@@ -6,7 +6,6 @@ import { Check, RefreshCw, Search, Sparkles } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 
 import {
-  DemoCursor,
   DemoFrame,
   DemoHighlight,
   DemoPulse,
@@ -411,14 +410,6 @@ export function FeatureTourEmailPageMock() {
             </div>
           </section>
         </div>
-
-        <DemoCursor
-          x={['22%', '22%', '72%', '72%', '76%', '68%', '68%']}
-          y={['52%', '52%', '46%', '46%', '56%', '82%', '82%']}
-          times={[0, 0.18, 0.36, 0.4, 0.64, 0.8, 0.9]}
-          clickAt={[0.18, 0.4, 0.64, 0.8, 0.9]}
-          duration={LOOP}
-        />
       </div>
     </DemoFrame>
   );

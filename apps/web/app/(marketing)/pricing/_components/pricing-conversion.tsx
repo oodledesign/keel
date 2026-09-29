@@ -6,6 +6,10 @@ import { cn } from '@kit/ui/utils';
 import { BusinessSeatCalculator } from '~/(marketing)/_components/business-seat-calculator';
 import { MarketingFaqsSection } from '~/(marketing)/_components/marketing-faqs';
 import {
+  MarketingSectionHeader,
+  MarketingSectionIndex,
+} from '~/(marketing)/_components/marketing-section-index';
+import {
   annualSavingPercent,
   formatAnnualSavingPercent,
   formatGbp,
@@ -17,11 +21,16 @@ import {
 } from '~/lib/billing/pricing-marketing';
 import {
   marketingBodyText,
-  marketingBtnGradient,
   marketingBtnOutline,
-  marketingEyebrow,
-  marketingFeatureCard,
+  marketingBtnPrimary,
+  marketingDisplay,
+  marketingFeaturedPlan,
+  marketingFigure,
+  marketingLede,
   marketingMutedText,
+  marketingPlanBadge,
+  marketingRadiusMedia,
+  marketingRule,
 } from '~/lib/marketing/marketing-ui';
 import {
   PRICING_LAST_VERIFIED,
@@ -59,7 +68,7 @@ const FEATURE_MATRIX: Array<{
   },
   {
     feature: 'Project guests',
-    hint: 'External collaborators on one project — not paid seats',
+    hint: 'External collaborators on one project. They are not paid seats.',
     lite: '1',
     starter: '1 per billable seat',
     pro: '3 per billable seat',
@@ -78,7 +87,7 @@ const FEATURE_MATRIX: Array<{
   },
   {
     feature: '14-day free trial',
-    hint: 'On your first paid workspace — card on file, billed after 14 days',
+    hint: 'On your first paid workspace. Card on file, billed after 14 days.',
     lite: false,
     starter: true,
     pro: true,
@@ -153,31 +162,36 @@ export function PricingConversion() {
   const faqs = pricingFaqs();
 
   return (
-    <div className="space-y-16">
-      {/* Stage 1 — which bucket */}
-      <section className="text-center">
-        <p className={marketingEyebrow}>Pricing</p>
-        <h1 className="font-heading mt-4 text-4xl font-bold tracking-tight text-[var(--workspace-shell-text)] md:text-5xl">
-          Graduated seats for your studio
-        </h1>
-        <p
-          className={cn(
-            'mx-auto mt-4 max-w-2xl text-lg leading-relaxed',
-            marketingBodyText,
-          )}
-        >
-          {philosophyLine()}
-        </p>
-        <p className={cn('mt-2 text-sm', marketingMutedText)}>
-          Prices last verified {PRICING_LAST_VERIFIED}.
-        </p>
+    <div className="space-y-24">
+      <section>
+        <MarketingSectionIndex
+          label="Pricing"
+          aside={
+            <span className="tabular-nums">
+              Last verified {PRICING_LAST_VERIFIED}
+            </span>
+          }
+        />
+        <div className="mt-10 grid gap-8 lg:grid-cols-12 lg:items-end">
+          <h1
+            className={cn(
+              marketingDisplay,
+              'text-[var(--workspace-shell-text)] lg:col-span-8 lg:text-[4.75rem]',
+            )}
+          >
+            Graduated seats for your studio.
+          </h1>
+          <p className={cn(marketingLede, marketingBodyText, 'lg:col-span-4')}>
+            {philosophyLine()}
+          </p>
+        </div>
       </section>
 
       <section aria-labelledby="tier-cards-heading">
         <h2 id="tier-cards-heading" className="sr-only">
           Business workspace tiers
         </h2>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {tiers.map((plan) => {
             const saving = formatAnnualSavingPercent(plan);
             const signup = buildPricingSignupUrl({
@@ -190,29 +204,39 @@ export function PricingConversion() {
               <article
                 key={plan.productId}
                 className={cn(
-                  'flex flex-col rounded-2xl border p-6',
-                  marketingFeatureCard,
-                  plan.highlighted &&
-                    'border-[var(--ozer-accent)] shadow-[0_0_0_1px_var(--ozer-coral-alpha-45)]',
+                  'relative flex flex-col border p-6',
+                  marketingRadiusMedia,
+                  plan.highlighted
+                    ? marketingFeaturedPlan
+                    : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]',
                 )}
               >
                 {plan.badge ? (
-                  <span className="mb-2 w-fit rounded-full bg-[var(--ozer-accent)] px-2 py-0.5 text-xs font-semibold text-[var(--ozer-plum-950)]">
+                  <span
+                    className={cn(marketingPlanBadge, 'absolute -top-3 left-6')}
+                  >
                     {plan.badge}
                   </span>
                 ) : null}
-                <h3 className="font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">
+                <h3 className="font-heading text-[1.75rem] leading-tight font-medium text-[var(--workspace-shell-text)]">
                   {plan.productName}
                 </h3>
                 <p className={cn('mt-1 text-sm', marketingMutedText)}>
                   {plan.description}
                 </p>
-                <p className="mt-4 text-3xl font-bold tracking-tight text-[var(--workspace-shell-text)]">
+                <p
+                  className={cn(
+                    marketingFigure,
+                    'mt-6 text-[3rem] leading-none text-[var(--workspace-shell-text)]',
+                  )}
+                >
                   {formatGbp(plan.monthlyPriceGbp)}
                   <span
-                    className={cn('text-base font-normal', marketingMutedText)}
+                    className={cn(
+                      'ml-1 font-sans text-base font-normal tracking-normal',
+                      marketingMutedText,
+                    )}
                   >
-                    {' '}
                     per month
                   </span>
                 </p>
@@ -230,17 +254,26 @@ export function PricingConversion() {
                 </p>
                 <ul
                   className={cn(
-                    'mt-4 flex-1 space-y-1.5 text-sm',
+                    marketingRule,
+                    'mt-5 flex-1 divide-y divide-[color:var(--workspace-shell-border)] border-t text-sm',
                     marketingMutedText,
                   )}
                 >
                   {plan.includes.map((item) => (
-                    <li key={item}>· {item}</li>
+                    <li key={item} className="py-2">
+                      {item}
+                    </li>
                   ))}
                 </ul>
                 <Button
                   asChild
-                  className={cn('mt-6 w-full', marketingBtnGradient)}
+                  className={cn(
+                    'mt-6 w-full',
+                    plan.highlighted
+                      ? marketingBtnPrimary
+                      : marketingBtnOutline,
+                  )}
+                  variant={plan.highlighted ? 'default' : 'outline'}
                 >
                   <Link href={signup}>Start free</Link>
                 </Button>
@@ -259,24 +292,19 @@ export function PricingConversion() {
       <PlanRecommender />
 
       {/* What this replaces */}
-      <section
-        className={cn(
-          'rounded-2xl border border-[color:var(--workspace-shell-border)] p-6 md:p-8',
-          marketingFeatureCard,
-        )}
-        aria-labelledby="replaces-heading"
-      >
-        <h2
-          id="replaces-heading"
-          className="font-heading text-2xl font-semibold text-[var(--workspace-shell-text)]"
+      <section aria-labelledby="replaces-heading">
+        <MarketingSectionHeader
+          label="What this replaces"
+          title="The separate tools you stop paying for."
+          intro="Typical UK monthly spend on the tools a small studio often pays for. Your own stack will differ."
+          headingId="replaces-heading"
+        />
+        <ul
+          className={cn(
+            marketingRule,
+            'mt-10 divide-y divide-[color:var(--workspace-shell-border)] border-y',
+          )}
         >
-          What this replaces
-        </h2>
-        <p className={cn('mt-2 max-w-2xl text-sm', marketingBodyText)}>
-          Typical UK monthly spend on separate tools a small studio often pays
-          for — not a promise that every studio pays exactly this.
-        </p>
-        <ul className="mt-6 divide-y divide-[color:var(--workspace-shell-border)]">
           {REPLACED_STACK.map((row) => (
             <li
               key={row.category}
@@ -288,7 +316,7 @@ export function PricingConversion() {
                   ({row.note})
                 </span>
               </span>
-              <span className="font-medium text-[var(--workspace-shell-text)]">
+              <span className="font-medium text-[var(--workspace-shell-text)] tabular-nums">
                 {formatGbp(row.typicalMonthlyGbp)} per month
               </span>
             </li>
@@ -316,17 +344,13 @@ export function PricingConversion() {
       <WorkspaceFeatureComparison variant="full" />
 
       <section aria-labelledby="matrix-heading">
-        <h2
-          id="matrix-heading"
-          className="font-heading text-2xl font-semibold text-[var(--workspace-shell-text)]"
-        >
-          Free, Starter, and Pro seats
-        </h2>
-        <p className={cn('mt-2 text-sm', marketingMutedText)}>
-          Seat limits inside Business. Use the calculator above for monthly
-          totals — or open the comparison when you want the tier list.
-        </p>
-        <details className="mt-4">
+        <MarketingSectionHeader
+          label="Plan detail"
+          title="Free, Starter and Pro seats"
+          intro="Seat limits inside Business. Use the calculator above for monthly totals, or open the comparison for the full tier list."
+          headingId="matrix-heading"
+        />
+        <details className="mt-10">
           <summary
             className={cn(
               marketingBtnOutline,
@@ -335,7 +359,7 @@ export function PricingConversion() {
           >
             Compare plans in detail
           </summary>
-          <div className="mt-4 overflow-x-auto rounded-2xl border border-[color:var(--workspace-shell-border)]">
+          <div className="mt-4 overflow-x-auto rounded-[var(--ozer-radius-media)] border border-[color:var(--workspace-shell-border)]">
             <table className="w-full min-w-[28rem] text-left text-sm">
               <thead>
                 <tr className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
@@ -445,7 +469,7 @@ export function PricingConversion() {
           </li>
         </ul>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Button asChild className={marketingBtnGradient}>
+          <Button asChild className={marketingBtnPrimary}>
             <Link href={MARKETING_FREE_SIGNUP_URL}>Start free</Link>
           </Button>
           <Button asChild variant="outline" className={marketingBtnOutline}>

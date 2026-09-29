@@ -29,6 +29,16 @@ const logos = [
   { label: 'Brand guide (HTML)', path: '/brand/ozer-brand-guide.html' },
 ];
 
+const editorialShortlist = [
+  { name: 'Gambetta', selected: true },
+  { name: 'Zodiak', selected: false },
+  { name: 'Erode', selected: false },
+  { name: 'Boska', selected: false },
+];
+
+const EDITORIAL_SHORTLIST_HREF =
+  'https://api.fontshare.com/v2/css?f[]=zodiak@400,401,500&f[]=erode@400,401,500&f[]=boska@400,401,500&display=swap';
+
 export function OzerBrandingGuide() {
   return (
     <div className="space-y-10">
@@ -54,6 +64,42 @@ export function OzerBrandingGuide() {
             <code className="text-xs">apps/web/styles/ozer-tokens.css</code> to
             change fonts or colours.
           </p>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <link
+          rel="stylesheet"
+          href={EDITORIAL_SHORTLIST_HREF}
+          precedence="default"
+        />
+        <h2 className="text-lg font-semibold">Marketing display serif</h2>
+        <p className="text-muted-foreground text-sm">
+          Marketing pages only, via{' '}
+          <code className="text-xs">--ozer-font-editorial</code>. The app keeps
+          Cabinet Grotesk. Current choice: Gambetta.
+        </p>
+        <div className="divide-y rounded-xl border">
+          {editorialShortlist.map((face) => (
+            <div
+              key={face.name}
+              className="grid gap-4 p-6 md:grid-cols-[10rem_1fr]"
+            >
+              <p className="text-muted-foreground text-sm">
+                {face.name}
+                {face.selected ? ' (in use)' : ''}
+              </p>
+              <div style={{ fontFamily: `'${face.name}', serif` }}>
+                <p className="text-5xl leading-[1.02] font-medium tracking-[-0.02em]">
+                  The workspace for commercial agents
+                </p>
+                <p className="mt-3 text-2xl italic">
+                  Instructions, disposals &amp; heads of terms
+                </p>
+                <p className="mt-3 text-4xl tabular-nums">£89 · 02 / 06</p>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 

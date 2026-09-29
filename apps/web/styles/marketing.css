@@ -1,12 +1,13 @@
 /*
  * Marketing site shell — cream (light) or Cassis/plum (dark) colour blocks.
  * Uses Ozer tokens from ozer-tokens.css; follows html.dark from next-themes.
- * Avoid glassmorphism / frosted blur. Prefer flat bands; hero may use a
- * subtle same-family gradient for atmosphere (see .marketing-section-plum-hero).
+ * Editorial direction ("Particulars"): flat bands, hairline rules instead of
+ * boxes, serif display type, coral reserved for the primary action.
  */
 
 @layer utilities {
   .marketing-grain {
+    --font-heading: var(--ozer-font-editorial);
     position: relative;
     isolation: isolate;
     color: var(--ozer-text-on-light);
@@ -19,22 +20,20 @@
   }
 
   .marketing-grain::before {
-    content: "";
+    content: '';
     position: fixed;
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    /* Paper grain — visible on cream without reading as dirt. */
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     background-repeat: repeat;
     background-size: 180px 180px;
-    opacity: 0.12;
+    opacity: 0.05;
     mix-blend-mode: multiply;
   }
 
   .dark .marketing-grain::before {
-    opacity: 0.14;
-    mix-blend-mode: soft-light;
+    opacity: 0;
   }
 
   .marketing-grain > * {
@@ -63,13 +62,12 @@
   .marketing-header {
     @apply border-b;
     border-color: var(--ozer-border-on-light);
-    /* Keep grain visible through the sticky header */
-    background: color-mix(in srgb, var(--ozer-cream-50) 88%, transparent);
+    background: color-mix(in srgb, var(--ozer-cream-50) 94%, transparent);
   }
 
   .dark .marketing-header {
     border-color: var(--ozer-border-on-dark);
-    background: color-mix(in srgb, var(--ozer-plum-950) 88%, transparent);
+    background: color-mix(in srgb, var(--ozer-plum-950) 94%, transparent);
   }
 
   .marketing-section-muted {
@@ -91,51 +89,31 @@
     color: var(--ozer-text-on-dark);
   }
 
-  /**
-   * Hero atmosphere: same-hue plum depth + a soft coral bloom.
-   * Keep contrast for --ozer-text-on-dark; no purple/indigo blends.
-   */
+  /** Flat plum hero band. Keep contrast for --ozer-text-on-dark. */
   .marketing-section-plum-hero {
     position: relative;
     isolation: isolate;
     overflow: hidden;
     border-top: 0;
-    background:
-      radial-gradient(
-        120% 90% at 85% 10%,
-        color-mix(in srgb, var(--ozer-coral-500) 18%, transparent) 0%,
-        transparent 55%
-      ),
-      radial-gradient(
-        90% 70% at 0% 100%,
-        color-mix(in srgb, var(--ozer-plum-800) 70%, transparent) 0%,
-        transparent 60%
-      ),
-      linear-gradient(
-        165deg,
-        var(--ozer-plum-900) 0%,
-        var(--ozer-plum-950) 48%,
-        color-mix(in srgb, var(--ozer-plum-950) 82%, black) 100%
-      );
-  }
-
-  .marketing-section-plum-hero::after {
-    content: '';
-    position: absolute;
-    inset: auto 0 0;
-    height: 4.5rem;
-    z-index: 0;
-    pointer-events: none;
-    background: linear-gradient(
-      to bottom,
-      transparent,
-      color-mix(in srgb, var(--ozer-cream-50) 8%, transparent)
-    );
+    background: var(--ozer-plum-950);
   }
 
   .marketing-section-plum-hero > * {
     position: relative;
     z-index: 1;
+  }
+
+  /** Hairline rules — the primary divider in place of cards. */
+  .marketing-rule {
+    border-color: var(--ozer-border-on-light);
+  }
+
+  .dark .marketing-rule {
+    border-color: var(--ozer-border-on-dark);
+  }
+
+  .marketing-rule-on-dark {
+    border-color: var(--ozer-border-on-dark-strong);
   }
 
   /**
@@ -149,7 +127,8 @@
   }
 
   .marketing-feature-card {
-    @apply rounded-2xl border;
+    @apply border;
+    border-radius: var(--ozer-radius-media);
     border-color: var(--ozer-border-on-light);
     color: var(--ozer-text-on-light);
     background: var(--ozer-white);
@@ -162,24 +141,17 @@
   }
 
   .marketing-faq-item {
-    @apply rounded-xl border;
+    @apply border-t;
     border-color: var(--ozer-border-on-light);
-    background: var(--ozer-white);
   }
 
   .dark .marketing-faq-item {
     border-color: var(--ozer-border-on-dark);
-    background: var(--ozer-plum-800);
   }
 
-  .marketing-faq-item-muted {
-    background: var(--ozer-cream-100);
+  .marketing-faq-item-dark {
+    border-color: var(--ozer-border-on-dark-strong);
   }
-
-  .dark .marketing-faq-item-muted {
-    background: var(--ozer-plum-800);
-  }
-
 }
 
 @media (prefers-reduced-motion: reduce) {

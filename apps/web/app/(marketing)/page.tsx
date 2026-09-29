@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { ArrowRight } from 'lucide-react';
+
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
@@ -17,9 +19,9 @@ import {
 } from '~/lib/marketing/commercial-home-content';
 import { loadMarketingViewer } from '~/lib/marketing/load-marketing-viewer';
 import {
-  marketingBtnGradient,
-  marketingBtnOutline,
+  marketingBtnPrimary,
   marketingShellClass,
+  marketingTextLink,
 } from '~/lib/marketing/marketing-ui';
 import { getSegmentLandingConfig } from '~/lib/marketing/segment-landing-pages';
 import { JsonLd } from '~/lib/seo/json-ld';
@@ -35,7 +37,7 @@ import { FeatureTourSection } from './_components/feature-tour-section';
 import { CommercialFinalCta } from './_components/home/commercial-final-cta';
 import { CommercialHomeHero } from './_components/home/commercial-home-hero';
 import { CommercialPricingTeaser } from './_components/home/commercial-pricing-teaser';
-import { CommercialProofStrip } from './_components/home/commercial-proof-strip';
+import { CommercialProofQuote } from './_components/home/commercial-proof-quote';
 import { CommercialTrustStrip } from './_components/home/commercial-trust-strip';
 import { PainFixSection } from './_components/home/pain-fix-section';
 import { WorkspacesStrip } from './_components/home/workspaces-strip';
@@ -67,7 +69,7 @@ async function Home() {
   const offers = COMMERCIAL_ILLUSTRATIVE_TIERS.map((tier) => ({
     name: tier.label,
     price: estimateMonthlyGbp(tier.billableSeats),
-    description: `${tier.description} — ${tier.seatRangeLabel}`,
+    description: `${tier.description} (${tier.seatRangeLabel})`,
     url: absoluteUrl('/commercial-property#pricing'),
   }));
 
@@ -75,7 +77,7 @@ async function Home() {
     softwareApplicationJsonLd({
       name: 'Ozer',
       description:
-        'The workspace for UK commercial property agents — disposals, requirements, matching, circulation, pipeline and portal publishing to Rightmove Commercial, EACH and Property Hive.',
+        'The workspace for UK commercial property agents: disposals, requirements, matching, circulation, pipeline and portal publishing to Rightmove Commercial, EACH and Property Hive.',
       url: absoluteUrl('/'),
       offers,
     }),
@@ -88,25 +90,27 @@ async function Home() {
 
       <CommercialHomeHero viewer={viewer} />
 
-      <CommercialProofStrip />
+      <CommercialProofQuote />
 
       <PainFixSection />
 
       <FeatureTourSection
+        index="02"
         blocks={COMMERCIAL_FEATURE_TOUR_BLOCKS}
         eyebrow={COMMERCIAL_TOUR_HEADING.eyebrow}
         heading={COMMERCIAL_TOUR_HEADING.title}
         intro={COMMERCIAL_TOUR_HEADING.intro}
         cta={
           <>
-            <Button asChild className={marketingBtnGradient}>
-              <Link href="#waitlist">Join the waiting list</Link>
-            </Button>
-            <Button asChild variant="outline" className={marketingBtnOutline}>
-              <Link href="/commercial-property">
-                Explore the commercial workspace
+            <Button asChild className={marketingBtnPrimary}>
+              <Link href="#waitlist">
+                Join the waiting list
+                <ArrowRight className="size-4" aria-hidden="true" />
               </Link>
             </Button>
+            <Link href="/commercial-property" className={marketingTextLink}>
+              Explore the commercial workspace
+            </Link>
           </>
         }
       />
@@ -117,16 +121,15 @@ async function Home() {
 
       <MarketingFaqsSection
         faqs={faqs}
-        tone="light"
-        title="Questions, answered"
+        index="04"
+        title="Questions agents ask us"
         headingId="home-faq-heading"
+        footer={
+          <Link href="/faq" className={marketingTextLink}>
+            All FAQs
+          </Link>
+        }
       />
-
-      <div className="mx-auto -mt-6 mb-4 flex w-full max-w-3xl justify-center px-6 md:-mt-8">
-        <Button asChild variant="outline" className={marketingBtnOutline}>
-          <Link href="/faq">View all FAQs</Link>
-        </Button>
-      </div>
 
       <WorkspacesStrip />
 

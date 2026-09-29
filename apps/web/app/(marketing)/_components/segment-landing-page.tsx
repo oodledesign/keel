@@ -1,17 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import {
-  ArrowLeftRight,
-  ArrowRight,
-  Check,
-  ClipboardList,
-  FileText,
-  ListFilter,
-  Mail,
-  PenLine,
-  Sparkles,
-} from 'lucide-react';
+import { ArrowRight, FileText } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
@@ -23,23 +13,26 @@ import {
 } from '~/lib/billing/pricing-marketing';
 import { loadPublicBrochureByToken } from '~/lib/commercial/public-brochure.loader';
 import { extractBrochureShareToken } from '~/lib/commercial/public-brochure.shared';
+import { COMMERCIAL_HOME_HERO_SCREEN } from '~/lib/marketing/commercial-home-content';
 import {
   marketingBodyText,
-  marketingBtnGradient,
   marketingBtnOutline,
-  marketingBtnOutlineOnDark,
-  marketingCardHover,
-  marketingEyebrow,
-  marketingEyebrowOnDark,
+  marketingBtnPrimary,
+  marketingDisplay,
   marketingFeatureCard,
   marketingFeaturedPlan,
-  marketingHeadlineGradient,
+  marketingFigure,
+  marketingLede,
   marketingMutedText,
-  marketingPanelDeep,
-  marketingPanelInner,
+  marketingPlanBadge,
+  marketingRule,
+  marketingRuleOnDark,
+  marketingSectionDark,
   marketingSectionDarkMuted,
   marketingSectionHeading,
   marketingSectionMuted,
+  marketingTextLink,
+  marketingTextLinkOnDark,
 } from '~/lib/marketing/marketing-ui';
 import { getSegmentPricingComparison } from '~/lib/marketing/pricing-comparison';
 import type { SegmentLandingConfig } from '~/lib/marketing/segment-landing-pages';
@@ -51,6 +44,11 @@ import { CommercialSeatCalculator } from './commercial-seat-calculator';
 import { FeatureTourSection } from './feature-tour-section';
 import { InterconnectedWorkspacesSection } from './interconnected-workspaces-section';
 import { MarketingFaqsSection } from './marketing-faqs';
+import { MarketingScreen } from './marketing-screen';
+import {
+  MarketingSectionHeader,
+  MarketingSectionIndex,
+} from './marketing-section-index';
 import { PricingComparisonTable } from './pricing-comparison-table';
 
 type SegmentLandingPageProps = {
@@ -82,290 +80,67 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
 
   return (
     <main className="marketing-shell relative overflow-hidden">
-      {/* Hero */}
-      {usesPlumHero ? (
-        <section className="marketing-section-plum marketing-section-plum-hero -mb-4">
-          <div className="relative mx-auto w-full max-w-7xl px-6 pt-24 pb-16 md:pt-28 md:pb-20">
-            <div className="grid items-center gap-12 lg:grid-cols-[0.95fr,1.05fr] lg:gap-14">
-              <div className="flex flex-col gap-7">
-                <span className={marketingEyebrowOnDark}>
-                  {config.hero.eyebrow}
-                </span>
-                <div className="space-y-4">
-                  <h1 className="font-heading text-4xl leading-[1.08] font-bold tracking-tight text-[var(--ozer-text-on-dark)] md:text-5xl lg:text-6xl">
-                    {config.hero.title}
-                    <span
-                      className={cn(marketingHeadlineGradient, 'mt-1 block')}
-                    >
-                      {config.hero.titleAccent}.
-                    </span>
-                  </h1>
-                  <p
-                    className={`max-w-xl text-base leading-relaxed md:text-lg ${marketingSectionDarkMuted}`}
-                  >
-                    {config.hero.subtitle}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-3 pt-1">
-                  <Button
-                    asChild
-                    size="lg"
-                    className={cn(
-                      marketingBtnGradient,
-                      'transition-transform duration-150 ease-out active:scale-[0.97]',
-                    )}
-                  >
-                    <Link href={primarySignup}>
-                      Start free
-                      <ArrowRight className="ml-1.5 h-4 w-4" />
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="lg"
-                    className={cn(
-                      marketingBtnOutlineOnDark,
-                      'transition-transform duration-150 ease-out active:scale-[0.97]',
-                    )}
-                  >
-                    <Link href={pricingLink}>See pricing</Link>
-                  </Button>
-                </div>
-              </div>
-
-              {isCommercial ? (
-                <div className="relative overflow-hidden rounded-3xl border border-[color:var(--ozer-border-on-dark-strong)] bg-[var(--ozer-plum-900)] shadow-[0_24px_60px_rgba(0,0,0,0.35)]">
-                  <Image
-                    src="/brand/marketing/commercial-agency-home.jpg"
-                    alt="Commercial Property agency home — unactioned enquiries, stock on market, recent disposals, and quick links"
-                    width={2880}
-                    height={1340}
-                    priority
-                    className="h-auto w-full object-contain object-left-top"
-                    sizes="(max-width: 1024px) 100vw, 52vw"
-                  />
-                </div>
-              ) : (
-                <div className="relative overflow-hidden rounded-3xl border border-[color:var(--ozer-border-on-dark-strong)] bg-[var(--ozer-plum-900)] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.35)] sm:p-6">
-                  <p className="text-xs tracking-[0.12em] text-[var(--ozer-text-on-dark-muted)] uppercase">
-                    Included in {config.hero.eyebrow.toLowerCase()}
-                  </p>
-                  <ul className="mt-4 space-y-3">
-                    {includedFeatures.map((feature) => (
-                      <li
-                        key={feature.title}
-                        className="flex items-start gap-3 rounded-xl border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-cream-50)] px-3 py-3"
-                      >
-                        <feature.icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
-                        <div>
-                          <p className="text-sm font-medium text-[var(--ozer-text-on-light)]">
-                            {feature.title}
-                          </p>
-                          <p className="mt-0.5 text-xs leading-relaxed text-[var(--ozer-text-on-light-muted)]">
-                            {feature.description}
-                          </p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            {isWork ? (
-              <div className="mt-12 grid gap-4 sm:grid-cols-3">
-                {config.stats.map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="rounded-2xl border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-on-dark-alpha-08)] px-5 py-4"
-                  >
-                    <p className="text-2xl font-semibold text-[var(--ozer-text-on-dark)]">
-                      {stat.value}
-                    </p>
-                    <p className="mt-1 text-xs tracking-[0.1em] text-[var(--ozer-text-on-dark-muted)] uppercase">
-                      {stat.label}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        </section>
-      ) : (
-        <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-14 px-6 pt-24 pb-16 md:pt-28">
-          <div className="grid items-center gap-12 lg:grid-cols-[1.05fr,0.95fr]">
-            <div className="space-y-8">
-              <span className={marketingEyebrow}>{config.hero.eyebrow}</span>
-
-              <div className="space-y-5">
-                <h1 className="font-heading text-4xl leading-tight font-bold text-[var(--workspace-shell-text)] md:text-5xl lg:text-6xl">
-                  {config.hero.title}
-                  <span className={marketingHeadlineGradient}>
-                    {' '}
-                    {config.hero.titleAccent}
-                  </span>
-                  .
-                </h1>
-                <p
-                  className={`max-w-xl text-base leading-relaxed md:text-lg ${marketingBodyText}`}
-                >
-                  {config.hero.subtitle}
-                </p>
-                {isPersonal ? (
-                  <ul
-                    className={`flex flex-wrap gap-x-5 gap-y-2 text-sm ${marketingBodyText}`}
-                  >
-                    {['Completely free', 'No credit card', 'No time limit'].map(
-                      (label) => (
-                        <li
-                          key={label}
-                          className="inline-flex items-center gap-1.5"
-                        >
-                          <Check
-                            className="h-4 w-4 shrink-0 text-[var(--ozer-accent)]"
-                            aria-hidden
-                          />
-                          <span>{label}</span>
-                        </li>
-                      ),
-                    )}
-                  </ul>
-                ) : null}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <Button asChild size="lg" className={marketingBtnGradient}>
-                  <Link href={primarySignup}>
-                    Start free
-                    <ArrowRight className="ml-1.5 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  className={marketingBtnOutline}
-                >
-                  <Link href={pricingLink}>See pricing</Link>
-                </Button>
-              </div>
-            </div>
-
-            <div className={`relative rounded-3xl p-5 ${marketingPanelDeep}`}>
-              <div className={`relative space-y-4 p-5 ${marketingPanelInner}`}>
-                <p
-                  className={`text-xs tracking-[0.12em] uppercase ${marketingMutedText}`}
-                >
-                  Included in {config.hero.eyebrow.toLowerCase()}
-                </p>
-                <ul className="space-y-3">
-                  {includedFeatures.map((feature) => (
-                    <li
-                      key={feature.title}
-                      className="flex items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/80 px-3 py-3"
-                    >
-                      <feature.icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
-                      <div>
-                        <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                          {feature.title}
-                        </p>
-                        <p
-                          className={`mt-0.5 text-xs leading-relaxed ${marketingMutedText}`}
-                        >
-                          {feature.description}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            {config.stats.map((stat) => (
-              <div
-                key={stat.label}
-                className="marketing-feature-card rounded-2xl border border-[color:var(--workspace-shell-border)] px-5 py-4"
-              >
-                <p className="text-2xl font-semibold text-[var(--workspace-shell-text)]">
-                  {stat.value}
-                </p>
-                <p
-                  className={`mt-1 text-xs tracking-[0.1em] uppercase ${marketingMutedText}`}
-                >
-                  {stat.label}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <SegmentHero
+        config={config}
+        tone={usesPlumHero ? 'dark' : 'light'}
+        primarySignup={primarySignup}
+        pricingLink={pricingLink}
+        includedFeatures={includedFeatures}
+        showScreen={isCommercial}
+        showStats={!isCommercial}
+        showFreeNotes={isPersonal}
+      />
 
       {isPersonal ? (
         <InterconnectedWorkspacesSection variant="personal" />
       ) : null}
 
-      {/* Features */}
       <section
         id="features"
-        className={cn(
-          'relative pb-20',
-          usesPlumHero
-            ? 'z-10 bg-[var(--workspace-shell-bg)] pt-20'
-            : 'mx-auto w-full max-w-7xl px-6 pt-4',
-        )}
+        className="mx-auto w-full max-w-[88rem] px-6 py-20 md:py-28"
         aria-labelledby="features-heading"
       >
-        <div className={cn(usesPlumHero && 'mx-auto w-full max-w-7xl px-6')}>
-          <div
-            className={cn(
-              'mb-10 max-w-2xl',
-              usesPlumHero && 'mx-auto text-center',
-            )}
-          >
-            <h2
-              id="features-heading"
-              className={cn(
-                marketingSectionHeading,
-                'text-[var(--workspace-shell-text)]',
-              )}
+        <MarketingSectionHeader
+          label="Features"
+          headingId="features-heading"
+          title={
+            isCommercial
+              ? 'Built for the commercial desk'
+              : `Everything in ${config.hero.eyebrow.toLowerCase()}`
+          }
+          intro={
+            config.slug === 'personal'
+              ? 'Modules connect through your personal home, so tasks, the planner and shortcuts span every workspace you add.'
+              : config.slug === 'work'
+                ? 'Your business workspace runs inside your Ozer account. Clients, jobs and invoices link back to your home rather than a separate silo.'
+                : 'What fee-earners use every day: disposals, pipeline, requirements, interest schedules and portal publishing.'
+          }
+        />
+        <ol
+          className={cn(
+            marketingRule,
+            'mt-12 grid border-t md:mt-16 md:grid-cols-2 lg:grid-cols-3',
+          )}
+        >
+          {config.features.map((feature, index) => (
+            <li
+              key={feature.title}
+              className={cn(marketingRule, 'border-b py-8 md:pr-10')}
             >
-              {isCommercial
-                ? 'Built for the commercial workspace'
-                : `Everything you need for ${config.hero.eyebrow.toLowerCase()}`}
-            </h2>
-            <p className={`mt-3 ${marketingBodyText}`}>
-              {config.slug === 'personal'
-                ? 'Modules connect through your personal home — tasks, planner, and shortcuts span every workspace you add.'
-                : config.slug === 'work'
-                  ? 'Your business workspace runs inside your Ozer account — clients, jobs, and invoices link back to one home, not a separate silo.'
-                  : 'Everything fee-earners need on one commercial desk: disposals, pipeline, requirements, interest, and publishing.'}
-            </p>
-          </div>
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {config.features.map((feature) => (
-              <article
-                key={feature.title}
-                className="marketing-feature-card rounded-2xl border border-[color:var(--workspace-shell-border)] p-6"
+              <span className="text-[0.8125rem] font-medium text-[var(--workspace-shell-text-muted)] tabular-nums">
+                {String(index + 1).padStart(2, '0')}
+              </span>
+              <h3 className="font-heading mt-3 text-[1.5rem] leading-tight font-medium tracking-[-0.01em] text-[var(--workspace-shell-text)]">
+                {feature.title}
+              </h3>
+              <p
+                className={`mt-2 text-[0.9375rem] leading-relaxed ${marketingMutedText}`}
               >
-                <feature.icon
-                  className="h-5 w-5 text-[var(--ozer-accent)]"
-                  aria-hidden
-                />
-                <h3 className="font-heading mt-4 text-xl font-semibold text-[var(--workspace-shell-text)]">
-                  {feature.title}
-                </h3>
-                <p
-                  className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}
-                >
-                  {feature.description}
-                </p>
-              </article>
-            ))}
-          </div>
-        </div>
+                {feature.description}
+              </p>
+            </li>
+          ))}
+        </ol>
       </section>
 
       {isCommercial ? <CommercialSpotlightSections config={config} /> : null}
@@ -380,35 +155,36 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
 
       {!isCommercial ? (
         <section
-          className={cn('border-y py-20', marketingSectionMuted)}
+          className={cn('border-y py-20 md:py-28', marketingSectionMuted)}
           aria-labelledby="how-it-works-heading"
         >
-          <div className="mx-auto w-full max-w-7xl px-6">
-            <div className={cn(isWork && 'mx-auto max-w-2xl text-center')}>
-              <h2
-                id="how-it-works-heading"
-                className={cn(
-                  marketingSectionHeading,
-                  'text-[var(--workspace-shell-text)]',
-                )}
-              >
-                How it works
-              </h2>
-            </div>
-            <ol className="mt-10 grid gap-5 md:grid-cols-3 md:gap-6">
+          <div className="mx-auto w-full max-w-[88rem] px-6">
+            <MarketingSectionHeader
+              label="How it works"
+              title={`${config.steps.length} steps to get going`}
+              headingId="how-it-works-heading"
+            />
+            <ol className="mt-12 grid gap-10 md:mt-16 md:grid-cols-3 md:gap-10">
               {config.steps.map((step, index) => (
                 <li
                   key={step.title}
-                  className="marketing-feature-card rounded-2xl border border-[color:var(--workspace-shell-border)] p-6"
+                  className={cn(marketingRule, 'border-t pt-6')}
                 >
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--ozer-accent-subtle)] text-sm font-bold text-[var(--ozer-coral-600)]">
+                  <span
+                    className={cn(
+                      marketingFigure,
+                      'block text-[3.5rem] leading-none text-[var(--workspace-shell-text)]',
+                    )}
+                    aria-hidden="true"
+                  >
                     {index + 1}
                   </span>
-                  <h3 className="mt-4 text-lg font-semibold text-[var(--workspace-shell-text)]">
+                  <h3 className="mt-6 text-lg font-medium text-[var(--workspace-shell-text)]">
+                    <span className="sr-only">Step {index + 1}: </span>
                     {step.title}
                   </h3>
                   <p
-                    className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}
+                    className={`mt-2 text-[0.9375rem] leading-relaxed ${marketingMutedText}`}
                   >
                     {step.description}
                   </p>
@@ -419,35 +195,33 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
         </section>
       ) : null}
 
-      {/* Pricing */}
       <section
         id="pricing"
-        className="relative mx-auto w-full max-w-7xl px-6 py-20"
+        className="mx-auto w-full max-w-[88rem] scroll-mt-24 px-6 py-20 md:py-28"
         aria-labelledby="pricing-heading"
       >
-        <div className="mb-10 text-center">
-          <h2
-            id="pricing-heading"
-            className={cn(
-              marketingSectionHeading,
-              'text-[var(--workspace-shell-text)]',
-            )}
-          >
-            {isPersonal
-              ? 'Completely free for personal & family'
+        <MarketingSectionHeader
+          label="Pricing"
+          headingId="pricing-heading"
+          title={
+            isPersonal
+              ? 'Free for personal and family'
               : isCommercial
-                ? 'Commercial Pricing'
-                : 'Simple, transparent pricing'}
-          </h2>
-          <p className={`mx-auto mt-3 max-w-2xl ${marketingBodyText}`}>
-            {config.pricingNote}
-          </p>
-          {isPersonal ? (
-            <p className="mx-auto mt-2 max-w-2xl text-sm font-medium text-[var(--ozer-accent-muted)]">
-              £0 forever · No credit card · No trial countdown
-            </p>
-          ) : null}
-        </div>
+                ? 'Commercial pricing'
+                : 'Published pricing'
+          }
+          intro={
+            <>
+              {config.pricingNote}
+              {isPersonal ? (
+                <span className="mt-2 block text-sm font-medium text-[var(--workspace-shell-text)]">
+                  Free forever. No card, no trial countdown.
+                </span>
+              ) : null}
+            </>
+          }
+          className="mb-12 md:mb-16"
+        />
 
         {isCommercial ? (
           <CommercialPricingGrid plans={config.pricingPlans} />
@@ -458,7 +232,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
             className={cn(
               'grid gap-6',
               config.pricingPlans.length === 1
-                ? 'mx-auto max-w-md'
+                ? 'max-w-md'
                 : config.pricingPlans.length === 2
                   ? 'md:grid-cols-2'
                   : 'md:grid-cols-2 xl:grid-cols-3',
@@ -478,12 +252,9 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
         ) : null}
 
         {!usesGraduatedPricing ? (
-          <p className={`mt-8 text-center text-sm ${marketingMutedText}`}>
-            <Link
-              href="/pricing"
-              className="underline underline-offset-2 hover:text-[var(--workspace-shell-text)]"
-            >
-              View full pricing, annual billing, and add-ons
+          <p className="mt-8 text-sm">
+            <Link href="/pricing" className={marketingTextLink}>
+              Full pricing, annual billing and add-ons
             </Link>
           </p>
         ) : null}
@@ -493,139 +264,104 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
         faqs={config.faqs}
         tone={usesPlumHero ? 'light' : 'muted'}
         headingId="faq-heading"
-        headingAlign={usesPlumHero ? 'center' : 'start'}
         sectionClassName="marketing-section-muted"
       />
 
-      {/* Related + CTA */}
+      {!isCommercial && config.relatedSegments.length > 0 ? (
+        <section
+          className="mx-auto w-full max-w-[88rem] px-6 py-20 md:py-28"
+          aria-labelledby="related-heading"
+        >
+          <MarketingSectionHeader
+            label="Other workspaces"
+            title="More Ozer workspaces"
+            intro="Add business, property or community spaces whenever you need them. Your personal home keeps tasks, the planner and shortcuts joined up across all of them."
+            headingId="related-heading"
+          />
+          <ul className={cn(marketingRule, 'mt-12 border-b md:mt-16')}>
+            {config.relatedSegments.map((segment) => (
+              <li key={segment.slug} className={cn(marketingRule, 'border-t')}>
+                <Link
+                  href={`/${segment.slug}`}
+                  className="group grid items-baseline gap-x-8 gap-y-1 py-6 transition-colors duration-200 hover:bg-[var(--ozer-plum-alpha-08)] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:outline-none sm:grid-cols-[minmax(0,5fr)_minmax(0,6fr)_2rem] dark:hover:bg-[var(--ozer-on-dark-alpha-06)]"
+                >
+                  <span className="font-heading text-[1.625rem] leading-tight font-medium tracking-[-0.015em] text-[var(--workspace-shell-text)] md:text-[2rem]">
+                    {segment.label}
+                  </span>
+                  <span className={`text-[0.9375rem] ${marketingMutedText}`}>
+                    {segment.description}
+                  </span>
+                  <span
+                    className="text-right text-[var(--workspace-shell-text)] transition-transform duration-200 group-hover:translate-x-1"
+                    aria-hidden="true"
+                  >
+                    →
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section
         className={cn(
-          usesPlumHero
-            ? 'marketing-section-plum py-20'
-            : 'relative mx-auto w-full max-w-7xl px-6 py-20',
+          usesPlumHero ? marketingSectionDark : marketingSectionMuted,
+          !usesPlumHero && 'border-t',
         )}
+        aria-labelledby="segment-cta-heading"
       >
-        <div
-          className={cn(
-            usesPlumHero && 'relative mx-auto w-full max-w-7xl px-6',
-          )}
-        >
-          {!isCommercial && config.relatedSegments.length > 0 ? (
-            <>
-              <h2
-                className={cn(
-                  'font-heading text-2xl font-semibold',
-                  usesPlumHero
-                    ? 'text-[var(--ozer-text-on-dark)]'
-                    : 'text-[var(--workspace-shell-text)]',
-                )}
-              >
-                More Ozer workspaces — all connected
-              </h2>
-              <p
-                className={cn(
-                  'mt-2 max-w-2xl text-sm',
-                  usesPlumHero ? marketingSectionDarkMuted : marketingMutedText,
-                )}
-              >
-                Add business, property, or community spaces anytime. Your
-                personal home keeps tasks, planner, and shortcuts unified across
-                every workspace.
-              </p>
-              <div className="mt-6 grid gap-4 md:grid-cols-3">
-                {config.relatedSegments.map((segment) => {
-                  const SegmentIcon = segment.icon;
-
-                  return (
-                    <Link
-                      key={segment.slug}
-                      href={`/${segment.slug}`}
-                      className={cn(
-                        'rounded-2xl border border-[color:var(--workspace-shell-border)] p-5 transition',
-                        marketingFeatureCard,
-                        marketingCardHover,
-                      )}
-                    >
-                      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-plum-alpha-08)] text-[var(--ozer-accent)]">
-                        <SegmentIcon className="h-5 w-5" aria-hidden />
-                      </span>
-                      <p className="mt-4 font-medium text-[var(--workspace-shell-text)]">
-                        {segment.label}
-                      </p>
-                      <p className={`mt-1 text-sm ${marketingMutedText}`}>
-                        {segment.description}
-                      </p>
-                    </Link>
-                  );
-                })}
-              </div>
-            </>
-          ) : null}
-
-          <div
+        <div className="mx-auto w-full max-w-[88rem] px-6 py-20 md:py-28">
+          <MarketingSectionIndex
+            label="Get started"
+            tone={usesPlumHero ? 'dark' : 'light'}
+          />
+          <h2
+            id="segment-cta-heading"
             className={cn(
-              'rounded-2xl px-8 py-12 text-center',
+              marketingDisplay,
+              'mt-12 max-w-[16ch] md:mt-16',
               usesPlumHero
-                ? 'border border-[color:var(--ozer-border-on-dark-strong)] bg-[var(--ozer-plum-900)]'
-                : cn(
-                    'border border-[color:var(--workspace-shell-border)]',
-                    marketingFeatureCard,
-                  ),
-              !isCommercial && config.relatedSegments.length > 0 && 'mt-16',
+                ? 'text-[var(--ozer-text-on-dark)]'
+                : 'text-[var(--workspace-shell-text)]',
             )}
           >
-            <h2
-              className={cn(
-                marketingSectionHeading,
-                usesPlumHero
-                  ? 'text-[var(--ozer-text-on-dark)]'
-                  : 'text-[var(--workspace-shell-text)]',
-              )}
-            >
-              {isPersonal
-                ? 'Ready for your free Ozer home?'
-                : isCommercial
-                  ? 'Ready to run the commercial desk on Ozer?'
-                  : 'Ready to get organised with Ozer?'}
-            </h2>
+            {isPersonal
+              ? 'Ready for your free Ozer home?'
+              : isCommercial
+                ? 'Run the commercial desk on Ozer.'
+                : 'Run your studio on Ozer.'}
+          </h2>
+          <div className="mt-10 grid gap-8 md:mt-14 lg:grid-cols-12 lg:gap-10">
             <p
               className={cn(
-                'mx-auto mt-3 max-w-xl',
+                marketingLede,
+                'lg:col-span-5',
                 usesPlumHero ? marketingSectionDarkMuted : marketingBodyText,
               )}
             >
               {isPersonal
-                ? 'Personal and family workspaces stay free — no credit card, no subscription, no catch.'
+                ? 'Personal and family workspaces are free. No card and no subscription.'
                 : isCommercial
-                  ? 'Start with Solo or choose seats for the desk. Graduated pricing is public — no quote form.'
-                  : 'Join thousands using Ozer as their workspace OS — personal life and work in one account.'}
+                  ? 'Start with Solo or choose seats for the desk. Graduated pricing is public, with no quote form.'
+                  : 'Clients, jobs, invoices and your own planner in the same Ozer account.'}
             </p>
-            <Button
-              asChild
-              size="lg"
-              className="mt-6 rounded-full bg-[var(--ozer-accent)] px-7 text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-accent-hover)] hover:text-[var(--ozer-white)]"
-            >
-              <Link href={primarySignup}>Start free</Link>
-            </Button>
-            <p
-              className={cn(
-                'mt-4 text-xs',
-                usesPlumHero ? marketingSectionDarkMuted : marketingMutedText,
-              )}
-            >
-              Already have an account?{' '}
+            <div className="flex flex-wrap items-center gap-6 lg:col-span-6 lg:col-start-7">
+              <Button asChild size="lg" className={marketingBtnPrimary}>
+                <Link href={primarySignup}>
+                  Start free
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </Link>
+              </Button>
               <Link
                 href={pathsConfig.auth.signIn}
-                className={cn(
-                  'underline',
-                  usesPlumHero
-                    ? 'hover:text-[var(--ozer-text-on-dark)]'
-                    : 'hover:text-[var(--workspace-shell-text)]',
-                )}
+                className={
+                  usesPlumHero ? marketingTextLinkOnDark : marketingTextLink
+                }
               >
                 Sign in
               </Link>
-            </p>
+            </div>
           </div>
         </div>
       </section>
@@ -662,7 +398,7 @@ function SegmentPricingPlanCard({
   return (
     <article
       className={cn(
-        'relative flex flex-col rounded-2xl border',
+        'relative flex flex-col rounded-[var(--ozer-radius-media)] border',
         compact ? 'min-h-0 flex-1 p-5' : 'h-full p-6',
         plan.highlighted
           ? marketingFeaturedPlan
@@ -670,13 +406,13 @@ function SegmentPricingPlanCard({
       )}
     >
       {plan.badge ? (
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--ozer-accent)] px-3 py-0.5 text-xs font-semibold text-[var(--ozer-plum-950)]">
+        <span className={cn(marketingPlanBadge, 'absolute -top-3 left-6')}>
           {plan.badge}
         </span>
       ) : null}
       {plan.bandTitle ? (
         <>
-          <p className="text-xs font-semibold tracking-[0.14em] text-[var(--ozer-coral-600)] uppercase">
+          <p className="text-[0.8125rem] font-medium text-[var(--workspace-shell-text-muted)]">
             {plan.bandTitle}
           </p>
           <h3 className="mt-2 text-lg font-semibold text-[var(--workspace-shell-text)]">
@@ -689,7 +425,12 @@ function SegmentPricingPlanCard({
         </h3>
       )}
       <p className={`mt-1 text-sm ${marketingMutedText}`}>{plan.description}</p>
-      <p className="mt-4 text-3xl font-bold tracking-tight text-[var(--workspace-shell-text)]">
+      <p
+        className={cn(
+          marketingFigure,
+          'mt-4 text-[2.5rem] leading-none text-[var(--workspace-shell-text)]',
+        )}
+      >
         {plan.priceGbp === 0 ? (
           'Free'
         ) : unit === 'then_band' ? (
@@ -728,26 +469,14 @@ function SegmentPricingPlanCard({
           {plan.priceCaption}
         </p>
       ) : null}
-      <ul className={cn('mt-4 space-y-2', compact && 'mt-3')}>
-        {plan.features.map((feature) => (
-          <li key={feature} className="flex gap-2 text-sm">
-            <Check
-              className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]"
-              aria-hidden
-            />
-            <span className={marketingBodyText}>{feature}</span>
-          </li>
-        ))}
-      </ul>
+      <RuledList items={plan.features} className={compact ? 'mt-3' : 'mt-5'} />
       {!hideCta ? (
         <div className="mt-auto pt-6">
           <Button
             asChild
             className={cn(
-              'w-full rounded-full',
-              plan.highlighted
-                ? 'bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-accent-hover)] hover:text-[var(--ozer-white)]'
-                : cn(marketingBtnOutline, 'w-full'),
+              'w-full',
+              plan.highlighted ? marketingBtnPrimary : marketingBtnOutline,
             )}
             variant={plan.highlighted ? 'default' : 'outline'}
           >
@@ -825,36 +554,55 @@ function CommercialPricingGrid({
 
 const COMMERCIAL_AI_USES = [
   {
-    icon: PenLine,
     title: 'Marketing copy',
     description:
-      'First-pass disposal wording from the listing — headline, summary, and particulars.',
+      'First-pass disposal wording from the listing: headline, summary and particulars.',
   },
   {
-    icon: ClipboardList,
     title: 'Requirement drafts',
     description:
       'Turn an enquiry or pasted email into a structured brief, ready to review.',
   },
   {
-    icon: ArrowLeftRight,
     title: 'Match explanations',
     description:
       'Why a requirement fits a disposal, in plain English, on the interest schedule.',
   },
   {
-    icon: ListFilter,
     title: 'Interest triage',
     description:
-      'Suggested add, skip, or review on each pair so the desk works the shortlist first.',
+      'Suggested add, skip or review on each pair, so the desk works the shortlist first.',
   },
   {
-    icon: Mail,
     title: 'Outreach drafts',
     description:
-      'A first email to a matched party — edit and send, never auto-published.',
+      'A first email to a matched party. You edit and send it; nothing goes out on its own.',
   },
 ] as const;
+
+function RuledList({
+  items,
+  className,
+}: {
+  items: readonly string[];
+  className?: string;
+}) {
+  return (
+    <ul
+      className={cn(
+        marketingRule,
+        'border-b text-[0.9375rem] leading-snug text-[var(--workspace-shell-text)]',
+        className,
+      )}
+    >
+      {items.map((item) => (
+        <li key={item} className={cn(marketingRule, 'border-t py-2.5')}>
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 async function CommercialSpotlightSections({
   config,
@@ -883,7 +631,7 @@ async function CommercialSpotlightSections({
           className="marketing-section-plum py-20"
           aria-labelledby="integrations-heading"
         >
-          <div className="relative mx-auto grid w-full max-w-7xl items-center gap-10 px-6 lg:grid-cols-2 lg:gap-14">
+          <div className="relative mx-auto grid w-full max-w-[88rem] items-center gap-10 px-6 lg:grid-cols-2 lg:gap-16">
             <div>
               <h2
                 id="integrations-heading"
@@ -894,10 +642,12 @@ async function CommercialSpotlightSections({
               >
                 Portals & website sync
               </h2>
-              <p className={`mt-4 ${marketingSectionDarkMuted}`}>
-                Publish from Commercial Solo — Rightmove, EACH, and Property
-                Hive WordPress included. Stock goes out from the same disposal
-                record the desk already maintains.
+              <p
+                className={cn(marketingLede, 'mt-4', marketingSectionDarkMuted)}
+              >
+                Publish from Commercial Solo upwards. Rightmove, EACH and the
+                Property Hive WordPress plugin are included, and stock goes out
+                from the same disposal record the desk already keeps.
               </p>
             </div>
             <ul className="flex flex-col items-start justify-center gap-8 sm:gap-10 lg:items-end">
@@ -929,51 +679,41 @@ async function CommercialSpotlightSections({
         className={cn('border-y py-20', marketingSectionMuted)}
         aria-labelledby="pipeline-heading"
       >
-        <div className="mx-auto grid w-full max-w-7xl items-center gap-10 px-6 lg:grid-cols-2">
+        <div className="mx-auto grid w-full max-w-[88rem] items-center gap-10 px-6 lg:grid-cols-2 lg:gap-16">
           <div>
-            <span className={marketingEyebrow}>Pipeline</span>
+            <MarketingSectionIndex label="Pipeline" />
             <h2
               id="pipeline-heading"
               className={cn(
                 marketingSectionHeading,
-                'mt-4 text-[var(--workspace-shell-text)]',
+                'mt-8 text-[var(--workspace-shell-text)]',
               )}
             >
               One board for instructions and requirements
             </h2>
-            <p className={`mt-4 ${marketingBodyText}`}>
+            <p className={cn(marketingLede, 'mt-4', marketingBodyText)}>
               Drag stages, attach tasks and notes, and keep fee-earners aligned
               without a separate spreadsheet. Requirements sit alongside
               instructions so the desk sees demand and supply together.
             </p>
-            <ul className="mt-6 space-y-2">
-              {[
+            <RuledList
+              className="mt-6"
+              items={[
                 'Instruction and requirement cards on the same pipeline',
                 'Stage history and activity for every move',
                 'Interest matching between stock and briefs',
-              ].map((item) => (
-                <li key={item} className="flex gap-2 text-sm">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
-                  <span className={marketingBodyText}>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div
-            className={cn(
-              'relative mx-auto aspect-square w-full max-w-md overflow-hidden rounded-3xl border border-[color:var(--workspace-shell-border)] lg:mx-0 lg:max-w-none',
-              marketingFeatureCard,
-            )}
-          >
-            <Image
-              src="/brand/marketing/commercial-pipeline-wip.png"
-              alt="Commercial WIP board with Potential, Current, and Under Offer columns"
-              fill
-              unoptimized
-              className="object-cover object-left-top"
-              sizes="(max-width: 1024px) 90vw, 32rem"
+              ]}
             />
           </div>
+          <MarketingScreen
+            screen={{
+              src: '/brand/marketing/commercial-pipeline-board.png',
+              alt: 'Commercial WIP board with potential and current instruction columns',
+              width: 1140,
+              height: 1018,
+            }}
+            sizes="(min-width: 1024px) 45vw, 100vw"
+          />
         </div>
       </section>
 
@@ -982,51 +722,40 @@ async function CommercialSpotlightSections({
         className="py-20"
         aria-labelledby="insights-heading"
       >
-        <div className="mx-auto grid w-full max-w-7xl items-center gap-10 px-6 lg:grid-cols-2 lg:gap-14">
-          <div
-            className={cn(
-              'relative order-2 overflow-hidden rounded-3xl border border-[color:var(--workspace-shell-border)] lg:order-1',
-              marketingFeatureCard,
-            )}
-          >
-            <Image
-              src="/brand/marketing/commercial-agency-insights.png"
-              alt="Agency Insights — disposals metrics, size bands, and status breakdown for the last quarter"
-              width={1024}
-              height={529}
-              unoptimized
-              className="h-auto w-full object-contain object-top"
-              sizes="(max-width: 1024px) 90vw, 36rem"
-            />
-          </div>
+        <div className="mx-auto grid w-full max-w-[88rem] items-center gap-10 px-6 lg:grid-cols-2 lg:gap-16">
+          <MarketingScreen
+            screen={{
+              src: '/brand/marketing/commercial-agency-insights.png',
+              alt: 'Agency Insights showing disposals metrics, size bands and status breakdown for the last quarter',
+              width: 1024,
+              height: 529,
+            }}
+            sizes="(min-width: 1024px) 45vw, 100vw"
+            className="order-2 lg:order-1"
+          />
           <div className="order-1 lg:order-2">
-            <span className={marketingEyebrow}>Insights</span>
+            <MarketingSectionIndex label="Insights" />
             <h2
               id="insights-heading"
               className={cn(
                 marketingSectionHeading,
-                'mt-4 text-[var(--workspace-shell-text)]',
+                'mt-8 text-[var(--workspace-shell-text)]',
               )}
             >
               Agency insights, period by period
             </h2>
-            <p className={`mt-4 ${marketingBodyText}`}>
-              See how the desk performed — new instructions, size on market,
-              average days to let or sell, and status mix — with comparison to
-              the previous period.
+            <p className={cn(marketingLede, 'mt-4', marketingBodyText)}>
+              New instructions, size on the market, average days to let or sell
+              and status mix, compared with the previous period.
             </p>
-            <ul className="mt-6 space-y-2">
-              {[
-                'Disposals, viewings, requirements, and inbound in one place',
+            <RuledList
+              className="mt-6"
+              items={[
+                'Disposals, viewings, requirements and inbound on one screen',
                 'Lettings and sales overviews with period comparison',
                 'Size bands and status breakdowns for board updates',
-              ].map((item) => (
-                <li key={item} className="flex gap-2 text-sm">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
-                  <span className={marketingBodyText}>{item}</span>
-                </li>
-              ))}
-            </ul>
+              ]}
+            />
           </div>
         </div>
       </section>
@@ -1036,47 +765,50 @@ async function CommercialSpotlightSections({
         className="marketing-section-plum py-20"
         aria-labelledby="ai-writing-heading"
       >
-        <div className="relative mx-auto w-full max-w-7xl px-6">
-          <div className="max-w-3xl">
-            <span className={marketingEyebrowOnDark}>
-              <Sparkles className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-              AI
-            </span>
+        <div className="relative mx-auto w-full max-w-[88rem] px-6">
+          <MarketingSectionIndex label="AI" tone="dark" />
+          <div className="mt-8 max-w-3xl">
             <h2
               id="ai-writing-heading"
               className={cn(
                 marketingSectionHeading,
-                'mt-4 text-[var(--ozer-text-on-dark)]',
+                'text-[var(--ozer-text-on-dark)]',
               )}
             >
               AI that speeds up the desk
             </h2>
-            <p className={`mt-4 ${marketingSectionDarkMuted}`}>
-              Use AI where commercial desks lose time — writing, matching, and
-              first-touch outreach. Every draft stays reviewable. Nothing
-              publishes or emails until you say so.
+            <p className={cn(marketingLede, 'mt-4', marketingSectionDarkMuted)}>
+              AI goes where commercial desks lose time: writing, matching and
+              first-touch outreach. Every draft stays reviewable, and nothing is
+              published or emailed until you say so.
             </p>
           </div>
-          <ul className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {COMMERCIAL_AI_USES.map((item) => (
-              <li key={item.title} className="min-w-0">
-                <article className="flex h-full flex-col gap-3 rounded-2xl border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-on-dark-alpha-08)] p-4">
-                  <item.icon
-                    className="h-5 w-5 shrink-0 text-[var(--ozer-accent)]"
-                    aria-hidden
-                  />
-                  <div>
-                    <p className="font-heading text-base font-semibold text-[var(--ozer-text-on-dark)]">
-                      {item.title}
-                    </p>
-                    <p className="mt-1 text-sm leading-relaxed text-[var(--ozer-text-on-dark-muted)]">
-                      {item.description}
-                    </p>
-                  </div>
-                </article>
+          <ol
+            className={cn(
+              marketingRuleOnDark,
+              'mt-12 grid border-t sm:grid-cols-2 lg:grid-cols-5',
+            )}
+          >
+            {COMMERCIAL_AI_USES.map((item, index) => (
+              <li
+                key={item.title}
+                className={cn(
+                  marketingRuleOnDark,
+                  'min-w-0 border-b py-6 lg:border-b-0 lg:border-l lg:px-5 lg:first:border-l-0 lg:first:pl-0',
+                )}
+              >
+                <span className="text-[0.8125rem] font-medium text-[var(--ozer-text-on-dark-muted)] tabular-nums">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <p className="font-heading mt-3 text-[1.25rem] leading-tight font-medium text-[var(--ozer-text-on-dark)]">
+                  {item.title}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-[var(--ozer-text-on-dark-muted)]">
+                  {item.description}
+                </p>
               </li>
             ))}
-          </ul>
+          </ol>
         </div>
       </section>
 
@@ -1085,7 +817,7 @@ async function CommercialSpotlightSections({
         className={cn('border-y py-20', marketingSectionMuted)}
         aria-labelledby="brochures-heading"
       >
-        <div className="mx-auto grid w-full max-w-7xl items-center gap-10 px-6 lg:grid-cols-2">
+        <div className="mx-auto grid w-full max-w-[88rem] items-center gap-10 px-6 lg:grid-cols-2 lg:gap-16">
           <div>
             <h2
               id="brochures-heading"
@@ -1096,30 +828,26 @@ async function CommercialSpotlightSections({
             >
               Online brochures & branded presentations
             </h2>
-            <p className={`mt-4 ${marketingBodyText}`}>
-              Share a branded slideshow for each disposal — photos, key facts,
-              floorplans, location, and an enquire form — instead of emailing
-              another static PDF. Agency colours and logo come through
+            <p className={cn(marketingLede, 'mt-4', marketingBodyText)}>
+              Share a branded slideshow for each disposal, with photos, key
+              facts, floorplans, location and an enquire form, instead of
+              emailing another static PDF. Agency colours and logo come through
               automatically.
             </p>
-            <ul className="mt-6 space-y-2">
-              {[
-                'Shareable brochure link for landlords and enquirees',
+            <RuledList
+              className="mt-6"
+              items={[
+                'Shareable brochure link for landlords and enquirers',
                 'Brand colours and logo on the deck',
                 'Enquire form wired back to the acting agents',
-              ].map((item) => (
-                <li key={item} className="flex gap-2 text-sm">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
-                  <span className={marketingBodyText}>{item}</span>
-                </li>
-              ))}
-            </ul>
+              ]}
+            />
             {brochureUrl ? (
-              <div className="mt-6">
-                <Button asChild className={marketingBtnGradient}>
+              <div className="mt-8">
+                <Button asChild className={marketingBtnPrimary}>
                   <Link href={brochureUrl} target="_blank" rel="noreferrer">
-                    View live version
-                    <ArrowRight className="ml-1.5 h-4 w-4" />
+                    View a live brochure
+                    <ArrowRight className="size-4" aria-hidden="true" />
                   </Link>
                 </Button>
               </div>
@@ -1128,12 +856,7 @@ async function CommercialSpotlightSections({
           {brochureUrl ? (
             <CommercialBrochurePreview data={brochureData} />
           ) : (
-            <div
-              className={cn(
-                'rounded-3xl border border-[color:var(--workspace-shell-border)] p-6',
-                marketingFeatureCard,
-              )}
-            >
+            <div className={cn('border p-6', marketingFeatureCard)}>
               <div className="flex items-center gap-2 text-sm font-medium text-[var(--workspace-shell-text)]">
                 <FileText className="h-4 w-4 text-[var(--ozer-accent)]" />
                 Brochure preview
@@ -1152,7 +875,7 @@ async function CommercialSpotlightSections({
           className="marketing-section-plum py-20"
           aria-labelledby="testimonials-heading"
         >
-          <div className="relative mx-auto w-full max-w-7xl px-6">
+          <div className="relative mx-auto w-full max-w-[88rem] px-6">
             <div className="mx-auto mb-10 max-w-2xl text-center">
               <h2
                 id="testimonials-heading"
@@ -1172,7 +895,7 @@ async function CommercialSpotlightSections({
               {testimonials.map((item) => (
                 <blockquote
                   key={`${item.name}-${item.firm}`}
-                  className="marketing-feature-card rounded-2xl border border-[color:var(--workspace-shell-border)] p-6"
+                  className="marketing-feature-card border border-[color:var(--workspace-shell-border)] p-6"
                 >
                   <p className={`text-sm leading-relaxed ${marketingBodyText}`}>
                     “{item.quote}”
@@ -1192,5 +915,142 @@ async function CommercialSpotlightSections({
         </section>
       ) : null}
     </>
+  );
+}
+
+function SegmentHero({
+  config,
+  tone,
+  primarySignup,
+  pricingLink,
+  includedFeatures,
+  showScreen,
+  showStats,
+  showFreeNotes,
+}: {
+  config: SegmentLandingConfig;
+  tone: 'light' | 'dark';
+  primarySignup: string;
+  pricingLink: string;
+  includedFeatures: SegmentLandingConfig['features'];
+  showScreen: boolean;
+  showStats: boolean;
+  showFreeNotes: boolean;
+}) {
+  const onDark = tone === 'dark';
+  const text = onDark
+    ? 'text-[var(--ozer-text-on-dark)]'
+    : 'text-[var(--workspace-shell-text)]';
+  const muted = onDark ? marketingSectionDarkMuted : marketingBodyText;
+  const rule = onDark ? marketingRuleOnDark : marketingRule;
+
+  return (
+    <section
+      className={cn(
+        onDark &&
+          'marketing-section-plum marketing-section-plum-hero border-b-0',
+      )}
+      aria-labelledby="segment-hero-heading"
+    >
+      <div className="mx-auto w-full max-w-[88rem] px-6 pt-10 pb-20 md:pt-14 md:pb-28">
+        <MarketingSectionIndex label={config.hero.eyebrow} tone={tone} />
+
+        <h1
+          id="segment-hero-heading"
+          className={cn(marketingDisplay, 'mt-10 max-w-[18ch] md:mt-14', text)}
+        >
+          {config.hero.title} {config.hero.titleAccent}.
+        </h1>
+
+        <div className="mt-10 grid gap-10 md:mt-12 lg:grid-cols-12">
+          <div className="lg:col-span-5">
+            <p className={cn(marketingLede, muted)}>{config.hero.subtitle}</p>
+            {showFreeNotes ? (
+              <p className={cn('mt-4 text-sm', muted)}>
+                Free, with no card and no time limit.
+              </p>
+            ) : null}
+            <div className="mt-8 flex flex-wrap items-center gap-6">
+              <Button asChild size="lg" className={marketingBtnPrimary}>
+                <Link href={primarySignup}>
+                  Start free
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </Link>
+              </Button>
+              <Link
+                href={pricingLink}
+                className={onDark ? marketingTextLinkOnDark : marketingTextLink}
+              >
+                See pricing
+              </Link>
+            </div>
+          </div>
+
+          {showScreen ? (
+            <MarketingScreen
+              screen={{ ...COMMERCIAL_HOME_HERO_SCREEN, annotations: [] }}
+              tone={tone}
+              priority
+              sizes="(min-width: 1024px) 58vw, 100vw"
+              className="lg:col-span-7 lg:mr-[calc(-1*(max(0px,(100vw_-_88rem)/2)_+_1.5rem))]"
+              frameClassName="lg:rounded-r-none lg:border-r-0"
+            />
+          ) : (
+            <div className="lg:col-span-6 lg:col-start-7">
+              <p className={cn('text-[0.8125rem] font-medium', muted)}>
+                Included
+              </p>
+              <ul className={cn('mt-3 border-b', rule)}>
+                {includedFeatures.map((feature) => (
+                  <li
+                    key={feature.title}
+                    className={cn(
+                      'grid gap-1 border-t py-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] sm:gap-6',
+                      rule,
+                    )}
+                  >
+                    <p className={cn('text-[0.9375rem] font-medium', text)}>
+                      {feature.title}
+                    </p>
+                    <p className={cn('text-sm leading-relaxed', muted)}>
+                      {feature.description}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {showStats && config.stats.length > 0 ? (
+          <dl
+            className={cn('mt-16 grid border-t sm:grid-cols-3 md:mt-20', rule)}
+          >
+            {config.stats.map((stat) => (
+              <div
+                key={stat.label}
+                className={cn(
+                  'border-b py-6 sm:border-b-0 sm:border-l sm:px-6 sm:first:border-l-0 sm:first:pl-0',
+                  rule,
+                )}
+              >
+                <dt className={cn('text-[0.8125rem] font-medium', muted)}>
+                  {stat.label}
+                </dt>
+                <dd
+                  className={cn(
+                    marketingFigure,
+                    'mt-2 text-[2.5rem] leading-none md:text-[3rem]',
+                    text,
+                  )}
+                >
+                  {stat.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ) : null}
+      </div>
+    </section>
   );
 }

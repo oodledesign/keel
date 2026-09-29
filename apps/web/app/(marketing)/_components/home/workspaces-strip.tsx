@@ -1,18 +1,15 @@
 import Link from 'next/link';
 
-import { ArrowRight } from 'lucide-react';
-
 import { cn } from '@kit/ui/utils';
 
 import {
   COMMERCIAL_HOME_WORKSPACES,
+  COMMERCIAL_HOME_WORKSPACES_HEADING,
   type CommercialWorkspaceStripItem,
 } from '~/lib/marketing/commercial-home-content';
-import {
-  marketingFeatureCard,
-  marketingMutedText,
-  marketingSectionHeading,
-} from '~/lib/marketing/marketing-ui';
+import { marketingRule } from '~/lib/marketing/marketing-ui';
+
+import { MarketingSectionHeader } from '../marketing-section-index';
 
 const STATUS_LABEL: Record<CommercialWorkspaceStripItem['status'], string> = {
   live: 'Live',
@@ -20,92 +17,69 @@ const STATUS_LABEL: Record<CommercialWorkspaceStripItem['status'], string> = {
   soon: 'Coming soon',
 };
 
-const STATUS_CLASS: Record<CommercialWorkspaceStripItem['status'], string> = {
-  live: 'bg-[var(--ozer-sage-100)] text-[var(--ozer-plum-700)]',
-  free: 'bg-[var(--ozer-sky-100)] text-[var(--ozer-cool-blue)]',
-  soon: 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
-};
+const ROW_GRID =
+  'grid items-baseline gap-x-8 gap-y-1 py-6 sm:grid-cols-[minmax(0,5fr)_minmax(0,6fr)_7rem] md:py-7';
 
-function WorkspaceCard({ item }: { item: CommercialWorkspaceStripItem }) {
+function WorkspaceRow({ item }: { item: CommercialWorkspaceStripItem }) {
   return (
     <>
-      <span className="flex items-center justify-between gap-3">
-        <span className="font-semibold text-[var(--workspace-shell-text)]">
-          {item.label}
-        </span>
-        <span
-          className={cn(
-            'rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-[0.03em] uppercase',
-            STATUS_CLASS[item.status],
-          )}
-        >
-          {STATUS_LABEL[item.status]}
-        </span>
+      <span className="font-heading text-[1.625rem] leading-tight font-medium tracking-[-0.015em] text-[var(--workspace-shell-text)] md:text-[2rem]">
+        {item.label}
       </span>
-      <span
-        className={cn('mt-2 block text-sm leading-relaxed', marketingMutedText)}
-      >
+      <span className="text-[0.9375rem] leading-relaxed text-[var(--workspace-shell-text-muted)]">
         {item.description}
       </span>
-      {item.href ? (
-        <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[var(--ozer-accent)]">
-          Explore
-          <ArrowRight className="size-3.5" aria-hidden />
-        </span>
-      ) : null}
+      <span className="text-[0.8125rem] font-medium text-[var(--workspace-shell-text-muted)] sm:text-right">
+        {STATUS_LABEL[item.status]}
+        {item.href ? (
+          <span
+            className="ml-2 inline-block text-[var(--workspace-shell-text)] transition-transform duration-200 group-hover:translate-x-1"
+            aria-hidden="true"
+          >
+            →
+          </span>
+        ) : null}
+      </span>
     </>
   );
 }
 
 export function WorkspacesStrip() {
+  const heading = COMMERCIAL_HOME_WORKSPACES_HEADING;
+
   return (
     <section
-      className="mx-auto w-full max-w-7xl px-6 py-16 md:py-20"
+      className="mx-auto w-full max-w-[88rem] px-6 py-20 md:py-28"
       aria-labelledby="workspaces-strip-heading"
     >
-      <div className="mb-8 max-w-2xl">
-        <h2
-          id="workspaces-strip-heading"
-          className={cn(
-            marketingSectionHeading,
-            'text-[var(--workspace-shell-text)]',
-          )}
-        >
-          Not a commercial agent?
-        </h2>
-        <p className={cn('mt-3 text-base leading-relaxed', marketingMutedText)}>
-          Ozer runs other kinds of work too — one login, with tasks and the
-          planner connected across every workspace.
-        </p>
-      </div>
+      <MarketingSectionHeader
+        index="05"
+        label={heading.label}
+        title={heading.title}
+        intro={heading.intro}
+        headingId="workspaces-strip-heading"
+      />
 
-      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {COMMERCIAL_HOME_WORKSPACES.map((item) => {
-          const cardClass = cn(
-            'flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] p-5',
-            marketingFeatureCard,
-          );
-
-          return (
-            <li key={item.label}>
-              {item.href ? (
-                <Link
-                  href={item.href}
-                  className={cn(
-                    cardClass,
-                    'transition-colors hover:border-[color:var(--ozer-accent)]/40',
-                  )}
-                >
-                  <WorkspaceCard item={item} />
-                </Link>
-              ) : (
-                <div className={cn(cardClass, 'opacity-80')}>
-                  <WorkspaceCard item={item} />
-                </div>
-              )}
-            </li>
-          );
-        })}
+      <ul className={cn(marketingRule, 'mt-12 border-b md:mt-16')}>
+        {COMMERCIAL_HOME_WORKSPACES.map((item) => (
+          <li key={item.label} className={cn(marketingRule, 'border-t')}>
+            {item.href ? (
+              <Link
+                href={item.href}
+                className={cn(
+                  ROW_GRID,
+                  'group transition-colors duration-200 hover:bg-[var(--ozer-plum-alpha-08)] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:outline-none dark:hover:bg-[var(--ozer-on-dark-alpha-06)]',
+                )}
+              >
+                <WorkspaceRow item={item} />
+              </Link>
+            ) : (
+              <div className={cn(ROW_GRID, 'opacity-70')}>
+                <WorkspaceRow item={item} />
+              </div>
+            )}
+          </li>
+        ))}
       </ul>
     </section>
   );

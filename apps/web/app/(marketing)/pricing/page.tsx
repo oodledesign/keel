@@ -1,10 +1,10 @@
 import Link from 'next/link';
 
-import type { LucideIcon } from 'lucide-react';
-import { Activity, LayoutDashboard, ListTodo, Mail, Mic } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
+import { MarketingSectionIndex } from '~/(marketing)/_components/marketing-section-index';
 import { PricingConversion } from '~/(marketing)/pricing/_components/pricing-conversion';
 import {
   formatGbp,
@@ -14,8 +14,10 @@ import { estimateMonthlyGbp } from '~/lib/billing/business-graduated-pricing';
 import { MARKETING_FREE_TIER } from '~/lib/billing/pricing-marketing';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import {
-  marketingFeatureCard,
+  marketingRule,
+  marketingSectionHeading,
   marketingShellClass,
+  marketingTextLink,
 } from '~/lib/marketing/marketing-ui';
 import {
   pricingFaqs,
@@ -31,24 +33,12 @@ import {
   softwareApplicationJsonLd,
 } from '~/lib/seo/schema';
 
-const STACK_EXTRAS: Array<{
-  label: string;
-  href: string;
-  icon: LucideIcon;
-}> = [
-  {
-    label: 'Email Assistant (Pro)',
-    href: '/features/email-assistant',
-    icon: Mail,
-  },
-  {
-    label: 'Meeting recording',
-    href: '/features/desktop-assistant',
-    icon: Mic,
-  },
-  { label: 'Activity tracking', href: '/features/activity', icon: Activity },
-  { label: 'Planner (Pro)', href: '/features/planner', icon: LayoutDashboard },
-  { label: 'Tasks & pipeline', href: '/features/pipeline', icon: ListTodo },
+const STACK_EXTRAS: Array<{ label: string; href: string }> = [
+  { label: 'Email Assistant (Pro)', href: '/features/email-assistant' },
+  { label: 'Meeting recording', href: '/features/desktop-assistant' },
+  { label: 'Activity tracking', href: '/features/activity' },
+  { label: 'Planner (Pro)', href: '/features/planner' },
+  { label: 'Tasks & pipeline', href: '/features/pipeline' },
 ];
 
 function stackSavingPercent(
@@ -60,7 +50,7 @@ function stackSavingPercent(
 }
 
 export const metadata = buildMarketingMetadata({
-  title: 'Pricing — graduated Business seats — Ozer',
+  title: 'Pricing: graduated Business seats | Ozer',
   description:
     'Ozer pricing: personal and family free; Free (Business Lite) £0; Starter from £14; Pro from £29 with cheaper extra seats. No subscription transaction fees.',
   path: '/pricing',
@@ -94,7 +84,7 @@ async function PricingPage() {
     softwareApplicationJsonLd({
       name: 'Ozer',
       description:
-        'Workspace OS pricing in GBP — Free, Starter from £14, and Pro from £29 with cheaper extra seats.',
+        'Workspace OS pricing in GBP: Free, Starter from £14, and Pro from £29 with cheaper extra seats.',
       url: absoluteUrl('/pricing'),
       offers,
     }),
@@ -114,65 +104,67 @@ async function PricingPage() {
     <div className={cn('relative overflow-hidden', marketingShellClass)}>
       <JsonLd data={schema} />
       <div className="relative flex flex-col">
-        <div className="container mx-auto px-4 pt-8 pb-8 xl:pb-16">
+        <div className="mx-auto w-full max-w-[88rem] px-6 pt-24 pb-24 md:pt-32">
           <PricingConversion />
 
-          {/* Stage 4 — calculator bridge (full tool on its own route) */}
-          <section
-            className={cn(
-              'mt-16 rounded-2xl border border-[color:var(--workspace-shell-border)] p-6 md:p-8',
-              marketingFeatureCard,
-            )}
-            aria-labelledby="calculator-heading"
-          >
-            <h2
-              id="calculator-heading"
-              className="font-heading text-2xl font-semibold text-[var(--workspace-shell-text)]"
-            >
-              What does this mean for your studio?
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
-              A typical UK tool stack in our strip totals about{' '}
-              {formatGbp(stackYear)} per year. Ozer Business for four seats is
-              about {formatGbp(fourSeatYear)} per year (
-              {formatGbp(fourSeatMonthly)}/mo on graduated pricing)
-              {savingPct != null ? (
-                <>
-                  {' '}
-                  (
-                  <span className="font-semibold text-[var(--ozer-coral-600)]">
-                    about {savingPct}% less
-                  </span>
-                  )
-                </>
-              ) : null}
-              . And that is not just the apps in the strip — you also get
-              personal assistants and tracking that usually sit in separate
-              tools.
-            </p>
+          <section className="mt-24" aria-labelledby="calculator-heading">
+            <MarketingSectionIndex label="In practice" />
+            <div className="mt-8 grid gap-8 lg:grid-cols-12 lg:gap-10">
+              <h2
+                id="calculator-heading"
+                className={cn(
+                  marketingSectionHeading,
+                  'text-[var(--workspace-shell-text)] lg:col-span-5',
+                )}
+              >
+                What does this mean for your studio?
+              </h2>
+              <div className="lg:col-span-6 lg:col-start-7">
+                <p className="text-[1.0625rem] leading-relaxed text-[var(--workspace-shell-text-muted)]">
+                  A typical UK tool stack in our strip totals about{' '}
+                  {formatGbp(stackYear)} per year. Ozer Business for four seats
+                  is about {formatGbp(fourSeatYear)} per year (
+                  {formatGbp(fourSeatMonthly)}/mo on graduated pricing)
+                  {savingPct != null ? (
+                    <>
+                      , about{' '}
+                      <span className="font-medium text-[var(--workspace-shell-text)]">
+                        {savingPct}% less
+                      </span>
+                    </>
+                  ) : null}
+                  . On top of the apps in that strip, you also get personal
+                  assistants and tracking that usually sit in separate tools.
+                </p>
 
-            <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {STACK_EXTRAS.map(({ label, href, icon: Icon }) => (
-                <li key={label}>
-                  <Link
-                    href={href}
-                    className="flex items-center gap-2.5 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)]/60 px-3 py-2.5 text-sm font-medium text-[var(--workspace-shell-text)] transition-colors hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]"
-                  >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--ozer-accent-subtle)] text-[var(--ozer-coral-600)]">
-                      <Icon className="h-4 w-4" aria-hidden />
-                    </span>
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                <ul className={cn(marketingRule, 'mt-8 border-b')}>
+                  {STACK_EXTRAS.map(({ label, href }) => (
+                    <li key={label} className={cn(marketingRule, 'border-t')}>
+                      <Link
+                        href={href}
+                        className="group flex items-center justify-between py-3 text-sm font-medium text-[var(--workspace-shell-text)]"
+                      >
+                        {label}
+                        <ArrowRight
+                          className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                          aria-hidden
+                        />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
 
-            <Link
-              href="/tools/stack-cost-calculator"
-              className="mt-5 inline-flex text-sm font-medium text-[var(--ozer-coral-600)] underline underline-offset-2"
-            >
-              Open the stack cost calculator
-            </Link>
+                <Link
+                  href="/tools/stack-cost-calculator"
+                  className={cn(
+                    marketingTextLink,
+                    'mt-6 text-[var(--workspace-shell-text)]',
+                  )}
+                >
+                  Open the stack cost calculator
+                </Link>
+              </div>
+            </div>
           </section>
         </div>
       </div>

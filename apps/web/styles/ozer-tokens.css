@@ -62,10 +62,15 @@
     --ozer-on-dark-alpha-80: rgba(251, 246, 236, 0.8);
 
     /* ── Typography ── */
-    --ozer-font-body: 'General Sans', var(--font-sans-fallback, ui-sans-serif), system-ui,
+    --ozer-font-body:
+      'General Sans', var(--font-sans-fallback, ui-sans-serif), system-ui,
       sans-serif;
-    --ozer-font-display: 'Cabinet Grotesk', var(--font-heading-fallback, ui-sans-serif),
-      system-ui, sans-serif;
+    --ozer-font-display:
+      'Cabinet Grotesk', var(--font-heading-fallback, ui-sans-serif), system-ui,
+      sans-serif;
+    /* Marketing site only (scoped via .marketing-grain in marketing.css) */
+    --ozer-font-editorial:
+      'Gambetta', ui-serif, Georgia, 'Times New Roman', serif;
 
     --ozer-font-weight-body: 400;
     --ozer-font-weight-nav: 500;
@@ -76,6 +81,8 @@
     --ozer-radius-md: 0.5rem;
     --ozer-radius-lg: 0.75rem;
     --ozer-radius-xl: 1rem;
+    --ozer-radius-control: 6px;
+    --ozer-radius-media: 10px;
 
     /* ── Semantic brand ── */
     --ozer-accent: var(--ozer-coral-500);

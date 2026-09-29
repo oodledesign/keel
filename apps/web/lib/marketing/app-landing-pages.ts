@@ -68,7 +68,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     productId: 'ozer-addon-signatures',
     planId: 'signatures-starter-monthly',
     seo: {
-      title: 'Team email signatures — Ozer',
+      title: 'Team email signatures | Ozer',
       description:
         'Deploy on-brand signatures to Microsoft 365 and Google Workspace with flat tiers from £9 per month. Priced by workspace, never per person.',
       keywords: [
@@ -80,11 +80,11 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
       ],
     },
     hero: {
-      eyebrow: 'Ozer app — Signatures',
+      eyebrow: 'Ozer app: Signatures',
       title: 'Every mailbox on brand.',
       titleAccent: 'No per-seat tax',
       subtitle:
-        'Design one signature template, connect Microsoft 365 or Google Workspace, and roll it out to the whole team in minutes. Update the banner once — every mailbox follows. Flat tiers from £9/month — priced by workspace, never per person.',
+        'Design one signature template, connect Microsoft 365 or Google Workspace, and roll it out to the whole team in minutes. Update the banner once and every mailbox follows. Flat tiers from £9/month, priced by workspace, never per person.',
       priceBadge: 'Flat tiers from £9/mo',
       primaryCtaLabel: 'Start free with Business Lite',
       secondaryCta: {
@@ -151,7 +151,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
         icon: PenLine,
         title: 'Template designer',
         description:
-          'Build reusable signature layouts with your logo, colours, and legal disclaimers — update once, roll out everywhere.',
+          'Build reusable signature layouts with your logo, colours and legal disclaimers. Update once and roll out to every mailbox.',
       },
       {
         icon: Globe,
@@ -163,24 +163,24 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
         icon: Share2,
         title: 'Per-staff personalisation',
         description:
-          'Each person gets the right name, title, phone, and booking link while staying on brand.',
+          'Each person gets the right name, title, phone and booking link while staying on brand.',
       },
     ],
     steps: [
       {
         title: 'Create a free Business Lite workspace',
         description:
-          'Ozer apps attach to a business workspace. Business Lite is free — no card required to start free.',
+          'Ozer apps attach to a business workspace. Business Lite is free, and no card is required to start.',
       },
       {
         title: 'Subscribe to Signatures',
         description:
-          'Choose Starter, Team, or Office from billing. Each tier is flat for the workspace.',
+          'Choose Starter, Team or Office from billing. Each tier is flat for the workspace.',
       },
       {
         title: 'Connect & deploy',
         description:
-          'Link Microsoft 365 or Google Workspace, assign templates, and publish signatures to your team.',
+          'Link Microsoft 365 or Google Workspace, assign templates and publish signatures to your team.',
       },
     ],
     faqs: [
@@ -197,12 +197,12 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
       {
         question: 'How does this compare to Exclaimer or CodeTwo?',
         answer:
-          'Same job — centrally managed signatures deployed to Microsoft 365 or Google Workspace — without per-mailbox pricing. Choose a flat workspace tier by mailbox band, then deploy unlimited signatures inside that tier.',
+          'It does the same job: centrally managed signatures deployed to Microsoft 365 or Google Workspace, without per-mailbox pricing. Choose a flat workspace tier by mailbox band, then deploy unlimited signatures inside that tier.',
       },
       {
         question: 'What happens if we grow past our mailbox band?',
         answer:
-          "You'll get a prompt to move up a tier — nothing breaks, signatures keep deploying, and the new price applies from your next billing cycle.",
+          "You'll get a prompt to move up a tier. Nothing breaks, signatures keep deploying and the new price applies from your next billing cycle.",
       },
       {
         question: 'What counts as a mailbox?',
@@ -212,7 +212,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
       {
         question: 'Can you set it up for us?',
         answer:
-          "Yes — book a setup call and we'll connect your directory, build your first template, and deploy it with you.",
+          "Yes. Book a setup call and we'll connect your directory, build your first template and deploy it with you.",
       },
       {
         question: 'Can I use Signatures on multiple brands?',

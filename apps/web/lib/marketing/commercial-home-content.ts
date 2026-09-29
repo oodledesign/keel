@@ -1,9 +1,10 @@
 import type { FeatureTourBlock } from '~/lib/marketing/feature-tour-content';
+import type { MarketingScreenData } from '~/lib/marketing/marketing-screen';
 
 export const COMMERCIAL_HOME_SEO = {
-  title: 'The workspace for commercial property agents — Ozer',
+  title: 'The workspace for commercial property agents | Ozer',
   description:
-    'Disposals, requirements, matching, circulation, pipeline and WIP on one desk — with Rightmove Commercial, EACH and Property Hive publishing included from seat 1. Join the waiting list.',
+    'Disposals, requirements, matching, circulation and WIP for UK commercial agents, with Rightmove Commercial, EACH and Property Hive publishing included from the first seat. Join the waiting list.',
   keywords: [
     'commercial property CRM',
     'commercial property agent software UK',
@@ -19,16 +20,34 @@ export const COMMERCIAL_HOME_SEO = {
 
 export const COMMERCIAL_HOME_HERO = {
   eyebrow: 'For UK commercial property agents',
-  title: 'The workspace for',
-  titleAccent: 'commercial property agents',
+  status: 'Waiting list open',
+  title: 'The workspace for commercial property agents.',
   subtitle:
-    'Disposals, requirements, matching, circulation and your WIP on one desk. Publish to Rightmove Commercial, EACH and Property Hive in one click — included from seat 1.',
+    'Disposals, requirements, circulation and WIP on the same desk. Type an instruction in once and it goes to Rightmove Commercial, EACH and Property Hive, included from the first seat.',
   formLabel: 'Work email',
   formPlaceholder: 'you@youragency.co.uk',
   submitLabel: 'Join the waiting list',
-  reassurance: 'We onboard agencies one desk at a time. No spam, no sequence.',
+  reassurance:
+    'We bring agencies on a few desks at a time and reply personally.',
   signedInLabel: 'Open your workspace',
+  portalsLabel: 'Publishes to',
 } as const;
+
+export const COMMERCIAL_HOME_HERO_SCREEN: MarketingScreenData = {
+  src: '/brand/marketing/commercial-agency-desk.jpg',
+  alt: 'Ozer agency home showing unactioned enquiries, viewings awaiting feedback, stock on the market and recent disposals in Frant, Tunbridge Wells and Tonbridge',
+  width: 2400,
+  height: 1228,
+  annotations: [
+    { x: 4.5, y: 20, label: 'Portal enquiries queue up for triage' },
+    {
+      x: 42.5,
+      y: 20,
+      label: 'Live stock goes to Rightmove Commercial, EACH and your site',
+    },
+    { x: 47, y: 76, label: 'Under offer, let and sold follow to every portal' },
+  ],
+};
 
 export const COMMERCIAL_HOME_PUBLISH_PORTALS = [
   {
@@ -44,30 +63,39 @@ export type CommercialPainFix = {
   fix: string;
 };
 
+export const COMMERCIAL_HOME_PAIN_FIX_HEADING = {
+  label: 'The desk',
+  title: 'Built around disposals, applicants and fees.',
+  intro:
+    'Ozer was designed around commercial agency from day one: instructions, requirements, the interest schedule and the fee pipeline.',
+  beforeLabel: 'Before',
+  afterLabel: 'With Ozer',
+} as const;
+
 export const COMMERCIAL_HOME_PAIN_FIX: CommercialPainFix[] = [
   {
-    pain: 'Re-keying the same disposal into every portal and the agency site.',
-    fix: 'Publish once to Rightmove Commercial, EACH and Property Hive — status changes follow automatically.',
+    pain: 'Re-keying the same disposal into every portal and the agency website.',
+    fix: 'Publish once to Rightmove Commercial, EACH and Property Hive. Under offer, let and sold follow automatically.',
   },
   {
-    pain: 'Requirements living in inboxes, notebooks and one negotiator’s head.',
+    pain: 'Requirements kept in inboxes, notebooks and one negotiator’s head.',
     fix: 'Every requirement on the desk, scored against stock by size, location, tenure and sector.',
   },
   {
     pain: 'Mail-merging new instructions to applicants by hand.',
-    fix: 'Put a disposal live and matching applicants get it in their digest — no spreadsheet export.',
+    fix: 'Put a disposal live and the applicants it fits get it in their next digest.',
   },
   {
     pain: 'A WIP spreadsheet nobody trusts by month end.',
-    fix: 'Instructions, under offers and completions on one pipeline, with fees rolling up as deals move.',
+    fix: 'Instructions, under offers and completions on one board, with fees totalled by stage.',
   },
 ];
 
 export const COMMERCIAL_TOUR_HEADING = {
-  eyebrow: 'A closer look',
-  title: 'What a day on the desk feels like.',
+  eyebrow: 'On the desk',
+  title: 'Six jobs you stop doing by hand.',
   intro:
-    'Scroll through the commercial workspace — portals, requirements, circulation, pipeline, brochures and AI that knows your stock.',
+    'Portals, requirements, circulation, WIP, brochures and AI drafting, one at a time.',
 } as const;
 
 export const COMMERCIAL_FEATURE_TOUR_BLOCKS: FeatureTourBlock[] = [
@@ -78,7 +106,7 @@ export const COMMERCIAL_FEATURE_TOUR_BLOCKS: FeatureTourBlock[] = [
     eyebrow: 'Portal publishing',
     title: 'Publish a disposal everywhere, once.',
     moment:
-      'A new instruction lands on Monday. By lunch it is live on Rightmove Commercial, EACH and your own website — and you only typed it in once.',
+      'A new instruction lands on Monday. By lunch it is live on Rightmove Commercial, EACH and your own website, and you typed it in once.',
     desc: 'Rightmove Commercial via the Listings API, a dedicated EACH XML feed and a Property Hive import for the agency site. Included from seat 1, not a bolt-on.',
     highlights: [
       'Rightmove Commercial, EACH and Property Hive included',
@@ -96,7 +124,7 @@ export const COMMERCIAL_FEATURE_TOUR_BLOCKS: FeatureTourBlock[] = [
     title: 'Every applicant’s brief, matched against your stock.',
     moment:
       'A retailer emails asking for 2,000 sq ft in the town centre. Before you have finished reading, the desk has three disposals that fit.',
-    desc: 'Requirements sit next to disposals, scored by size, location, tenure and sector. Add a match to the interest schedule in one click.',
+    desc: 'Requirements sit next to disposals, scored by size, location, tenure and sector. Add a match to the interest schedule straight from the list.',
     highlights: [
       'Fit score for every disposal and requirement pair',
       'Interest schedule with activity and status',
@@ -116,8 +144,8 @@ export const COMMERCIAL_FEATURE_TOUR_BLOCKS: FeatureTourBlock[] = [
     desc: 'Going live triggers a match digest to the applicants it fits. Unsubscribes and delivery are handled for you.',
     highlights: [
       'Matched digests sent when stock goes live',
-      'Only applicants whose brief actually fits',
-      'One-click unsubscribe on every email',
+      'Only applicants whose brief fits',
+      'Unsubscribe link on every email',
       'No exporting lists into another tool',
     ],
     mock: 'circulation',
@@ -138,6 +166,17 @@ export const COMMERCIAL_FEATURE_TOUR_BLOCKS: FeatureTourBlock[] = [
       'Fallen-through deals stay visible, not deleted',
     ],
     mock: 'disposals-pipeline',
+    screen: {
+      src: '/brand/marketing/commercial-pipeline-board.png',
+      alt: 'Ozer WIP board with potential and current instructions, each showing client, address and asking rent or price',
+      width: 1140,
+      height: 1018,
+      annotations: [
+        { x: 37, y: 6, label: 'Instructions grouped by stage' },
+        { x: 28, y: 30, label: 'Asking rent or price on every card' },
+        { x: 91, y: 15, label: 'Edit a deal without leaving the board' },
+      ],
+    },
   },
   {
     id: 'commercial-brochures',
@@ -146,13 +185,13 @@ export const COMMERCIAL_FEATURE_TOUR_BLOCKS: FeatureTourBlock[] = [
     eyebrow: 'Online brochures',
     title: 'Send a brochure that looks like your agency, not a PDF dump.',
     moment:
-      'An applicant asks for particulars. You send a link — photos, key facts, floorplans and an enquire button, in your colours.',
+      'An applicant asks for particulars. You send a link with photos, key facts, floorplans and an enquire button, in your colours.',
     desc: 'Every disposal gets a branded online brochure. Enquiries route straight back to the acting agents.',
     highlights: [
       'Photos, key facts, floorplans and location',
       'Agency logo and colours applied automatically',
       'Enquire form routed to the acting agents',
-      'Always the latest version — no stale attachments',
+      'Always the latest version, never a stale attachment',
     ],
     mock: 'brochure',
   },
@@ -163,7 +202,7 @@ export const COMMERCIAL_FEATURE_TOUR_BLOCKS: FeatureTourBlock[] = [
     eyebrow: 'AI on the desk',
     title: 'Ask your desk a question. Get a LinkedIn post back.',
     moment:
-      '“Write a LinkedIn post about last month’s lettings.” Thirty seconds later there is a draft built from what you actually did.',
+      '“Write a LinkedIn post about last month’s lettings.” Thirty seconds later there is a draft built from the units you let.',
     desc: 'Marketing copy, requirement drafts, match explanations and activity round-ups, grounded in your own disposals. Every draft is yours to edit before anything goes out.',
     highlights: [
       'LinkedIn and blog drafts from real desk activity',
@@ -176,7 +215,6 @@ export const COMMERCIAL_FEATURE_TOUR_BLOCKS: FeatureTourBlock[] = [
 ];
 
 export type CommercialTrustItem = {
-  icon: string;
   title: string;
   description: string;
   href?: string;
@@ -184,33 +222,35 @@ export type CommercialTrustItem = {
 
 export const COMMERCIAL_HOME_TRUST: CommercialTrustItem[] = [
   {
-    icon: 'ShieldCheck',
     title: 'EU-hosted, UK-built',
     description:
-      'Your data sits on AWS in EU West, behind row-level security on every table.',
+      'Data sits on AWS in EU West, behind row-level security on every table.',
     href: '/trust',
   },
   {
-    icon: 'FileCheck',
     title: 'DPA ready',
     description:
       'A data processing agreement you can hand straight to compliance.',
     href: '/dpa',
   },
   {
-    icon: 'Users',
     title: 'Free support seats',
     description:
-      'Admin and finance get free seats once your desk has two or more fee-earners.',
+      'Admin and finance seats are free once the desk has two fee-earners.',
   },
   {
-    icon: 'BadgePoundSterling',
     title: 'Published pricing',
-    description:
-      'The price is on the page. No “book a demo to hear the number”.',
+    description: 'The price is on the page, not behind a demo call.',
     href: '/pricing',
   },
 ];
+
+export const COMMERCIAL_HOME_WORKSPACES_HEADING = {
+  label: 'Other workspaces',
+  title: 'Not a commercial agent?',
+  intro:
+    'Ozer runs other kinds of work too, with tasks and the planner shared across every workspace you use.',
+} as const;
 
 export type CommercialWorkspaceStripItem = {
   label: string;
@@ -246,12 +286,12 @@ export const COMMERCIAL_HOME_WORKSPACES: CommercialWorkspaceStripItem[] = [
 ];
 
 export const COMMERCIAL_HOME_FINAL_CTA = {
-  title: 'Get your desk on the list.',
+  title: 'Put your desk on the list.',
   subtitle:
-    'We are bringing commercial agencies on in small groups so every desk gets set up properly. Leave your email and we will be in touch personally.',
+    'We bring agencies on a few at a time so each desk is set up properly. Leave a work email and we will reply personally.',
   signedInTitle: 'Your desk is waiting.',
   signedInSubtitle:
-    'Pick up where you left off — disposals, requirements and your pipeline are one click away.',
+    'Disposals, requirements and your pipeline are where you left them.',
 } as const;
 
 export type CommercialProof = {
@@ -268,7 +308,7 @@ export const COMMERCIAL_HOME_PROOF: CommercialProof | null = null;
 export const COMMERCIAL_HOME_WAITLIST_FAQ = {
   question: 'What happens when I join the waiting list?',
   answer:
-    'We email you personally to set up your workspace — no automated sequence. If you would rather start straight away, pricing is published and you can sign up today.',
+    'We email you personally to set up your workspace. There is no automated sequence. If you would rather start now, pricing is published and you can sign up today.',
 } as const;
 
 /** Commercial FAQs repeated on the homepage, in display order. */

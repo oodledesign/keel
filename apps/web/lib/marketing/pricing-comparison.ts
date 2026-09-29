@@ -73,7 +73,7 @@ function workComparison(): SegmentPricingComparison {
           },
           {
             feature: 'Billable seats',
-            hint: 'Owners, admins, staff, and contractors count as paid seats.',
+            hint: 'Owners, admins, staff and contractors count as paid seats.',
             values: v(
               'Up to 2 members',
               '£14 then £9 extra',
@@ -82,12 +82,12 @@ function workComparison(): SegmentPricingComparison {
           },
           {
             feature: 'Project guests',
-            hint: 'External collaborators on a single project board — not paid seats.',
+            hint: 'External collaborators on a single project board. They are not paid seats.',
             values: v('1', '1 per billable seat', '3 per billable seat'),
           },
           {
             feature: 'Client portal contacts',
-            hint: 'Clients viewing their portal — unlimited on every plan.',
+            hint: 'Clients viewing their portal. Unlimited on every plan.',
             values: v('Unlimited', 'Unlimited', 'Unlimited'),
           },
           {
@@ -96,12 +96,12 @@ function workComparison(): SegmentPricingComparison {
           },
           {
             feature: '14-day free trial',
-            hint: 'On your first paid workspace — card on file, billed after 14 days.',
+            hint: 'On your first paid workspace, with a card on file. Billed after 14 days.',
             values: v(false, true, true),
           },
           {
             feature: 'Apps marketplace',
-            hint: 'Install Signatures, Site Studio, Media Generate, and future apps.',
+            hint: 'Install Signatures, Site Studio, Media Generate and future apps.',
             href: '/apps',
             values: v(true, true, true),
           },
@@ -115,7 +115,7 @@ function workComparison(): SegmentPricingComparison {
           },
           {
             feature: 'Monthly AI credits',
-            hint: 'One shared workspace pool for email drafts, summaries, coaching, and other model use. Pro scales with seats (3,000 + 1,500 per extra seat). Starter uses the same pool.',
+            hint: 'One shared workspace pool for email drafts, summaries, coaching and other model use. Pro scales with seats (3,000 + 1,500 per extra seat). Starter uses the same pool.',
             values: v('200', 'Same workspace pool', 'From 3,000 (scales)'),
           },
         ],
@@ -213,7 +213,7 @@ function workComparison(): SegmentPricingComparison {
           },
           {
             feature: 'Email Assistant',
-            hint: 'Included on Pro. Drafts spend the workspace AI credit pool — not a second currency.',
+            hint: 'Included on Pro. Drafts spend the same workspace AI credit pool as everything else.',
             href: '/features/email-assistant',
             values: v(false, false, true),
           },

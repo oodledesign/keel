@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { ArrowRight, Link2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
@@ -14,7 +14,8 @@ import {
 } from '~/lib/marketing/interconnected-workspaces';
 import {
   marketingBtnOutline,
-  marketingHeadlineGradient,
+  marketingBtnOutlineOnDark,
+  marketingSectionHeading,
 } from '~/lib/marketing/marketing-ui';
 import type { PricingTone } from '~/lib/marketing/pricing-theme';
 
@@ -23,6 +24,7 @@ import {
   MarketingBentoGrid,
   MarketingBentoTile,
 } from './marketing-bento';
+import { MarketingSectionIndex } from './marketing-section-index';
 import { WorkspaceOrbitDiagram } from './workspace-orbit-diagram';
 
 type Props = {
@@ -42,9 +44,9 @@ export function InterconnectedWorkspacesSection({
 
   const subtitle =
     variant === 'personal'
-      ? `${m.subtitle} Your personal home stays free — workspaces connect around it.`
+      ? `${m.subtitle} Your personal home stays free, and workspaces connect around it.`
       : variant === 'work'
-        ? `${m.subtitle} Your business workspace sits inside the same Ozer account — not a separate product you will abandon for personal stuff.`
+        ? `${m.subtitle} Your business workspace sits inside the same Ozer account as your personal planner.`
         : m.subtitle;
 
   return (
@@ -53,39 +55,29 @@ export function InterconnectedWorkspacesSection({
       className={cn(
         'relative overflow-hidden py-16 md:py-24',
         isLight
-          ? 'border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)]'
-          : 'border-y border-[var(--ozer-accent)]/20 bg-[var(--ozer-plum-950)]',
+          ? 'border-y border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)]'
+          : 'bg-[var(--ozer-plum-950)]',
         className,
       )}
       aria-labelledby="connected-workspaces-heading"
     >
-      <div className="relative mx-auto w-full max-w-7xl px-6">
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,38fr)_minmax(0,62fr)] lg:items-center lg:gap-8">
+      <div className="relative mx-auto w-full max-w-[88rem] px-6">
+        <MarketingSectionIndex
+          label={m.eyebrow}
+          tone={isLight ? 'light' : 'dark'}
+        />
+        <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,38fr)_minmax(0,62fr)] lg:items-center lg:gap-8">
           <div>
-            <span
-              className={cn(
-                'inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold tracking-[0.14em] uppercase',
-                isLight
-                  ? 'border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] text-[var(--ozer-coral-600)]'
-                  : 'border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] text-[var(--ozer-coral-400)]',
-              )}
-            >
-              <Link2 className="h-3.5 w-3.5" aria-hidden />
-              {m.eyebrow}
-            </span>
             <h2
               id="connected-workspaces-heading"
               className={cn(
-                'font-heading mt-6 text-3xl leading-tight font-bold md:text-5xl lg:text-[3.25rem]',
+                marketingSectionHeading,
                 isLight
                   ? 'text-[var(--workspace-shell-text)]'
                   : 'text-[var(--ozer-text-on-dark)]',
               )}
             >
-              {m.title}
-              <span className={cn('mt-1 block', marketingHeadlineGradient)}>
-                {m.titleAccent}
-              </span>
+              {m.title} <span className="block">{m.titleAccent}</span>
             </h2>
             <p
               className={cn(
@@ -138,16 +130,13 @@ export function InterconnectedWorkspacesSection({
             <Button
               asChild
               variant="outline"
-              className={cn(
-                'h-11 rounded-full px-6',
-                isLight
-                  ? cn(marketingBtnOutline, 'h-auto')
-                  : 'border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-on-dark-alpha-06)] text-[var(--ozer-text-on-dark)] hover:bg-[var(--ozer-on-dark-alpha-08)]',
-              )}
+              className={
+                isLight ? marketingBtnOutline : marketingBtnOutlineOnDark
+              }
             >
               <Link href="/features">
                 All features
-                <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
+                <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             </Button>
           </div>

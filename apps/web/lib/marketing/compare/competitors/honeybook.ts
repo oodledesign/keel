@@ -208,7 +208,7 @@ export const honeybookComparison: ComparisonConfig = {
     {
       question: 'Can Ozer handle proposals and invoices like HoneyBook?',
       answer:
-        'Ozer includes pipeline, contracts, invoices, and client portals in the business workspace. Feature depth differs — compare modules you actually use day to day.',
+        'Ozer includes pipeline, contracts, invoices, and client portals in the business workspace. Feature depth differs, so compare the modules you use day to day.',
     },
   ],
   migrationNote:

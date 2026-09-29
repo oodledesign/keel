@@ -118,7 +118,7 @@ export const WORKSPACE_FEATURE_ROWS: WorkspaceFeatureRow[] = [
   {
     id: 'activity',
     feature: 'Activity tracking (Mac)',
-    hint: 'Ozer Assistant on Mac — assign app and website sessions to clients and projects.',
+    hint: 'Ozer Assistant on Mac assigns app and website sessions to clients and projects.',
     href: '/features/activity',
     preview: true,
     values: { business: true, commercial: false },
@@ -133,14 +133,14 @@ export const WORKSPACE_FEATURE_ROWS: WorkspaceFeatureRow[] = [
   {
     id: 'listings',
     feature: 'Commercial listings',
-    hint: 'Disposals, units, media, and marketing for agency stock.',
+    hint: 'Disposals, units, media and marketing for agency stock.',
     preview: true,
     values: { business: false, commercial: true },
   },
   {
     id: 'ios',
     feature: 'iOS app',
-    hint: 'Native iPhone app in progress — tasks, notes, people, meetings and dictation. Not in the App Store yet.',
+    hint: 'Native iPhone app in progress, with tasks, notes, people, meetings and dictation. Not in the App Store yet.',
     preview: true,
     values: { business: 'coming', commercial: 'coming' },
   },
@@ -206,7 +206,7 @@ export const WORKSPACE_FEATURE_ROWS: WorkspaceFeatureRow[] = [
   {
     id: 'xml-feeds',
     feature: 'Portal XML feeds',
-    hint: 'Rightmove Commercial, EACH, and Property Hive WordPress — included from seat 1.',
+    hint: 'Rightmove Commercial, EACH and Property Hive WordPress, included from seat 1.',
     values: { business: false, commercial: true },
   },
   {

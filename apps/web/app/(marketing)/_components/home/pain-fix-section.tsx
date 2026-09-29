@@ -1,76 +1,72 @@
-import { ArrowRight, Check, X } from 'lucide-react';
-
 import { cn } from '@kit/ui/utils';
 
-import { COMMERCIAL_HOME_PAIN_FIX } from '~/lib/marketing/commercial-home-content';
 import {
-  marketingFeatureCard,
-  marketingMutedText,
-  marketingSectionHeading,
-} from '~/lib/marketing/marketing-ui';
+  COMMERCIAL_HOME_PAIN_FIX,
+  COMMERCIAL_HOME_PAIN_FIX_HEADING,
+} from '~/lib/marketing/commercial-home-content';
+import { marketingRule } from '~/lib/marketing/marketing-ui';
+
+import { MarketingSectionHeader } from '../marketing-section-index';
+
+const LEDGER_GRID =
+  'grid gap-x-10 gap-y-2 md:grid-cols-[3rem_minmax(0,5fr)_minmax(0,6fr)]';
 
 export function PainFixSection() {
+  const heading = COMMERCIAL_HOME_PAIN_FIX_HEADING;
+
   return (
     <section
-      className="relative mx-auto w-full max-w-7xl px-6 pt-20 pb-8 md:pt-24"
+      className="mx-auto w-full max-w-[88rem] px-6 pt-20 pb-8 md:pt-28"
       aria-labelledby="pain-fix-heading"
     >
-      <div className="mb-10 max-w-2xl md:mx-auto md:text-center">
-        <h2
-          id="pain-fix-heading"
-          className={cn(
-            marketingSectionHeading,
-            'text-[var(--workspace-shell-text)]',
-          )}
-        >
-          Built for how a commercial desk actually works.
-        </h2>
-        <p className={cn('mt-3 text-base leading-relaxed', marketingMutedText)}>
-          Not a residential CRM with the word “commercial” bolted on. Ozer
-          starts from disposals, requirements and the fee pipeline.
-        </p>
-      </div>
+      <MarketingSectionHeader
+        index="01"
+        label={heading.label}
+        title={heading.title}
+        intro={heading.intro}
+        headingId="pain-fix-heading"
+      />
 
-      <ul className="grid gap-4 md:grid-cols-2 md:gap-5">
-        {COMMERCIAL_HOME_PAIN_FIX.map((item) => (
-          <li
-            key={item.pain}
-            className={cn(
-              'flex flex-col gap-4 rounded-2xl border border-[color:var(--workspace-shell-border)] p-6',
-              marketingFeatureCard,
-            )}
-          >
-            <p className="flex items-start gap-3 text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
-              <span
-                className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--ozer-coral-50)] text-[var(--ozer-coral-600)]"
-                aria-hidden
-              >
-                <X className="size-3" strokeWidth={3} />
+      <div className="mt-14 md:mt-20">
+        <div
+          className={cn(
+            LEDGER_GRID,
+            'hidden pb-3 text-[0.8125rem] font-medium text-[var(--workspace-shell-text-muted)] md:grid',
+          )}
+          aria-hidden="true"
+        >
+          <span />
+          <span>{heading.beforeLabel}</span>
+          <span>{heading.afterLabel}</span>
+        </div>
+
+        <ol className={cn(marketingRule, 'border-b')}>
+          {COMMERCIAL_HOME_PAIN_FIX.map((item, index) => (
+            <li
+              key={item.pain}
+              className={cn(
+                LEDGER_GRID,
+                marketingRule,
+                'border-t py-6 md:items-baseline md:py-8',
+              )}
+            >
+              <span className="text-[0.8125rem] font-medium text-[var(--workspace-shell-text-muted)] tabular-nums">
+                {String(index + 1).padStart(2, '0')}
               </span>
-              <span>
-                <span className="sr-only">Before: </span>
+              <p className="text-[0.9375rem] leading-relaxed text-[var(--workspace-shell-text-muted)] md:text-base">
+                <span className="font-medium md:sr-only">
+                  {heading.beforeLabel}:{' '}
+                </span>
                 {item.pain}
-              </span>
-            </p>
-            <ArrowRight
-              className="ml-1 size-4 rotate-90 text-[var(--workspace-shell-text-muted)]"
-              aria-hidden
-            />
-            <p className="flex items-start gap-3 text-base leading-relaxed font-medium text-[var(--workspace-shell-text)]">
-              <span
-                className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[var(--ozer-sage-100)] text-[var(--ozer-plum-700)]"
-                aria-hidden
-              >
-                <Check className="size-3" strokeWidth={3} />
-              </span>
-              <span>
-                <span className="sr-only">With Ozer: </span>
+              </p>
+              <p className="font-heading mt-2 text-[1.25rem] leading-[1.3] font-medium tracking-[-0.01em] text-[var(--workspace-shell-text)] md:mt-0 md:text-[1.5rem]">
+                <span className="sr-only">{heading.afterLabel}: </span>
                 {item.fix}
-              </span>
-            </p>
-          </li>
-        ))}
-      </ul>
+              </p>
+            </li>
+          ))}
+        </ol>
+      </div>
     </section>
   );
 }

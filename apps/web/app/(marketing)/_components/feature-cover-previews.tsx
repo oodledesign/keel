@@ -23,7 +23,6 @@ import {
   Sparkles,
   StickyNote,
   Sun,
-  Users,
 } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
@@ -117,7 +116,7 @@ function PlannerCover({ compact }: { compact: boolean }) {
       </div>
       <div className="mt-3 space-y-2">
         {[
-          { time: '09:00', task: 'Deep work — Acme proposal', done: true },
+          { time: '09:00', task: 'Deep work: Northgate proposal', done: true },
           { time: '11:30', task: 'Client call prep', done: false },
           { time: '14:00', task: 'Review portal feedback', done: false },
         ].map((row) => (
@@ -167,7 +166,7 @@ function EmailCover({ compact }: { compact: boolean }) {
       <div className="mt-3 space-y-2">
         {[
           {
-            client: 'Acme Co',
+            client: 'Northgate Dental',
             subject: 'Re: March deliverables',
             tag: '2 action items',
           },
@@ -366,16 +365,16 @@ function ActivityCover({ compact }: { compact: boolean }) {
         {[
           {
             app: 'Figma',
-            detail: 'Acme homepage',
+            detail: 'Northgate homepage',
             duration: '1h 40m',
-            client: 'Acme Studio',
+            client: 'Northgate Dental',
             sessions: null,
           },
           {
             app: 'github.com',
             detail: '3 sessions grouped',
             duration: '52m',
-            client: 'Acme Studio',
+            client: 'Northgate Dental',
             sessions: 3,
           },
           {
@@ -429,7 +428,7 @@ function ClientPortalsCover({ compact }: { compact: boolean }) {
       <div className="flex items-center gap-2">
         <LayoutDashboard className="h-4 w-4 text-[var(--ozer-slate-blue)]" />
         <p className={cn('font-semibold', compact ? 'text-xs' : 'text-sm')}>
-          Acme client portal
+          Northgate client portal
         </p>
       </div>
       <div className="mt-3 grid flex-1 grid-cols-2 gap-2">
@@ -477,7 +476,7 @@ function InvoicingCover({ compact }: { compact: boolean }) {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[10px] text-[var(--ozer-text-on-light-muted)]">
-              Invoice · Acme rebrand
+              Invoice · Northgate rebrand
             </p>
             <p className={cn('font-bold', compact ? 'text-lg' : 'text-xl')}>
               £2,400
@@ -511,7 +510,7 @@ function SecondBrainCover({ compact }: { compact: boolean }) {
         <div className="flex items-center gap-2 text-[var(--ozer-text-on-dark-muted)]">
           <Search className="h-3 w-3 shrink-0" />
           <p className="truncate text-[11px]">
-            What did we agree with Acme on launch?
+            What did we agree with Northgate on launch?
           </p>
         </div>
       </div>
@@ -544,7 +543,7 @@ function MessagingCover({ compact }: { compact: boolean }) {
             compact ? 'text-xs' : 'text-sm',
           )}
         >
-          Acme rebrand project
+          Northgate rebrand project
         </p>
       </div>
       <div className="mt-3 space-y-2">
@@ -577,7 +576,7 @@ function NotesCover({ compact }: { compact: boolean }) {
       </div>
       <div className="mt-3 flex-1 rounded-xl bg-[var(--ozer-white)] p-3">
         <p className="text-[10px] font-semibold text-[var(--ozer-text-on-light-muted)]">
-          Acme kickoff
+          Northgate kickoff
         </p>
         <ul
           className={cn(
@@ -648,7 +647,7 @@ function ProjectManagementCover({ compact }: { compact: boolean }) {
       <div className="mt-3 space-y-2">
         {[
           {
-            name: 'Acme rebrand',
+            name: 'Northgate rebrand',
             phase: 'Design',
             pct: 65,
             color: 'var(--ozer-info)',
@@ -706,7 +705,11 @@ function TasksCover({ compact }: { compact: boolean }) {
       </div>
       <div className="mt-3 space-y-1.5">
         {[
-          { title: 'Send proposal revision', client: 'Acme', urgent: true },
+          {
+            title: 'Send proposal revision',
+            client: 'Northgate',
+            urgent: true,
+          },
           {
             title: 'Review portal mockups',
             client: 'North Lane',
@@ -756,7 +759,7 @@ function ContractsCover({ compact }: { compact: boolean }) {
       <div className="mt-3 space-y-2">
         {[
           {
-            title: 'Acme SOW — Phase 1',
+            title: 'Northgate SOW, phase 1',
             status: 'Signed',
             tone: 'text-[var(--ozer-plum-900)] bg-[var(--ozer-sage-300)]',
           },

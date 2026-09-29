@@ -7,12 +7,15 @@ import { cn } from '@kit/ui/utils';
 
 import { COMMERCIAL_HOME_FINAL_CTA } from '~/lib/marketing/commercial-home-content';
 import {
-  marketingBtnGradient,
+  marketingBtnPrimary,
+  marketingDisplay,
+  marketingLede,
   marketingSectionDark,
   marketingSectionDarkMuted,
 } from '~/lib/marketing/marketing-ui';
 import type { MarketingViewerContext } from '~/lib/marketing/marketing-viewer';
 
+import { MarketingSectionIndex } from '../marketing-section-index';
 import { WaitlistEmailForm } from './waitlist-email-form';
 
 export function CommercialFinalCta({
@@ -25,37 +28,39 @@ export function CommercialFinalCta({
   return (
     <section
       id="waitlist"
-      className="scroll-mt-24 px-6 py-10 md:py-14"
+      className={cn('scroll-mt-20', marketingSectionDark)}
       aria-labelledby="home-final-cta-heading"
     >
-      <div
-        className={cn(
-          'relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] border border-[color:var(--ozer-border-on-dark)] px-6 py-14 md:rounded-[2.5rem] md:px-12 md:py-20',
-          marketingSectionDark,
-        )}
-      >
-        <div className="relative mx-auto flex max-w-2xl flex-col items-center text-center">
-          <h2
-            id="home-final-cta-heading"
-            className="font-heading text-3xl leading-tight font-bold text-[var(--ozer-text-on-dark)] md:text-4xl lg:text-[2.75rem]"
-          >
-            {viewer.isAuthenticated ? copy.signedInTitle : copy.title}
-          </h2>
+      <div className="mx-auto w-full max-w-[88rem] px-6 py-20 md:py-28">
+        <MarketingSectionIndex index="06" label="Waiting list" tone="dark" />
+
+        <h2
+          id="home-final-cta-heading"
+          className={cn(
+            marketingDisplay,
+            'mt-12 max-w-[14ch] text-[var(--ozer-text-on-dark)] md:mt-16',
+          )}
+        >
+          {viewer.isAuthenticated ? copy.signedInTitle : copy.title}
+        </h2>
+
+        <div className="mt-10 grid gap-8 md:mt-14 lg:grid-cols-12 lg:gap-10">
           <p
             className={cn(
-              'mx-auto mt-4 max-w-xl text-base leading-relaxed md:text-lg',
+              marketingLede,
               marketingSectionDarkMuted,
+              'lg:col-span-5',
             )}
           >
             {viewer.isAuthenticated ? copy.signedInSubtitle : copy.subtitle}
           </p>
 
-          <div className="mt-8 flex w-full justify-center">
+          <div className="lg:col-span-6 lg:col-start-7">
             {viewer.isAuthenticated ? (
-              <Button asChild size="lg" className={marketingBtnGradient}>
+              <Button asChild size="lg" className={marketingBtnPrimary}>
                 <Link href={viewer.dashboardHref}>
                   Open your workspace
-                  <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
+                  <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
               </Button>
             ) : (
@@ -63,7 +68,6 @@ export function CommercialFinalCta({
                 id="home-final-waitlist-email"
                 source="home-final"
                 tone="dark"
-                className="w-full justify-center"
               />
             )}
           </div>

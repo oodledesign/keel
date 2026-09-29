@@ -13,7 +13,6 @@ import {
   RequirementsMatchMock,
 } from '~/(marketing)/_components/feature-tour-commercial-mocks';
 import {
-  DemoCursor,
   DemoFrame,
   DemoHighlight,
   DemoPulse,
@@ -101,13 +100,6 @@ function KanbanMock() {
             <DemoPulse className="rounded-[0.625rem]" delay={0.8} />
           </motion.div>
         </div>
-        <DemoCursor
-          x={['18%', '18%', '58%', '58%', '18%']}
-          y={['42%', '38%', '38%', '62%', '42%']}
-          times={[0, 0.15, 0.42, 0.55, 0.9]}
-          clickAt={[0.15, 0.42]}
-          duration={LOOP}
-        />
       </div>
     </DemoFrame>
   );
@@ -210,13 +202,6 @@ function InvoiceMock() {
           <span>Outstanding</span>
           <span>£750</span>
         </motion.div>
-        <DemoCursor
-          x={['72%', '72%', '72%']}
-          y={['38%', '38%', '38%']}
-          times={[0, 0.38, 0.7]}
-          clickAt={[0.38]}
-          duration={LOOP}
-        />
       </div>
     </DemoFrame>
   );
@@ -270,13 +255,6 @@ function PortalMock() {
             )}
           </div>
         ))}
-        <DemoCursor
-          x={['24%', '24%', '24%']}
-          y={['28%', '28%', '28%']}
-          times={[0, 0.35, 0.75]}
-          clickAt={[0.35]}
-          duration={LOOP}
-        />
       </div>
     </DemoFrame>
   );
@@ -348,13 +326,6 @@ function NotesMock() {
             </motion.span>
           ))}
         </div>
-        <DemoCursor
-          x={['18%', '52%', '52%']}
-          y={['58%', '58%', '72%']}
-          times={[0, 0.45, 0.75]}
-          clickAt={[0.45, 0.52]}
-          duration={LOOP}
-        />
       </div>
     </DemoFrame>
   );
@@ -430,13 +401,6 @@ function PlannerMock({ accent }: { accent: EarlyAccessAccent }) {
             </motion.span>
           </div>
         ))}
-        <DemoCursor
-          x={['22%', '22%', '22%']}
-          y={['42%', '42%', '42%']}
-          times={[0, 0.35, 0.8]}
-          clickAt={[0.35]}
-          duration={LOOP}
-        />
       </div>
     </DemoFrame>
   );
@@ -511,13 +475,6 @@ function RequestsMock({ accent }: { accent: EarlyAccessAccent }) {
             12
           </motion.span>
         </div>
-        <DemoCursor
-          x={['38%', '38%', '38%']}
-          y={['30%', '30%', '30%']}
-          times={[0, 0.38, 0.8]}
-          clickAt={[0.38]}
-          duration={LOOP}
-        />
       </div>
     </DemoFrame>
   );

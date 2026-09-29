@@ -14,20 +14,14 @@ import {
 
 import { cn } from '@kit/ui/utils';
 
-import { FeatureLandingIcon } from '~/(marketing)/_components/feature-landing-icon';
 import { FeatureTourMock } from '~/(marketing)/_components/feature-tour-mocks';
-import {
-  EARLY_ACCESS_ACCENT_CLASS,
-  EARLY_ACCESS_ACCENT_SOFT_CLASS,
-} from '~/lib/marketing/early-access-content';
+import { MarketingScreen } from '~/(marketing)/_components/marketing-screen';
 import {
   FEATURE_TOUR_BLOCKS,
   type FeatureTourBlock,
 } from '~/lib/marketing/feature-tour-content';
 import {
-  marketingCard,
   marketingHeroEase,
-  marketingIconWell,
   marketingMutedText,
 } from '~/lib/marketing/marketing-ui';
 
@@ -36,24 +30,26 @@ const FEATURE_SWITCH_FADE_S = 0.32;
 
 type FeatureBlock = FeatureTourBlock;
 
+function formatIndex(value: number) {
+  return String(value).padStart(2, '0');
+}
+
 function FeatureTourCard({
   block,
+  index,
   blocks,
   scrollYProgress,
   activeIndex,
 }: {
   block: FeatureBlock;
+  index: number;
   blocks?: FeatureBlock[];
   scrollYProgress?: MotionValue<number>;
   activeIndex?: number;
 }) {
   return (
     <div
-      className={cn(
-        marketingCard,
-        'relative flex h-full flex-col overflow-x-hidden overflow-y-auto rounded-[1.25rem] lg:max-h-[calc(100vh-5.5rem)] lg:overflow-hidden',
-        block.soon && 'opacity-95',
-      )}
+      className="relative flex h-full flex-col overflow-x-hidden overflow-y-auto bg-[var(--ozer-cream-50)] lg:max-h-[calc(100vh-5.5rem)] lg:overflow-hidden dark:bg-[var(--ozer-plum-900)]"
       data-test="feature-tour-card"
     >
       {blocks != null && scrollYProgress != null && activeIndex != null ? (
@@ -62,76 +58,62 @@ function FeatureTourCard({
           scrollYProgress={scrollYProgress}
           activeIndex={activeIndex}
         />
-      ) : null}
+      ) : (
+        <div className="marketing-rule border-t" aria-hidden="true" />
+      )}
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6 lg:grid lg:grid-cols-[minmax(0,11fr)_minmax(0,13fr)] lg:items-stretch lg:gap-8 lg:p-8">
+      <div className="flex min-h-0 flex-1 flex-col gap-6 pt-6 lg:grid lg:grid-cols-[minmax(0,10fr)_minmax(0,14fr)] lg:items-stretch lg:gap-12 lg:pt-8">
         <div className="flex shrink-0 flex-col lg:min-h-0 lg:min-w-0">
-          <span className="mb-2 inline-flex items-center gap-2 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
-            <span
-              className={cn(
-                marketingIconWell,
-                'size-7 shrink-0 rounded-md border-[color:var(--ozer-accent)]/35 p-0',
-              )}
-            >
-              <FeatureLandingIcon
-                name={block.icon}
-                className="size-3.5 text-[var(--ozer-accent)]"
-              />
+          <p className="mb-4 text-[0.8125rem] font-medium text-[var(--workspace-shell-text-muted)]">
+            <span className="text-[var(--workspace-shell-text)] tabular-nums">
+              {formatIndex(index + 1)}
             </span>
+            <span aria-hidden="true"> / </span>
             {block.eyebrow}
-          </span>
-          <h3 className="font-heading mb-2 text-xl font-semibold tracking-tight text-[var(--workspace-shell-text)] md:text-2xl lg:text-[1.65rem] lg:leading-tight xl:text-3xl">
+          </p>
+          <h3 className="font-heading mb-4 text-[1.75rem] leading-[1.08] font-medium tracking-[-0.015em] text-balance text-[var(--workspace-shell-text)] md:text-[2.125rem] xl:text-[2.5rem]">
             {block.title}
           </h3>
-          <p className="mb-2 text-sm leading-relaxed text-[var(--workspace-shell-text)] md:text-base">
+          <p className="mb-2 text-[0.9375rem] leading-relaxed text-[var(--workspace-shell-text)] md:text-base">
             {block.moment}
           </p>
           <p
-            className={`mb-3 text-sm leading-relaxed md:mb-4 md:text-base ${marketingMutedText}`}
+            className={`mb-5 text-[0.9375rem] leading-relaxed md:text-base ${marketingMutedText}`}
           >
             {block.desc}
           </p>
 
-          <div className="mb-3 shrink-0 md:mb-4">
-            <p className="mb-2 text-xs font-medium tracking-[0.08em] text-[var(--workspace-shell-text-muted)] uppercase">
-              Includes
-            </p>
-            <ul className="space-y-1.5 md:space-y-2">
-              {block.highlights.map((highlight) => (
-                <li
-                  key={highlight}
-                  className="flex items-start gap-2 text-sm leading-snug text-[var(--workspace-shell-text)]"
-                >
-                  <span
-                    className={cn(
-                      'mt-2 size-1.5 shrink-0 rounded-full',
-                      EARLY_ACCESS_ACCENT_CLASS[block.accent],
-                    )}
-                    aria-hidden
-                  />
-                  {highlight}
-                </li>
-              ))}
-            </ul>
-          </div>
+          <ul
+            className="marketing-rule shrink-0 border-b text-sm leading-snug text-[var(--workspace-shell-text)]"
+            aria-label={`${block.eyebrow} includes`}
+          >
+            {block.highlights.map((highlight) => (
+              <li key={highlight} className="marketing-rule border-t py-2.5">
+                {highlight}
+              </li>
+            ))}
+          </ul>
 
           {block.soon ? (
-            <span
-              className={cn(
-                'mt-1 inline-block w-fit rounded-full px-3 py-1.5 text-xs font-bold md:mt-2',
-                EARLY_ACCESS_ACCENT_SOFT_CLASS[block.accent],
-              )}
-            >
+            <p className="mt-4 text-[0.8125rem] font-medium text-[var(--workspace-shell-text-muted)]">
               {block.soonLabel ?? 'Coming soon'}
-            </span>
+            </p>
           ) : null}
         </div>
 
-        <FeatureTourMock
-          type={block.mock}
-          accent={block.accent}
-          className="h-36 max-h-36 w-full shrink-0 sm:h-44 sm:max-h-44 md:h-52 md:max-h-52 lg:h-full lg:max-h-none lg:min-h-0 lg:shrink"
-        />
+        {block.screen ? (
+          <MarketingScreen
+            screen={block.screen}
+            fill
+            className="w-full shrink-0 lg:h-full lg:min-h-0 lg:shrink"
+          />
+        ) : (
+          <FeatureTourMock
+            type={block.mock}
+            accent={block.accent}
+            className="h-36 max-h-36 w-full shrink-0 sm:h-44 sm:max-h-44 md:h-52 md:max-h-52 lg:h-full lg:max-h-none lg:min-h-0 lg:shrink"
+          />
+        )}
       </div>
     </div>
   );
@@ -169,15 +151,9 @@ function FeatureStepProgress({
   const nextLabel = isLast ? null : blocks[activeIndex + 1]?.eyebrow;
 
   return (
-    <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-5 pt-4 pb-3 md:px-6 lg:px-8">
-      <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-medium tracking-[0.04em] text-[var(--workspace-shell-text-muted)] uppercase">
-        <span>
-          {activeIndex + 1} / {count}
-        </span>
-        {nextLabel ? <span>Next · {nextLabel}</span> : <span>End</span>}
-      </div>
+    <div className="shrink-0">
       <div
-        className="h-1 overflow-hidden rounded-full bg-[var(--workspace-shell-sidebar-accent)]"
+        className="marketing-rule h-px overflow-hidden bg-[var(--ozer-plum-alpha-12)] dark:bg-[var(--ozer-border-on-dark)]"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
@@ -189,9 +165,18 @@ function FeatureStepProgress({
         }
       >
         <motion.div
-          className="h-full origin-left rounded-full bg-[var(--ozer-accent)]"
+          className="h-full origin-left bg-[var(--workspace-shell-text)]"
           style={{ scaleX }}
         />
+      </div>
+      <div className="mt-2.5 flex items-center justify-between gap-3 text-[0.8125rem] font-medium text-[var(--workspace-shell-text-muted)] tabular-nums">
+        <span>
+          <span className="text-[var(--workspace-shell-text)]">
+            {formatIndex(activeIndex + 1)}
+          </span>{' '}
+          / {formatIndex(count)}
+        </span>
+        {nextLabel ? <span>Next: {nextLabel}</span> : <span>End</span>}
       </div>
     </div>
   );
@@ -233,6 +218,7 @@ function FeatureTourSlidePanel({
         >
           <FeatureTourCard
             block={activeBlock}
+            index={activeIndex}
             blocks={blocks}
             scrollYProgress={scrollYProgress}
             activeIndex={activeIndex}
@@ -302,13 +288,10 @@ function FeatureTourNav({
 
   return (
     <nav aria-label="Features" className="lg:sticky lg:top-24 lg:self-start">
-      <p className="mb-2 px-2 text-[11px] font-medium tracking-[0.08em] text-[var(--workspace-shell-text-muted)] uppercase">
-        Features
-      </p>
       <ul
         ref={scrollerRef}
         data-test="feature-tour-pills"
-        className="flex flex-nowrap gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden"
+        className="flex flex-nowrap gap-5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-col lg:gap-0 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden"
       >
         {blocks.map((block, index) => {
           const isActive = activeId === block.id;
@@ -330,28 +313,20 @@ function FeatureTourNav({
                   onNavigate(block.id, index);
                 }}
                 className={cn(
-                  'flex items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm',
+                  'flex items-baseline gap-3 py-2 text-left text-sm transition-colors duration-200 lg:border-t lg:py-2.5',
+                  'marketing-rule',
                   isActive
-                    ? 'bg-[var(--workspace-shell-sidebar-accent)] font-semibold text-[var(--workspace-shell-text)]'
-                    : 'font-medium text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+                    ? 'font-medium text-[var(--workspace-shell-text)]'
+                    : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
                 )}
               >
                 <span
                   className={cn(
-                    marketingIconWell,
-                    'size-7 shrink-0 rounded-md p-0',
-                    isActive && 'border-[color:var(--ozer-accent)]/35',
+                    'text-[0.75rem] tabular-nums',
+                    isActive && 'text-[var(--ozer-accent)]',
                   )}
                 >
-                  <FeatureLandingIcon
-                    name={block.icon}
-                    className={cn(
-                      'size-3.5',
-                      isActive
-                        ? 'text-[var(--ozer-accent)]'
-                        : 'text-[var(--workspace-shell-text-muted)]',
-                    )}
-                  />
+                  {formatIndex(index + 1)}
                 </span>
                 <span className="min-w-0 whitespace-nowrap lg:whitespace-normal">
                   {block.eyebrow}
@@ -531,9 +506,9 @@ function StackedFeatureTour({ blocks }: { blocks: FeatureBlock[] }) {
       </div>
 
       <div className="flex min-w-0 flex-col gap-6 md:gap-8">
-        {blocks.map((block) => (
+        {blocks.map((block, index) => (
           <article key={block.id} id={block.id} className="scroll-mt-28">
-            <FeatureTourCard block={block} />
+            <FeatureTourCard block={block} index={index} />
           </article>
         ))}
       </div>

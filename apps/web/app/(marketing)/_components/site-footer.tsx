@@ -1,123 +1,180 @@
-// Task A: Life CRM → OS copy (footer description).
 import type { ReactNode } from 'react';
 
-import { Footer } from '@kit/ui/marketing';
+import Link from 'next/link';
+
 import { Trans } from '@kit/ui/trans';
+import { cn } from '@kit/ui/utils';
 
 import { AppLogo } from '~/components/app-logo';
 import appConfig from '~/config/app.config';
 import { docsUrl } from '~/lib/docs-url';
 import { OZER_ASSISTANT_DOWNLOAD } from '~/lib/marketing/assistant-download';
+import { marketingRule } from '~/lib/marketing/marketing-ui';
 
 import { MarketingFooterNewsletter } from './marketing-footer-newsletter';
 
-function SocialIcon({ children }: { children: ReactNode }) {
+type FooterLink = { href: string; label: ReactNode; external?: boolean };
+
+const SECTIONS: Array<{ heading: ReactNode; links: FooterLink[] }> = [
+  {
+    heading: 'Workspaces',
+    links: [
+      { href: '/commercial-property', label: 'Commercial property' },
+      { href: '/work', label: 'Business' },
+      { href: '/personal', label: 'Personal & family' },
+      { href: '/work#coming-soon', label: 'Coming soon' },
+    ],
+  },
+  {
+    heading: <Trans i18nKey="marketing:product" />,
+    links: [
+      { href: '/features', label: 'Features' },
+      { href: OZER_ASSISTANT_DOWNLOAD.pagePath, label: 'Assistant for Mac' },
+      { href: '/apps', label: 'Apps' },
+      { href: '/pricing', label: <Trans i18nKey="marketing:pricing" /> },
+      { href: docsUrl(), label: <Trans i18nKey="marketing:documentation" /> },
+    ],
+  },
+  {
+    heading: 'Company',
+    links: [
+      { href: '/blog', label: 'Blog' },
+      { href: '/faq', label: 'FAQ' },
+      { href: '/trust', label: 'Security' },
+      { href: '/contact', label: <Trans i18nKey="marketing:contact" /> },
+    ],
+  },
+  {
+    heading: 'Compare',
+    links: [
+      { href: '/compare', label: 'All comparisons' },
+      { href: '/compare/hellobonsai', label: 'Hello Bonsai' },
+      { href: '/compare/honeybook', label: 'HoneyBook' },
+      { href: '/compare/withmoxie', label: 'Moxie' },
+    ],
+  },
+];
+
+const SOCIAL_LINKS: FooterLink[] = [
+  {
+    href: 'https://www.linkedin.com/company/ozer-so',
+    label: 'LinkedIn',
+    external: true,
+  },
+  { href: 'https://x.com/ozerso', label: 'X', external: true },
+  { href: 'mailto:hello@ozer.so', label: 'hello@ozer.so' },
+];
+
+const LEGAL_LINKS: FooterLink[] = [
+  { href: '/privacy-policy', label: 'Privacy' },
+  { href: '/terms-of-service', label: 'Terms' },
+  { href: '/cookie-policy', label: 'Cookies' },
+  { href: '/data-deletion', label: 'Data deletion' },
+];
+
+const linkClass =
+  'rounded-[2px] text-[var(--workspace-shell-text-muted)] underline-offset-4 transition-colors duration-200 hover:text-[var(--workspace-shell-text)] hover:underline focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:outline-none';
+
+function FooterAnchor({ link }: { link: FooterLink }) {
+  if (link.external) {
+    return (
+      <a
+        href={link.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={linkClass}
+      >
+        {link.label}
+      </a>
+    );
+  }
+
   return (
-    <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
-      {children}
-    </svg>
+    <Link href={link.href} className={linkClass}>
+      {link.label}
+    </Link>
   );
 }
 
 export function SiteFooter() {
   return (
-    <Footer
-      logo={<AppLogo className="w-[85px] md:w-[95px]" />}
-      description={
-        <p>
-          Ozer is the Workspace OS for freelancers and small agencies — your
-          studio, your life, one home. Flat pricing, data in the EU.
+    <footer
+      className={cn(
+        marketingRule,
+        'site-footer relative mt-auto w-full border-t bg-[var(--ozer-cream-100)] dark:bg-[var(--ozer-plum-950)]',
+      )}
+    >
+      <div className="mx-auto w-full max-w-[88rem] px-6 pt-20 pb-10 md:pt-28">
+        <p className="font-heading max-w-[22ch] text-[2.25rem] leading-[1.05] font-medium tracking-[-0.02em] text-balance text-[var(--workspace-shell-text)] md:text-[3.5rem]">
+          Workspaces for commercial agents, studios and home life.
         </p>
-      }
-      copyright={
-        <Trans
-          i18nKey="marketing:copyright"
-          values={{
-            product: appConfig.name,
-            year: new Date().getFullYear(),
-          }}
-        />
-      }
-      socialLinks={[
-        {
-          href: 'https://www.linkedin.com/company/ozer-so',
-          label: 'LinkedIn',
-          icon: (
-            <SocialIcon>
-              <path d="M4.98 3.5C4.98 4.88 3.86 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM.5 8.5h4V23h-4V8.5zM8.5 8.5h3.8v2h.05c.53-1 1.82-2.05 3.75-2.05 4.01 0 4.75 2.64 4.75 6.07V23h-4v-6.6c0-1.57-.03-3.59-2.19-3.59-2.19 0-2.53 1.71-2.53 3.48V23h-4V8.5z" />
-            </SocialIcon>
-          ),
-        },
-        {
-          href: 'https://x.com/ozerso',
-          label: 'X',
-          icon: (
-            <SocialIcon>
-              <path d="M18.244 2H21.5l-7.5 8.57L22.5 22h-6.57l-5.14-6.7L5.2 22H1.94l8.03-9.17L1.5 2h6.74l4.65 6.14L18.244 2zm-1.15 18h1.8L7.02 3.94H5.1L17.094 20z" />
-            </SocialIcon>
-          ),
-        },
-        {
-          href: 'mailto:hello@ozer.so',
-          label: 'Email',
-          icon: (
-            <SocialIcon>
-              <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5L4 8V6l8 5 8-5v2z" />
-            </SocialIcon>
-          ),
-        },
-      ]}
-      sections={[
-        {
-          heading: 'Company',
-          links: [
-            { href: '/personal', label: 'Personal & family' },
-            { href: '/work', label: 'Business' },
-            { href: '/blog', label: 'Blog' },
-            { href: '/contact', label: <Trans i18nKey="marketing:contact" /> },
-            { href: '/work#coming-soon', label: 'Coming soon' },
-          ],
-        },
-        {
-          heading: <Trans i18nKey="marketing:product" />,
-          links: [
-            { href: '/features', label: 'Features' },
-            { href: '/features/activity', label: 'Activity tracking' },
-            { href: '/features/desktop-assistant', label: 'Assistant for Mac' },
-            {
-              href: OZER_ASSISTANT_DOWNLOAD.pagePath,
-              label: 'Download Assistant',
-            },
-            { href: '/apps', label: 'Apps' },
-            { href: '/pricing', label: <Trans i18nKey="marketing:pricing" /> },
-            {
-              href: docsUrl(),
-              label: <Trans i18nKey="marketing:documentation" />,
-            },
-            { href: '/faq', label: 'FAQ' },
-          ],
-        },
-        {
-          heading: 'Compare',
-          links: [
-            { href: '/compare', label: 'All comparisons' },
-            {
-              href: '/compare/hellobonsai',
-              label: 'Hello Bonsai alternatives',
-            },
-            { href: '/compare/honeybook', label: 'HoneyBook alternatives' },
-            { href: '/compare/withmoxie', label: 'Moxie alternatives' },
-          ],
-        },
-      ]}
-      newsletter={<MarketingFooterNewsletter />}
-      legalLinks={[
-        { href: '/privacy-policy', label: 'Privacy Policy' },
-        { href: '/terms-of-service', label: 'Terms of Service' },
-        { href: '/trust', label: 'Security' },
-        { href: '/cookie-policy', label: 'Cookie' },
-        { href: '/data-deletion', label: 'Data deletion' },
-      ]}
-    />
+
+        <div
+          className={cn(
+            marketingRule,
+            'mt-16 grid gap-12 border-t pt-10 lg:grid-cols-12 lg:gap-10',
+          )}
+        >
+          <div className="flex flex-col gap-6 lg:col-span-4">
+            <AppLogo className="w-[85px] md:w-[95px]" />
+            <p className="max-w-sm text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
+              Ozer is a workspace for UK commercial property agents, studios and
+              small agencies, with your personal planner alongside. Published
+              pricing, data hosted in the EU.
+            </p>
+            <MarketingFooterNewsletter className="max-w-sm" />
+          </div>
+
+          <nav
+            aria-label="Footer"
+            className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4 lg:col-span-8"
+          >
+            {SECTIONS.map((section, index) => (
+              <div key={index}>
+                <p className="text-[0.8125rem] font-medium text-[var(--workspace-shell-text)]">
+                  {section.heading}
+                </p>
+                <ul
+                  className={cn(
+                    marketingRule,
+                    'mt-3 flex flex-col gap-y-2.5 border-t pt-3 text-sm',
+                  )}
+                >
+                  {section.links.map((link) => (
+                    <li key={link.href}>
+                      <FooterAnchor link={link} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </nav>
+        </div>
+
+        <div
+          className={cn(
+            marketingRule,
+            'mt-16 flex flex-col gap-4 border-t pt-6 text-xs sm:flex-row sm:items-center sm:justify-between',
+          )}
+        >
+          <p className="text-[var(--workspace-shell-text-muted)]">
+            <Trans
+              i18nKey="marketing:copyright"
+              values={{
+                product: appConfig.name,
+                year: new Date().getFullYear(),
+              }}
+            />
+          </p>
+          <ul className="flex flex-wrap gap-x-5 gap-y-2">
+            {[...SOCIAL_LINKS, ...LEGAL_LINKS].map((link) => (
+              <li key={link.href}>
+                <FooterAnchor link={link} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </footer>
   );
 }

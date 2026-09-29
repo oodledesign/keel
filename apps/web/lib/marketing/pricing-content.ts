@@ -76,7 +76,7 @@ export function businessTierCards(): Array<
     const excludes =
       higher.length === 0
         ? [
-            'Nothing above this tier — use the seat calculator to add more billable seats.',
+            'Nothing above this tier. Use the seat calculator to add more billable seats.',
           ]
         : [
             ...higher.flatMap((h) =>
@@ -123,7 +123,7 @@ export function annualCostForTeamSize(teamSize: number): {
 }
 
 export function philosophyLine(): string {
-  return 'Free, Starter, and Pro in pounds. Starter is £14 for seat 1 then £9 for each extra seat. Pro is £29 for seat 1 then £22 for each extra seat. No transaction fees on your subscription.';
+  return 'Free, Starter and Pro in pounds. Starter is £14 for seat 1 then £9 for each extra seat. Pro is £29 for seat 1 then £22 for each extra seat. No transaction fees on your subscription.';
 }
 
 export function ozerTeamAnnualGbp(): number {
@@ -148,11 +148,11 @@ export function pricingFaqs() {
     },
     {
       question: 'What happens when the team grows?',
-      answer: `Starter is ${formatGbp(starter?.monthlyPriceGbp ?? 14)} for seat 1, then £9 for every extra seat. Pro is ${formatGbp(business?.monthlyPriceGbp ?? 29)} for seat 1, then £22 for every extra seat. One shared AI credit pool covers drafts, summaries, coaching, and other model use — it scales with seats on Pro. Client portals stay unlimited.`,
+      answer: `Starter is ${formatGbp(starter?.monthlyPriceGbp ?? 14)} for seat 1, then £9 for every extra seat. Pro is ${formatGbp(business?.monthlyPriceGbp ?? 29)} for seat 1, then £22 for every extra seat. One shared AI credit pool covers drafts, summaries, coaching and other model use, and it scales with seats on Pro. Client portals stay unlimited.`,
     },
     {
       question: 'Is there a free trial?',
-      answer: `Personal and family are free forever. Free is ${formatGbp(lite?.monthlyPriceGbp ?? 0)} per month with no card. Starter and Pro include a ${BILLING_TRIAL_DAYS}-day free trial on your first paid workspace — card on file, billed after the trial.`,
+      answer: `Personal and family are free forever. Free is ${formatGbp(lite?.monthlyPriceGbp ?? 0)} per month with no card. Starter and Pro include a ${BILLING_TRIAL_DAYS}-day free trial on your first paid workspace, with a card on file and billing after the trial.`,
     },
     {
       question: 'How do I cancel?',

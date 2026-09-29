@@ -1,15 +1,21 @@
 import Link from 'next/link';
 
+import { ArrowRight } from 'lucide-react';
+
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
 import { getCommercialHomePricing } from '~/lib/marketing/commercial-home-pricing';
 import {
-  marketingBtnGradient,
-  marketingBtnOutline,
-  marketingFeatureCard,
+  marketingBtnPrimary,
+  marketingFigure,
+  marketingLede,
   marketingMutedText,
+  marketingRule,
+  marketingTextLink,
 } from '~/lib/marketing/marketing-ui';
+
+import { MarketingSectionIndex } from '../marketing-section-index';
 
 export function CommercialPricingTeaser() {
   const pricing = getCommercialHomePricing();
@@ -17,77 +23,101 @@ export function CommercialPricingTeaser() {
   return (
     <section
       id="pricing"
-      className="mx-auto w-full max-w-7xl px-6 py-16"
+      className="mx-auto w-full max-w-[88rem] scroll-mt-24 px-6 py-20 md:py-28"
       aria-labelledby="home-pricing-heading"
     >
-      <div
-        className={cn(
-          'grid gap-8 rounded-[1.75rem] border border-[color:var(--workspace-shell-border)] p-8 md:p-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center',
-          marketingFeatureCard,
-        )}
-      >
-        <div>
-          <p
-            className={cn(
-              'text-xs font-medium tracking-[0.14em] uppercase',
-              marketingMutedText,
-            )}
-          >
-            Published pricing
-          </p>
-          <h2
-            id="home-pricing-heading"
-            className="font-heading mt-2 text-3xl font-semibold text-[var(--workspace-shell-text)] md:text-4xl"
-          >
-            From {pricing.fromLabel} a month. Portals included.
+      <MarketingSectionIndex index="03" label="Rate card" />
+
+      <div className="mt-10 grid gap-12 lg:grid-cols-12 lg:gap-10">
+        <div className="lg:col-span-5">
+          <h2 id="home-pricing-heading" className="sr-only">
+            Pricing from {pricing.fromLabel} a month for the first seat
           </h2>
           <p
-            className={cn('mt-3 max-w-xl leading-relaxed', marketingMutedText)}
+            className="text-[0.8125rem] font-medium text-[var(--workspace-shell-text-muted)]"
+            aria-hidden="true"
           >
-            One graduated price for every desk — no demo to hear the number, no
-            per-portal add-ons. A typical {pricing.example.seats}-negotiator
-            desk is {pricing.example.totalLabel} a month
-            {pricing.example.supportSeats > 0
-              ? `, with ${pricing.example.supportSeats} free support seats for admin and finance`
-              : ''}
-            .
+            From
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button asChild className={marketingBtnGradient}>
-              <Link href="/commercial-property#pricing">Price your desk</Link>
+          <p
+            className={cn(
+              marketingFigure,
+              'text-[6rem] leading-[0.9] text-[var(--workspace-shell-text)] md:text-[8.5rem]',
+            )}
+            aria-hidden="true"
+          >
+            {pricing.fromLabel}
+          </p>
+          <p
+            className="mt-3 text-[0.9375rem] text-[var(--workspace-shell-text-muted)]"
+            aria-hidden="true"
+          >
+            a month for the first seat, less for each seat after. Portals
+            included.
+          </p>
+          <p className={cn(marketingLede, marketingMutedText, 'mt-8')}>
+            One graduated price for every desk, published here rather than
+            behind a demo. Rightmove Commercial, EACH and Property Hive are in
+            the price, not add-ons.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-6">
+            <Button asChild className={marketingBtnPrimary}>
+              <Link href="/commercial-property#pricing">
+                Price your desk
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
             </Button>
-            <Button asChild variant="outline" className={marketingBtnOutline}>
-              <Link href="#waitlist">Join the waiting list</Link>
-            </Button>
+            <Link href="#waitlist" className={marketingTextLink}>
+              Join the waiting list
+            </Link>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] p-5">
-          <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
-            {pricing.bands.map((band) => (
-              <li
-                key={band.label}
-                className="flex items-baseline justify-between gap-4 py-3 first:pt-0 last:pb-0"
-              >
-                <span className="text-sm text-[var(--workspace-shell-text)]">
-                  {band.label}
-                </span>
-                <span className="font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">
-                  {band.unitLabel}
-                  <span
+        <div className="lg:col-span-6 lg:col-start-7">
+          <table className="w-full border-collapse text-left">
+            <caption className="sr-only">Price per seat by band</caption>
+            <thead>
+              <tr className="text-[0.8125rem] font-medium text-[var(--workspace-shell-text-muted)]">
+                <th scope="col" className="pb-3 font-medium">
+                  Seats
+                </th>
+                <th scope="col" className="pb-3 text-right font-medium">
+                  Per seat, per month
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {pricing.bands.map((band) => (
+                <tr key={band.label} className={cn(marketingRule, 'border-t')}>
+                  <th
+                    scope="row"
+                    className="py-5 text-base font-normal text-[var(--workspace-shell-text)]"
+                  >
+                    {band.label}
+                  </th>
+                  <td
                     className={cn(
-                      'ml-1 text-xs font-normal',
-                      marketingMutedText,
+                      marketingFigure,
+                      'py-5 text-right text-[2rem] leading-none text-[var(--workspace-shell-text)]',
                     )}
                   >
-                    / seat / mo
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className={cn('mt-4 text-xs', marketingMutedText)}>
+                    {band.unitLabel}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p
+            className={cn(
+              marketingRule,
+              'border-t pt-4 text-[0.8125rem] leading-relaxed text-[var(--workspace-shell-text-muted)]',
+            )}
+          >
+            A {pricing.example.seats}-negotiator desk:{' '}
             {pricing.example.workedLabel}
+            {pricing.example.supportSeats > 0
+              ? `, plus ${pricing.example.supportSeats} free support seats for admin and finance.`
+              : '.'}
           </p>
         </div>
       </div>

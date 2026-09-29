@@ -2,23 +2,25 @@ import type { ReactNode } from 'react';
 
 import Link from 'next/link';
 
+import { ArrowRight } from 'lucide-react';
+
 import { Button } from '@kit/ui/button';
-import { cn } from '@kit/ui/utils';
 
 import { MARKETING_FREE_SIGNUP_URL } from '~/lib/billing/pricing-marketing';
 import type { FeatureTourBlock } from '~/lib/marketing/feature-tour-content';
 import {
-  marketingBtnGradient,
-  marketingBtnOutline,
-  marketingMutedText,
-  marketingSectionHeading,
+  marketingBtnPrimary,
+  marketingTextLink,
 } from '~/lib/marketing/marketing-ui';
 
 import { FeatureTour } from './feature-tour';
+import { MarketingSectionHeader } from './marketing-section-index';
 
 type FeatureTourSectionProps = {
   id?: string;
   blocks?: FeatureTourBlock[];
+  /** Section number shown in the index marker, e.g. "03". */
+  index?: string;
   eyebrow?: string;
   heading?: string;
   intro?: string;
@@ -29,9 +31,10 @@ type FeatureTourSectionProps = {
 export function FeatureTourSection({
   id = 'features',
   blocks,
+  index,
   eyebrow = 'A closer look',
   heading = 'What it feels like in the workspace.',
-  intro = 'Scroll through the studio — pipeline, invoices, portals, notes, and the iPhone app we are building next.',
+  intro = 'Scroll through the studio: pipeline, invoices, client portals, notes, and the iPhone app we are building next.',
   cta,
 }: FeatureTourSectionProps = {}) {
   return (
@@ -40,35 +43,29 @@ export function FeatureTourSection({
       className="relative mx-auto w-full max-w-[88rem] px-6 py-16 md:py-24"
       aria-labelledby="feature-tour-heading"
     >
-      <div className="mb-8 max-w-2xl md:mx-auto md:mb-10 md:text-center">
-        <p className="mb-2 text-xs font-medium tracking-[0.14em] text-[var(--workspace-shell-text-muted)] uppercase">
-          {eyebrow}
-        </p>
-        <h2
-          id="feature-tour-heading"
-          className={cn(
-            marketingSectionHeading,
-            'text-[var(--workspace-shell-text)]',
-          )}
-        >
-          {heading}
-        </h2>
-        <p className={cn('mt-3 text-base leading-relaxed', marketingMutedText)}>
-          {intro}
-        </p>
-      </div>
+      <MarketingSectionHeader
+        index={index}
+        label={eyebrow}
+        title={heading}
+        intro={intro}
+        headingId="feature-tour-heading"
+        className="mb-12 md:mb-16"
+      />
 
       <FeatureTour blocks={blocks} />
 
-      <div className="mt-10 flex flex-wrap justify-center gap-3">
+      <div className="mt-12 flex flex-wrap items-center gap-6">
         {cta ?? (
           <>
-            <Button asChild className={marketingBtnGradient}>
-              <Link href={MARKETING_FREE_SIGNUP_URL}>Start free</Link>
+            <Button asChild className={marketingBtnPrimary}>
+              <Link href={MARKETING_FREE_SIGNUP_URL}>
+                Start free
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
             </Button>
-            <Button asChild variant="outline" className={marketingBtnOutline}>
-              <Link href="/pricing">See pricing</Link>
-            </Button>
+            <Link href="/pricing" className={marketingTextLink}>
+              See pricing
+            </Link>
           </>
         )}
       </div>

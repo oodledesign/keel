@@ -4,52 +4,64 @@ import { cn } from '@kit/ui/utils';
 
 import { COMMERCIAL_HOME_TRUST } from '~/lib/marketing/commercial-home-content';
 import {
-  marketingIconWell,
   marketingMutedText,
+  marketingRule,
 } from '~/lib/marketing/marketing-ui';
-
-import { FeatureLandingIcon } from '../feature-landing-icon';
 
 export function CommercialTrustStrip() {
   return (
     <section
-      className="border-y border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]"
+      className="mx-auto w-full max-w-[88rem] px-6"
       aria-label="Security and pricing"
     >
-      <ul className="mx-auto grid w-full max-w-7xl gap-6 px-6 py-12 sm:grid-cols-2 lg:grid-cols-4">
+      <ul
+        className={cn(
+          marketingRule,
+          'grid border-y sm:grid-cols-2 lg:grid-cols-4',
+        )}
+      >
         {COMMERCIAL_HOME_TRUST.map((item) => {
           const content = (
             <>
-              <span className={cn(marketingIconWell, 'size-10 shrink-0')}>
-                <FeatureLandingIcon name={item.icon} className="size-4" />
+              <span className="block text-[0.9375rem] font-medium text-[var(--workspace-shell-text)]">
+                {item.title}
+                {item.href ? (
+                  <span
+                    className="ml-1.5 text-[var(--workspace-shell-text-muted)] transition-transform duration-200 group-hover:translate-x-0.5"
+                    aria-hidden="true"
+                  >
+                    →
+                  </span>
+                ) : null}
               </span>
-              <span>
-                <span className="block text-sm font-semibold text-[var(--workspace-shell-text)]">
-                  {item.title}
-                </span>
-                <span
-                  className={cn(
-                    'mt-1 block text-sm leading-relaxed',
-                    marketingMutedText,
-                  )}
-                >
-                  {item.description}
-                </span>
+              <span
+                className={cn(
+                  'mt-1.5 block text-sm leading-relaxed',
+                  marketingMutedText,
+                )}
+              >
+                {item.description}
               </span>
             </>
           );
 
           return (
-            <li key={item.title}>
+            <li
+              key={item.title}
+              className={cn(
+                marketingRule,
+                'border-t py-7 first:border-t-0 lg:border-t-0 lg:border-l lg:px-6 lg:first:border-l-0 lg:first:pl-0 sm:[&:nth-child(2)]:border-t-0',
+              )}
+            >
               {item.href ? (
                 <Link
                   href={item.href}
-                  className="-m-2 flex items-start gap-3 rounded-xl p-2 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                  className="group block rounded-[2px] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:outline-none"
                 >
                   {content}
                 </Link>
               ) : (
-                <div className="flex items-start gap-3">{content}</div>
+                <div>{content}</div>
               )}
             </li>
           );

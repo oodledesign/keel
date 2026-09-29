@@ -51,23 +51,22 @@ export function SiteHeaderAccountSection({
   return <AuthButtons />;
 }
 
+const HEADER_SIGN_UP_CLASS =
+  'h-9 rounded-[var(--ozer-radius-control)] bg-[var(--ozer-plum-950)] px-4 text-sm font-medium text-[var(--ozer-cream-50)] hover:bg-[var(--ozer-plum-800)] dark:bg-[var(--ozer-cream-50)] dark:text-[var(--ozer-plum-950)] dark:hover:bg-[var(--ozer-cream-100)]';
+
 function AuthButtons() {
   return (
     <div className="animate-in fade-in flex items-center gap-x-2 duration-500">
       <ThemeModeToggle className="hidden md:inline-flex" />
-      <div className="hidden items-center gap-x-2 md:flex">
-        <Button asChild className="md:text-sm" variant="outline" size="sm">
-          <Link href={pathsConfig.auth.signIn}>
-            <Trans i18nKey="auth:signIn" />
-          </Link>
-        </Button>
-
-        <Button
-          asChild
-          className="text-xs md:text-sm"
-          variant="default"
-          size="sm"
+      <div className="hidden items-center gap-x-5 md:flex">
+        <Link
+          href={pathsConfig.auth.signIn}
+          className="text-sm font-medium text-[var(--workspace-shell-nav-text)] decoration-2 underline-offset-[10px] transition-colors duration-200 hover:text-[var(--workspace-shell-nav-text-hover)] hover:underline hover:decoration-[color:var(--ozer-plum-alpha-18)] dark:hover:decoration-[color:var(--ozer-on-dark-alpha-65)]"
         >
+          <Trans i18nKey="auth:signIn" />
+        </Link>
+
+        <Button asChild size="sm" className={HEADER_SIGN_UP_CLASS}>
           <Link href={MARKETING_FREE_SIGNUP_URL}>
             <Trans i18nKey="auth:signUp" />
           </Link>
@@ -75,7 +74,7 @@ function AuthButtons() {
       </div>
 
       <div className="flex items-center gap-x-2 md:hidden">
-        <Button asChild className="text-xs" variant="default" size="sm">
+        <Button asChild size="sm" className={HEADER_SIGN_UP_CLASS}>
           <Link href={MARKETING_FREE_SIGNUP_URL}>
             <Trans i18nKey="auth:signUp" />
           </Link>

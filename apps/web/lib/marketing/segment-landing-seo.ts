@@ -37,7 +37,7 @@ export function buildSegmentJsonLd(config: SegmentLandingConfig) {
       path,
     }),
     softwareApplicationJsonLd({
-      name: `Ozer — ${config.hero.eyebrow}`,
+      name: `${config.hero.eyebrow} | Ozer`,
       description: config.seo.description,
       url: pageUrl,
       offers: config.pricingPlans.map((plan) => ({

@@ -6,7 +6,7 @@ import { ArrowRight } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
-/** Pill newsletter field — opens a mailto compose (no list backend yet). */
+/** Ruled newsletter field. Opens a mailto compose (no list backend yet). */
 export function MarketingFooterNewsletter({
   className,
 }: {
@@ -30,24 +30,21 @@ export function MarketingFooterNewsletter({
 
   return (
     <div className={cn('flex flex-col gap-3', className)}>
-      <p className="font-heading text-sm font-semibold text-[var(--workspace-shell-text)]">
-        Newsletter
-      </p>
-      <p className="text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
-        Get tips, product updates, and insights on running a calmer studio.
+      <p className="text-[0.8125rem] font-medium text-[var(--workspace-shell-text)]">
+        Product updates, roughly once a month
       </p>
       {sent ? (
         <p
           role="status"
           aria-live="polite"
-          className="text-sm text-[var(--ozer-coral-600)]"
+          className="text-sm text-[var(--workspace-shell-text-muted)]"
         >
-          Your email app should open — send to finish signing up.
+          Your email app should open. Send the message to finish signing up.
         </p>
       ) : (
         <form
           onSubmit={onSubmit}
-          className="flex items-center gap-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 shadow-sm"
+          className="flex items-center gap-2 border-b border-[color:var(--workspace-shell-text)] pb-1.5 transition-[border-color,box-shadow] duration-200 focus-within:border-[color:var(--ozer-accent)] focus-within:shadow-[0_1px_0_0_var(--ozer-accent)]"
         >
           <label className="sr-only" htmlFor="footer-newsletter-email">
             Email address
@@ -60,13 +57,13 @@ export function MarketingFooterNewsletter({
             placeholder="Email address"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="min-w-0 flex-1 rounded-full bg-transparent px-4 py-2.5 text-sm text-[var(--workspace-shell-text)] outline-none placeholder:text-[var(--workspace-shell-text-muted)]"
+            className="h-10 min-w-0 flex-1 bg-transparent text-sm text-[var(--workspace-shell-text)] outline-none placeholder:text-[var(--workspace-shell-text-muted)]"
           />
           <button
             type="submit"
             className={cn(
-              'inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--ozer-accent)] px-4 py-2.5 text-sm font-semibold text-[var(--ozer-plum-950)]',
-              'transition-[transform,background-color] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-[var(--ozer-accent-hover)] active:scale-[0.97]',
+              'inline-flex shrink-0 items-center gap-1.5 rounded-[2px] py-2 text-sm font-medium text-[var(--workspace-shell-text)]',
+              'transition-colors duration-200 hover:text-[var(--ozer-coral-600)] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:outline-none dark:hover:text-[var(--ozer-coral-400)]',
             )}
           >
             Subscribe

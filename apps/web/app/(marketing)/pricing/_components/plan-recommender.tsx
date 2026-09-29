@@ -210,20 +210,20 @@ export function PlanRecommender() {
   return (
     <section
       className={cn(
-        'rounded-3xl border border-[color:var(--workspace-shell-border)] p-5 md:p-8',
+        'rounded-[var(--ozer-radius-media)] border border-[color:var(--workspace-shell-border)] p-5 md:p-8',
         marketingFeatureCard,
       )}
       aria-labelledby="plan-recommender-heading"
     >
       <div className="mx-auto max-w-3xl text-center">
-        <p className="text-sm font-semibold tracking-[0.12em] text-[var(--ozer-coral-600)] uppercase">
+        <p className="text-[0.8125rem] font-medium text-[var(--workspace-shell-text-muted)]">
           Plan finder
         </p>
         <h2
           id="plan-recommender-heading"
           ref={headingRef}
           tabIndex={-1}
-          className="font-heading mt-2 text-2xl font-semibold text-[var(--workspace-shell-text)] outline-none md:text-3xl"
+          className="font-heading mt-2 text-2xl font-medium tracking-[-0.015em] text-[var(--workspace-shell-text)] outline-none md:text-[2.25rem]"
         >
           Not sure which plan? Answer three quick questions.
         </h2>
@@ -297,7 +297,7 @@ function Question<T extends string>({
 }) {
   return (
     <div>
-      <h3 className="font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">
+      <h3 className="font-heading text-xl font-medium text-[var(--workspace-shell-text)]">
         {question}
       </h3>
       <div className="mt-4 grid gap-3">
@@ -306,7 +306,7 @@ function Question<T extends string>({
             key={option.value}
             type="button"
             onClick={() => onChoose(option.value)}
-            className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-5 py-4 text-left transition hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--workspace-shell-sidebar-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ozer-accent)]"
+            className="rounded-[var(--ozer-radius-control)] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-5 py-4 text-left transition hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--workspace-shell-sidebar-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ozer-accent)]"
           >
             <span className="block font-semibold text-[var(--workspace-shell-text)]">
               {option.label}
@@ -375,17 +375,17 @@ function RecommendationCard({
   onReset: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] p-5 md:p-6">
+    <div className="rounded-[var(--ozer-radius-media)] border border-[color:var(--workspace-shell-text)] bg-[var(--workspace-shell-panel)] p-5 md:p-6">
       {exploring ? (
         <p className={cn('mb-4 text-sm', marketingBodyText)}>
           Personal and family workspaces are free forever — you can start there
           today and add a business workspace whenever you&apos;re ready.
         </p>
       ) : null}
-      <p className="text-sm font-semibold tracking-[0.12em] text-[var(--ozer-coral-600)] uppercase">
+      <p className="text-[0.8125rem] font-medium text-[var(--workspace-shell-text-muted)]">
         Recommended
       </p>
-      <h3 className="font-heading mt-2 text-2xl font-semibold text-[var(--workspace-shell-text)]">
+      <h3 className="font-heading mt-2 text-2xl font-medium text-[var(--workspace-shell-text)]">
         {recommendation.title}
       </h3>
       {recommendation.monthlyPriceGbp == null ? (

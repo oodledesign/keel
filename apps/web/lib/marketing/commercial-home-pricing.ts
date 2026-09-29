@@ -33,7 +33,10 @@ export function getCommercialHomePricing(): CommercialHomePricing {
     example: {
       seats: exampleSeats,
       totalLabel: formatGbp(estimateMonthlyBreakdownGbp(exampleSeats).totalGbp),
-      workedLabel: formatGraduatedWorkedExample(exampleSeats, formatGbp),
+      workedLabel: formatGraduatedWorkedExample(
+        exampleSeats,
+        formatGbp,
+      ).replace(/^e\.g\.\s+/, ''),
       supportSeats: freeSupportSeats(exampleSeats),
     },
   };

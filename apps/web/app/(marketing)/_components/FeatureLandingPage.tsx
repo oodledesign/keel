@@ -3,26 +3,29 @@ import Link from 'next/link';
 import { ArrowRight, Download } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { cn } from '@kit/ui/utils';
 
 import { MARKETING_FREE_SIGNUP_URL } from '~/lib/billing/pricing-marketing';
 import { isAssistantDownloadFilePath } from '~/lib/marketing/assistant-download';
 import type { FeatureSlug } from '~/lib/marketing/feature-landing-pages';
 import {
   marketingBodyText,
-  marketingBtnGradient,
-  marketingBtnOutline,
-  marketingEyebrow,
-  marketingFeatureCard,
-  marketingIconWell,
+  marketingBtnPrimary,
+  marketingDisplay,
+  marketingLede,
   marketingMutedText,
-  marketingPanelDeep,
+  marketingRule,
   marketingSectionMuted,
+  marketingTextLink,
 } from '~/lib/marketing/marketing-ui';
 
 import { FeatureCoverPreview } from './feature-cover-previews';
 import type { FAQItem } from './feature-landing-faqs';
-import { FeatureLandingIcon } from './feature-landing-icon';
 import { MarketingFaqsSection } from './marketing-faqs';
+import {
+  MarketingSectionHeader,
+  MarketingSectionIndex,
+} from './marketing-section-index';
 
 export type FeatureHighlight = {
   icon: string;
@@ -80,161 +83,146 @@ export function FeatureLandingPage({
   ctaText = 'Start free',
   ctaHref = MARKETING_FREE_SIGNUP_URL,
 }: FeatureLandingPageProps) {
+  const relatedLinks = [
+    ...connectedTo.slice(0, 2).map((item) => ({
+      href: item.href,
+      label: item.label,
+    })),
+    { href: '/pricing', label: 'Ozer pricing, with graduated seats from £14' },
+    relatedBlog,
+    ...relatedComparisons,
+  ];
+
   return (
     <main
       className="marketing-shell relative overflow-hidden"
       aria-label={primaryKeyword}
     >
-      <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-10 px-6 pt-24 pb-16 md:pt-28 lg:flex-row lg:items-center lg:gap-12">
-        <div className="max-w-3xl flex-1 space-y-8">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={marketingEyebrow}>{eyebrow}</span>
-            {heroBadge ? (
-              <span className="inline-flex items-center rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-1.5 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
-                {heroBadge}
-              </span>
-            ) : null}
-          </div>
+      <section className="mx-auto w-full max-w-[88rem] px-6 pt-10 pb-20 md:pt-14 md:pb-28">
+        <MarketingSectionIndex label={eyebrow} aside={heroBadge} />
 
-          <div className="space-y-5">
-            <h1 className="font-heading text-4xl leading-tight font-bold text-[var(--workspace-shell-text)] md:text-5xl lg:text-6xl">
+        <div className="mt-10 grid gap-12 md:mt-14 lg:grid-cols-12 lg:items-end lg:gap-10">
+          <div className="lg:col-span-7">
+            <h1
+              className={cn(
+                marketingDisplay,
+                'text-[var(--workspace-shell-text)] lg:text-[4.75rem]',
+              )}
+            >
               {heading}
             </h1>
-            <p
-              className={`max-w-2xl text-base leading-relaxed md:text-lg ${marketingBodyText}`}
-            >
+            <p className={cn(marketingLede, 'mt-8', marketingBodyText)}>
               {answerFirst}
             </p>
             {subheading !== answerFirst ? (
               <p
-                className={`max-w-2xl text-sm leading-relaxed ${marketingMutedText}`}
+                className={`mt-4 max-w-2xl text-[0.9375rem] leading-relaxed ${marketingMutedText}`}
               >
                 {subheading}
               </p>
             ) : null}
-          </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <Button asChild size="lg" className={marketingBtnGradient}>
-              <Link href={ctaHref}>
-                {ctaText}
-                <ArrowRight className="ml-1.5 h-4 w-4" />
-              </Link>
-            </Button>
-            {secondaryCta ? (
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className={marketingBtnOutline}
-              >
-                {isAssistantDownloadFilePath(secondaryCta.href) ? (
+            <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
+              <Button asChild size="lg" className={marketingBtnPrimary}>
+                <Link href={ctaHref}>
+                  {ctaText}
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </Link>
+              </Button>
+              {secondaryCta ? (
+                isAssistantDownloadFilePath(secondaryCta.href) ? (
                   <a
                     href={secondaryCta.href}
                     download
                     data-test="feature-assistant-download"
+                    className={marketingTextLink}
                   >
-                    <Download className="mr-1.5 h-4 w-4" />
+                    <Download className="size-4" aria-hidden="true" />
                     {secondaryCta.label}
                   </a>
                 ) : (
                   <Link
                     href={secondaryCta.href}
                     data-test="feature-assistant-download-page"
+                    className={marketingTextLink}
                   >
-                    <Download className="mr-1.5 h-4 w-4" />
+                    <Download className="size-4" aria-hidden="true" />
                     {secondaryCta.label}
                   </Link>
-                )}
-              </Button>
-            ) : null}
-            <Button
-              asChild
-              variant="outline"
-              size="lg"
-              className={marketingBtnOutline}
-            >
-              <Link href="/features">See all features</Link>
-            </Button>
+                )
+              ) : null}
+              <Link href="/features" className={marketingTextLink}>
+                All features
+              </Link>
+            </div>
           </div>
-        </div>
 
-        <div className="w-full flex-1 lg:max-w-xl">
-          <FeatureCoverPreview slug={coverSlug} variant="hero" />
+          <div className="w-full lg:col-span-5">
+            <FeatureCoverPreview slug={coverSlug} variant="hero" />
+          </div>
         </div>
       </section>
 
-      <section className="relative mx-auto w-full max-w-7xl px-6 pb-16">
-        <div className="mb-10 max-w-2xl">
-          <h2 className="font-heading text-3xl font-semibold tracking-tight text-[var(--workspace-shell-text)] md:text-4xl">
-            What you get
-          </h2>
-        </div>
-
-        <div className="grid gap-5 md:grid-cols-2">
-          {highlights.map((item) => (
-            <article key={item.title} className={`${marketingFeatureCard} p-6`}>
-              <div className={`mb-4 h-11 w-11 ${marketingIconWell}`}>
-                <FeatureLandingIcon name={item.icon} className="h-5 w-5" />
-              </div>
-              <h3 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
+      <section className="mx-auto w-full max-w-[88rem] px-6 pb-20 md:pb-28">
+        <MarketingSectionHeader
+          label="Highlights"
+          title="What you get"
+          headingId="feature-highlights-heading"
+        />
+        <ol className={cn(marketingRule, 'mt-12 grid border-t md:grid-cols-2')}>
+          {highlights.map((item, index) => (
+            <li
+              key={item.title}
+              className={cn(
+                marketingRule,
+                'border-b py-8 md:pr-12 md:odd:border-r md:even:pl-12',
+              )}
+            >
+              <span className="text-[0.8125rem] font-medium text-[var(--workspace-shell-text-muted)] tabular-nums">
+                {String(index + 1).padStart(2, '0')}
+              </span>
+              <h3 className="font-heading mt-3 text-[1.5rem] leading-tight font-medium tracking-[-0.01em] text-[var(--workspace-shell-text)]">
                 {item.title}
               </h3>
               <p
-                className={`mt-3 text-sm leading-relaxed ${marketingMutedText}`}
+                className={`mt-2 text-[0.9375rem] leading-relaxed ${marketingMutedText}`}
               >
                 {item.description}
               </p>
-            </article>
+            </li>
           ))}
-        </div>
+        </ol>
       </section>
 
-      <section className={`relative py-16 ${marketingSectionMuted}`}>
-        <div className="mx-auto w-full max-w-7xl px-6">
-          <div className="max-w-2xl space-y-4">
-            <h2 className="font-heading text-3xl font-semibold tracking-tight text-[var(--workspace-shell-text)] md:text-4xl">
-              {connectionHeading}
-            </h2>
-            {connectionDescription ? (
-              <p className={`text-base leading-relaxed ${marketingBodyText}`}>
-                {connectionDescription}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="mt-8 flex flex-wrap gap-3">
-            {connectedTo.slice(0, 2).map((item) => (
-              <Link
-                key={`${item.href}-${item.label}`}
-                href={item.href}
-                className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)] px-4 py-2 text-sm font-medium text-[var(--ozer-coral-600)] transition hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]"
+      <section className={`py-20 md:py-28 ${marketingSectionMuted}`}>
+        <div className="mx-auto w-full max-w-[88rem] px-6">
+          <MarketingSectionHeader
+            label="Connected"
+            title={connectionHeading}
+            intro={connectionDescription}
+            headingId="feature-connected-heading"
+          />
+          <ul className={cn(marketingRule, 'mt-12 border-b')}>
+            {relatedLinks.map((link) => (
+              <li
+                key={`${link.href}-${link.label}`}
+                className={cn(marketingRule, 'border-t')}
               >
-                Related: {item.label}
-              </Link>
+                <Link
+                  href={link.href}
+                  className="group flex items-baseline justify-between gap-6 py-4 text-[1.0625rem] text-[var(--workspace-shell-text)] transition-colors duration-200 hover:text-[var(--ozer-coral-600)] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:outline-none dark:hover:text-[var(--ozer-coral-400)]"
+                >
+                  {link.label}
+                  <span
+                    className="transition-transform duration-200 group-hover:translate-x-1"
+                    aria-hidden="true"
+                  >
+                    →
+                  </span>
+                </Link>
+              </li>
             ))}
-            <Link
-              href="/pricing"
-              className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)] px-4 py-2 text-sm font-medium text-[var(--ozer-coral-600)] transition hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]"
-            >
-              Ozer pricing — graduated seats from £14
-            </Link>
-            <Link
-              href={relatedBlog.href}
-              className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)] px-4 py-2 text-sm font-medium text-[var(--ozer-coral-600)] transition hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]"
-            >
-              {relatedBlog.label}
-            </Link>
-            {relatedComparisons.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="inline-flex items-center rounded-full border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)] px-4 py-2 text-sm font-medium text-[var(--ozer-coral-600)] transition hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
+          </ul>
         </div>
       </section>
 
@@ -248,24 +236,36 @@ export function FeatureLandingPage({
 
       <section
         id="get-started"
-        className="relative mx-auto w-full max-w-7xl scroll-mt-24 px-6 pt-4 pb-20"
+        className="scroll-mt-24 bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]"
+        aria-labelledby="feature-cta-heading"
       >
-        <div className={`${marketingPanelDeep} p-8 text-center md:p-12`}>
-          <h2 className="font-heading text-3xl font-semibold tracking-tight text-[var(--workspace-shell-text)]">
-            Run this in your Workspace OS
-          </h2>
-          <p
-            className={`mx-auto mt-3 max-w-xl text-sm leading-relaxed md:text-base ${marketingBodyText}`}
+        <div className="mx-auto w-full max-w-[88rem] px-6 py-20 md:py-28">
+          <MarketingSectionIndex label="Get started" tone="dark" />
+          <h2
+            id="feature-cta-heading"
+            className={cn(marketingDisplay, 'mt-12 max-w-[16ch] md:mt-16')}
           >
-            Start free. Personal and family stay free. Business is Free, Starter
-            from £14, or Pro from £29 — extra seats stay cheaper.
-          </p>
-          <Button asChild size="lg" className={`mt-6 ${marketingBtnGradient}`}>
-            <Link href={ctaHref}>
-              {ctaText}
-              <ArrowRight className="ml-1.5 h-4 w-4" />
-            </Link>
-          </Button>
+            Run this in your Ozer workspace.
+          </h2>
+          <div className="mt-10 grid gap-8 md:mt-14 lg:grid-cols-12 lg:gap-10">
+            <p
+              className={cn(
+                marketingLede,
+                'text-[var(--ozer-text-on-dark-muted)] lg:col-span-5',
+              )}
+            >
+              Start free. Personal and family stay free. Business is Free,
+              Starter from £14 or Pro from £29, and extra seats cost less.
+            </p>
+            <div className="lg:col-span-6 lg:col-start-7">
+              <Button asChild size="lg" className={marketingBtnPrimary}>
+                <Link href={ctaHref}>
+                  {ctaText}
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </Link>
+              </Button>
+            </div>
+          </div>
         </div>
       </section>
     </main>

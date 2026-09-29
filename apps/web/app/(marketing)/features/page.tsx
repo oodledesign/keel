@@ -2,14 +2,15 @@ import Link from 'next/link';
 
 import { ArrowRight } from 'lucide-react';
 
+import { cn } from '@kit/ui/utils';
+
 import { listFeaturePageConfigs } from '~/lib/marketing/feature-landing-pages';
 import {
   marketingBodyText,
-  marketingEyebrow,
-  marketingFeatureCard,
-  marketingIconAccent,
-  marketingIconWell,
+  marketingDisplay,
+  marketingLede,
   marketingMutedText,
+  marketingRule,
 } from '~/lib/marketing/marketing-ui';
 import { JsonLd } from '~/lib/seo/json-ld';
 import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
@@ -21,12 +22,12 @@ import {
 } from '~/lib/seo/schema';
 
 import { FeatureCoverPreview } from '../_components/feature-cover-previews';
-import { FeatureLandingIcon } from '../_components/feature-landing-icon';
+import { MarketingSectionIndex } from '../_components/marketing-section-index';
 
 export const metadata = buildMarketingMetadata({
   title: 'Workspace OS features — Ozer',
   description:
-    'Planner, pipeline, invoices, activity tracking, meetings, and portals in one Workspace OS. Built for freelancers and small agencies — not seven tools and Zapier.',
+    'Planner, pipeline, invoices, activity tracking, meetings and portals in one Workspace OS, built for freelancers and small agencies who are tired of stitching seven tools together.',
   path: '/features',
   ogType: 'feature',
 });
@@ -52,62 +53,78 @@ export default function FeaturesIndexPage() {
         ])}
       />
 
-      <section className="relative mx-auto w-full max-w-7xl px-6 pt-24 pb-20 md:pt-28">
-        <div className="max-w-3xl space-y-5">
-          <span className={marketingEyebrow}>Ozer Features</span>
-          <h1 className="font-heading text-4xl leading-tight font-bold text-[var(--workspace-shell-text)] md:text-5xl lg:text-6xl">
-            The Workspace OS, feature by feature
-          </h1>
-          <p
-            className={`text-base leading-relaxed md:text-lg ${marketingBodyText}`}
+      <section className="relative mx-auto w-full max-w-[88rem] px-6 pt-24 pb-24 md:pt-32">
+        <MarketingSectionIndex
+          label="Features"
+          aside={<span className="tabular-nums">{features.length} pages</span>}
+        />
+        <div className="mt-10 grid gap-8 lg:grid-cols-12 lg:items-end">
+          <h1
+            className={cn(
+              marketingDisplay,
+              'text-[var(--workspace-shell-text)] lg:col-span-8 lg:text-[4.75rem]',
+            )}
           >
-            Planner, pipeline, invoices, activity tracking, meetings, and more —
-            one system so a small studio does not need seven tools and Zapier.
+            Every part of the workspace, one page each.
+          </h1>
+          <p className={cn(marketingLede, marketingBodyText, 'lg:col-span-4')}>
+            Planner, pipeline, invoices, activity tracking and meetings share
+            the same records, so a small studio can drop the separate tools and
+            the Zapier glue between them.
           </p>
         </div>
 
-        <div className="mt-14 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-          {features.map((feature) => (
-            <Link
-              key={feature.slug}
-              href={`/features/${feature.slug}`}
-              className={`group overflow-hidden transition hover:border-[var(--ozer-accent)]/30 ${marketingFeatureCard}`}
-            >
-              <FeatureCoverPreview
-                slug={feature.slug}
-                variant="card"
-                className="rounded-none border-0 border-b border-[color:var(--workspace-shell-border)] shadow-none"
-              />
-              <div className="p-6">
-                <div className={`mb-4 h-11 w-11 ${marketingIconWell}`}>
-                  <FeatureLandingIcon
-                    name={feature.indexIcon}
-                    className={`h-5 w-5 ${marketingIconAccent}`}
-                  />
-                </div>
-                <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
-                  {feature.name}
-                </h2>
-                {feature.heroBadge ? (
-                  <p
-                    className={`mt-1 text-xs font-medium ${marketingMutedText}`}
+        <ol className="mt-20 grid gap-x-10 gap-y-16 sm:grid-cols-2 xl:grid-cols-3">
+          {features.map((feature, index) => (
+            <li key={feature.slug}>
+              <Link
+                href={`/features/${feature.slug}`}
+                className="group block rounded-[2px] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:outline-none"
+              >
+                <FeatureCoverPreview
+                  slug={feature.slug}
+                  variant="card"
+                  className="overflow-hidden rounded-[var(--ozer-radius-media)] border border-[color:var(--workspace-shell-border)] shadow-none"
+                />
+                <div
+                  className={cn(
+                    marketingRule,
+                    'mt-6 flex items-baseline gap-3 border-t pt-4',
+                  )}
+                >
+                  <span
+                    className={cn('text-sm tabular-nums', marketingMutedText)}
                   >
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <h2 className="font-heading text-[1.625rem] leading-tight font-medium tracking-[-0.01em] text-[var(--workspace-shell-text)] decoration-1 underline-offset-[6px] group-hover:underline">
+                    {feature.name}
+                  </h2>
+                </div>
+                {feature.heroBadge ? (
+                  <p className={cn('mt-2 text-xs', marketingMutedText)}>
                     {feature.heroBadge}
                   </p>
                 ) : null}
                 <p
-                  className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}
+                  className={cn(
+                    'mt-3 text-[0.9375rem] leading-relaxed',
+                    marketingMutedText,
+                  )}
                 >
                   {feature.shortDescription}
                 </p>
-                <span className="mt-4 inline-flex items-center text-sm font-medium text-[var(--ozer-coral-600)] dark:text-[var(--ozer-coral-400)]">
-                  See {feature.name}
-                  <ArrowRight className="ml-1.5 h-4 w-4 transition group-hover:translate-x-0.5" />
+                <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--workspace-shell-text)]">
+                  Read more
+                  <ArrowRight
+                    className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
                 </span>
-              </div>
-            </Link>
+              </Link>
+            </li>
           ))}
-        </div>
+        </ol>
       </section>
     </main>
   );

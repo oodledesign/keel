@@ -51,69 +51,69 @@ export const EARLY_ACCESS_BENTO_FEATURES: Array<{
 }> = [
   {
     title: 'Pipeline & CRM',
-    desc: 'Every client and deal in one place — so nothing lives only in your inbox.',
+    desc: 'Every client and deal on one board, so nothing lives only in your inbox.',
     status: 'live',
     accent: 'cool-blue',
     wide: true,
   },
   {
     title: 'Invoicing',
-    desc: 'Send an invoice and see what is still owed — without opening a spreadsheet.',
+    desc: 'Send an invoice and see what is still owed without opening a spreadsheet.',
     status: 'live',
     accent: 'coral',
   },
   {
     title: 'Client portals',
-    desc: 'One link for files and sign-off — not another folder to babysit.',
+    desc: 'One link for files and sign-off, so there is no shared folder to babysit.',
     status: 'live',
     accent: 'sage',
   },
   {
     title: 'Second brain',
-    desc: 'Walk into a call with context already there — not a scramble through notes.',
+    desc: 'Walk into a call with the context already there, instead of scrambling through notes.',
     status: 'live',
     accent: 'lime',
   },
   {
     title: 'Client requests',
-    desc: 'Clear asks with credit costs — not vague favours buried in email.',
+    desc: 'Clear asks with credit costs, instead of vague favours buried in email.',
     status: 'live',
     accent: 'plum',
   },
   {
     title: 'Scheduling',
-    desc: 'Bookings without the back-and-forth — clients pick a time that works.',
+    desc: 'Bookings without the back-and-forth. Clients pick a time that works.',
     status: 'live',
     accent: 'cool-blue',
   },
   {
     title: 'Tasks',
-    desc: 'One list for what is actually due — not five apps and a notebook.',
+    desc: 'One list for what is due, instead of five apps and a notebook.',
     status: 'live',
     accent: 'coral',
   },
   {
     title: 'Messaging',
-    desc: 'Client chat tied to the project — not another thread to lose.',
+    desc: 'Client chat tied to the project, so conversations do not get lost.',
     status: 'live',
     accent: 'sage',
   },
   {
     title: 'Email assistant',
-    desc: 'Open your inbox already sorted — replies drafted, tasks extracted.',
+    desc: 'Open your inbox already sorted, with replies drafted and tasks extracted.',
     status: 'soon',
     accent: 'plum',
     wide: true,
   },
   {
     title: 'Meeting assistant',
-    desc: 'Leave the call with notes and follow-ups — not a mental to-do list.',
+    desc: 'Leave the call with notes and follow-ups written down, instead of a mental to-do list.',
     status: 'soon',
     accent: 'sage',
   },
   {
     title: 'Planner',
-    desc: 'See your day as a plan — calls, deep work, and what to do next.',
+    desc: 'See your day as a plan: calls, deep work and what to do next.',
     status: 'soon',
     accent: 'coral',
     wide: true,
@@ -126,13 +126,13 @@ export const EARLY_ACCESS_BENTO_FEATURES: Array<{
   },
   {
     title: 'AI media generation',
-    desc: 'On-brand visuals when the brief lands — not a separate creative stack.',
+    desc: 'On-brand visuals when the brief lands, without a separate creative stack.',
     status: 'addon',
     accent: 'cool-blue',
   },
   {
     title: 'Screen recording',
-    desc: 'Record a walkthrough in a click — feedback that clients actually watch.',
+    desc: 'Record a walkthrough in a click and send feedback clients will watch.',
     status: 'addon',
     accent: 'plum',
   },
@@ -173,7 +173,7 @@ export const EARLY_ACCESS_FEATURE_BLOCKS: Array<{
     eyebrow: 'Pipeline & CRM',
     title: 'You always know what happens next with a client.',
     moment:
-      'A new enquiry lands while you are in a meeting — you open Ozer later and it is already on the board, with the next step obvious.',
+      'A new enquiry lands while you are in a meeting. You open Ozer later and it is already on the board, with the next step obvious.',
     desc: 'Track enquiries through to signed work without digging through email. One board, one source of truth.',
     highlights: [
       'Kanban board from first enquiry to invoiced',
@@ -188,10 +188,10 @@ export const EARLY_ACCESS_FEATURE_BLOCKS: Array<{
     accent: 'plum',
     icon: 'Sparkles',
     eyebrow: 'Email assistant',
-    title: 'Start the day knowing what actually needs you.',
+    title: 'Start the day knowing which emails need you.',
     moment:
-      'You open your inbox and the noise is already sorted — what needs a reply, what is waiting on someone else, and what can wait.',
-    desc: 'Drafts replies in your voice and turns action into tasks, so you are responding — not reorganising.',
+      'You open your inbox and the noise is already sorted: what needs a reply, what is waiting on someone else and what can wait.',
+    desc: 'Drafts replies in your voice and turns action into tasks, so you spend the time responding instead of reorganising.',
     highlights: [
       'Triages your inbox by what needs a reply',
       'Drafts responses in your voice',
@@ -208,8 +208,8 @@ export const EARLY_ACCESS_FEATURE_BLOCKS: Array<{
     eyebrow: 'Planner',
     title: 'Your day has a shape, not just a pile of tasks.',
     moment:
-      'It is 9:15 and you can see the call, the deep work block, and when to chase that invoice — without rebuilding the plan in your head.',
-    desc: 'Pulls tasks, meetings and deadlines into a schedule you can actually follow.',
+      'It is 9:15 and you can see the call, the deep work block and when to chase that invoice, without rebuilding the plan in your head.',
+    desc: 'Pulls tasks, meetings and deadlines into a schedule that fits the time you have.',
     highlights: [
       'Builds a schedule from tasks and meetings',
       'Shows what to do next, not just what is open',
@@ -226,8 +226,8 @@ export const EARLY_ACCESS_FEATURE_BLOCKS: Array<{
     eyebrow: 'Invoicing',
     title: 'Getting paid should not need a spreadsheet ritual.',
     moment:
-      'You send an invoice after a call and immediately see what is still outstanding — no copying numbers into another tab.',
-    desc: 'Professional invoices, payment status, and totals in one place tied to the client.',
+      'You send an invoice after a call and immediately see what is still outstanding. No copying numbers into another tab.',
+    desc: 'Professional invoices, payment status and totals, all tied to the client.',
     highlights: [
       'Send invoices in a few clicks',
       'Track paid, sent and overdue at a glance',
@@ -243,7 +243,7 @@ export const EARLY_ACCESS_FEATURE_BLOCKS: Array<{
     eyebrow: 'Client portals',
     title: 'Clients feel looked after, not lost in a folder.',
     moment:
-      'They open one link, find the latest files, and sign off — no "which Dropbox was that?" message.',
+      'They open one link, find the latest files and sign off. Nobody has to ask "which Dropbox was that?"',
     desc: 'A branded space for files, updates and approvals tied to the project.',
     highlights: [
       'Share files and updates in one branded space',
@@ -261,12 +261,12 @@ export const EARLY_ACCESS_FEATURE_BLOCKS: Array<{
     title: 'Context is there when the client calls.',
     moment:
       'Five minutes before a catch-up, you pull up the record and the last decision is right where you left it.',
-    desc: 'Notes and meeting detail on the client they belong to — searchable when you need them.',
+    desc: 'Notes and meeting detail on the client they belong to, searchable when you need them.',
     highlights: [
       'Notes attached to the client they belong to',
       'Meeting summaries searchable when you need them',
       'Tags and context that survives the week',
-      'Decisions and details in one place, not five apps',
+      'Decisions and details on the client record, not spread across five apps',
     ],
     mock: 'notes',
   },
@@ -277,7 +277,7 @@ export const EARLY_ACCESS_FEATURE_BLOCKS: Array<{
     eyebrow: 'Client requests',
     title: 'Scope stays clear without another email thread.',
     moment:
-      'A client picks from your menu, you approve in a click, and it lands in your queue — not as a vague "quick favour".',
+      'A client picks from your menu, you approve in a click, and it lands in your queue as scoped work instead of a vague "quick favour".',
     desc: 'Services with credit costs, so requests are explicit and billable.',
     highlights: [
       'Publish a menu of services with credit costs',
@@ -322,7 +322,7 @@ export const EARLY_ACCESS_PERSONAS: Array<{
   {
     accent: 'sage',
     title: 'Small studio, 2–5 people',
-    desc: 'The whole team sees the same client picture — no status meeting required.',
+    desc: 'The whole team sees the same client picture, so nobody needs a status meeting.',
     features: [
       'Pipeline & CRM',
       'Tasks',
@@ -334,7 +334,7 @@ export const EARLY_ACCESS_PERSONAS: Array<{
   {
     accent: 'lime',
     title: 'Freelance writer or marketer',
-    desc: 'Briefs and feedback live on the deal — not buried in threads.',
+    desc: 'Briefs and feedback live on the deal instead of in email threads.',
     features: [
       'Pipeline & CRM',
       'Client portals',
@@ -346,7 +346,7 @@ export const EARLY_ACCESS_PERSONAS: Array<{
   {
     accent: 'plum',
     title: 'Virtual assistant',
-    desc: 'Retainer work and one-off asks land in one queue — clearly scoped.',
+    desc: 'Retainer work and one-off asks land in one queue, each clearly scoped.',
     features: [
       'Client requests',
       'Tasks',
@@ -359,19 +359,19 @@ export const EARLY_ACCESS_PERSONAS: Array<{
 
 export const EARLY_ACCESS_FAQS = [
   {
-    question: "What's actually included right now?",
+    question: "What's included right now?",
     answer:
-      "Pipeline & CRM, invoicing, client portals, tasks, scheduling and notes — all fully tested and live from day one. We don't put anything in front of early adopters that isn't solid.",
+      "Pipeline & CRM, invoicing, client portals, tasks, scheduling and notes. All of them are fully tested and live from day one. We don't put anything in front of early adopters that isn't solid.",
   },
   {
     question: 'What about the email assistant and planner?',
     answer:
-      "Both are already in testing. As a tester you get them the moment they're ready, automatically — no separate signup, and no change to what you're paying.",
+      "Both are already in testing. As a tester you get them automatically the moment they're ready, with no separate signup and no change to what you're paying.",
   },
   {
     question: 'What does early access cost?',
     answer:
-      "£14/month for your first 3 months — everything on this page, with extra seats at £9/month each. When that period ends, you pick whatever fits how you work, or stay on full access and keep 15% off for as long as you're with us.",
+      "£14/month for your first 3 months, covering everything on this page, with extra seats at £9/month each. When that period ends, you pick whatever fits how you work, or stay on full access and keep 15% off for as long as you're with us.",
   },
   {
     question: 'Is my client data safe?',
@@ -379,8 +379,8 @@ export const EARLY_ACCESS_FAQS = [
       'Yes. Ozer is built privacy-first and hosted in the UK/EU. We never sell or share your data, and we mean that literally, not as a footer line.',
   },
   {
-    question: 'When do I actually get in?',
+    question: 'When do I get in?',
     answer:
-      "This pricing is for people who join in September, so everyone's testing on the same timeline. We onboard by hand in small batches, so it might take a little while — you'll hear from a real person, not an automated welcome email. Sign up after September and we'll add you to the next cohort.",
+      "This pricing is for people who join in September, so everyone's testing on the same timeline. We onboard by hand in small batches, so it might take a little while. You'll hear from a real person, not an automated welcome email. Sign up after September and we'll add you to the next cohort.",
   },
 ] as const;

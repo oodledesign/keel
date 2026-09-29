@@ -1,5 +1,10 @@
 import { cn } from '@kit/ui/utils';
 
+import {
+  marketingLede,
+  marketingSectionHeading,
+} from '~/lib/marketing/marketing-ui';
+
 export function SitePageHeader({
   title,
   subtitle,
@@ -11,36 +16,32 @@ export function SitePageHeader({
   container?: boolean;
   className?: string;
 }) {
-  const containerClass = container ? 'container' : '';
-
   return (
     <div
       className={cn(
-        'border-border/40 border-b py-6 xl:py-8 2xl:py-10',
+        'pt-16 md:pt-24',
+        container && 'mx-auto w-full max-w-[88rem] px-6',
         className,
       )}
     >
-      <div
-        className={cn(
-          'flex flex-col items-center gap-y-2 lg:gap-y-3',
-          containerClass,
-        )}
-      >
+      <div className="marketing-rule grid gap-6 border-b pb-10 md:grid-cols-12 md:gap-8 md:pb-14">
         <h1
-          className={
-            'font-heading text-3xl tracking-tighter xl:text-5xl dark:text-[var(--workspace-shell-text)]'
-          }
+          className={cn(
+            marketingSectionHeading,
+            'text-[var(--workspace-shell-text)] md:col-span-7 md:text-[3.5rem]',
+          )}
         >
           {title}
         </h1>
 
-        <h2
-          className={
-            'text-muted-foreground text-lg tracking-tight 2xl:text-2xl'
-          }
+        <p
+          className={cn(
+            marketingLede,
+            'self-end text-[var(--workspace-shell-text-muted)] md:col-span-5',
+          )}
         >
           {subtitle}
-        </h2>
+        </p>
       </div>
     </div>
   );

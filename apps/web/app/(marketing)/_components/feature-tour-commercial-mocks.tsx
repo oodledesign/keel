@@ -6,7 +6,6 @@ import { Check } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 
 import {
-  DemoCursor,
   DemoFrame,
   DemoHighlight,
   DemoPulse,
@@ -112,13 +111,6 @@ export function PublishPortalsMock() {
             </div>
           ))}
         </div>
-        <DemoCursor
-          x={['60%', '88%', '88%', '60%']}
-          y={['70%', '22%', '22%', '70%']}
-          times={[0, 0.22, 0.6, 1]}
-          clickAt={[0.24]}
-          duration={LOOP}
-        />
       </div>
     </DemoFrame>
   );
@@ -199,13 +191,6 @@ export function RequirementsMatchMock({
         >
           Added to interest schedule
         </motion.span>
-        <DemoCursor
-          x={['80%', '40%', '40%', '80%']}
-          y={['85%', '40%', '40%', '85%']}
-          times={[0, 0.48, 0.7, 1]}
-          clickAt={[0.52]}
-          duration={LOOP}
-        />
       </div>
     </DemoFrame>
   );
@@ -339,13 +324,6 @@ export function DisposalsPipelineMock() {
             </motion.span>
           </span>
         </div>
-        <DemoCursor
-          x={['52%', '52%', '84%', '84%', '52%']}
-          y={['58%', '54%', '54%', '70%', '58%']}
-          times={times}
-          clickAt={[0.15, 0.42]}
-          duration={LOOP}
-        />
       </div>
     </DemoFrame>
   );
@@ -465,13 +443,6 @@ export function BrochureMock({ accent }: { accent: EarlyAccessAccent }) {
             </span>
           </div>
         </div>
-        <DemoCursor
-          x={['80%', '50%', '50%', '80%']}
-          y={['30%', '82%', '82%', '30%']}
-          times={[0, 0.4, 0.7, 1]}
-          clickAt={[0.44]}
-          duration={LOOP}
-        />
       </div>
     </DemoFrame>
   );

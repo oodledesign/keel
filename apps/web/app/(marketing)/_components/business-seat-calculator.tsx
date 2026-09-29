@@ -64,6 +64,9 @@ export function BusinessSeatCalculator({
   });
 
   const isDark = variant === 'dark';
+  const segmentActiveClass = isDark
+    ? 'bg-[var(--ozer-cream-50)] text-[var(--ozer-plum-950)]'
+    : 'bg-[var(--ozer-plum-950)] text-[var(--ozer-cream-50)]';
 
   const fieldClassName = isDark
     ? 'border-[color:var(--ozer-border-on-dark-strong)] bg-[var(--ozer-on-dark-alpha-08)] text-[var(--ozer-text-on-dark)] placeholder:text-[var(--ozer-text-on-dark-muted)] focus-visible:border-[var(--ozer-coral-500)]/50 focus-visible:ring-[var(--ozer-coral-500)]/30'
@@ -73,7 +76,7 @@ export function BusinessSeatCalculator({
     <div
       id="business-your-plan"
       className={cn(
-        'scroll-mt-24 rounded-2xl border p-6 md:p-8',
+        'scroll-mt-24 rounded-[var(--ozer-radius-media)] border p-6 md:p-8',
         isDark
           ? 'border-[color:var(--ozer-border-on-dark-strong)] bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]'
           : 'border-[color:var(--workspace-shell-border)] bg-[var(--ozer-cream-50)] text-[var(--ozer-plum-950)]',
@@ -91,7 +94,7 @@ export function BusinessSeatCalculator({
                   : 'text-[var(--ozer-plum-950)]',
               )}
             >
-              Your Plan
+              Your plan
             </h3>
             <p
               className={cn(
@@ -107,17 +110,18 @@ export function BusinessSeatCalculator({
           </div>
 
           <div
-            className="inline-flex rounded-full border border-[color:var(--workspace-shell-border)] p-1"
+            className="inline-flex rounded-[var(--ozer-radius-control)] border border-[color:var(--workspace-shell-border)] p-1"
             role="group"
             aria-label="Paid plan"
           >
             <button
               type="button"
+              aria-pressed={isStarter}
               onClick={() => setPlan('starter')}
               className={cn(
-                'rounded-full px-3 py-1.5 text-sm font-medium transition',
+                'rounded-[4px] px-3 py-1.5 text-sm font-medium transition',
                 isStarter
-                  ? 'bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)]'
+                  ? segmentActiveClass
                   : isDark
                     ? 'text-[var(--ozer-text-on-dark-muted)]'
                     : 'text-[var(--ozer-plum-600)]',
@@ -127,11 +131,12 @@ export function BusinessSeatCalculator({
             </button>
             <button
               type="button"
+              aria-pressed={!isStarter}
               onClick={() => setPlan('pro')}
               className={cn(
-                'rounded-full px-3 py-1.5 text-sm font-medium transition',
+                'rounded-[4px] px-3 py-1.5 text-sm font-medium transition',
                 !isStarter
-                  ? 'bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)]'
+                  ? segmentActiveClass
                   : isDark
                     ? 'text-[var(--ozer-text-on-dark-muted)]'
                     : 'text-[var(--ozer-plum-600)]',
@@ -209,13 +214,13 @@ export function BusinessSeatCalculator({
 
         <div
           className={cn(
-            'flex flex-col space-y-4 rounded-xl border p-5',
+            'flex flex-col space-y-4 rounded-[6px] border p-5',
             isDark
               ? 'border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-cream-50)] text-[var(--ozer-plum-950)]'
               : 'border-[color:var(--workspace-shell-border)] bg-white text-[var(--ozer-plum-950)]',
           )}
         >
-          <p className="text-sm font-bold tracking-[0.08em] text-[var(--ozer-plum-600)] uppercase">
+          <p className="text-[0.8125rem] font-medium text-[var(--ozer-plum-600)]">
             {isStarter ? 'Starter' : 'Pro'} estimated monthly total
           </p>
 

@@ -91,7 +91,7 @@ export function EarlyAccessLanding() {
                 className="mr-2 inline-block size-1.5 rounded-full bg-[var(--ozer-sage-500)]"
                 aria-hidden
               />
-              Early access — now onboarding
+              Early access, now onboarding
             </span>
 
             <div className="mt-6 space-y-5 md:mt-8">
@@ -103,8 +103,8 @@ export function EarlyAccessLanding() {
                 className={`mx-auto max-w-[34rem] text-base leading-[1.65] md:text-lg md:leading-[1.7] ${marketingMutedText}`}
               >
                 Stop opening six tabs just to answer &ldquo;where are we with
-                this client?&rdquo; Ozer holds the thread — from first enquiry
-                to final invoice — in one calm workspace.
+                this client?&rdquo; Ozer holds the thread from first enquiry to
+                final invoice.
               </p>
             </div>
 
@@ -137,9 +137,8 @@ export function EarlyAccessLanding() {
             <p
               className={`mx-auto mt-3 max-w-xl text-[var(--workspace-shell-text-muted)]`}
             >
-              No limited version, no feature gates — every single thing on this
-              page, including the email assistant and planner the moment
-              they&apos;re ready.
+              Every feature on this page is included, and the email assistant
+              and planner are added the moment they&apos;re ready.
             </p>
             <div className="mt-7 flex flex-wrap justify-center gap-8 border-t border-dashed border-[color:var(--workspace-shell-border)] pt-6">
               <div className="min-w-40 text-left">
@@ -265,7 +264,6 @@ export function EarlyAccessLanding() {
         tone="light"
         title="Questions people ask"
         headingId="early-access-faq-heading"
-        headingAlign="center"
         sectionClassName="border-t border-[color:var(--workspace-shell-border)] py-16 md:py-24"
       />
 

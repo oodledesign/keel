@@ -8,7 +8,7 @@ export const OZER_FAQS: OzerFaqItem[] = [
   {
     question: 'What is Ozer?',
     answer:
-      'Ozer is a Workspace OS for freelancers and small studios. Clients, projects, invoices, pipeline, activity tracking, and your plan for the day live in one place — with free personal and family workspaces connected to the same login.',
+      'Ozer is a Workspace OS for freelancers and small studios. Clients, projects, invoices, pipeline, activity tracking and your plan for the day share one workspace, with free personal and family workspaces connected to the same login.',
   },
   {
     question: 'Is there a free plan?',
@@ -18,7 +18,7 @@ export const OZER_FAQS: OzerFaqItem[] = [
   {
     question: 'Do I pay per seat?',
     answer:
-      'Yes on paid Business. Starter is £14 for seat 1 then £9 for each extra seat. Pro is £29 for seat 1 then £22 for each extra seat. Invited members do not pay separately — billing stays with the workspace owner.',
+      'Yes on paid Business. Starter is £14 for seat 1 then £9 for each extra seat. Pro is £29 for seat 1 then £22 for each extra seat. Invited members do not pay separately. Billing stays with the workspace owner.',
   },
   {
     question: 'Can I cancel anytime?',
@@ -43,7 +43,7 @@ export const OZER_FAQS: OzerFaqItem[] = [
   {
     question: 'Do you offer non-profit pricing?',
     answer:
-      'Yes — 50% off for eligible non-profits. Contact us and we will set it up.',
+      'Yes. Eligible non-profits get 50% off. Contact us and we will set it up.',
   },
 ];
 
@@ -65,6 +65,6 @@ export const HOME_FAQS: OzerFaqItem[] = [
   {
     question: 'Is personal and family really free forever?',
     answer:
-      'Yes. Your personal hub and one family workspace stay free forever. They share one planner and today view with your studio — school runs and client calls on the same timeline.',
+      'Yes. Your personal hub and one family workspace stay free forever. They share one planner and today view with your studio, so school runs and client calls sit on the same timeline.',
   },
 ];

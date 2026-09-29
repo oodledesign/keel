@@ -202,7 +202,7 @@ export const withmoxieComparison: ComparisonConfig = {
     {
       question: 'Does Ozer include phone features like Moxie?',
       answer:
-        'Ozer focuses on workspace operations, email assist, and Mac meeting capture rather than a full telephony stack. Compare the modules you actually use.',
+        'Ozer focuses on workspace operations, email assist, and Mac meeting capture rather than a full telephony stack. Compare the modules you use today.',
     },
     {
       question: 'Is Moxie available for EU teams?',

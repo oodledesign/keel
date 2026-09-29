@@ -43,8 +43,7 @@ export function OzerVsOthersSection() {
           Ozer vs the others
         </h2>
         <p className="mt-3 text-base font-medium text-[var(--workspace-shell-text)] md:text-lg">
-          Get way more of your work — and your life — in one place from{' '}
-          <span className="text-[var(--ozer-accent)]">£29/mo</span>.
+          Your work and your home life in one workspace, from £29/mo.
         </p>
       </div>
 
