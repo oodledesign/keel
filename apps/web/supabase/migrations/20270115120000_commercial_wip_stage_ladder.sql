@@ -2,7 +2,7 @@
 -- per-instruction AML done tracking.
 --
 -- Dan: apply this on production manually. It does not rewrite deal stages.
--- Bracketts move existing instructions onto Billed, Completed, Under offer,
+-- Bracketts move existing instructions onto Billed, Completed (Unbilled), Under offer,
 -- Negotiating, and Managed themselves. New columns start empty.
 --
 -- Legacy keys stay valid so older rows still read. Combined keys
@@ -94,7 +94,7 @@ SET
     FROM (
       VALUES
         (1, 'billed', 'Billed'),
-        (2, 'completed', 'Completed'),
+        (2, 'completed', 'Completed (Unbilled)'),
         (3, 'under_offer', 'Under offer'),
         (4, 'negotiating', 'Negotiating'),
         (5, 'current', 'Current Instructions'),

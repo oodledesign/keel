@@ -21,9 +21,9 @@ const METRICS = [
   },
   {
     key: 'completed' as const,
-    label: 'Completed',
+    label: 'Completed (Unbilled)',
     testId: 'wip-running-total-completed',
-    hint: 'Completed but not yet billed',
+    hint: 'Exchanged or completed, invoice not yet sent',
     colour: WIP_STAGE_COLOURS.completed,
   },
   {

@@ -476,7 +476,7 @@ export const COMMERCIAL_PIPELINE_STAGE_LABELS: Record<
   string
 > = {
   billed: 'Billed',
-  completed: 'Completed',
+  completed: 'Completed (Unbilled)',
   under_offer: 'Under offer',
   negotiating: 'Negotiating',
   current: 'Current Instructions',
@@ -488,7 +488,7 @@ export const COMMERCIAL_PIPELINE_STAGE_LABELS: Record<
 /** Stages shown on the board by default, in ladder order. */
 export const COMMERCIAL_PIPELINE_BOARD_STAGES = [
   { key: 'billed', label: 'Billed', hidden: false },
-  { key: 'completed', label: 'Completed', hidden: false },
+  { key: 'completed', label: 'Completed (Unbilled)', hidden: false },
   { key: 'under_offer', label: 'Under offer', hidden: false },
   { key: 'negotiating', label: 'Negotiating', hidden: false },
   { key: 'current', label: 'Current Instructions', hidden: false },

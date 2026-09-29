@@ -83,6 +83,7 @@ import type { CommercialRequirement } from '~/home/[account]/requirements/_lib/s
 import { updateRequirement } from '~/home/[account]/requirements/_lib/server/server-actions';
 import {
   COMMERCIAL_PIPELINE_LOST_STAGE,
+  COMMERCIAL_PIPELINE_STAGE_LABELS,
   COMMERCIAL_PIPELINE_WON_STAGE,
   DEFAULT_COMMERCIAL_WIP_BOARD_NAME,
   DISPOSAL_TYPE_BADGE_CLASS,
@@ -1546,7 +1547,7 @@ export function CommercialWipBoard({
             <AlertDialogDescription>
               {pendingClosed?.kind === 'requirement'
                 ? 'Was this requirement fulfilled or withdrawn?'
-                : 'Mark this instruction billed, completed, or fallen through.'}
+                : 'Mark this instruction billed, completed (unbilled), or fallen through.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
@@ -1566,7 +1567,7 @@ export function CommercialWipBoard({
                     confirmClosedChoice(COMMERCIAL_PIPELINE_WON_STAGE)
                   }
                 >
-                  Completed
+                  {COMMERCIAL_PIPELINE_STAGE_LABELS.completed}
                 </Button>
                 <Button
                   type="button"
