@@ -40,6 +40,13 @@ export type ProjectRetainerRecord = {
   updatedAt: string;
 };
 
+/** Spendable credits on the project's client account (portal ledger). */
+export type ClientCreditSummary = {
+  balance: number;
+  topupBalance: number;
+  nextTopupExpiry: string | null;
+};
+
 export type ProjectRetainerBurn = {
   id: string;
   amount: number;

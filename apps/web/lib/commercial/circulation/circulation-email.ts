@@ -83,6 +83,8 @@ export type CirculationDigestListing = {
   coverImageUrl?: string | null;
   sizeLabel?: string | null;
   disposalTypeLabel?: string | null;
+  /** Why an already-sent listing is being sent again, e.g. "Price reduced". */
+  badge?: string | null;
 };
 
 export function buildCirculationEmailHtml(input: {
@@ -230,6 +232,9 @@ export function buildCirculationDigestEmailHtml(input: {
                   <img src="${escapeCirculationHtml(listing.coverImageUrl)}" alt="${name}" width="496" style="display:block;width:100%;max-width:496px;height:auto;border:0;border-radius:10px 10px 0 0;" />
                 </td></tr>`
         : '';
+      const badge = listing.badge?.trim()
+        ? `<p style="margin:0 0 8px;"><span style="display:inline-block;background:${accent};color:${contrastTextOn(accent)};font-size:12px;font-weight:700;line-height:1;padding:5px 9px;border-radius:999px;">${escapeCirculationHtml(listing.badge.trim())}</span></p>`
+        : '';
       const viewLabel = listing.viewUrlLabel?.trim() || 'View details';
       const cta = listing.viewUrl
         ? `<div style="margin-top:12px;">${renderCta(viewLabel, listing.viewUrl, accent)}</div>`
@@ -240,6 +245,7 @@ export function buildCirculationDigestEmailHtml(input: {
               ${cover}
               <tr>
                 <td style="padding:18px 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#09111F;">
+                  ${badge}
                   <h2 style="margin:0 0 6px;font-size:18px;line-height:1.3;font-weight:700;">${name}</h2>
                   ${meta ? `<p style="margin:0 0 8px;font-size:13px;color:#6B6B6B;">${meta}</p>` : ''}
                   ${address}

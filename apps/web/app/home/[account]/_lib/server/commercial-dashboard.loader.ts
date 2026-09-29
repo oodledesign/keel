@@ -6,8 +6,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
   encodeStorageSignedUrl,
+  listingMediaDisplayPath,
   listingMediaSignedUrlTtlSeconds,
-  listingMediaTransformFor,
   pickListingCoverMedia,
 } from '~/lib/commercial/listing-media-public-url';
 import {
@@ -193,7 +193,7 @@ async function attachCoverUrls(
   const { data: mediaRows, error } = await client
     .from('commercial_listing_media')
     .select(
-      'listing_id, storage_path, external_url, is_cover, sort_order, created_at, id',
+      'listing_id, storage_path, thumb_path, preview_path, external_url, is_cover, sort_order, created_at, id',
     )
     .in('listing_id', listingIds)
     .eq('is_private', false)
@@ -208,67 +208,50 @@ async function attachCoverUrls(
   }
 
   const coverByListing = pickListingCoverMedia(
-    ((mediaRows ?? []) as Array<Record<string, unknown>>).map((row) => ({
-      listingId: row.listing_id as string,
-      isCover: Boolean(row.is_cover),
-      storagePath: (row.storage_path as string | null) ?? null,
-      externalUrl: (row.external_url as string | null) ?? null,
-    })),
+    ((mediaRows ?? []) as Array<Record<string, unknown>>).map((row) => {
+      const media = {
+        storagePath: (row.storage_path as string | null) ?? null,
+        thumbPath: (row.thumb_path as string | null) ?? null,
+        previewPath: (row.preview_path as string | null) ?? null,
+      };
+      return {
+        listingId: row.listing_id as string,
+        isCover: Boolean(row.is_cover),
+        displayPath: listingMediaDisplayPath(media, 'list'),
+        externalUrl: (row.external_url as string | null) ?? null,
+      };
+    }),
   );
 
-  const paths = [...coverByListing.values()]
-    .map((media) => media.storagePath?.trim() || '')
-    .filter(Boolean);
-  const uniquePaths = [...new Set(paths)];
+  const uniquePaths = [
+    ...new Set(
+      [...coverByListing.values()]
+        .map((media) => media.displayPath)
+        .filter((path): path is string => Boolean(path)),
+    ),
+  ];
   const signedByPath = new Map<string, string>();
 
   if (uniquePaths.length > 0) {
-    const expiresIn = listingMediaSignedUrlTtlSeconds('list');
-    const transform = listingMediaTransformFor('list');
-    const bucket = client.storage.from(COMMERCIAL_LISTING_MEDIA_BUCKET);
-    const signed = await Promise.all(
-      uniquePaths.map(async (path) => {
-        const { data, error: signError } = await bucket.createSignedUrl(
-          path,
-          expiresIn,
-          { transform },
-        );
-        if (signError || !data?.signedUrl) {
-          if (signError) {
-            console.error(
-              '[commercial-dashboard] signed cover url:',
-              signError.message,
-            );
-          }
-          return [path, null] as const;
-        }
-        return [path, data.signedUrl] as const;
-      }),
-    );
-
-    const failed = signed.filter(([, url]) => !url).map(([path]) => path);
-
-    if (failed.length > 0) {
-      const fallback = await bucket.createSignedUrls(failed, expiresIn);
-      for (let i = 0; i < failed.length; i++) {
-        const path = failed[i]!;
-        const row = fallback.data?.[i];
-        if (row?.signedUrl && !row.error) {
-          signedByPath.set(path, row.signedUrl);
-          if (row.path) signedByPath.set(row.path, row.signedUrl);
-        }
-      }
+    const { data, error: signError } = await client.storage
+      .from(COMMERCIAL_LISTING_MEDIA_BUCKET)
+      .createSignedUrls(uniquePaths, listingMediaSignedUrlTtlSeconds('list'));
+    if (signError) {
+      console.error(
+        '[commercial-dashboard] signed cover urls:',
+        signError.message,
+      );
     }
-
-    for (const [path, url] of signed) {
-      if (url) signedByPath.set(path, url);
-    }
+    uniquePaths.forEach((path, index) => {
+      const row = data?.[index];
+      if (row?.signedUrl && !row.error) signedByPath.set(path, row.signedUrl);
+    });
   }
 
   const urlByListing = new Map(
     [...coverByListing.entries()].map(([listingId, media]) => {
-      const storageSignedUrl = media.storagePath
-        ? (signedByPath.get(media.storagePath) ?? null)
+      const storageSignedUrl = media.displayPath
+        ? (signedByPath.get(media.displayPath) ?? null)
         : null;
       const resolved = resolveCommercialMediaPublicUrl({
         storageSignedUrl,

@@ -1,15 +1,4 @@
-/**
- * Client-portal credit top-up packs (GBP).
- * Pack sizes are display credits only — never mention time equivalents in UI.
- */
-export const PORTAL_CREDIT_TOPUP_PACKS = [
-  { id: 'small', units: 40, totalPence: 3500, label: '40 credits' },
-  { id: 'medium', units: 80, totalPence: 7000, label: '80 credits' },
-  { id: 'large', units: 160, totalPence: 14000, label: '160 credits' },
-] as const;
-
-export type PortalCreditTopupPackId =
-  (typeof PORTAL_CREDIT_TOPUP_PACKS)[number]['id'];
+import type { CreditTopupPack } from '~/lib/credits/credit-topup-packs';
 
 export type PortalCreditTransaction = {
   id: string;
@@ -39,12 +28,8 @@ export type PortalCreditsBundle = {
     isSupport: boolean;
     categoryGroup: string | null;
   }>;
-  topupPacks: Array<{
-    id: string;
-    units: number;
-    totalPence: number;
-    label: string;
-  }>;
+  /** Empty while a retainer is awaiting payment or top-ups are turned off. */
+  topupPacks: CreditTopupPack[];
   pendingCreditTicketCount: number;
   pendingPlans: Array<{
     id: string;

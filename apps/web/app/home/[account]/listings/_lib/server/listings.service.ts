@@ -35,11 +35,10 @@ import {
 import { sortListingMedia } from '~/lib/commercial/listing-media-order';
 import {
   type ListingMediaPreviewSize,
-  type ListingMediaTransform,
   encodeStorageSignedUrl,
+  listingMediaDerivativePath,
+  listingMediaDisplayPath,
   listingMediaSignedUrlTtlSeconds,
-  listingMediaSupportsPreviewTransform,
-  listingMediaTransformFor,
   pickListingCoverMedia,
 } from '~/lib/commercial/listing-media-public-url';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
@@ -464,6 +463,8 @@ export type CommercialListingMedia = {
   accountId: string;
   mediaType: MediaType;
   storagePath: string | null;
+  thumbPath: string | null;
+  previewPath: string | null;
   externalUrl: string | null;
   fileName: string | null;
   mimeType: string | null;
@@ -732,6 +733,8 @@ function mapMedia(row: MediaRow): CommercialListingMedia {
     accountId: row.account_id,
     mediaType: (row.media_type as MediaType) ?? 'image',
     storagePath: (row.storage_path as string | null) ?? null,
+    thumbPath: (row.thumb_path as string | null) ?? null,
+    previewPath: (row.preview_path as string | null) ?? null,
     externalUrl: (row.external_url as string | null) ?? null,
     fileName: (row.file_name as string | null) ?? null,
     mimeType: (row.mime_type as string | null) ?? null,
@@ -1062,7 +1065,7 @@ function generateShareToken() {
 
 const LISTING_MEDIA_SIGN_CHUNK = 50;
 const COVER_MEDIA_SELECT =
-  'id, listing_id, account_id, media_type, storage_path, external_url, file_name, mime_type, sort_order, is_cover, is_private, created_at';
+  'id, listing_id, account_id, media_type, storage_path, thumb_path, preview_path, external_url, file_name, mime_type, sort_order, is_cover, is_private, created_at';
 
 function applySignedMediaUrl(
   item: CommercialListingMedia,
@@ -1079,46 +1082,13 @@ function applySignedMediaUrl(
 async function signStoragePaths(
   client: SupabaseClient,
   paths: string[],
-  options?: { transform?: ListingMediaTransform; expiresIn?: number },
+  options?: { expiresIn?: number },
 ): Promise<Map<string, string>> {
   const unique = [...new Set(paths.map((path) => path.trim()).filter(Boolean))];
   const signedByPath = new Map<string, string>();
   const expiresIn =
     options?.expiresIn ?? listingMediaSignedUrlTtlSeconds('gallery');
   const bucket = client.storage.from('commercial-listing-media');
-
-  // storage-js createSignedUrls does not accept `transform` — only the
-  // singular createSignedUrl call signs Image Transformation params.
-  if (options?.transform) {
-    const transform = options.transform;
-    const results = await Promise.all(
-      unique.map(async (path) => {
-        const { data, error } = await bucket.createSignedUrl(path, expiresIn, {
-          transform,
-        });
-        if (error || !data?.signedUrl) {
-          if (error) {
-            console.error('[listings] signed media url error:', error.message);
-          }
-          return [path, null] as const;
-        }
-        return [path, data.signedUrl] as const;
-      }),
-    );
-
-    const failed: string[] = [];
-    for (const [path, url] of results) {
-      if (url) signedByPath.set(path, url);
-      else failed.push(path);
-    }
-
-    if (failed.length > 0) {
-      const fallback = await signStoragePaths(client, failed, { expiresIn });
-      for (const [path, url] of fallback) signedByPath.set(path, url);
-    }
-
-    return signedByPath;
-  }
 
   for (let i = 0; i < unique.length; i += LISTING_MEDIA_SIGN_CHUNK) {
     const chunk = unique.slice(i, i + LISTING_MEDIA_SIGN_CHUNK);
@@ -1154,47 +1124,46 @@ async function signMediaUrls(
   if (items.length === 0) return items;
 
   const size = options?.size ?? 'gallery';
-  const expiresIn = listingMediaSignedUrlTtlSeconds(size);
-  const transformable: CommercialListingMedia[] = [];
-  const plain: CommercialListingMedia[] = [];
+  const displayPaths = items.map((item) => listingMediaDisplayPath(item, size));
+  const urlByPath = await signStoragePaths(
+    client,
+    displayPaths.filter((path): path is string => Boolean(path)),
+    { expiresIn: listingMediaSignedUrlTtlSeconds(size) },
+  );
 
-  for (const item of items) {
-    if (!item.storagePath) continue;
-    if (listingMediaSupportsPreviewTransform(item.mimeType)) {
-      transformable.push(item);
-    } else {
-      plain.push(item);
-    }
-  }
-
-  const [transformed, untransformed] = await Promise.all([
-    transformable.length > 0
-      ? signStoragePaths(
-          client,
-          transformable.map((item) => item.storagePath!).filter(Boolean),
-          {
-            transform: listingMediaTransformFor(size),
-            expiresIn,
-          },
-        )
-      : Promise.resolve(new Map<string, string>()),
-    plain.length > 0
-      ? signStoragePaths(
-          client,
-          plain.map((item) => item.storagePath!).filter(Boolean),
-          { expiresIn },
-        )
-      : Promise.resolve(new Map<string, string>()),
-  ]);
-
-  const urlByPath = new Map([...transformed, ...untransformed]);
-
-  return items.map((item) => {
-    if (!item.storagePath) {
-      return applySignedMediaUrl(item, null);
-    }
-    return applySignedMediaUrl(item, urlByPath.get(item.storagePath) ?? null);
+  return items.map((item, index) => {
+    const path = displayPaths[index];
+    return applySignedMediaUrl(
+      item,
+      path ? (urlByPath.get(path) ?? null) : null,
+    );
   });
+}
+
+/** Client-supplied copy paths must sit next to their own original. */
+function trustedDerivativePaths(
+  storagePath: string | null | undefined,
+  input: { thumbPath?: string | null; previewPath?: string | null },
+): { thumb_path: string | null; preview_path: string | null } {
+  const original = storagePath?.trim();
+  if (!original) return { thumb_path: null, preview_path: null };
+  const thumb = listingMediaDerivativePath(original, 'thumb');
+  const preview = listingMediaDerivativePath(original, 'preview');
+  return {
+    thumb_path: input.thumbPath === thumb ? thumb : null,
+    preview_path: input.previewPath === preview ? preview : null,
+  };
+}
+
+/** Original plus any display copies, for storage cleanup. */
+function mediaStorageObjects(row: {
+  storage_path?: string | null;
+  thumb_path?: string | null;
+  preview_path?: string | null;
+}): string[] {
+  return [row.storage_path, row.thumb_path, row.preview_path]
+    .map((path) => path?.trim())
+    .filter((path): path is string => Boolean(path));
 }
 
 async function fetchCoverMediaRows(
@@ -2340,6 +2309,8 @@ export function createListingsService(client: SupabaseClient) {
           listingId: created.id,
           mediaType: item.mediaType as CreateListingMediaInput['mediaType'],
           storagePath: item.storagePath,
+          thumbPath: item.thumbPath,
+          previewPath: item.previewPath,
           externalUrl: item.externalUrl,
           fileName: item.fileName,
           mimeType: item.mimeType,
@@ -2678,6 +2649,7 @@ export function createListingsService(client: SupabaseClient) {
           listing_id: input.listingId,
           media_type: mediaType,
           storage_path: input.storagePath ?? null,
+          ...trustedDerivativePaths(input.storagePath, input),
           external_url: input.externalUrl ?? null,
           file_name: input.fileName ?? null,
           mime_type: input.mimeType ?? null,
@@ -2823,12 +2795,14 @@ export function createListingsService(client: SupabaseClient) {
       accountId: string;
       fileName?: string;
       storagePath?: string;
+      thumbPath?: string | null;
+      previewPath?: string | null;
       mimeType?: string | null;
       mediaType?: MediaType;
     }): Promise<CommercialListingMedia> {
       const { data: existing, error: fetchError } = await client
         .from('commercial_listing_media')
-        .select('storage_path')
+        .select('storage_path, thumb_path, preview_path')
         .eq('id', input.mediaId)
         .eq('listing_id', input.listingId)
         .eq('account_id', input.accountId)
@@ -2837,16 +2811,23 @@ export function createListingsService(client: SupabaseClient) {
       if (fetchError) throw new Error(fetchError.message);
       if (!existing) throw new Error('Media not found');
 
-      const previousPath = (existing as { storage_path?: string | null } | null)
-        ?.storage_path;
+      const previous = existing as {
+        storage_path?: string | null;
+        thumb_path?: string | null;
+        preview_path?: string | null;
+      };
+      const previousPath = previous.storage_path;
 
       const patch: Record<string, unknown> = {};
       if (input.fileName !== undefined) {
         patch.file_name = input.fileName.trim() || null;
       }
       if (input.storagePath !== undefined) {
-        patch.storage_path = input.storagePath;
-        patch.external_url = null;
+        Object.assign(
+          patch,
+          { storage_path: input.storagePath, external_url: null },
+          trustedDerivativePaths(input.storagePath, input),
+        );
       }
       if (input.mimeType !== undefined) {
         patch.mime_type = input.mimeType;
@@ -2875,7 +2856,7 @@ export function createListingsService(client: SupabaseClient) {
       ) {
         const { error: storageError } = await client.storage
           .from('commercial-listing-media')
-          .remove([previousPath]);
+          .remove(mediaStorageObjects(previous));
         if (storageError) {
           console.error(
             '[listings] updateMedia storage cleanup:',
@@ -2903,7 +2884,7 @@ export function createListingsService(client: SupabaseClient) {
     ): Promise<void> {
       let fetchQuery = client
         .from('commercial_listing_media')
-        .select('storage_path, listing_id')
+        .select('storage_path, thumb_path, preview_path, listing_id')
         .eq('id', mediaId)
         .eq('account_id', accountId);
 
@@ -2919,9 +2900,13 @@ export function createListingsService(client: SupabaseClient) {
 
       const existingRow = existing as {
         storage_path?: string | null;
+        thumb_path?: string | null;
+        preview_path?: string | null;
         listing_id?: string;
       } | null;
-      const storagePath = existingRow?.storage_path;
+      const storageObjects = existingRow
+        ? mediaStorageObjects(existingRow)
+        : [];
       const resolvedListingId = listingId ?? existingRow?.listing_id ?? null;
 
       let deleteQuery = client
@@ -2938,10 +2923,10 @@ export function createListingsService(client: SupabaseClient) {
 
       if (error) throw new Error(error.message);
 
-      if (storagePath) {
+      if (storageObjects.length > 0) {
         const { error: storageError } = await client.storage
           .from('commercial-listing-media')
-          .remove([storagePath]);
+          .remove(storageObjects);
         if (storageError) {
           console.error(
             '[listings] deleteMedia storage error:',

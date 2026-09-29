@@ -10,6 +10,10 @@ import { escapeEmailHtml } from '~/lib/email/ozer-transactional-shell';
 import { wrapNotificationEmail } from '~/lib/email/wrap-notification-email';
 import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
 import { notifyInvoicePaidInApp } from '~/lib/invoices/invoice-in-app-notifications';
+import {
+  formatInvoiceItemsLine,
+  summarizeInvoicePurchase,
+} from '~/lib/invoices/invoice-purchase-summary';
 import { sendClientFacingEmail } from '~/lib/server/send-client-facing-email';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
@@ -118,7 +122,7 @@ export async function sendInvoicePaidNotifications(params: {
   const { data: invoice, error: invoiceError } = await admin
     .from('invoices')
     .select(
-      'id, account_id, client_id, invoice_number, total_pence, currency, paid_at, public_token, sent_to_email',
+      'id, account_id, client_id, invoice_number, total_pence, currency, paid_at, public_token, sent_to_email, metadata',
     )
     .eq('id', params.invoiceId)
     .eq('account_id', params.accountId)
@@ -128,18 +132,24 @@ export async function sendInvoicePaidNotifications(params: {
     return;
   }
 
-  const [{ data: account }, { data: client }] = await Promise.all([
-    admin
-      .from('accounts')
-      .select('id, name, slug, email')
-      .eq('id', params.accountId)
-      .maybeSingle(),
-    admin
-      .from('clients')
-      .select('display_name, first_name, last_name, email')
-      .eq('id', invoice.client_id)
-      .maybeSingle(),
-  ]);
+  const [{ data: account }, { data: client }, { data: items }] =
+    await Promise.all([
+      admin
+        .from('accounts')
+        .select('id, name, slug, email')
+        .eq('id', params.accountId)
+        .maybeSingle(),
+      admin
+        .from('clients')
+        .select('display_name, first_name, last_name, email')
+        .eq('id', invoice.client_id)
+        .maybeSingle(),
+      admin
+        .from('invoice_items')
+        .select('description')
+        .eq('invoice_id', invoice.id)
+        .order('sort_order', { ascending: true }),
+    ]);
 
   if (!account?.slug) {
     return;
@@ -149,6 +159,11 @@ export async function sendInvoicePaidNotifications(params: {
   if (!from) {
     return;
   }
+
+  const purchase = summarizeInvoicePurchase(invoice.metadata);
+  const itemsLine = formatInvoiceItemsLine(
+    (items ?? []).map((item) => item.description),
+  );
 
   const brand = await loadAccountBrandResolved(params.accountId);
   const replyTo = alignedReplyTo(
@@ -212,16 +227,64 @@ export async function sendInvoicePaidNotifications(params: {
   const safeMethod = escapeEmailHtml(methodLabel);
   const safeAccountName = escapeEmailHtml(account.name?.trim() || productName);
 
-  const customerSubject = `Payment received for invoice ${invoice.invoice_number}`;
+  const itemsHtml = itemsLine
+    ? `<p style="margin:0 0 4px;"><strong>For:</strong> ${escapeEmailHtml(itemsLine)}</p>`
+    : '';
+  const amountHtml = `<p style="margin:0 0 4px;"><strong>Amount:</strong> ${safeAmount}</p>`;
+  const paidAtHtml = `<p style="margin:0;">Paid at: ${safePaidAt}</p>`;
+
+  let customerSubject = `Payment received for invoice ${invoice.invoice_number}`;
+  let customerHeading = 'Payment received';
+  let customerPreview = `${amount} paid for invoice ${invoice.invoice_number}`;
+  let customerBody = `<p style="margin:0 0 12px;">We've received payment for invoice <strong>${safeInvoiceNumber}</strong> via <strong>${safeMethod}</strong>.</p>
+      ${itemsHtml}${amountHtml}${paidAtHtml}`;
+
+  let ownerSubject = `Invoice ${invoice.invoice_number} paid via ${methodLabel}`;
+  let ownerHeading = 'Invoice paid';
+  let ownerPreview = `${clientName} paid ${amount} via ${methodLabel}`;
+  let ownerBody = `<p style="margin:0 0 12px;">Invoice <strong>${safeInvoiceNumber}</strong> for <strong>${safeClientName}</strong> has been marked as paid via <strong>${safeMethod}</strong>.</p>
+      ${itemsHtml}${amountHtml}${paidAtHtml}`;
+
+  if (purchase.kind === 'credit_topup') {
+    const credits = purchase.credits;
+    const validity = `${purchase.expiryMonths} month${purchase.expiryMonths === 1 ? '' : 's'}`;
+    const creditsHtml = `<p style="margin:0 0 4px;"><strong>Credits added:</strong> ${credits} (valid for ${validity})</p>`;
+
+    customerSubject = `Your ${credits}-credit top-up is confirmed`;
+    customerHeading = 'Top-up confirmed';
+    customerPreview = `${credits} credits added to your account`;
+    customerBody = `<p style="margin:0 0 12px;">Thanks — we've received ${safeAmount} for your <strong>${credits}-credit top-up</strong> (invoice ${safeInvoiceNumber}). The credits are in your account now.</p>
+      ${creditsHtml}${amountHtml}${paidAtHtml}
+      <p style="margin:12px 0 0;">This is a one-off purchase, separate from any retainer.</p>`;
+
+    ownerSubject = `Credit top-up paid: ${credits} credits · ${clientName} (${invoice.invoice_number})`;
+    ownerHeading = 'Credit top-up paid';
+    ownerPreview = `${clientName} bought ${credits} credits for ${amount}`;
+    ownerBody = `<p style="margin:0 0 12px;"><strong>${safeClientName}</strong> bought a one-off <strong>${credits}-credit top-up</strong> (invoice ${safeInvoiceNumber}), paid via <strong>${safeMethod}</strong>.</p>
+      ${creditsHtml}${amountHtml}${paidAtHtml}
+      <p style="margin:12px 0 0;">This is a one-off top-up, not a retainer or subscription payment.</p>`;
+  } else if (purchase.kind === 'retainer_credits') {
+    const creditsHtml = `<p style="margin:0 0 4px;"><strong>Credits this cycle:</strong> ${purchase.credits}</p>`;
+
+    customerSubject = `Retainer payment received for invoice ${invoice.invoice_number}`;
+    customerHeading = 'Retainer payment received';
+    customerPreview = `${amount} retainer payment · ${purchase.credits} credits this cycle`;
+    customerBody = `<p style="margin:0 0 12px;">We've received your retainer payment for invoice <strong>${safeInvoiceNumber}</strong> via <strong>${safeMethod}</strong>.</p>
+      ${itemsHtml}${creditsHtml}${amountHtml}${paidAtHtml}`;
+
+    ownerSubject = `Retainer invoice ${invoice.invoice_number} paid via ${methodLabel}`;
+    ownerHeading = 'Retainer invoice paid';
+    ownerBody = `<p style="margin:0 0 12px;">Retainer invoice <strong>${safeInvoiceNumber}</strong> for <strong>${safeClientName}</strong> has been paid via <strong>${safeMethod}</strong>.</p>
+      ${itemsHtml}${creditsHtml}${amountHtml}${paidAtHtml}`;
+  }
+
   const customerHtml = wrapNotificationEmail(
     `<p style="margin:0 0 12px;">Hi ${safeClientName},</p>
-      <p style="margin:0 0 12px;">We've received payment for invoice <strong>${safeInvoiceNumber}</strong> via <strong>${safeMethod}</strong>.</p>
-      <p style="margin:0 0 4px;"><strong>Amount:</strong> ${safeAmount}</p>
-      <p style="margin:0;">Paid at: ${safePaidAt}</p>`,
+      ${customerBody}`,
     {
       title: customerSubject,
-      heading: 'Payment received',
-      preview: `${amount} paid for invoice ${invoice.invoice_number}`,
+      heading: customerHeading,
+      preview: customerPreview,
       cta: portalInvoiceUrl
         ? { label: 'View invoice', href: portalInvoiceUrl }
         : undefined,
@@ -230,20 +293,14 @@ export async function sendInvoicePaidNotifications(params: {
     },
   );
 
-  const ownerSubject = `Invoice ${invoice.invoice_number} paid via ${methodLabel}`;
-  const ownerHtml = wrapNotificationEmail(
-    `<p style="margin:0 0 12px;">Invoice <strong>${safeInvoiceNumber}</strong> for <strong>${safeClientName}</strong> has been marked as paid via <strong>${safeMethod}</strong>.</p>
-      <p style="margin:0 0 4px;"><strong>Amount:</strong> ${safeAmount}</p>
-      <p style="margin:0;">Paid at: ${safePaidAt}</p>`,
-    {
-      title: ownerSubject,
-      heading: 'Invoice paid',
-      preview: `${clientName} paid ${amount} via ${methodLabel}`,
-      cta: { label: 'Open invoice', href: adminInvoiceUrl },
-      footerNote: `You're receiving this because you own or admin ${safeAccountName} on ${escapeEmailHtml(productName)}.`,
-      productName,
-    },
-  );
+  const ownerHtml = wrapNotificationEmail(ownerBody, {
+    title: ownerSubject,
+    heading: ownerHeading,
+    preview: ownerPreview,
+    cta: { label: 'Open invoice', href: adminInvoiceUrl },
+    footerNote: `You're receiving this because you own or admin ${safeAccountName} on ${escapeEmailHtml(productName)}.`,
+    productName,
+  });
 
   const emailJobs: Promise<unknown>[] = [];
 
@@ -296,6 +353,7 @@ export async function sendInvoicePaidNotifications(params: {
     totalPence: invoice.total_pence ?? 0,
     currency: invoice.currency ?? 'gbp',
     paymentMethod: params.paymentMethod,
+    topupCredits: purchase.kind === 'credit_topup' ? purchase.credits : null,
   });
 }
 

@@ -21,6 +21,7 @@ import type {
 } from '~/lib/retainers/effective-services';
 import { inheritanceLabel } from '~/lib/retainers/effective-services';
 import type {
+  ClientCreditSummary,
   ProjectRetainerBurn,
   ProjectRetainerRecord,
   RetainerServiceRecord,
@@ -42,7 +43,16 @@ type Loaded = {
   effective: EffectiveServiceList;
   library: CatalogueService[];
   categories: ServiceCategory[];
+  clientCredits: ClientCreditSummary | null;
 };
+
+function formatShortDate(value: string) {
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(value));
+}
 
 export function ProjectRetainerPanel({
   accountId,
@@ -60,6 +70,8 @@ export function ProjectRetainerPanel({
   const [library, setLibrary] = useState<CatalogueService[]>([]);
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [recent, setRecent] = useState<ProjectRetainerBurn[]>([]);
+  const [clientCredits, setClientCredits] =
+    useState<ClientCreditSummary | null>(null);
   const [adjustBy, setAdjustBy] = useState('10');
   const [pending, startTransition] = useTransition();
   const [loading, setLoading] = useState(true);
@@ -70,6 +82,7 @@ export function ProjectRetainerPanel({
     setLibrary(data.library);
     setCategories(data.categories);
     setRecent(data.recent);
+    setClientCredits(data.clientCredits);
   }
 
   useEffect(() => {
@@ -82,6 +95,7 @@ export function ProjectRetainerPanel({
         setLibrary(data.library);
         setCategories(data.categories);
         setRecent(data.recent);
+        setClientCredits(data.clientCredits);
       })
       .catch((error) => {
         if (!cancelled) {
@@ -269,12 +283,29 @@ export function ProjectRetainerPanel({
         />
       )}
 
-      <p className="text-2xl font-semibold text-[var(--workspace-shell-text)]">
-        {retainer.creditBalance}
-        <span className="ml-1 text-sm font-normal text-[var(--workspace-shell-text-muted)]">
-          credits
-        </span>
-      </p>
+      <div className="space-y-1">
+        <p className="text-2xl font-semibold text-[var(--workspace-shell-text)]">
+          {retainer.creditBalance}
+          <span className="ml-1 text-sm font-normal text-[var(--workspace-shell-text-muted)]">
+            project credits
+          </span>
+        </p>
+        {clientCredits && clientCredits.balance > 0 ? (
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+            <span className="font-medium text-[var(--workspace-shell-text)]">
+              {clientCredits.balance}
+            </span>{' '}
+            on the client account
+            {clientCredits.topupBalance > 0
+              ? ` · ${clientCredits.topupBalance} from top-ups${
+                  clientCredits.nextTopupExpiry
+                    ? `, expiring ${formatShortDate(clientCredits.nextTopupExpiry)}`
+                    : ''
+                }`
+              : null}
+          </p>
+        ) : null}
+      </div>
 
       {canEdit ? (
         <div className="flex flex-wrap items-end gap-2">

@@ -32,6 +32,7 @@ import {
   resetProjectServiceList,
 } from '~/lib/retainers/persist-service-list';
 import type {
+  ClientCreditSummary,
   ProjectRetainerBurn,
   ProjectRetainerRecord,
   RetainerServiceRecord,
@@ -67,12 +68,66 @@ class ProjectRetainerService {
   private async requireProject(accountId: string, projectId: string) {
     const { data: project, error } = await this.client
       .from('projects')
-      .select('id')
+      .select('id, client_id')
       .eq('id', projectId)
       .eq('account_id', accountId)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!project) throw new Error('Project not found or access denied');
+    return { clientId: (project.client_id as string | null) ?? null };
+  }
+
+  private async loadClientCredits(
+    accountId: string,
+    clientId: string,
+  ): Promise<ClientCreditSummary | null> {
+    const { data: client } = await db(this.client)
+      .from('clients')
+      .select('client_org_id')
+      .eq('id', clientId)
+      .eq('account_id', accountId)
+      .maybeSingle();
+    const clientOrgId = (client as { client_org_id?: string | null } | null)
+      ?.client_org_id;
+    if (!clientOrgId) return null;
+
+    const { data: batches, error } = await db(this.client)
+      .from('client_credit_batches')
+      .select('source_type, units_remaining, expires_at')
+      .eq('client_org_id', clientOrgId)
+      .eq('account_id', accountId)
+      .gt('units_remaining', 0)
+      .is('swept_at', null);
+    if (error) throw error;
+
+    const now = Date.now();
+    const summary: ClientCreditSummary = {
+      balance: 0,
+      topupBalance: 0,
+      nextTopupExpiry: null,
+    };
+    for (const batch of (batches ?? []) as Array<{
+      source_type: string;
+      units_remaining: number;
+      expires_at: string | null;
+    }>) {
+      if (batch.expires_at && new Date(batch.expires_at).getTime() <= now) {
+        continue;
+      }
+      const units = Number(batch.units_remaining) || 0;
+      summary.balance += units;
+      if (batch.source_type === 'topup_purchase') {
+        summary.topupBalance += units;
+        if (
+          batch.expires_at &&
+          (!summary.nextTopupExpiry ||
+            batch.expires_at < summary.nextTopupExpiry)
+        ) {
+          summary.nextTopupExpiry = batch.expires_at;
+        }
+      }
+    }
+    return summary;
   }
 
   /**
@@ -154,35 +209,41 @@ class ProjectRetainerService {
     effective: EffectiveServiceList;
     library: CatalogueService[];
     categories: ServiceCategory[];
+    clientCredits: ClientCreditSummary | null;
   }> {
     await this.ensureMember(accountId);
-    await this.requireProject(accountId, projectId);
+    const project = await this.requireProject(accountId, projectId);
     await ensureProjectRetainer({ projectId, accountId });
+    const creditsClientId = clientId ?? project.clientId;
 
-    const [retainerRes, allowRes, catalogueRes, txRes] = await Promise.all([
-      db(this.client)
-        .from('project_retainers')
-        .select('*')
-        .eq('project_id', projectId)
-        .eq('account_id', accountId)
-        .maybeSingle(),
-      db(this.client)
-        .from('project_retainer_services')
-        .select('service_id')
-        .eq('project_id', projectId),
-      db(this.client)
-        .from('retainer_services')
-        .select('*')
-        .eq('account_id', accountId)
-        .order('sort_order', { ascending: true })
-        .order('name', { ascending: true }),
-      db(this.client)
-        .from('project_retainer_transactions')
-        .select('id, amount, service_id, task_id, created_at, type')
-        .eq('project_id', projectId)
-        .order('created_at', { ascending: false })
-        .limit(12),
-    ]);
+    const [retainerRes, allowRes, catalogueRes, txRes, clientCredits] =
+      await Promise.all([
+        db(this.client)
+          .from('project_retainers')
+          .select('*')
+          .eq('project_id', projectId)
+          .eq('account_id', accountId)
+          .maybeSingle(),
+        db(this.client)
+          .from('project_retainer_services')
+          .select('service_id')
+          .eq('project_id', projectId),
+        db(this.client)
+          .from('retainer_services')
+          .select('*')
+          .eq('account_id', accountId)
+          .order('sort_order', { ascending: true })
+          .order('name', { ascending: true }),
+        db(this.client)
+          .from('project_retainer_transactions')
+          .select('id, amount, service_id, task_id, created_at, type')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: false })
+          .limit(12),
+        creditsClientId
+          ? this.loadClientCredits(accountId, creditsClientId)
+          : Promise.resolve(null),
+      ]);
 
     if (retainerRes.error) throw retainerRes.error;
     if (!retainerRes.data) throw new Error('Could not load project retainer');
@@ -245,6 +306,7 @@ class ProjectRetainerService {
       effective,
       library: layers.workspace.filter((row) => row.scope === 'workspace'),
       categories: layers.categories,
+      clientCredits,
     };
   }
 

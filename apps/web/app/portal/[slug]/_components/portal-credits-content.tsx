@@ -14,10 +14,7 @@ import pathsConfig from '~/config/paths.config';
 import { shouldNamePortalPlanProject } from '~/lib/billing/client-subscription-lifecycle';
 
 import { createPortalCreditTopupAction } from '../_lib/server/server-actions';
-import type {
-  PortalCreditTopupPackId,
-  PortalCreditsBundle,
-} from '../_lib/types/portal-credits.types';
+import type { PortalCreditsBundle } from '../_lib/types/portal-credits.types';
 import { PortalPendingRetainerPayList } from './portal-pending-retainer-pay-card';
 import { PortalServicesTabs } from './portal-services-tabs';
 
@@ -92,7 +89,7 @@ export function PortalCreditsContent({
     bundle.pendingPlans.length + (bundle.planName ? 1 : 0),
   );
 
-  function buyPack(packId: PortalCreditTopupPackId) {
+  function buyPack(packId: string) {
     startTransition(async () => {
       try {
         const result = await createPortalCreditTopupAction({
@@ -195,38 +192,46 @@ export function PortalCreditsContent({
         </div>
       ) : null}
 
-      <div className="space-y-3">
-        <h3 className="text-base font-semibold text-[var(--ozer-text-on-light)]">
-          Top up
-        </h3>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {bundle.topupPacks.map((pack) => (
-            <div
-              key={pack.id}
-              className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4"
-            >
-              <div>
-                <p className="font-medium text-[var(--ozer-text-on-light)]">
-                  {pack.label}
-                </p>
-                <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
-                  {formatPounds(pack.totalPence)}
-                </p>
-              </div>
-              <Button
-                type="button"
-                disabled={pending}
-                onClick={() => buyPack(pack.id as PortalCreditTopupPackId)}
+      {bundle.topupPacks.length > 0 ? (
+        <div className="space-y-3">
+          <div>
+            <h3 className="text-base font-semibold text-[var(--ozer-text-on-light)]">
+              Top up
+            </h3>
+            <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
+              One-off credit packs, separate from your retainer. Top-up credits
+              are valid for 6 months.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {bundle.topupPacks.map((pack) => (
+              <div
+                key={pack.id}
+                className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4"
               >
-                {pending ? (
-                  <Loader2 className="mr-1 size-4 animate-spin" />
-                ) : null}
-                Buy
-              </Button>
-            </div>
-          ))}
+                <div>
+                  <p className="font-medium text-[var(--ozer-text-on-light)]">
+                    {pack.label}
+                  </p>
+                  <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+                    {formatPounds(pack.totalPence)} one-off
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => buyPack(pack.id)}
+                >
+                  {pending ? (
+                    <Loader2 className="mr-1 size-4 animate-spin" />
+                  ) : null}
+                  Buy
+                </Button>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="space-y-3">
         <h3 className="text-base font-semibold text-[var(--ozer-text-on-light)]">

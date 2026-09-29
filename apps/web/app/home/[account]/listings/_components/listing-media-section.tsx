@@ -77,6 +77,7 @@ import {
   compareListingMediaOrder,
   sortListingMedia,
 } from '~/lib/commercial/listing-media-order';
+import { uploadListingImageDerivatives } from '~/lib/commercial/upload-listing-image-derivatives';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import {
@@ -373,11 +374,17 @@ export function ListingMediaSection({
             throw new Error(uploadError.message);
           }
 
+          const derivatives = await uploadListingImageDerivatives(
+            client,
+            path,
+            file,
+          );
           const created = await createListingMedia({
             accountId,
             listingId,
             mediaType: uploadType,
             storagePath: path,
+            ...derivatives,
             fileName: original.name,
             mimeType: file.type || original.type || null,
             sortOrder: media.length + uploaded.length,
@@ -567,12 +574,18 @@ export function ListingMediaSection({
           });
         if (uploadError) throw new Error(uploadError.message);
 
+        const derivatives = await uploadListingImageDerivatives(
+          client,
+          path,
+          prepared,
+        );
         const existing = media.find((item) => item.id === mediaId);
         const updated = await updateListingMedia({
           accountId,
           listingId,
           mediaId,
           storagePath: path,
+          ...derivatives,
           fileName: file.name,
           mimeType: prepared.type || file.type || null,
           mediaType: existing?.mediaType ?? uploadType,

@@ -1,22 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { PORTAL_CREDIT_TOPUP_PACKS } from '../../app/portal/[slug]/_lib/types/portal-credits.types';
 import {
   calendarDaysUntil,
   portalCreditsHasRenewal,
   portalCreditsNextSteps,
   portalCreditsResetCopy,
 } from './portal-overview-credits';
-
-describe('PORTAL_CREDIT_TOPUP_PACKS', () => {
-  it('prices 40 / 80 / 160 credits in GBP pence', () => {
-    expect(PORTAL_CREDIT_TOPUP_PACKS).toEqual([
-      { id: 'small', units: 40, totalPence: 3500, label: '40 credits' },
-      { id: 'medium', units: 80, totalPence: 7000, label: '80 credits' },
-      { id: 'large', units: 160, totalPence: 14000, label: '160 credits' },
-    ]);
-  });
-});
 
 describe('portalCreditsResetCopy', () => {
   const now = new Date(2026, 8, 21);

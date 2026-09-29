@@ -7,6 +7,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { canPayClientSubscription } from '~/lib/billing/client-subscription-lifecycle';
 import { createCreditTopupInvoice } from '~/lib/credits/create-credit-topup-invoice';
+import { loadAccountCreditTopupPacks } from '~/lib/credits/load-credit-topup-packs.server';
 import type { RequestTypeRecord } from '~/lib/credits/request-types-types';
 import { clientFacingEffectiveServices } from '~/lib/retainers/effective-services';
 import {
@@ -15,14 +16,12 @@ import {
 } from '~/lib/retainers/load-effective-layers';
 import { looseClient } from '~/lib/retainers/loose-client';
 
-import {
-  PORTAL_CREDIT_TOPUP_PACKS,
-  type PortalCreditTransaction,
-  type PortalCreditsBundle,
+import type {
+  PortalCreditTransaction,
+  PortalCreditsBundle,
 } from '../types/portal-credits.types';
 
 export type { PortalCreditsBundle, PortalCreditTransaction };
-export { PORTAL_CREDIT_TOPUP_PACKS };
 
 function mapRequestType(row: Record<string, unknown>): RequestTypeRecord {
   return {
@@ -139,6 +138,33 @@ class PortalCreditsService {
     }
 
     return String(client.id);
+  }
+
+  private async listPayablePendingSubscriptions(
+    clientOrgId: string,
+    accountId: string,
+  ): Promise<Array<Record<string, unknown>>> {
+    const { data, error } = await this.admin
+      .from('client_subscriptions')
+      .select(
+        'id, plan_name, monthly_amount, currency, status, billing_collection, project_id',
+      )
+      .eq('client_org_id', clientOrgId)
+      .eq('account_id', accountId)
+      .in('status', ['pending', 'incomplete'])
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+
+    return ((data ?? []) as Array<Record<string, unknown>>).filter((row) =>
+      canPayClientSubscription({
+        status: String(row.status ?? ''),
+        billingCollection: row.billing_collection
+          ? String(row.billing_collection)
+          : 'stripe',
+      }),
+    );
   }
 
   async listActiveRequestTypes(clientOrgId: string): Promise<
@@ -289,54 +315,53 @@ class PortalCreditsService {
     await this.ensureMember(clientOrgId);
     const accountId = await this.resolveAccountIdFromOrg(clientOrgId);
 
-    const [poolRes, txRes, typesRes, pendingRes, subRes, pendingSubRes] =
-      await Promise.all([
-        this.admin
-          .from('client_credit_pools')
-          .select('balance, cycle_start, cycle_end')
-          .eq('client_org_id', clientOrgId)
-          .maybeSingle(),
-        this.admin
-          .from('client_credit_transactions')
-          .select('id, type, amount, reason, created_at, related_ticket_id')
-          .eq('client_org_id', clientOrgId)
-          .order('created_at', { ascending: false })
-          .limit(50),
-        this.admin
-          .from('request_types')
-          .select(
-            'id, label, credit_cost, is_billable, is_support, category_group, sort_order',
-          )
-          .eq('account_id', accountId)
-          .eq('is_active', true)
-          .order('sort_order', { ascending: true }),
-        this.admin
-          .from('support_tickets')
-          .select('id', { count: 'exact', head: true })
-          .eq('client_org_id', clientOrgId)
-          .eq('status', 'pending_credits'),
-        this.admin
-          .from('client_subscriptions')
-          .select(
-            'id, next_billing_date, status, plan_template_id, project_id, plan_templates(name, credits_per_cycle, rollover_policy, rollover_cap)',
-          )
-          .eq('client_org_id', clientOrgId)
-          .eq('account_id', accountId)
-          .eq('status', 'active')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        this.admin
-          .from('client_subscriptions')
-          .select(
-            'id, plan_name, monthly_amount, currency, status, billing_collection, project_id',
-          )
-          .eq('client_org_id', clientOrgId)
-          .eq('account_id', accountId)
-          .in('status', ['pending', 'incomplete'])
-          .order('created_at', { ascending: false })
-          .limit(20),
-      ]);
+    const [
+      poolRes,
+      txRes,
+      typesRes,
+      pendingRes,
+      subRes,
+      payablePending,
+      topupPacks,
+    ] = await Promise.all([
+      this.admin
+        .from('client_credit_pools')
+        .select('balance, cycle_start, cycle_end')
+        .eq('client_org_id', clientOrgId)
+        .maybeSingle(),
+      this.admin
+        .from('client_credit_transactions')
+        .select('id, type, amount, reason, created_at, related_ticket_id')
+        .eq('client_org_id', clientOrgId)
+        .order('created_at', { ascending: false })
+        .limit(50),
+      this.admin
+        .from('request_types')
+        .select(
+          'id, label, credit_cost, is_billable, is_support, category_group, sort_order',
+        )
+        .eq('account_id', accountId)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true }),
+      this.admin
+        .from('support_tickets')
+        .select('id', { count: 'exact', head: true })
+        .eq('client_org_id', clientOrgId)
+        .eq('status', 'pending_credits'),
+      this.admin
+        .from('client_subscriptions')
+        .select(
+          'id, next_billing_date, status, plan_template_id, project_id, plan_templates(name, credits_per_cycle, rollover_policy, rollover_cap)',
+        )
+        .eq('client_org_id', clientOrgId)
+        .eq('account_id', accountId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      this.listPayablePendingSubscriptions(clientOrgId, accountId),
+      loadAccountCreditTopupPacks(this.admin, accountId),
+    ]);
 
     const pool = poolRes.data as {
       balance?: number;
@@ -373,16 +398,6 @@ class PortalCreditsService {
         ? policy
         : null;
 
-    const payablePending = (
-      (pendingSubRes.data ?? []) as Array<Record<string, unknown>>
-    ).filter((row) =>
-      canPayClientSubscription({
-        status: String(row.status ?? ''),
-        billingCollection: row.billing_collection
-          ? String(row.billing_collection)
-          : 'stripe',
-      }),
-    );
     const projectIds = [
       ...new Set(
         [
@@ -452,7 +467,7 @@ class PortalCreditsService {
         isSupport: Boolean(row.is_support ?? false),
         categoryGroup: row.category_group ? String(row.category_group) : null,
       })),
-      topupPacks: PORTAL_CREDIT_TOPUP_PACKS.map((pack) => ({ ...pack })),
+      topupPacks: payablePending.length > 0 ? [] : topupPacks.packs,
       pendingCreditTicketCount: pendingRes.count ?? 0,
       pendingPlans: payablePending.map((row) => {
         const projectId = row.project_id ? String(row.project_id) : null;
@@ -480,10 +495,23 @@ class PortalCreditsService {
     );
     const clientId = await this.resolveClientId(accountId, input.clientOrgId);
 
-    const pack = PORTAL_CREDIT_TOPUP_PACKS.find(
-      (row) => row.id === input.packId,
+    const pendingPlans = await this.listPayablePendingSubscriptions(
+      input.clientOrgId,
+      accountId,
     );
-    if (!pack) throw new Error('Unknown top-up pack');
+    if (pendingPlans.length > 0) {
+      throw new Error(
+        'Complete your retainer payment first — top-ups are available once it is active.',
+      );
+    }
+
+    const { packs } = await loadAccountCreditTopupPacks(this.admin, accountId);
+    const pack = packs.find((row) => row.id === input.packId);
+    if (!pack) {
+      throw new Error(
+        'This top-up pack is no longer available. Refresh and try again.',
+      );
+    }
 
     return createCreditTopupInvoice({
       accountId,

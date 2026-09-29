@@ -20,6 +20,7 @@ import {
   setCirculationAutoSend,
   setCirculationContactAutoSend,
   setCirculationMinGap,
+  setCirculationRematch,
 } from '../_lib/server/circulation-workspace-actions';
 
 export type CirculationWorkspaceContact = {
@@ -80,6 +81,8 @@ type Props = {
   fromName: string;
   initialAutoSendEnabled: boolean;
   initialMinGapDays: number;
+  initialRematchOnPriceDrop: boolean;
+  initialRematchOnRelist: boolean;
   initialContacts: CirculationWorkspaceContact[];
   initialSends: CirculationWorkspaceSend[];
   suspectedUnsubscribes: CirculationSuspectedUnsubscribe[];
@@ -128,6 +131,8 @@ export function CirculationWorkspaceClient({
   fromName,
   initialAutoSendEnabled,
   initialMinGapDays,
+  initialRematchOnPriceDrop,
+  initialRematchOnRelist,
   initialContacts,
   initialSends,
   suspectedUnsubscribes,
@@ -136,11 +141,18 @@ export function CirculationWorkspaceClient({
   const [autoSend, setAutoSend] = useState(initialAutoSendEnabled);
   const [minGapDays, setMinGapDays] = useState(initialMinGapDays);
   const [minGapDraft, setMinGapDraft] = useState(String(initialMinGapDays));
+  const [rematchOnPriceDrop, setRematchOnPriceDrop] = useState(
+    initialRematchOnPriceDrop,
+  );
+  const [rematchOnRelist, setRematchOnRelist] = useState(
+    initialRematchOnRelist,
+  );
   const [contacts, setContacts] = useState(initialContacts);
   const [sends] = useState(initialSends);
   const [suspects, setSuspects] = useState(suspectedUnsubscribes);
   const [autoPending, startAutoTransition] = useTransition();
   const [gapPending, startGapTransition] = useTransition();
+  const [rematchPending, startRematchTransition] = useTransition();
   const [runPending, startRunTransition] = useTransition();
   const [contactPending, startContactTransition] = useTransition();
   const [reviewPending, startReviewTransition] = useTransition();
@@ -171,6 +183,25 @@ export function CirculationWorkspaceClient({
         setMinGapDraft(String(previous));
         toast.error(
           error instanceof Error ? error.message : 'Could not update the gap',
+        );
+      }
+    });
+  }
+
+  function toggleRematch(kind: 'onPriceDrop' | 'onRelist', enabled: boolean) {
+    const setValue =
+      kind === 'onPriceDrop' ? setRematchOnPriceDrop : setRematchOnRelist;
+    const previous =
+      kind === 'onPriceDrop' ? rematchOnPriceDrop : rematchOnRelist;
+    setValue(enabled);
+    startRematchTransition(async () => {
+      try {
+        await setCirculationRematch({ accountId, [kind]: enabled });
+        toast.success(enabled ? 'Setting turned on' : 'Setting turned off');
+      } catch (error) {
+        setValue(previous);
+        toast.error(
+          error instanceof Error ? error.message : 'Could not update setting',
         );
       }
     });
@@ -363,6 +394,43 @@ export function CirculationWorkspaceClient({
                 days
               </span>
             </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
+            <div>
+              <p className="text-sm text-[var(--workspace-shell-text)]">
+                Re-send when the price drops
+              </p>
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                A cut of 5% or more on a listing someone was already sent, in
+                the daily run. Marked &quot;Price reduced&quot;. A price put
+                back up cancels it.
+              </p>
+            </div>
+            <Switch
+              checked={rematchOnPriceDrop}
+              disabled={rematchPending}
+              onCheckedChange={(enabled) =>
+                toggleRematch('onPriceDrop', enabled)
+              }
+              data-test="circulation-rematch-price-drop-switch"
+            />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
+            <div>
+              <p className="text-sm text-[var(--workspace-shell-text)]">
+                Re-send when a listing is back on the market
+              </p>
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Under offer, let, sold or withdrawn, then marketing again.
+                Marked &quot;Back on the market&quot;.
+              </p>
+            </div>
+            <Switch
+              checked={rematchOnRelist}
+              disabled={rematchPending}
+              onCheckedChange={(enabled) => toggleRematch('onRelist', enabled)}
+              data-test="circulation-rematch-relist-switch"
+            />
           </div>
           <div className="flex flex-wrap gap-2">
             <Button

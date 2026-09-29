@@ -51,6 +51,8 @@ export async function loadCirculationWorkspaceData(
   return {
     autoSendEnabled: settings.auto_send_enabled,
     minGapDays: settings.min_gap_days,
+    rematchOnPriceDrop: settings.rematch_on_price_drop,
+    rematchOnRelist: settings.rematch_on_relist,
     suspectedUnsubscribes,
     fromEmail: identity.fromEmail,
     fromName: identity.fromName,

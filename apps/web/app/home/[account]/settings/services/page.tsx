@@ -3,6 +3,10 @@ import { redirect } from 'next/navigation';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import type { PlanTemplateRecord } from '~/lib/billing/plan-templates-types';
+import {
+  type CreditTopupPack,
+  DEFAULT_CREDIT_TOPUP_PACKS,
+} from '~/lib/credits/credit-topup-packs';
 import type { RequestTypeRecord } from '~/lib/credits/request-types-types';
 import type { ServiceCategory } from '~/lib/retainers/effective-services';
 import type { RetainerServiceRecord } from '~/lib/retainers/types';
@@ -16,9 +20,11 @@ import {
   WORK_DESIGN_SETTINGS_PROFILES,
   redirectIfProfileNotIn,
 } from '../../_lib/server/workspace-route-guard';
+import { CreditTopupPacksPanel } from './_components/credit-topup-packs-panel';
 import { RequestTypesPanel } from './_components/request-types-panel';
 import { RetainerServicesPanel } from './_components/retainer-services-panel';
 import { ServicesPlansPanel } from './_components/services-plans-panel';
+import { createCreditTopupPacksService } from './_lib/server/credit-topup-packs.service';
 import { createPlanTemplatesService } from './_lib/server/plan-templates.service';
 import { createRequestTypesService } from './_lib/server/request-types.service';
 import { createRetainerServicesService } from './_lib/server/retainer-services.service';
@@ -88,6 +94,15 @@ export default async function ServicesSettingsPage(
   } catch {
     retainerCategories = [];
   }
+  let topupPacks: { packs: CreditTopupPack[]; isCustom: boolean } = {
+    packs: DEFAULT_CREDIT_TOPUP_PACKS,
+    isCustom: false,
+  };
+  try {
+    topupPacks = await createCreditTopupPacksService(client).get(accountId);
+  } catch {
+    // Keep defaults if settings can't be read.
+  }
 
   const canEdit = access.isOwner || access.isAdmin;
 
@@ -96,6 +111,12 @@ export default async function ServicesSettingsPage(
       <ServicesPlansPanel
         accountId={accountId}
         initialTemplates={templates}
+        canEdit={canEdit}
+      />
+      <CreditTopupPacksPanel
+        accountId={accountId}
+        initialPacks={topupPacks.packs}
+        initialIsCustom={topupPacks.isCustom}
         canEdit={canEdit}
       />
       <RetainerServicesPanel

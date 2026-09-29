@@ -5970,8 +5970,10 @@ export type Database = {
           listing_id: string
           media_type: string
           mime_type: string | null
+          preview_path: string | null
           sort_order: number
           storage_path: string | null
+          thumb_path: string | null
         }
         Insert: {
           account_id: string
@@ -5984,8 +5986,10 @@ export type Database = {
           listing_id: string
           media_type?: string
           mime_type?: string | null
+          preview_path?: string | null
           sort_order?: number
           storage_path?: string | null
+          thumb_path?: string | null
         }
         Update: {
           account_id?: string
@@ -5998,8 +6002,10 @@ export type Database = {
           listing_id?: string
           media_type?: string
           mime_type?: string | null
+          preview_path?: string | null
           sort_order?: number
           storage_path?: string | null
+          thumb_path?: string | null
         }
         Relationships: [
           {

@@ -304,6 +304,8 @@ export const CreateListingMediaSchema = z
     listingId: z.string().uuid(),
     mediaType: z.enum(MEDIA_TYPES).optional(),
     storagePath: z.string().min(1).optional().nullable(),
+    thumbPath: z.string().min(1).max(1024).optional().nullable(),
+    previewPath: z.string().min(1).max(1024).optional().nullable(),
     externalUrl: z
       .union([z.string().trim().url().max(2000), z.literal(''), z.null()])
       .optional(),
@@ -351,6 +353,8 @@ export const UpdateListingMediaSchema = z
     accountId: z.string().uuid(),
     fileName: z.string().trim().min(1).max(200).optional(),
     storagePath: z.string().min(1).optional(),
+    thumbPath: z.string().min(1).max(1024).optional().nullable(),
+    previewPath: z.string().min(1).max(1024).optional().nullable(),
     mimeType: z.string().trim().max(120).optional().nullable(),
     mediaType: z.enum(MEDIA_TYPES).optional(),
   })
