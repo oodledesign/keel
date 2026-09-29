@@ -6,8 +6,10 @@ import { useRouter } from 'next/navigation';
 
 import {
   Download,
+  Images,
   ListChecks,
   Loader2,
+  LockKeyhole,
   Mail,
   Pencil,
   Send,
@@ -532,6 +534,7 @@ export function SurveyReportBuilder({
               <>
                 <SurveyBuilderSidebarSection
                   title="Photo library"
+                  icon={Images}
                   testId="survey-builder-photos"
                 >
                   <SurveyPhotosPanel
@@ -546,6 +549,7 @@ export function SurveyReportBuilder({
                 </SurveyBuilderSidebarSection>
                 <SurveyBuilderSidebarSection
                   title="Private note"
+                  icon={LockKeyhole}
                   meta={privateNote.trim() ? 'Added' : undefined}
                   testId="survey-builder-private-note"
                 >

@@ -14,6 +14,47 @@ import {
   isSafeHttpUrl,
   parseSurveyReportDocument,
 } from '~/lib/building-surveyor/survey-report-document';
+import {
+  buildingSurveyTypeLabel,
+  isSurveyLevel,
+  surveyLevelFromType,
+} from '~/lib/building-surveyor/survey-types';
+
+function surveyReportMeta(proposal: Record<string, unknown>) {
+  const surveyType = (proposal.survey_type as string | null) ?? null;
+  const isHomeSurvey = !surveyType || surveyType.startsWith('rics_hss');
+  const storedLevel = proposal.survey_level as number | null;
+  const level = isSurveyLevel(storedLevel)
+    ? storedLevel
+    : surveyLevelFromType(surveyType);
+  const address = [
+    (proposal.survey_property_address as string | null)?.trim(),
+    (proposal.survey_property_postcode as string | null)?.trim(),
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  return {
+    survey_level: isHomeSurvey ? level : null,
+    survey_report_label: isHomeSurvey
+      ? `RICS Home Survey - Level ${level}`
+      : buildingSurveyTypeLabel(surveyType),
+    survey_property_address: address || null,
+    report_date:
+      (proposal.sent_at as string | null) ??
+      (proposal.updated_at as string | null) ??
+      null,
+  };
+}
+
+function pdfFilename(proposal: Record<string, unknown>): string {
+  const prefix =
+    proposal.kind === 'survey_report' ? 'survey-report' : 'proposal';
+  const title = ((proposal.title as string | null) ?? 'document')
+    .replace(/[^\w-]+/g, '-')
+    .slice(0, 40);
+  return `${prefix}-${title}.pdf`;
+}
 
 async function buildPayload(
   proposal: Record<string, unknown>,
@@ -53,6 +94,8 @@ async function buildPayload(
     recipient_name: proposal.recipient_name as string | null,
     brand_name: account?.name ?? null,
     brand_logo_url: brand.logo_url,
+    brand_primary_color: brand.primary_color,
+    ...(kind === 'survey_report' ? surveyReportMeta(proposal) : {}),
     imageBytesById,
     client: clientRow ?? null,
   };
@@ -140,7 +183,7 @@ export async function GET(request: Request) {
 
     const payload = await buildPayload(proposal, proposal.account_id);
     const pdfBytes = await buildProposalPdf(payload);
-    const filename = `proposal-${(proposal.title ?? 'document').replace(/[^\w-]+/g, '-').slice(0, 40)}.pdf`;
+    const filename = pdfFilename(proposal);
     const body = Buffer.from(pdfBytes);
     return new NextResponse(body, {
       status: 200,
@@ -174,7 +217,7 @@ export async function GET(request: Request) {
 
     const payload = await buildPayload(proposal, proposal.account_id);
     const pdfBytes = await buildProposalPdf(payload);
-    const filename = `proposal-${(proposal.title ?? 'document').replace(/[^\w-]+/g, '-').slice(0, 40)}.pdf`;
+    const filename = pdfFilename(proposal);
     const body = Buffer.from(pdfBytes);
     return new NextResponse(body, {
       status: 200,

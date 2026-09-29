@@ -6,7 +6,68 @@ import {
   htmlToPlainText,
 } from '~/home/[account]/proposals/_lib/server/proposal-pdf';
 
+import {
+  assembleSurveyReportFromTemplate,
+  mergeValuesFromSurvey,
+} from './assemble-survey-template';
 import { documentFromObservations } from './survey-report-document';
+import {
+  buildSurveyReportPdf,
+  surveyHtmlToPdfItems,
+} from './survey-report-pdf';
+import { RICS_HSS_L3_TEMPLATE } from './survey-template';
+
+describe('surveyHtmlToPdfItems', () => {
+  it('labels merge fields and keeps table headers and bullets', () => {
+    const items = surveyHtmlToPdfItems(
+      '<p>Intro</p><ul><li>First</li></ul><table class="survey-merge-fields"><tr><th>client.name</th><td>Jane Doe</td></tr></table><table><tr><th>Room</th><th>Floor</th></tr><tr><td>Kitchen</td><td>Ground</td></tr></table>',
+    );
+    expect(items).toEqual([
+      { kind: 'para', text: 'Intro', bold: false, bullet: false },
+      { kind: 'para', text: 'First', bold: false, bullet: true },
+      { kind: 'fields', rows: [["Client's name", 'Jane Doe']] },
+      {
+        kind: 'table',
+        header: ['Room', 'Floor'],
+        rows: [['Kitchen', 'Ground']],
+      },
+    ]);
+  });
+});
+
+describe('buildSurveyReportPdf', () => {
+  it('adds a cover, contents and a divider page per lettered section', async () => {
+    const document = assembleSurveyReportFromTemplate({
+      template: RICS_HSS_L3_TEMPLATE,
+      merge: mergeValuesFromSurvey({ clientName: 'Jane Doe' }),
+      observations: [
+        {
+          sectionKey: 'chimney_stacks',
+          ricsCode: 'D1',
+          body: 'Pointing is weathered.',
+          conditionRating: '2',
+        },
+      ],
+    });
+    const sections = document.blocks.filter(
+      (block) => block.type === 'heading' && block.level === 1,
+    ).length;
+
+    const bytes = await buildSurveyReportPdf({
+      title: '106 Hadlow Road',
+      document,
+      brandName: 'Test Surveyors',
+      brandColor: '#4A2C6A',
+      surveyLevel: 3,
+      reportLabel: 'RICS Home Survey - Level 3',
+    });
+
+    const pdf = await PDFDocument.load(bytes);
+    expect(sections).toBeGreaterThan(10);
+    expect(pdf.getPageCount()).toBeGreaterThan(2 + sections);
+    expect(pdf.getTitle()).toBe('106 Hadlow Road');
+  });
+});
 
 describe('htmlToPlainText', () => {
   it('keeps list markers and headings', () => {

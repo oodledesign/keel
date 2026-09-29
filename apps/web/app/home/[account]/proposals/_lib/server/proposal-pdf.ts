@@ -9,12 +9,10 @@ import {
 } from 'pdf-lib';
 
 import {
-  type SurveyReportBlock,
-  type SurveyReportDocument,
   isSafeHttpUrl,
   parseSurveyReportDocument,
 } from '~/lib/building-surveyor/survey-report-document';
-import { stripHtmlToText } from '~/lib/campaigns/campaign-document';
+import { buildSurveyReportPdf } from '~/lib/building-surveyor/survey-report-pdf';
 import { sanitizePdfText } from '~/lib/invoices/pdf-text';
 
 type ProposalForPdf = {
@@ -29,6 +27,11 @@ type ProposalForPdf = {
   recipient_name?: string | null;
   brand_name?: string | null;
   brand_logo_url?: string | null;
+  brand_primary_color?: string | null;
+  survey_level?: 2 | 3 | null;
+  survey_report_label?: string | null;
+  survey_property_address?: string | null;
+  report_date?: string | null;
   imageBytesById?: Record<string, Uint8Array>;
   client?: {
     display_name?: string | null;
@@ -213,115 +216,43 @@ function drawLines(
   }
 }
 
-async function drawImage(
-  writer: PdfWriter,
-  bytes: Uint8Array,
-  kind: 'png' | 'jpg',
-  caption?: string,
-) {
-  const image =
-    kind === 'png'
-      ? await writer.doc.embedPng(bytes)
-      : await writer.doc.embedJpg(bytes);
-  const maxWidth = writer.width - writer.margin * 2;
-  const maxHeight = 260;
-  const scale = Math.min(maxWidth / image.width, maxHeight / image.height, 1);
-  const imageWidth = image.width * scale;
-  const imageHeight = image.height * scale;
-  const captionLines = caption
-    ? wrapText(caption, writer.font, 9, maxWidth)
-    : [];
-  const captionHeight = captionLines.length * 12;
-
-  ensureSpace(writer, imageHeight + captionHeight + 20);
-  writer.page.drawImage(image, {
-    x: writer.margin,
-    y: writer.y - imageHeight,
-    width: imageWidth,
-    height: imageHeight,
-  });
-  writer.y -= imageHeight + 8;
-  if (captionLines.length > 0) {
-    drawLines(writer, captionLines, 9, writer.font, 12);
-    writer.y -= 6;
-  } else {
-    writer.y -= 8;
-  }
-}
-
-async function renderSurveyBlocks(
-  writer: PdfWriter,
-  document: SurveyReportDocument,
-  imageBytesById: Record<string, Uint8Array>,
-) {
-  for (const block of document.blocks) {
-    await renderSurveyBlock(writer, block, imageBytesById);
-  }
-}
-
-async function renderSurveyBlock(
-  writer: PdfWriter,
-  block: SurveyReportBlock,
-  imageBytesById: Record<string, Uint8Array>,
-) {
-  const maxWidth = writer.width - writer.margin * 2;
-
-  switch (block.type) {
-    case 'heading': {
-      const text = stripHtmlToText(block.text) || block.text;
-      if (!text.trim()) return;
-      const size = block.level === 1 ? 16 : 13;
-      writer.y -= 8;
-      const lines = wrapText(text, writer.fontBold, size, maxWidth);
-      drawLines(writer, lines, size, writer.fontBold, size + 4);
-      writer.y -= 4;
-      return;
-    }
-    case 'text': {
-      const text = htmlToPlainText(block.html);
-      if (!text.trim()) return;
-      drawLines(writer, text.split('\n'), 10, writer.font, 13);
-      writer.y -= 6;
-      return;
-    }
-    case 'image': {
-      const key = block.documentId ?? block.src;
-      const stored = key ? imageBytesById[key] : undefined;
-      const fetched = stored
-        ? { bytes: stored, kind: detectImageKind(stored) }
-        : block.src
-          ? await fetchImageBytes(block.src)
-          : null;
-      if (!fetched) return;
-      await drawImage(
-        writer,
-        fetched.bytes,
-        fetched.kind,
-        block.caption || block.alt,
-      );
-      return;
-    }
-    case 'divider': {
-      ensureSpace(writer, 16);
-      writer.page.drawLine({
-        start: { x: writer.margin, y: writer.y },
-        end: { x: writer.width - writer.margin, y: writer.y },
-        thickness: 0.6,
-        color: rgb(0.75, 0.72, 0.7),
-      });
-      writer.y -= 14;
-    }
-  }
-}
-
-function detectImageKind(bytes: Uint8Array): 'png' | 'jpg' {
-  if (bytes[0] === 0x89 && bytes[1] === 0x50) return 'png';
-  return 'jpg';
-}
-
 export async function buildProposalPdf(
   proposal: ProposalForPdf,
 ): Promise<Uint8Array> {
+  const recipientName =
+    proposal.recipient_name?.trim() ||
+    proposal.client?.display_name?.trim() ||
+    [proposal.client?.first_name, proposal.client?.last_name]
+      .filter(Boolean)
+      .join(' ') ||
+    null;
+
+  const surveyDocument =
+    proposal.kind === 'survey_report'
+      ? parseSurveyReportDocument(proposal.body_document)
+      : null;
+
+  if (surveyDocument && surveyDocument.blocks.length > 0) {
+    return buildSurveyReportPdf({
+      title: proposal.title,
+      document: surveyDocument,
+      imageBytesById: proposal.imageBytesById,
+      loadImage: fetchImageBytes,
+      logo: proposal.brand_logo_url
+        ? await fetchImageBytes(proposal.brand_logo_url)
+        : null,
+      brandName: proposal.brand_name,
+      brandColor: proposal.brand_primary_color,
+      propertyAddress: proposal.survey_property_address,
+      clientName: recipientName,
+      reportDate: proposal.report_date
+        ? formatDate(proposal.report_date)
+        : null,
+      surveyLevel: proposal.survey_level,
+      reportLabel: proposal.survey_report_label,
+    });
+  }
+
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -405,14 +336,6 @@ export async function buildProposalPdf(
     writer.y -= 8;
   }
 
-  const recipientName =
-    proposal.recipient_name?.trim() ||
-    proposal.client?.display_name?.trim() ||
-    [proposal.client?.first_name, proposal.client?.last_name]
-      .filter(Boolean)
-      .join(' ') ||
-    null;
-
   if (recipientName) {
     drawLines(writer, ['Prepared for'], 11, fontBold, 14);
     drawLines(writer, [recipientName], 10, font, 13);
@@ -439,20 +362,8 @@ export async function buildProposalPdf(
     18,
   );
 
-  const surveyDocument = isSurvey
-    ? parseSurveyReportDocument(proposal.body_document)
-    : null;
-
-  if (surveyDocument && surveyDocument.blocks.length > 0) {
-    await renderSurveyBlocks(
-      writer,
-      surveyDocument,
-      proposal.imageBytesById ?? {},
-    );
-  } else {
-    const bodyText = htmlToPlainText(proposal.content_html);
-    drawLines(writer, bodyText.split('\n'), 10, font, 13);
-  }
+  const bodyText = htmlToPlainText(proposal.content_html);
+  drawLines(writer, bodyText.split('\n'), 10, font, 13);
 
   if (isSurvey && proposal.brand_name) {
     writer.y -= 10;

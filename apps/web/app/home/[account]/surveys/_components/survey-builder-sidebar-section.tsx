@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, type LucideIcon } from 'lucide-react';
 
 import {
   Collapsible,
@@ -14,12 +14,14 @@ import { workspacePanelCard, workspaceTextMuted } from '~/lib/workspace-ui';
 
 export function SurveyBuilderSidebarSection({
   title,
+  icon: Icon,
   meta,
   defaultOpen = false,
   testId,
   children,
 }: {
   title: string;
+  icon?: LucideIcon;
   meta?: ReactNode;
   defaultOpen?: boolean;
   testId?: string;
@@ -32,7 +34,13 @@ export function SurveyBuilderSidebarSection({
       data-test={testId}
     >
       <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left transition-colors hover:bg-[var(--workspace-shell-panel-hover)]">
-        <span className="text-xs font-semibold text-[var(--workspace-shell-text)]">
+        <span className="flex min-w-0 items-center gap-2 text-xs font-semibold text-[var(--workspace-shell-text)]">
+          {Icon ? (
+            <Icon
+              className={`h-3.5 w-3.5 shrink-0 ${workspaceTextMuted}`}
+              aria-hidden
+            />
+          ) : null}
           {title}
         </span>
         <span className="flex items-center gap-2">

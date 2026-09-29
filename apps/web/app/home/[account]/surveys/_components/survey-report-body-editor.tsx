@@ -21,6 +21,7 @@ import {
   GripVertical,
   Heading2,
   ImageIcon,
+  LayoutList,
   Minus,
   Trash2,
   Type,
@@ -151,6 +152,7 @@ export function SurveyReportBodyEditor({
       <aside className="space-y-3 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:self-start xl:overflow-y-auto">
         <SurveyBuilderSidebarSection
           title="Blocks"
+          icon={LayoutList}
           defaultOpen
           testId="survey-builder-blocks"
         >

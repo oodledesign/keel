@@ -48,6 +48,7 @@ import {
   updateSurveyFloodAction,
 } from '../_lib/server/survey-prep-actions';
 import { SurveyEpcPanel } from './survey-epc-panel';
+import { SurveyPropertyMapThumbnail } from './survey-property-map-thumbnail';
 
 function SourceBadge({ edited }: { edited: boolean }) {
   return (
@@ -232,7 +233,11 @@ export function SurveyPropertyPanel({
 
             {!editingAddress || !canEdit ? (
               <div className="mt-3 flex items-start justify-between gap-3">
-                <div className="min-w-0 text-sm">
+                <SurveyPropertyMapThumbnail
+                  address={lookup.address}
+                  postcode={lookup.postcode}
+                />
+                <div className="min-w-0 flex-1 text-sm">
                   <p className="font-medium text-[var(--workspace-shell-text)]">
                     {lookup.address?.trim() || 'No address yet'}
                   </p>
