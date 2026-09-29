@@ -120,7 +120,9 @@ function commercialStageIcon(key: string) {
   if (
     key === COMMERCIAL_PIPELINE_WON_STAGE ||
     key === 'signed' ||
-    key === 'completed_exchanged'
+    key === 'completed_exchanged' ||
+    key === 'billed' ||
+    key === 'completed'
   ) {
     return Trophy;
   }
@@ -135,7 +137,8 @@ function commercialStageIcon(key: string) {
   if (
     key === 'under_offer_negotiating' ||
     key === 'under_offer' ||
-    key === 'negotiating'
+    key === 'negotiating' ||
+    key === 'managed'
   ) {
     return Send;
   }
@@ -244,9 +247,24 @@ const STAGE_COLORS: Record<string, { dot: string; bar: string; tint: string }> =
       tint: 'rgba(234,179,8,0.08)',
     },
     completed_exchanged: {
-      dot: '#FF5C34',
-      bar: '#FF5C34',
-      tint: 'rgba(255, 92, 52, 0.16)',
+      dot: '#0F766E',
+      bar: '#0F766E',
+      tint: 'rgba(15, 118, 110, 0.12)',
+    },
+    billed: {
+      dot: '#27751E',
+      bar: '#27751E',
+      tint: 'rgba(39, 117, 30, 0.14)',
+    },
+    completed: {
+      dot: '#0F766E',
+      bar: '#0F766E',
+      tint: 'rgba(15, 118, 110, 0.12)',
+    },
+    managed: {
+      dot: '#3D5A80',
+      bar: '#3D5A80',
+      tint: 'rgba(61, 90, 128, 0.12)',
     },
     fallen_through: {
       dot: '#64748B',
@@ -576,6 +594,7 @@ export function PipelineBoard({
           newStage === BUILDING_SURVEYOR_PIPELINE_WON_STAGE ||
           newStage === 'completed' ||
           newStage === 'completed_exchanged' ||
+          newStage === 'billed' ||
           newStage === 'signed'
         ) {
           onDealWon?.(updatedDeal);

@@ -5,8 +5,11 @@ export const BRACKETTS_WIP_IMPORT_SOURCE = 'bracketts_wip_csv_202605';
 export type BrackettsWipStage =
   | 'potential'
   | 'current'
-  | 'under_offer_negotiating'
-  | 'completed_exchanged'
+  | 'under_offer'
+  | 'negotiating'
+  | 'billed'
+  | 'completed'
+  | 'managed'
   | 'fallen_through';
 
 export type ParsedChaseNote = {
@@ -46,7 +49,7 @@ type SectionRule = {
 const SECTION_RULES: SectionRule[] = [
   {
     match: /^professional\s*&\s*mi\s*billed$/i,
-    stage: 'completed_exchanged',
+    stage: 'billed',
     workType: 'professional',
   },
   {
@@ -56,22 +59,22 @@ const SECTION_RULES: SectionRule[] = [
   },
   {
     match: /^agency\s*billed$/i,
-    stage: 'completed_exchanged',
+    stage: 'billed',
     workType: 'agency',
   },
   {
     match: /under\s*offer/i,
-    stage: 'under_offer_negotiating',
+    stage: 'under_offer',
     workType: 'agency',
   },
   {
     match: /^offer\s*received/i,
-    stage: 'under_offer_negotiating',
+    stage: 'under_offer',
     workType: 'agency',
   },
   {
     match: /negotiat|negotat/i,
-    stage: 'under_offer_negotiating',
+    stage: 'negotiating',
     workType: 'agency',
   },
   {
@@ -111,13 +114,13 @@ const SECTION_RULES: SectionRule[] = [
   },
   {
     match: /^management$/i,
-    stage: 'current',
+    stage: 'managed',
     workType: 'management',
     portfolioMode: true,
   },
   {
     match: /^2027\s*\/\s*2028$/i,
-    stage: 'under_offer_negotiating',
+    stage: 'under_offer',
     workType: 'agency',
   },
 ];

@@ -15023,6 +15023,9 @@ export type Database = {
           value: number | null
           won_at: string | null
           work_type: string | null
+          aml_done: boolean
+          aml_done_at: string | null
+          aml_done_by: string | null
         }
         Insert: {
           account_id?: string | null
@@ -15063,6 +15066,9 @@ export type Database = {
           value?: number | null
           won_at?: string | null
           work_type?: string | null
+          aml_done?: boolean
+          aml_done_at?: string | null
+          aml_done_by?: string | null
         }
         Update: {
           account_id?: string | null
@@ -15103,6 +15109,9 @@ export type Database = {
           value?: number | null
           won_at?: string | null
           work_type?: string | null
+          aml_done?: boolean
+          aml_done_at?: string | null
+          aml_done_by?: string | null
         }
         Relationships: [
           {

@@ -11,10 +11,13 @@ describe('pipeline-stage-config', () => {
   it('defaults match WIP Instruction stages', () => {
     const defaults = defaultCommercialPipelineStageConfig();
     expect(defaults.map((stage) => stage.key)).toEqual([
-      'potential',
+      'billed',
+      'completed',
+      'under_offer',
+      'negotiating',
       'current',
-      'under_offer_negotiating',
-      'completed_exchanged',
+      'potential',
+      'managed',
       'fallen_through',
     ]);
   });
@@ -22,8 +25,12 @@ describe('pipeline-stage-config', () => {
   it('normalizes legacy Kato keys into WIP stages', () => {
     expect(normalizeCommercialPipelineStage('enquiry')).toBe('potential');
     expect(normalizeCommercialPipelineStage('viewing')).toBe('current');
-    expect(normalizeCommercialPipelineStage('signed')).toBe(
-      'completed_exchanged',
+    expect(normalizeCommercialPipelineStage('signed')).toBe('completed');
+    expect(normalizeCommercialPipelineStage('completed_exchanged')).toBe(
+      'completed',
+    );
+    expect(normalizeCommercialPipelineStage('under_offer_negotiating')).toBe(
+      'under_offer',
     );
     expect(normalizeCommercialPipelineStage('discounted')).toBe(
       'fallen_through',
@@ -42,7 +49,7 @@ describe('pipeline-stage-config', () => {
     expect(
       resolved.find((stage) => stage.key === 'fallen_through')?.hidden,
     ).toBe(true);
-    expect(resolved).toHaveLength(5);
+    expect(resolved).toHaveLength(8);
   });
 
   it('keeps hidden columns when deals remain', () => {

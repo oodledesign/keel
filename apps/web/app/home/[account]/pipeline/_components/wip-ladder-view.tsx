@@ -42,21 +42,29 @@ import type { PipelineListingOption } from '~/home/(user)/pipeline/_components/p
 import {
   moveDealToStage,
   reorderPipelineDeals,
+  updateDeal,
 } from '~/home/(user)/pipeline/actions';
+import { COMMERCIAL_PIPELINE_LOST_STAGE } from '~/lib/commercial/commercial-constants';
 import {
-  COMMERCIAL_PIPELINE_LOST_STAGE,
-  COMMERCIAL_PIPELINE_WON_STAGE,
-} from '~/lib/commercial/commercial-constants';
-import { normalizeCommercialPipelineStage } from '~/lib/commercial/pipeline-stage-config';
+  isCommercialWonStage,
+  normalizeCommercialPipelineStage,
+} from '~/lib/commercial/pipeline-stage-config';
 import { wipStageColour } from '~/lib/commercial/wip-stage-colours';
+import {
+  computeWipStageForecasts,
+  formatWipStageForecast,
+  wipStageForecast,
+} from '~/lib/commercial/wip-stage-forecasts';
 import {
   WIP_WORK_TYPE_LABELS,
   normalizeWipWorkType,
+  wipWorkTypeSurface,
 } from '~/lib/commercial/wip-work-type';
 import { workspacePanelCard, workspaceTextMuted } from '~/lib/workspace-ui';
 
 import { instructionTitle } from '../_lib/instruction-title';
 import type { WipDeskActivityItem } from '../_lib/server/wip-attachments.actions';
+import { WipAmlToggle } from './wip-aml-toggle';
 import { WipAttachmentsStrip } from './wip-attachments-strip';
 
 type StageColumn = { key: string; label: string };
@@ -106,13 +114,7 @@ function previewText(content: string, max = 90) {
 }
 
 function isWonStage(stage: string) {
-  return (
-    stage === COMMERCIAL_PIPELINE_WON_STAGE ||
-    stage === 'completed_exchanged' ||
-    stage === 'won' ||
-    stage === 'signed' ||
-    stage === 'completed'
-  );
+  return isCommercialWonStage(stage) || stage === 'won' || stage === 'signed';
 }
 
 export function WipLadderView({
@@ -295,13 +297,17 @@ export function WipLadderView({
     });
   };
 
-  // Ladder climbs upward: completed / exchanged at the top; fallen-through always last.
+  const stageForecasts = useMemo(
+    () => computeWipStageForecasts(deals),
+    [deals],
+  );
+
+  // Config order is the ladder: Billed at the top, Fallen through last.
   const ladderStages = useMemo(() => {
-    const reversed = [...stages].reverse();
-    const fallen = reversed.filter(
+    const fallen = stages.filter(
       (stage) => stage.key === COMMERCIAL_PIPELINE_LOST_STAGE,
     );
-    const rest = reversed.filter(
+    const rest = stages.filter(
       (stage) => stage.key !== COMMERCIAL_PIPELINE_LOST_STAGE,
     );
     return [...rest, ...fallen];
@@ -312,6 +318,7 @@ export function WipLadderView({
       {ladderStages.map((stage) => {
         const stageDeals = dealsByStage.get(stage.key) ?? [];
         const colour = wipStageColour(stage.key);
+        const forecast = wipStageForecast(stageForecasts, stage.key);
         return (
           <section
             key={stage.key}
@@ -331,8 +338,12 @@ export function WipLadderView({
               >
                 {stage.label}
               </h3>
-              <span className={`text-xs tabular-nums ${workspaceTextMuted}`}>
-                {stageDeals.length}
+              <span
+                className="text-xs font-medium tabular-nums"
+                style={{ color: colour.label }}
+                data-test="wip-stage-forecast"
+              >
+                {formatWipStageForecast(forecast)}
               </span>
             </header>
 
@@ -352,13 +363,14 @@ export function WipLadderView({
                 >
                   <ul className="divide-y divide-[color:var(--workspace-shell-border)]/70">
                     <li
-                      className={`hidden border-b border-[color:var(--workspace-shell-border)]/50 px-3 py-1.5 text-[10px] font-medium tracking-wide uppercase sm:grid sm:grid-cols-[1.25rem_minmax(0,1fr)_6.5rem_5.5rem_9.5rem_auto] sm:gap-3 ${workspaceTextMuted}`}
+                      className={`hidden border-b border-[color:var(--workspace-shell-border)]/50 px-3 py-1.5 text-[10px] font-medium tracking-wide uppercase sm:grid sm:grid-cols-[1.25rem_minmax(0,1fr)_6.5rem_5.5rem_4.5rem_9.5rem_auto] sm:gap-3 ${workspaceTextMuted}`}
                       aria-hidden
                     >
                       <span />
                       <span>Instruction</span>
                       <span>Last contact</span>
                       <span className="text-right">Value</span>
+                      <span>AML</span>
                       <span>Stage</span>
                       <span />
                     </li>
@@ -394,6 +406,60 @@ export function WipLadderView({
                           stages={stages}
                           onToggle={() => toggleExpanded(deal.id)}
                           onChangeStage={(next) => changeStage(deal, next)}
+                          onToggleAml={(next) => {
+                            const previous = {
+                              amlDone: deal.amlDone,
+                              amlDoneAt: deal.amlDoneAt,
+                              amlDoneBy: deal.amlDoneBy,
+                            };
+                            onDealsChange((prev) =>
+                              prev.map((item) =>
+                                item.id === deal.id
+                                  ? {
+                                      ...item,
+                                      amlDone: next,
+                                      amlDoneAt: next
+                                        ? new Date().toISOString()
+                                        : null,
+                                      amlDoneBy: next ? item.amlDoneBy : null,
+                                    }
+                                  : item,
+                              ),
+                            );
+                            startTransition(async () => {
+                              try {
+                                const result = await updateDeal(deal.id, {
+                                  amlDone: next,
+                                  accountSlug,
+                                });
+                                if (!result.success) {
+                                  onDealsChange((prev) =>
+                                    prev.map((item) =>
+                                      item.id === deal.id
+                                        ? { ...item, ...previous }
+                                        : item,
+                                    ),
+                                  );
+                                  toast.error(
+                                    result.error ?? 'Could not update AML',
+                                  );
+                                }
+                              } catch (error) {
+                                onDealsChange((prev) =>
+                                  prev.map((item) =>
+                                    item.id === deal.id
+                                      ? { ...item, ...previous }
+                                      : item,
+                                  ),
+                                );
+                                toast.error(
+                                  error instanceof Error
+                                    ? error.message
+                                    : 'Could not update AML',
+                                );
+                              }
+                            });
+                          }}
                           onEdit={() => onEditInstruction(deal)}
                           onActivityChanged={onActivityChanged}
                         />
@@ -423,6 +489,7 @@ function LadderSortableRow({
   stages,
   onToggle,
   onChangeStage,
+  onToggleAml,
   onEdit,
   onActivityChanged,
 }: {
@@ -438,6 +505,7 @@ function LadderSortableRow({
   stages: StageColumn[];
   onToggle: () => void;
   onChangeStage: (next: string) => void;
+  onToggleAml: (next: boolean) => void;
   onEdit: () => void;
   onActivityChanged?: () => void;
 }) {
@@ -457,9 +525,10 @@ function LadderSortableRow({
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.5 : 1,
+        backgroundColor: wipWorkTypeSurface(deal.workType),
       }}
     >
-      <div className="grid grid-cols-1 items-center gap-2 px-3 py-2.5 sm:grid-cols-[1.25rem_minmax(0,1fr)_6.5rem_5.5rem_9.5rem_auto] sm:gap-3">
+      <div className="grid grid-cols-1 items-center gap-2 px-3 py-2.5 sm:grid-cols-[1.25rem_minmax(0,1fr)_6.5rem_5.5rem_4.5rem_9.5rem_auto] sm:gap-3">
         <button
           type="button"
           className={`hidden touch-none items-center justify-center text-[var(--workspace-shell-text-muted)] sm:flex ${
@@ -541,6 +610,14 @@ function LadderSortableRow({
         <span className="pl-6 text-sm text-[var(--workspace-shell-text)] tabular-nums sm:pl-0 sm:text-right">
           {formatCurrency(deal.value || 0)}
         </span>
+
+        <div className="pl-6 sm:pl-0">
+          <WipAmlToggle
+            done={deal.amlDone}
+            doneAt={deal.amlDoneAt}
+            onToggle={onToggleAml}
+          />
+        </div>
 
         <div className="pl-6 sm:pl-0">
           <Select

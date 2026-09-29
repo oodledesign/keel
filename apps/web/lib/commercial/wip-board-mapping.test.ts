@@ -20,9 +20,14 @@ describe('wip-board-mapping', () => {
     expect(toSharedStatus('instruction', 'enquiry')).toBe('new');
     expect(toSharedStatus('instruction', 'current')).toBe('active');
     expect(toSharedStatus('instruction', 'viewing')).toBe('active');
+    expect(toSharedStatus('instruction', 'under_offer')).toBe('under_offer');
     expect(toSharedStatus('instruction', 'under_offer_negotiating')).toBe(
-      'under_offer_negotiating',
+      'under_offer',
     );
+    expect(toSharedStatus('instruction', 'negotiating')).toBe('negotiating');
+    expect(toSharedStatus('instruction', 'managed')).toBe('managed');
+    expect(toSharedStatus('instruction', 'billed')).toBe('closed');
+    expect(toSharedStatus('instruction', 'completed')).toBe('closed');
     expect(toSharedStatus('instruction', 'completed_exchanged')).toBe('closed');
     expect(toSharedStatus('instruction', 'fallen_through')).toBe('closed');
   });
@@ -33,7 +38,7 @@ describe('wip-board-mapping', () => {
     expect(toSharedStatus('requirement', 'actively_searching')).toBe('active');
     expect(toSharedStatus('requirement', 'search')).toBe('active');
     expect(toSharedStatus('requirement', 'under_offer_negotiating')).toBe(
-      'under_offer_negotiating',
+      'under_offer',
     );
     expect(toSharedStatus('requirement', 'fulfilled')).toBe('closed');
     expect(toSharedStatus('requirement', 'withdrawn')).toBe('closed');
@@ -42,9 +47,11 @@ describe('wip-board-mapping', () => {
   it('maps shared columns back to native stages with closed choices', () => {
     expect(fromSharedStatus('instruction', 'new')).toBe('potential');
     expect(fromSharedStatus('instruction', 'active')).toBe('current');
-    expect(fromSharedStatus('instruction', 'closed')).toBe(
-      'completed_exchanged',
-    );
+    expect(fromSharedStatus('instruction', 'under_offer')).toBe('under_offer');
+    expect(fromSharedStatus('instruction', 'negotiating')).toBe('negotiating');
+    expect(fromSharedStatus('instruction', 'managed')).toBe('managed');
+    expect(fromSharedStatus('instruction', 'closed')).toBe('completed');
+    expect(fromSharedStatus('instruction', 'closed', 'billed')).toBe('billed');
     expect(fromSharedStatus('instruction', 'closed', 'fallen_through')).toBe(
       'fallen_through',
     );

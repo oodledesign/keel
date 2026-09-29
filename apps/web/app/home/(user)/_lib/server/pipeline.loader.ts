@@ -48,6 +48,10 @@ export type PipelineDeal = {
   ladderPosition: number;
   boardPosition: number;
   followUpCall: boolean;
+  /** Instruction AML tick. */
+  amlDone: boolean;
+  amlDoneAt: string | null;
+  amlDoneBy: string | null;
 };
 
 export type PipelineData = {
@@ -88,6 +92,9 @@ type PipelineDealRow = {
   ladder_position?: number | null;
   board_position?: number | null;
   follow_up_call?: boolean | null;
+  aml_done?: boolean | null;
+  aml_done_at?: string | null;
+  aml_done_by?: string | null;
 };
 
 type BusinessRow = {
@@ -151,13 +158,16 @@ function mapDealRow(row: PipelineDealRow): PipelineDeal {
     ladderPosition: row.ladder_position ?? 0,
     boardPosition: row.board_position ?? 0,
     followUpCall: Boolean(row.follow_up_call),
+    amlDone: Boolean(row.aml_done),
+    amlDoneAt: row.aml_done_at ?? null,
+    amlDoneBy: row.aml_done_by ?? null,
   };
 }
 
 export { PIPELINE_WORKSPACE_BUSINESS_PREFIX } from '~/home/(user)/_lib/pipeline-constants';
 
 const DEAL_SELECT =
-  'id, name, contact_name, company_name, notes, value, stage, work_type, next_action, next_action_date, business_id, account_id, client_id, commercial_listing_id, hots_rent_psf, hots_size_sqft, hots_lease_years, hots_incentives, hots_solicitor_name, hots_target_exchange_date, hots_notes, completed_at, ladder_position, board_position, follow_up_call, businesses(name, colour), accounts(name), clients(display_name)';
+  'id, name, contact_name, company_name, notes, value, stage, work_type, next_action, next_action_date, business_id, account_id, client_id, commercial_listing_id, hots_rent_psf, hots_size_sqft, hots_lease_years, hots_incentives, hots_solicitor_name, hots_target_exchange_date, hots_notes, completed_at, ladder_position, board_position, follow_up_call, aml_done, aml_done_at, aml_done_by, businesses(name, colour), accounts(name), clients(display_name)';
 
 // ─── Loader ──────────────────────────────────────────────────────────
 

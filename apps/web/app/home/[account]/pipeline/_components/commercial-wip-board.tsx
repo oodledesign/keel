@@ -74,6 +74,7 @@ import type { PipelineListingOption } from '~/home/(user)/pipeline/_components/p
 import {
   moveDealToStage,
   reorderPipelineDeals,
+  updateDeal,
 } from '~/home/(user)/pipeline/actions';
 import { CustomizePipelinePhasesDialog } from '~/home/[account]/pipeline/_components/customize-pipeline-phases-dialog';
 import type { ClientOption } from '~/home/[account]/projects/_components/client-combobox';
@@ -96,6 +97,7 @@ import {
 import {
   type PipelineStageConfigItem,
   isCommercialTerminalStage,
+  isCommercialWonStage,
   normalizeCommercialPipelineStage,
   resolveCommercialPipelineBoardStages,
 } from '~/lib/commercial/pipeline-stage-config';
@@ -121,11 +123,18 @@ import {
 } from '~/lib/commercial/wip-board-mapping';
 import { computeWipInstructionTotals } from '~/lib/commercial/wip-running-totals';
 import { wipStageColour } from '~/lib/commercial/wip-stage-colours';
+import {
+  computeWipStageForecasts,
+  formatWipStageForecast,
+  wipStageForecast,
+} from '~/lib/commercial/wip-stage-forecasts';
+import { wipWorkTypeSurface } from '~/lib/commercial/wip-work-type';
 import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import type { WipDeskActivityItem } from '../_lib/server/wip-attachments.actions';
 import type { WipAttentionDigest } from '../_lib/server/wip-attention.loader';
+import { WipAmlToggle } from './wip-aml-toggle';
 import { WipLadderView } from './wip-ladder-view';
 import { WipNeedsAttentionStrip } from './wip-needs-attention-strip';
 import { WipRecentUpdatesStrip } from './wip-recent-updates-strip';
@@ -217,13 +226,7 @@ function budgetLabel(req: CommercialRequirement) {
 }
 
 function isWonInstructionStage(stage: string) {
-  return (
-    stage === COMMERCIAL_PIPELINE_WON_STAGE ||
-    stage === 'completed_exchanged' ||
-    stage === 'won' ||
-    stage === 'signed' ||
-    stage === 'completed'
-  );
+  return isCommercialWonStage(stage) || stage === 'won' || stage === 'signed';
 }
 
 function listingDetailHref(accountSlug: string, listingId: string) {
@@ -982,6 +985,58 @@ export function CommercialWipBoard({
   const instructionCount = activeInstructions.length;
   const requirementCount = filteredRequirements.length;
   const wipTotals = useMemo(() => computeWipInstructionTotals(deals), [deals]);
+  const instructionForecasts = useMemo(
+    () => computeWipStageForecasts(deals),
+    [deals],
+  );
+
+  const toggleInstructionAml = useCallback(
+    (deal: PipelineDeal, next: boolean) => {
+      const previous = {
+        amlDone: deal.amlDone,
+        amlDoneAt: deal.amlDoneAt,
+        amlDoneBy: deal.amlDoneBy,
+      };
+      setDeals((prev) =>
+        prev.map((item) =>
+          item.id === deal.id
+            ? {
+                ...item,
+                amlDone: next,
+                amlDoneAt: next ? new Date().toISOString() : null,
+                amlDoneBy: next ? item.amlDoneBy : null,
+              }
+            : item,
+        ),
+      );
+      startTransition(async () => {
+        try {
+          const result = await updateDeal(deal.id, {
+            amlDone: next,
+            accountSlug,
+          });
+          if (!result.success) {
+            setDeals((prev) =>
+              prev.map((item) =>
+                item.id === deal.id ? { ...item, ...previous } : item,
+              ),
+            );
+            toast.error(result.error ?? 'Could not update AML');
+          }
+        } catch (error) {
+          setDeals((prev) =>
+            prev.map((item) =>
+              item.id === deal.id ? { ...item, ...previous } : item,
+            ),
+          );
+          toast.error(
+            error instanceof Error ? error.message : 'Could not update AML',
+          );
+        }
+      });
+    },
+    [accountSlug],
+  );
   const ladderDealIds = useMemo(() => deals.map((deal) => deal.id), [deals]);
   const allLadderExpanded =
     ladderDealIds.length > 0 &&
@@ -1406,15 +1461,32 @@ export function CommercialWipBoard({
             <div className="flex w-max min-w-full gap-4 px-4 md:px-6 lg:px-8">
               {columns.map((column) => {
                 const cards = cardsByStage.get(column.key) ?? [];
+                const forecast =
+                  view === 'instructions'
+                    ? wipStageForecast(instructionForecasts, column.key)
+                    : {
+                        count: cards.filter(
+                          (card) => card.kind === 'instruction',
+                        ).length,
+                        fee: cards.reduce(
+                          (sum, card) =>
+                            card.kind === 'instruction'
+                              ? sum + (card.deal.value || 0)
+                              : sum,
+                          0,
+                        ),
+                      };
                 return (
                   <StageColumn
                     key={`${view}-${column.key}`}
                     stageKey={column.key}
                     label={column.label}
                     cards={cards}
+                    forecastLabel={formatWipStageForecast(forecast)}
                     accountSlug={accountSlug}
                     listingById={listingById}
                     latestCareByDealId={latestCareByDealId}
+                    onToggleAml={toggleInstructionAml}
                     onEditInstruction={(deal) => {
                       setDealToEdit(deal);
                       setEditDealOpen(true);
@@ -1442,6 +1514,7 @@ export function CommercialWipBoard({
                     : null
                 }
                 onEdit={() => {}}
+                onToggleAml={() => {}}
                 overlay
               />
             ) : null}
@@ -1472,7 +1545,7 @@ export function CommercialWipBoard({
             <AlertDialogDescription>
               {pendingClosed?.kind === 'requirement'
                 ? 'Was this requirement fulfilled or withdrawn?'
-                : 'Was this instruction completed / exchanged, or did it fall through?'}
+                : 'Mark this instruction billed, completed, or fallen through.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
@@ -1481,11 +1554,18 @@ export function CommercialWipBoard({
                 <Button
                   type="button"
                   className={workspaceBtnPrimaryMd}
+                  onClick={() => confirmClosedChoice('billed')}
+                >
+                  Billed
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() =>
                     confirmClosedChoice(COMMERCIAL_PIPELINE_WON_STAGE)
                   }
                 >
-                  Completed / Exchanged
+                  Completed
                 </Button>
                 <Button
                   type="button"
@@ -1527,18 +1607,22 @@ function StageColumn({
   stageKey,
   label,
   cards,
+  forecastLabel,
   accountSlug,
   listingById,
   latestCareByDealId,
+  onToggleAml,
   onEditInstruction,
   onEditRequirement,
 }: {
   stageKey: string;
   label: string;
   cards: BoardCard[];
+  forecastLabel: string;
   accountSlug: string;
   listingById: Map<string, PipelineListingOption>;
   latestCareByDealId: Record<string, string>;
+  onToggleAml: (deal: PipelineDeal, next: boolean) => void;
   onEditInstruction: (deal: PipelineDeal) => void;
   onEditRequirement: (requirement: CommercialRequirement) => void;
 }) {
@@ -1569,21 +1653,30 @@ function StageColumn({
         className="mb-0 flex items-center justify-between px-3 py-2.5"
         style={{ background: colour.tint }}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <span
+              className="text-sm font-semibold tracking-wide"
+              style={{ color: colour.label }}
+            >
+              {label}
+            </span>
+            <span
+              className="rounded-full px-2 py-0.5 text-xs tabular-nums"
+              style={{
+                background: 'rgba(255,255,255,0.55)',
+                color: colour.label,
+              }}
+            >
+              {cards.length}
+            </span>
+          </div>
           <span
-            className="text-sm font-semibold tracking-wide"
+            className="text-[11px] font-medium tabular-nums"
             style={{ color: colour.label }}
+            data-test="wip-stage-forecast"
           >
-            {label}
-          </span>
-          <span
-            className="rounded-full px-2 py-0.5 text-xs tabular-nums"
-            style={{
-              background: 'rgba(255,255,255,0.55)',
-              color: colour.label,
-            }}
-          >
-            {cards.length}
+            {forecastLabel}
           </span>
         </div>
       </div>
@@ -1611,6 +1704,7 @@ function StageColumn({
                   }
                   lastContactAt={latestCareByDealId[card.deal.id] ?? null}
                   onEdit={() => onEditInstruction(card.deal)}
+                  onToggleAml={(next) => onToggleAml(card.deal, next)}
                 />
               ) : (
                 <RequirementCard
@@ -1633,6 +1727,7 @@ function InstructionCard({
   listing,
   lastContactAt = null,
   onEdit,
+  onToggleAml,
   overlay = false,
 }: {
   deal: PipelineDeal;
@@ -1640,6 +1735,7 @@ function InstructionCard({
   listing?: PipelineListingOption | null;
   lastContactAt?: string | null;
   onEdit: () => void;
+  onToggleAml?: (next: boolean) => void;
   overlay?: boolean;
 }) {
   // DragOverlay must not call useSortable with the same id as the source card —
@@ -1652,6 +1748,7 @@ function InstructionCard({
         listing={listing}
         lastContactAt={lastContactAt}
         onEdit={onEdit}
+        onToggleAml={onToggleAml}
         overlay
       />
     );
@@ -1664,6 +1761,7 @@ function InstructionCard({
       listing={listing}
       lastContactAt={lastContactAt}
       onEdit={onEdit}
+      onToggleAml={onToggleAml}
     />
   );
 }
@@ -1674,12 +1772,14 @@ function SortableInstructionCard({
   listing,
   lastContactAt = null,
   onEdit,
+  onToggleAml,
 }: {
   deal: PipelineDeal;
   accountSlug: string;
   listing?: PipelineListingOption | null;
   lastContactAt?: string | null;
   onEdit: () => void;
+  onToggleAml?: (next: boolean) => void;
 }) {
   const id = cardCompositeId('instruction', deal.id);
   const {
@@ -1698,6 +1798,7 @@ function SortableInstructionCard({
       listing={listing}
       lastContactAt={lastContactAt}
       onEdit={onEdit}
+      onToggleAml={onToggleAml}
       ref={setNodeRef}
       style={{
         transform: CSS.Transform.toString(transform),
@@ -1715,6 +1816,7 @@ const InstructionCardBody = ({
   listing,
   lastContactAt = null,
   onEdit,
+  onToggleAml,
   overlay = false,
   ref,
   style,
@@ -1725,6 +1827,7 @@ const InstructionCardBody = ({
   listing?: PipelineListingOption | null;
   lastContactAt?: string | null;
   onEdit: () => void;
+  onToggleAml?: (next: boolean) => void;
   overlay?: boolean;
   ref?: Ref<HTMLDivElement>;
   style?: CSSProperties;
@@ -1754,10 +1857,15 @@ const InstructionCardBody = ({
       : null;
   const asking = rent ? `${rent} pa` : price;
 
+  const workSurface = wipWorkTypeSurface(deal.workType);
+
   return (
     <div
       ref={ref}
-      style={style}
+      style={{
+        ...style,
+        ...(workSurface ? { backgroundColor: workSurface } : null),
+      }}
       className={`${panelClass} cursor-grab p-4 active:cursor-grabbing ${
         overlay
           ? 'scale-105 rotate-2 shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)]'
@@ -1821,17 +1929,27 @@ const InstructionCardBody = ({
             </p>
           ) : null}
         </div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit();
-          }}
-          className="shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
-          aria-label="Edit instruction"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </button>
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          {onToggleAml ? (
+            <WipAmlToggle
+              done={deal.amlDone}
+              doneAt={deal.amlDoneAt}
+              onToggle={onToggleAml}
+            />
+          ) : null}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            onPointerDown={(event) => event.stopPropagation()}
+            className="shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+            aria-label="Edit instruction"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,10 @@
-import { COMMERCIAL_PIPELINE_WON_STAGE } from '~/lib/commercial/commercial-constants';
 import { normalizeCommercialPipelineStage } from '~/lib/commercial/pipeline-stage-config';
 
-export const WIP_UNDER_OFFER_STAGE = 'under_offer_negotiating';
+/** Stages that roll into the Under offer running-total card. */
+export const WIP_UNDER_OFFER_TOTAL_STAGES = [
+  'under_offer',
+  'negotiating',
+] as const;
 
 export type WipRunningTotals = {
   billed: number;
@@ -20,7 +23,8 @@ function feeValue(value: number | null | undefined) {
 
 /**
  * Running fee totals for the commercial WIP instruction list.
- * Billed = completed / exchanged (won). Under offer = under_offer_negotiating.
+ * Billed = Billed stage only. Under offer = Under offer + Negotiating.
+ * Total = billed + under offer (completed and other stages stay off the cards).
  */
 export function computeWipInstructionTotals(
   deals: readonly WipFeeRow[],
@@ -31,9 +35,9 @@ export function computeWipInstructionTotals(
   for (const deal of deals) {
     const stage = normalizeCommercialPipelineStage(deal.stage);
     const value = feeValue(deal.value);
-    if (stage === COMMERCIAL_PIPELINE_WON_STAGE) {
+    if (stage === 'billed') {
       billed += value;
-    } else if (stage === WIP_UNDER_OFFER_STAGE) {
+    } else if (stage === 'under_offer' || stage === 'negotiating') {
       underOffer += value;
     }
   }

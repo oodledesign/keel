@@ -51,7 +51,7 @@ describe('parseBrackettsWipCsvRows', () => {
 
     const parsed = parseBrackettsWipCsvRows(rows);
     const poundland = parsed.find((p) => p.title.includes('Poundland'))!;
-    expect(poundland.stage).toBe('completed_exchanged');
+    expect(poundland.stage).toBe('billed');
     expect(poundland.workType).toBe('agency');
     expect(poundland.feeGbp).toBe(11135);
     expect(poundland.importKey.startsWith(BRACKETTS_WIP_IMPORT_SOURCE)).toBe(
@@ -59,13 +59,14 @@ describe('parseBrackettsWipCsvRows', () => {
     );
 
     const uo = parsed.find((p) => p.title.includes('Unit 8'))!;
-    expect(uo.stage).toBe('under_offer_negotiating');
+    expect(uo.stage).toBe('under_offer');
     expect(uo.chaseNotes[0]?.authorToken).toBe('AM');
 
     const potential = parsed.find((p) => p.title.includes('Santander'))!;
     expect(potential.stage).toBe('potential');
 
     const portfolio = parsed.find((p) => p.title.includes('Nazeing'))!;
+    expect(portfolio.stage).toBe('managed');
     expect(portfolio.workType).toBe('management');
     expect(portfolio.childLabels).toEqual(
       expect.arrayContaining(['Asbestos', 'EICR']),
@@ -87,10 +88,8 @@ describe('parseBrackettsWipCsvRows', () => {
     const rows = parseCsvMultiline(buf.toString('latin1'));
     const parsed = parseBrackettsWipCsvRows(rows);
     expect(parsed.length).toBeGreaterThan(80);
-    expect(parsed.some((p) => p.stage === 'completed_exchanged')).toBe(true);
-    expect(parsed.some((p) => p.stage === 'under_offer_negotiating')).toBe(
-      true,
-    );
+    expect(parsed.some((p) => p.stage === 'billed')).toBe(true);
+    expect(parsed.some((p) => p.stage === 'under_offer')).toBe(true);
   });
 });
 

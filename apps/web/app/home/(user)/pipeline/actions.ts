@@ -94,6 +94,7 @@ export async function moveDealToStage(
       updates.board_position = options.boardPosition;
     }
     if (
+      newStage === 'billed' ||
       newStage === 'completed' ||
       newStage === 'signed' ||
       newStage === 'completed_exchanged'
@@ -102,7 +103,13 @@ export async function moveDealToStage(
     } else if (
       newStage === 'fell_through' ||
       newStage === 'discounted' ||
-      newStage === 'fallen_through'
+      newStage === 'fallen_through' ||
+      newStage === 'under_offer' ||
+      newStage === 'negotiating' ||
+      newStage === 'current' ||
+      newStage === 'potential' ||
+      newStage === 'managed' ||
+      newStage === 'under_offer_negotiating'
     ) {
       updates.completed_at = null;
     }
@@ -311,10 +318,12 @@ export type UpdateDealInput = {
   hotsTargetExchangeDate?: string | null;
   hotsNotes?: string | null;
   followUpCall?: boolean;
+  /** Instruction AML tick. Audit columns are set on the server. */
+  amlDone?: boolean;
 };
 
 export async function updateDeal(dealId: string, input: UpdateDealInput) {
-  await requireUserInServerComponent();
+  const user = await requireUserInServerComponent();
   const client = getSupabaseServerClient();
 
   const updates: Record<string, unknown> = {};
@@ -354,7 +363,26 @@ export async function updateDeal(dealId: string, input: UpdateDealInput) {
   if (input.followUpCall !== undefined) {
     updates.follow_up_call = input.followUpCall;
   }
+  if (input.amlDone !== undefined) {
+    const { data: currentAml } = await client
+      .from('pipeline_deals')
+      .select('aml_done')
+      .eq('id', dealId)
+      .maybeSingle();
+    const wasDone = Boolean(
+      (currentAml as { aml_done?: boolean | null } | null)?.aml_done,
+    );
+    updates.aml_done = input.amlDone;
+    if (input.amlDone && !wasDone) {
+      updates.aml_done_at = new Date().toISOString();
+      updates.aml_done_by = user.id;
+    } else if (!input.amlDone) {
+      updates.aml_done_at = null;
+      updates.aml_done_by = null;
+    }
+  }
   if (
+    input.stage === 'billed' ||
     input.stage === 'completed' ||
     input.stage === 'signed' ||
     input.stage === 'completed_exchanged'
@@ -363,7 +391,13 @@ export async function updateDeal(dealId: string, input: UpdateDealInput) {
   } else if (
     input.stage === 'fell_through' ||
     input.stage === 'discounted' ||
-    input.stage === 'fallen_through'
+    input.stage === 'fallen_through' ||
+    input.stage === 'under_offer' ||
+    input.stage === 'negotiating' ||
+    input.stage === 'current' ||
+    input.stage === 'potential' ||
+    input.stage === 'managed' ||
+    input.stage === 'under_offer_negotiating'
   ) {
     updates.completed_at = null;
   }

@@ -19,14 +19,19 @@ import {
   REQUIREMENT_STATUS_LABELS,
   type RequirementStatus,
 } from '~/lib/commercial/commercial-constants';
-import {
-  isCommercialTerminalStage,
-  normalizeCommercialPipelineStage,
-} from '~/lib/commercial/pipeline-stage-config';
+import { normalizeCommercialPipelineStage } from '~/lib/commercial/pipeline-stage-config';
 import { normalizeRequirementUseClass } from '~/lib/commercial/requirement-use-class';
 import type { WipBoardView } from '~/lib/commercial/wip-board-mapping';
 import { wipStageColour } from '~/lib/commercial/wip-stage-colours';
+import {
+  computeWipStageForecasts,
+  formatWipStageForecast,
+  wipStageForecast,
+} from '~/lib/commercial/wip-stage-forecasts';
+import { wipWorkTypeSurface } from '~/lib/commercial/wip-work-type';
 import { workspaceTextMuted } from '~/lib/workspace-ui';
+
+import { WipAmlToggle } from './wip-aml-toggle';
 
 type Props = {
   accountId: string;
@@ -198,16 +203,20 @@ export function WipSheetView({
     return map;
   }, [listings]);
 
-  const activeDeals = useMemo(
+  const sortedDeals = useMemo(
     () =>
       deals
-        .filter((d) => !isCommercialTerminalStage(d.stage))
         .slice()
         .sort((a, b) =>
           (a.companyName || a.contactName).localeCompare(
             b.companyName || b.contactName,
           ),
         ),
+    [deals],
+  );
+
+  const stageForecasts = useMemo(
+    () => computeWipStageForecasts(deals),
     [deals],
   );
 
@@ -241,7 +250,7 @@ export function WipSheetView({
 
   const visibleDeals = useMemo(
     () =>
-      activeDeals.filter((deal) => {
+      sortedDeals.filter((deal) => {
         const listingName = deal.commercialListingId
           ? listingById.get(deal.commercialListingId)?.name
           : null;
@@ -258,7 +267,7 @@ export function WipSheetView({
           stageLabel,
         ]);
       }),
-    [activeDeals, instructionQuery, listingById, instructionStages],
+    [sortedDeals, instructionQuery, listingById, instructionStages],
   );
 
   const showInstructions = view === 'instructions' || view === 'both';
@@ -589,7 +598,7 @@ export function WipSheetView({
           <SheetSectionHeader
             title="Instructions"
             count={visibleDeals.length}
-            totalCount={activeDeals.length}
+            totalCount={sortedDeals.length}
             query={instructionQuery}
             placeholder="Search instructions…"
             onQueryChange={setInstructionQuery}
@@ -604,6 +613,7 @@ export function WipSheetView({
                   <th className={thClass}>Disposal</th>
                   <th className={thClass}>Value</th>
                   <th className={thClass}>Stage</th>
+                  <th className={thClass}>AML</th>
                   <th className={thClass}>Next action</th>
                   <th className={thClass}>Due</th>
                   <th className={`${thClass} min-w-[14rem]`}>Notes</th>
@@ -613,181 +623,263 @@ export function WipSheetView({
                 {visibleDeals.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={9}
+                      colSpan={10}
                       className={`px-3 py-8 text-center text-sm ${workspaceTextMuted}`}
                     >
-                      {activeDeals.length === 0
-                        ? 'No active instructions.'
+                      {sortedDeals.length === 0
+                        ? 'No instructions.'
                         : 'No instructions match your search.'}
                     </td>
                   </tr>
                 ) : (
-                  visibleDeals.map((deal) => {
-                    const listing = deal.commercialListingId
-                      ? listingById.get(deal.commercialListingId)
-                      : null;
-                    const stageColour = wipStageColour(deal.stage);
-                    return (
-                      <tr
-                        key={deal.id}
-                        className="hover:bg-[var(--workspace-shell-sidebar-accent)]/25"
-                        style={{
-                          boxShadow: `inset 3px 0 0 ${stageColour.bar}`,
-                        }}
-                      >
-                        <td className={tdClass}>
-                          <SheetTextCell
-                            value={deal.projectName ?? ''}
-                            placeholder="Instruction"
-                            className="min-w-[10rem] font-medium"
-                            onCommit={(next) =>
-                              patchDeal(
-                                deal.id,
-                                { projectName: next.trim() || null },
-                                { projectName: next.trim() || null },
-                              )
-                            }
-                          />
-                        </td>
-                        <td className={tdClass}>
-                          <SheetTextCell
-                            value={deal.companyName}
-                            placeholder="Company"
-                            className="min-w-[8rem]"
-                            onCommit={(next) =>
-                              patchDeal(
-                                deal.id,
-                                { companyName: next },
-                                { companyName: next },
-                              )
-                            }
-                          />
-                        </td>
-                        <td className={tdClass}>
-                          <SheetTextCell
-                            value={deal.contactName}
-                            placeholder="Contact"
-                            className="min-w-[8rem]"
-                            onCommit={(next) =>
-                              patchDeal(
-                                deal.id,
-                                { contactName: next },
-                                { contactName: next },
-                              )
-                            }
-                          />
-                        </td>
-                        <td className={`${tdClass} px-2`}>
-                          {deal.commercialListingId ? (
-                            <Link
-                              href={pathsConfig.app.accountListingDetail
-                                .replace('[account]', accountSlug)
-                                .replace('[id]', deal.commercialListingId)}
-                              className="block max-w-[12rem] truncate text-xs font-medium text-[var(--ozer-info)] underline-offset-2 hover:underline"
-                              title="Open disposal"
+                  instructionStages.flatMap((stage) => {
+                    const stageDeals = visibleDeals.filter(
+                      (deal) =>
+                        normalizeCommercialPipelineStage(deal.stage) ===
+                        stage.key,
+                    );
+                    if (instructionQuery.trim() && stageDeals.length === 0) {
+                      return [];
+                    }
+                    const colour = wipStageColour(stage.key);
+                    const forecast = instructionQuery.trim()
+                      ? {
+                          count: stageDeals.length,
+                          fee: stageDeals.reduce(
+                            (sum, deal) =>
+                              sum +
+                              (Number.isFinite(deal.value) ? deal.value : 0),
+                            0,
+                          ),
+                        }
+                      : wipStageForecast(stageForecasts, stage.key);
+                    return [
+                      <tr key={`${stage.key}-header`}>
+                        <td
+                          colSpan={10}
+                          className="border-b border-[color:var(--workspace-shell-border)] px-3 py-2"
+                          style={{
+                            background: colour.tint,
+                            boxShadow: `inset 3px 0 0 ${colour.bar}`,
+                          }}
+                        >
+                          <div className="flex items-baseline justify-between gap-3">
+                            <span
+                              className="text-xs font-semibold tracking-wide"
+                              style={{ color: colour.label }}
                             >
-                              {listing?.name?.trim() || 'Open disposal'}
-                            </Link>
-                          ) : (
-                            <span className={`text-xs ${workspaceTextMuted}`}>
-                              —
+                              {stage.label}
                             </span>
-                          )}
-                        </td>
-                        <td className={tdClass}>
-                          <SheetTextCell
-                            value={
-                              deal.value ? gbpFormatter.format(deal.value) : ''
-                            }
-                            placeholder="£-"
-                            className="min-w-[6rem] tabular-nums"
-                            onCommit={(next) => {
-                              const value = parseOptionalNumber(next) ?? 0;
-                              patchDeal(deal.id, { value }, { value });
-                            }}
-                          />
-                        </td>
-                        <td className={tdClass}>
-                          <select
-                            className={selectClass}
-                            style={{
-                              color: stageColour.label,
-                              borderColor: stageColour.bar,
-                              background: stageColour.tint,
-                            }}
-                            value={normalizeCommercialPipelineStage(deal.stage)}
-                            onChange={(e) => {
-                              const stage = e.target.value;
-                              patchDeal(deal.id, { stage }, { stage });
-                            }}
-                          >
-                            {instructionStages.map((stage) => (
-                              <option key={stage.key} value={stage.key}>
-                                {stage.label}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className={tdClass}>
-                          <SheetTextCell
-                            value={deal.nextAction}
-                            placeholder="Next action"
-                            className="min-w-[9rem]"
-                            onCommit={(next) =>
-                              patchDeal(
-                                deal.id,
-                                { nextAction: next },
-                                { nextAction: next },
-                              )
-                            }
-                          />
-                        </td>
-                        <td className={tdClass}>
-                          <input
-                            type="date"
-                            className={selectClass}
-                            defaultValue={
-                              deal.nextActionDate?.slice(0, 10) ?? ''
-                            }
-                            key={`${deal.id}-due-${deal.nextActionDate ?? ''}`}
-                            onBlur={(e) => {
-                              const nextActionDate = e.target.value || null;
-                              const current =
-                                deal.nextActionDate?.slice(0, 10) || null;
-                              if (nextActionDate === current) return;
-                              patchDeal(
-                                deal.id,
-                                { nextActionDate },
-                                { nextActionDate },
-                              );
-                            }}
-                          />
-                        </td>
-                        <td className={tdClass}>
-                          <div className="flex items-center gap-1">
-                            <SheetTextCell
-                              value={deal.description ?? ''}
-                              placeholder="Notes"
-                              className="min-w-[12rem]"
-                              onCommit={(next) =>
-                                patchDeal(
-                                  deal.id,
-                                  { description: next.trim() || null },
-                                  { description: next.trim() || null },
-                                )
-                              }
-                            />
-                            <button
-                              type="button"
-                              className={`shrink-0 px-1 text-[11px] ${workspaceTextMuted} hover:text-[var(--workspace-shell-text)]`}
-                              onClick={() => onEditInstruction(deal)}
+                            <span
+                              className="text-xs font-medium tabular-nums"
+                              style={{ color: colour.label }}
+                              data-test="wip-stage-forecast"
                             >
-                              Open
-                            </button>
+                              {formatWipStageForecast(forecast)}
+                            </span>
                           </div>
                         </td>
-                      </tr>
-                    );
+                      </tr>,
+                      ...stageDeals.map((deal) => {
+                        const listing = deal.commercialListingId
+                          ? listingById.get(deal.commercialListingId)
+                          : null;
+                        const stageColour = wipStageColour(deal.stage);
+                        const workSurface = wipWorkTypeSurface(deal.workType);
+                        return (
+                          <tr
+                            key={deal.id}
+                            className="hover:bg-[var(--workspace-shell-sidebar-accent)]/25"
+                            style={{
+                              boxShadow: `inset 3px 0 0 ${stageColour.bar}`,
+                              ...(workSurface
+                                ? { backgroundColor: workSurface }
+                                : null),
+                            }}
+                          >
+                            <td className={tdClass}>
+                              <SheetTextCell
+                                value={deal.projectName ?? ''}
+                                placeholder="Instruction"
+                                className="min-w-[10rem] font-medium"
+                                onCommit={(next) =>
+                                  patchDeal(
+                                    deal.id,
+                                    { projectName: next.trim() || null },
+                                    { projectName: next.trim() || null },
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className={tdClass}>
+                              <SheetTextCell
+                                value={deal.companyName}
+                                placeholder="Company"
+                                className="min-w-[8rem]"
+                                onCommit={(next) =>
+                                  patchDeal(
+                                    deal.id,
+                                    { companyName: next },
+                                    { companyName: next },
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className={tdClass}>
+                              <SheetTextCell
+                                value={deal.contactName}
+                                placeholder="Contact"
+                                className="min-w-[8rem]"
+                                onCommit={(next) =>
+                                  patchDeal(
+                                    deal.id,
+                                    { contactName: next },
+                                    { contactName: next },
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className={`${tdClass} px-2`}>
+                              {deal.commercialListingId ? (
+                                <Link
+                                  href={pathsConfig.app.accountListingDetail
+                                    .replace('[account]', accountSlug)
+                                    .replace('[id]', deal.commercialListingId)}
+                                  className="block max-w-[12rem] truncate text-xs font-medium text-[var(--ozer-info)] underline-offset-2 hover:underline"
+                                  title="Open disposal"
+                                >
+                                  {listing?.name?.trim() || 'Open disposal'}
+                                </Link>
+                              ) : (
+                                <span
+                                  className={`text-xs ${workspaceTextMuted}`}
+                                >
+                                  —
+                                </span>
+                              )}
+                            </td>
+                            <td className={tdClass}>
+                              <SheetTextCell
+                                value={
+                                  deal.value
+                                    ? gbpFormatter.format(deal.value)
+                                    : ''
+                                }
+                                placeholder="£-"
+                                className="min-w-[6rem] tabular-nums"
+                                onCommit={(next) => {
+                                  const value = parseOptionalNumber(next) ?? 0;
+                                  patchDeal(deal.id, { value }, { value });
+                                }}
+                              />
+                            </td>
+                            <td className={tdClass}>
+                              <select
+                                className={selectClass}
+                                style={{
+                                  color: stageColour.label,
+                                  borderColor: stageColour.bar,
+                                  background: stageColour.tint,
+                                }}
+                                value={normalizeCommercialPipelineStage(
+                                  deal.stage,
+                                )}
+                                onChange={(e) => {
+                                  const stage = e.target.value;
+                                  patchDeal(deal.id, { stage }, { stage });
+                                }}
+                              >
+                                {instructionStages.map((stageOption) => (
+                                  <option
+                                    key={stageOption.key}
+                                    value={stageOption.key}
+                                  >
+                                    {stageOption.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className={`${tdClass} px-2`}>
+                              <WipAmlToggle
+                                done={deal.amlDone}
+                                doneAt={deal.amlDoneAt}
+                                onToggle={(next) =>
+                                  patchDeal(
+                                    deal.id,
+                                    {
+                                      amlDone: next,
+                                      amlDoneAt: next
+                                        ? new Date().toISOString()
+                                        : null,
+                                      amlDoneBy: next ? deal.amlDoneBy : null,
+                                    },
+                                    { amlDone: next },
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className={tdClass}>
+                              <SheetTextCell
+                                value={deal.nextAction}
+                                placeholder="Next action"
+                                className="min-w-[9rem]"
+                                onCommit={(next) =>
+                                  patchDeal(
+                                    deal.id,
+                                    { nextAction: next },
+                                    { nextAction: next },
+                                  )
+                                }
+                              />
+                            </td>
+                            <td className={tdClass}>
+                              <input
+                                type="date"
+                                className={selectClass}
+                                defaultValue={
+                                  deal.nextActionDate?.slice(0, 10) ?? ''
+                                }
+                                key={`${deal.id}-due-${deal.nextActionDate ?? ''}`}
+                                onBlur={(e) => {
+                                  const nextActionDate = e.target.value || null;
+                                  const current =
+                                    deal.nextActionDate?.slice(0, 10) || null;
+                                  if (nextActionDate === current) return;
+                                  patchDeal(
+                                    deal.id,
+                                    { nextActionDate },
+                                    { nextActionDate },
+                                  );
+                                }}
+                              />
+                            </td>
+                            <td className={tdClass}>
+                              <div className="flex items-center gap-1">
+                                <SheetTextCell
+                                  value={deal.description ?? ''}
+                                  placeholder="Notes"
+                                  className="min-w-[12rem]"
+                                  onCommit={(next) =>
+                                    patchDeal(
+                                      deal.id,
+                                      { description: next.trim() || null },
+                                      { description: next.trim() || null },
+                                    )
+                                  }
+                                />
+                                <button
+                                  type="button"
+                                  className={`shrink-0 px-1 text-[11px] ${workspaceTextMuted} hover:text-[var(--workspace-shell-text)]`}
+                                  onClick={() => onEditInstruction(deal)}
+                                >
+                                  Open
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      }),
+                    ];
                   })
                 )}
               </tbody>

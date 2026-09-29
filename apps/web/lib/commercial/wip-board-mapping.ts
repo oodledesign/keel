@@ -1,5 +1,6 @@
 import {
   COMMERCIAL_PIPELINE_LOST_STAGE,
+  COMMERCIAL_PIPELINE_STAGES,
   COMMERCIAL_PIPELINE_STAGE_LABELS,
   COMMERCIAL_PIPELINE_WON_STAGE,
   type CommercialPipelineStage,
@@ -18,7 +19,9 @@ export type WipBoardView = 'instructions' | 'requirements' | 'both';
 export const WIP_SHARED_STATUSES = [
   'new',
   'active',
-  'under_offer_negotiating',
+  'negotiating',
+  'under_offer',
+  'managed',
   'closed',
 ] as const;
 
@@ -27,11 +30,14 @@ export type WipSharedStatus = (typeof WIP_SHARED_STATUSES)[number];
 export const WIP_SHARED_STATUS_LABELS: Record<WipSharedStatus, string> = {
   new: 'New',
   active: 'Active',
-  under_offer_negotiating: 'Under Offer / Negotiating',
+  negotiating: 'Negotiating',
+  under_offer: 'Under offer',
+  managed: 'Managed',
   closed: 'Closed',
 };
 
 export type InstructionClosedChoice =
+  | 'billed'
   | typeof COMMERCIAL_PIPELINE_WON_STAGE
   | typeof COMMERCIAL_PIPELINE_LOST_STAGE;
 
@@ -59,10 +65,11 @@ export function toSharedStatus(
     const normalized = normalizeCommercialPipelineStage(stage);
     if (normalized === 'potential') return 'new';
     if (normalized === 'current') return 'active';
-    if (normalized === 'under_offer_negotiating') {
-      return 'under_offer_negotiating';
-    }
+    if (normalized === 'negotiating') return 'negotiating';
+    if (normalized === 'under_offer') return 'under_offer';
+    if (normalized === 'managed') return 'managed';
     if (
+      normalized === 'billed' ||
       normalized === COMMERCIAL_PIPELINE_WON_STAGE ||
       normalized === COMMERCIAL_PIPELINE_LOST_STAGE
     ) {
@@ -74,9 +81,7 @@ export function toSharedStatus(
   const normalized = normalizeRequirementStage(stage);
   if (normalized === 'new') return 'new';
   if (normalized === 'actively_searching') return 'active';
-  if (normalized === 'under_offer_negotiating') {
-    return 'under_offer_negotiating';
-  }
+  if (normalized === 'under_offer_negotiating') return 'under_offer';
   return 'closed';
 }
 
@@ -100,9 +105,9 @@ export function fromSharedStatus(
   if (kind === 'instruction') {
     if (shared === 'new') return 'potential';
     if (shared === 'active') return 'current';
-    if (shared === 'under_offer_negotiating') {
-      return 'under_offer_negotiating';
-    }
+    if (shared === 'negotiating') return 'negotiating';
+    if (shared === 'under_offer') return 'under_offer';
+    if (shared === 'managed') return 'managed';
     const choice =
       (closedChoice as InstructionClosedChoice | undefined) ??
       COMMERCIAL_PIPELINE_WON_STAGE;
@@ -110,8 +115,8 @@ export function fromSharedStatus(
   }
 
   if (shared === 'new') return 'new';
-  if (shared === 'active') return 'actively_searching';
-  if (shared === 'under_offer_negotiating') {
+  if (shared === 'active' || shared === 'managed') return 'actively_searching';
+  if (shared === 'negotiating' || shared === 'under_offer') {
     return 'under_offer_negotiating';
   }
   const choice =
@@ -130,16 +135,10 @@ export function instructionBoardStages(
         COMMERCIAL_PIPELINE_STAGE_LABELS[key as CommercialPipelineStage] ?? key,
     }));
   }
-  return [
-    { key: 'potential', label: 'Potential Instructions' },
-    { key: 'current', label: 'Current Instructions' },
-    {
-      key: 'under_offer_negotiating',
-      label: 'Under Offer / Negotiating',
-    },
-    { key: 'completed_exchanged', label: 'Completed / Exchanged' },
-    { key: 'fallen_through', label: 'Fallen through' },
-  ];
+  return COMMERCIAL_PIPELINE_STAGES.map((key) => ({
+    key,
+    label: COMMERCIAL_PIPELINE_STAGE_LABELS[key],
+  }));
 }
 
 export function requirementBoardStages(): Array<{

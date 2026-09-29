@@ -160,8 +160,9 @@ export function commercialPipelineStageLabel(
 }
 
 export function isCommercialWonStage(stage: string): boolean {
+  const normalized = normalizeCommercialPipelineStage(stage);
   return (
-    normalizeCommercialPipelineStage(stage) === COMMERCIAL_PIPELINE_WON_STAGE
+    normalized === 'billed' || normalized === COMMERCIAL_PIPELINE_WON_STAGE
   );
 }
 

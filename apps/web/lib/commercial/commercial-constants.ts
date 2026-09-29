@@ -452,14 +452,19 @@ export const LISTING_STATUS_FILTER_ACTIVE_CLASS: Record<ListingStatus, string> =
   };
 
 /**
- * Commercial Instruction (WIP) stages — Bracketts language.
+ * Commercial Instruction (WIP) stages — Bracketts ladder.
+ * Order is top-to-bottom on the ladder and left-to-right on the board:
+ * billed work first, fallen through last.
  * Stored on pipeline_deals.stage for commercial-property workspaces.
  */
 export const COMMERCIAL_PIPELINE_STAGES = [
-  'potential',
+  'billed',
+  'completed',
+  'under_offer',
+  'negotiating',
   'current',
-  'under_offer_negotiating',
-  'completed_exchanged',
+  'potential',
+  'managed',
   'fallen_through',
 ] as const;
 
@@ -470,33 +475,44 @@ export const COMMERCIAL_PIPELINE_STAGE_LABELS: Record<
   CommercialPipelineStage,
   string
 > = {
-  potential: 'Potential Instructions',
+  billed: 'Billed',
+  completed: 'Completed',
+  under_offer: 'Under offer',
+  negotiating: 'Negotiating',
   current: 'Current Instructions',
-  under_offer_negotiating: 'Under Offer / Negotiating',
-  completed_exchanged: 'Completed / Exchanged',
+  potential: 'Potential Instructions',
+  managed: 'Managed',
   fallen_through: 'Fallen through',
 };
 
-/** Stages shown on the board by default. */
+/** Stages shown on the board by default, in ladder order. */
 export const COMMERCIAL_PIPELINE_BOARD_STAGES = [
-  { key: 'potential', label: 'Potential Instructions', hidden: false },
+  { key: 'billed', label: 'Billed', hidden: false },
+  { key: 'completed', label: 'Completed', hidden: false },
+  { key: 'under_offer', label: 'Under offer', hidden: false },
+  { key: 'negotiating', label: 'Negotiating', hidden: false },
   { key: 'current', label: 'Current Instructions', hidden: false },
-  {
-    key: 'under_offer_negotiating',
-    label: 'Under Offer / Negotiating',
-    hidden: false,
-  },
-  {
-    key: 'completed_exchanged',
-    label: 'Completed / Exchanged',
-    hidden: false,
-  },
+  { key: 'potential', label: 'Potential Instructions', hidden: false },
+  { key: 'managed', label: 'Managed', hidden: false },
   { key: 'fallen_through', label: 'Fallen through', hidden: false },
 ] as const;
 
-/** Terminal “won” stage for commercial instructions. */
+/** Fee has been invoiced. Distinct from completed (exchanged, not yet billed). */
+export const COMMERCIAL_PIPELINE_BILLED_STAGE: CommercialPipelineStage =
+  'billed';
+
+/**
+ * Default success stage when a single “won” key is required
+ * (closed-column default). Billed is also a success stage.
+ */
 export const COMMERCIAL_PIPELINE_WON_STAGE: CommercialPipelineStage =
-  'completed_exchanged';
+  'completed';
+
+/** Success stages: exchanged/completed, or already billed. */
+export const COMMERCIAL_PIPELINE_WON_STAGES = [
+  'billed',
+  'completed',
+] as const satisfies readonly CommercialPipelineStage[];
 
 /** Terminal “lost” stage for commercial instructions. */
 export const COMMERCIAL_PIPELINE_LOST_STAGE: CommercialPipelineStage =
@@ -517,16 +533,18 @@ export const COMMERCIAL_PIPELINE_LEGACY_STAGE_MAP: Record<
   shortlisted: 'potential',
   enquiry: 'potential',
   viewing: 'current',
-  negotiating: 'under_offer_negotiating',
-  under_offer: 'under_offer_negotiating',
-  signed: 'completed_exchanged',
   idle: 'potential',
   discounted: 'fallen_through',
-  // Older commercial keys
-  offer: 'under_offer_negotiating',
-  hots: 'under_offer_negotiating',
-  solicitors: 'under_offer_negotiating',
-  completed: 'completed_exchanged',
+  // Combined WIP keys (split into the ladder). Billed vs completed is a
+  // one-time data migration when a billed signal is present; reads of the
+  // old combined key land on Completed.
+  under_offer_negotiating: 'under_offer',
+  completed_exchanged: 'completed',
+  signed: 'completed',
+  // Older commercial keys that are not themselves ladder stages
+  offer: 'under_offer',
+  hots: 'under_offer',
+  solicitors: 'under_offer',
   fell_through: 'fallen_through',
 };
 

@@ -35,6 +35,7 @@ import {
 import { MeetingTranscriptsBlock } from '~/home/[account]/_components/meeting-transcripts-block';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 import { InstructionCareCompliancePanel } from '~/home/[account]/pipeline/_components/instruction-care-compliance-panel';
+import { WipAmlToggle } from '~/home/[account]/pipeline/_components/wip-aml-toggle';
 import { WipAttachmentsStrip } from '~/home/[account]/pipeline/_components/wip-attachments-strip';
 import { createSurveyorQuoteAction } from '~/home/[account]/pipeline/_lib/server/surveyor-quote-actions';
 import {
@@ -43,6 +44,7 @@ import {
 } from '~/home/[account]/projects/_components/client-combobox';
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
 import { unwrapListClientsResult } from '~/lib/clients/unwrap-list-clients-result';
+import { normalizeCommercialPipelineStage } from '~/lib/commercial/pipeline-stage-config';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import type { PipelineDeal } from '../../_lib/server/pipeline.loader';
@@ -116,6 +118,7 @@ export function EditDealDialog({
     deal?.commercialListingId ?? NONE_LISTING,
   );
   const [followUpCall, setFollowUpCall] = useState(Boolean(deal?.followUpCall));
+  const [amlDone, setAmlDone] = useState(Boolean(deal?.amlDone));
   const [quoteAddress, setQuoteAddress] = useState('');
   const [quotePending, setQuotePending] = useState(false);
 
@@ -133,7 +136,11 @@ export function EditDealDialog({
 
   useEffect(() => {
     if (deal && open) {
-      setStage(deal.stage);
+      setStage(
+        commercial
+          ? String(normalizeCommercialPipelineStage(deal.stage))
+          : deal.stage,
+      );
       setBusinessId(
         (deal.businessId ||
           pickDefaultPipelineTargetId(businesses, { workspaceScoped })) ??
@@ -143,10 +150,11 @@ export function EditDealDialog({
       setClientId(deal.clientId ?? '');
       setListingId(deal.commercialListingId ?? NONE_LISTING);
       setFollowUpCall(Boolean(deal.followUpCall));
+      setAmlDone(Boolean(deal.amlDone));
       setQuoteAddress(deal.projectName || deal.companyName || '');
       setError(null);
     }
-  }, [deal, open, businesses, workspaceScoped]);
+  }, [deal, open, businesses, workspaceScoped, commercial]);
 
   useEffect(() => {
     if (!open || !resolvedAccountId) {
@@ -290,6 +298,7 @@ export function EditDealDialog({
         accountSlug: accountSlug ?? null,
         commercialListingId: commercial ? commercialListingId : undefined,
         followUpCall: surveyor ? followUpCall : undefined,
+        amlDone: commercial ? amlDone : undefined,
         ...(commercial
           ? {
               hotsRentPsf,
@@ -338,15 +347,17 @@ export function EditDealDialog({
               hotsTargetExchangeDate,
               hotsNotes,
               completedAt:
+                stage === 'billed' ||
                 stage === 'completed' ||
                 stage === 'signed' ||
                 stage === 'completed_exchanged'
                   ? (deal.completedAt ?? new Date().toISOString())
-                  : stage === 'fell_through' ||
-                      stage === 'discounted' ||
-                      stage === 'fallen_through'
-                    ? null
-                    : deal.completedAt,
+                  : null,
+              amlDone,
+              amlDoneAt: amlDone
+                ? (deal.amlDoneAt ?? new Date().toISOString())
+                : null,
+              amlDoneBy: amlDone ? deal.amlDoneBy : null,
             }
           : {}),
       });
@@ -570,6 +581,26 @@ export function EditDealDialog({
               </Select>
             </div>
           </div>
+
+          {commercial ? (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-2">
+              <div>
+                <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                  AML
+                </p>
+                <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                  {amlDone
+                    ? 'Marked done for this instruction'
+                    : 'Not done yet'}
+                </p>
+              </div>
+              <WipAmlToggle
+                done={amlDone}
+                doneAt={deal.amlDoneAt}
+                onToggle={setAmlDone}
+              />
+            </div>
+          ) : null}
 
           {surveyor ? (
             <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]">
