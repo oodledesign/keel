@@ -10,7 +10,13 @@ export type FeatureTourMock =
   | 'email'
   | 'requests'
   | 'planner'
-  | 'ios';
+  | 'ios'
+  | 'publish-portals'
+  | 'requirements-match'
+  | 'circulation'
+  | 'disposals-pipeline'
+  | 'ask-ai'
+  | 'brochure';
 
 export type FeatureTourBlock = {
   id: string;

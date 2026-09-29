@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import {
+  type LaunchInterestSource,
+  parseLaunchInterestSource,
+} from '~/lib/marketing/launch-interest';
 import { rateLimitApiRequest } from '~/lib/rate-limit/api-rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -13,15 +17,23 @@ const VALID_INTERESTS = [
   'community',
   'rankly',
   'feeds',
+  'commercial',
 ] as const;
-const DEFAULT_INTERESTS = [...VALID_INTERESTS];
 
 type LaunchInterest = (typeof VALID_INTERESTS)[number];
+
+const DEFAULT_INTERESTS: LaunchInterest[] = [
+  'ios',
+  'property',
+  'community',
+  'rankly',
+  'feeds',
+];
 
 type LaunchInterestInsert = {
   email: string;
   interests: LaunchInterest[];
-  source: 'coming-soon';
+  source: LaunchInterestSource;
 };
 
 type QueryResult = {
@@ -74,6 +86,7 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     email?: unknown;
     interests?: unknown;
+    source?: unknown;
   } | null;
 
   const email =
@@ -111,7 +124,7 @@ export async function POST(request: Request) {
   const { error } = await client.from('launch_interest').insert({
     email,
     interests: normaliseInterests(body?.interests),
-    source: 'coming-soon',
+    source: parseLaunchInterestSource(body?.source),
   });
 
   if (error) {

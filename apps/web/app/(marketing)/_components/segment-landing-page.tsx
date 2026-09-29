@@ -45,8 +45,10 @@ import { getSegmentPricingComparison } from '~/lib/marketing/pricing-comparison'
 import type { SegmentLandingConfig } from '~/lib/marketing/segment-landing-pages';
 
 import { BusinessSeatCalculator } from './business-seat-calculator';
+import { ComingSoon } from './coming-soon';
 import { CommercialBrochurePreview } from './commercial-brochure-preview';
 import { CommercialSeatCalculator } from './commercial-seat-calculator';
+import { FeatureTourSection } from './feature-tour-section';
 import { InterconnectedWorkspacesSection } from './interconnected-workspaces-section';
 import { MarketingFaqsSection } from './marketing-faqs';
 import { PricingComparisonTable } from './pricing-comparison-table';
@@ -368,7 +370,13 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
 
       {isCommercial ? <CommercialSpotlightSections config={config} /> : null}
 
-      {isWork ? <InterconnectedWorkspacesSection variant="work" /> : null}
+      {isWork ? (
+        <>
+          <InterconnectedWorkspacesSection variant="work" />
+          <FeatureTourSection id="tour" />
+          <ComingSoon />
+        </>
+      ) : null}
 
       {!isCommercial ? (
         <section

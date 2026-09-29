@@ -197,7 +197,10 @@ function PricingExplainedPage() {
           </ul>
           <p className={cn('mt-4 text-sm', marketingBodyText)}>
             More workspace types are coming. See{' '}
-            <Link href="/#coming-soon" className="underline underline-offset-2">
+            <Link
+              href="/work#coming-soon"
+              className="underline underline-offset-2"
+            >
               Growing with you
             </Link>{' '}
             for what is in development.

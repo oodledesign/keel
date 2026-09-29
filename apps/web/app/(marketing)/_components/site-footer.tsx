@@ -75,7 +75,7 @@ export function SiteFooter() {
             { href: '/work', label: 'Business' },
             { href: '/blog', label: 'Blog' },
             { href: '/contact', label: <Trans i18nKey="marketing:contact" /> },
-            { href: '/#coming-soon', label: 'Coming soon' },
+            { href: '/work#coming-soon', label: 'Coming soon' },
           ],
         },
         {

@@ -31,7 +31,6 @@ import {
   marketingMutedText,
 } from '~/lib/marketing/marketing-ui';
 
-const FEATURE_COUNT = FEATURE_TOUR_BLOCKS.length;
 const SCROLL_VH_PER_FEATURE = 72;
 const FEATURE_SWITCH_FADE_S = 0.32;
 
@@ -39,10 +38,12 @@ type FeatureBlock = FeatureTourBlock;
 
 function FeatureTourCard({
   block,
+  blocks,
   scrollYProgress,
   activeIndex,
 }: {
   block: FeatureBlock;
+  blocks?: FeatureBlock[];
   scrollYProgress?: MotionValue<number>;
   activeIndex?: number;
 }) {
@@ -55,8 +56,9 @@ function FeatureTourCard({
       )}
       data-test="feature-tour-card"
     >
-      {scrollYProgress != null && activeIndex != null ? (
+      {blocks != null && scrollYProgress != null && activeIndex != null ? (
         <FeatureStepProgress
+          blocks={blocks}
           scrollYProgress={scrollYProgress}
           activeIndex={activeIndex}
         />
@@ -135,45 +137,42 @@ function FeatureTourCard({
   );
 }
 
-function featureStepBounds(activeIndex: number) {
-  if (FEATURE_COUNT <= 1) {
+function featureStepBounds(activeIndex: number, count: number) {
+  if (count <= 1) {
     return { start: 0, end: 1 };
   }
 
-  const start =
-    activeIndex === 0 ? 0 : (activeIndex - 0.5) / (FEATURE_COUNT - 1);
-  const end =
-    activeIndex === FEATURE_COUNT - 1
-      ? 1
-      : (activeIndex + 0.5) / (FEATURE_COUNT - 1);
+  const start = activeIndex === 0 ? 0 : (activeIndex - 0.5) / (count - 1);
+  const end = activeIndex === count - 1 ? 1 : (activeIndex + 0.5) / (count - 1);
 
   return { start, end };
 }
 
 function FeatureStepProgress({
+  blocks,
   scrollYProgress,
   activeIndex,
 }: {
+  blocks: FeatureBlock[];
   scrollYProgress: MotionValue<number>;
   activeIndex: number;
 }) {
-  const { start, end } = featureStepBounds(activeIndex);
+  const count = blocks.length;
+  const { start, end } = featureStepBounds(activeIndex, count);
   const scaleX = useTransform(scrollYProgress, (progress) => {
     const range = Math.max(end - start, 0.0001);
 
     return Math.min(1, Math.max(0, (progress - start) / range));
   });
 
-  const isLast = activeIndex >= FEATURE_COUNT - 1;
-  const nextLabel = isLast
-    ? null
-    : FEATURE_TOUR_BLOCKS[activeIndex + 1]?.eyebrow;
+  const isLast = activeIndex >= count - 1;
+  const nextLabel = isLast ? null : blocks[activeIndex + 1]?.eyebrow;
 
   return (
     <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-5 pt-4 pb-3 md:px-6 lg:px-8">
       <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-medium tracking-[0.04em] text-[var(--workspace-shell-text-muted)] uppercase">
         <span>
-          {activeIndex + 1} / {FEATURE_COUNT}
+          {activeIndex + 1} / {count}
         </span>
         {nextLabel ? <span>Next · {nextLabel}</span> : <span>End</span>}
       </div>
@@ -182,7 +181,7 @@ function FeatureStepProgress({
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-valuenow={Math.round(((activeIndex + 1) / FEATURE_COUNT) * 100)}
+        aria-valuenow={Math.round(((activeIndex + 1) / count) * 100)}
         aria-label={
           nextLabel
             ? `Scroll progress to ${nextLabel}`
@@ -199,17 +198,18 @@ function FeatureStepProgress({
 }
 
 function FeatureTourSlidePanel({
+  blocks,
   activeId,
   activeIndex,
   scrollYProgress,
 }: {
+  blocks: FeatureBlock[];
   activeId: string;
   activeIndex: number;
   scrollYProgress: MotionValue<number>;
 }) {
   const activeBlock =
-    FEATURE_TOUR_BLOCKS.find((block) => block.id === activeId) ??
-    FEATURE_TOUR_BLOCKS[0];
+    blocks.find((block) => block.id === activeId) ?? blocks[0];
 
   if (!activeBlock) {
     return null;
@@ -233,6 +233,7 @@ function FeatureTourSlidePanel({
         >
           <FeatureTourCard
             block={activeBlock}
+            blocks={blocks}
             scrollYProgress={scrollYProgress}
             activeIndex={activeIndex}
           />
@@ -242,28 +243,30 @@ function FeatureTourSlidePanel({
   );
 }
 
-function scrollProgressToFeatureIndex(progress: number) {
-  if (FEATURE_COUNT <= 1) {
+function scrollProgressToFeatureIndex(progress: number, count: number) {
+  if (count <= 1) {
     return 0;
   }
 
-  const index = Math.round(progress * (FEATURE_COUNT - 1));
+  const index = Math.round(progress * (count - 1));
 
-  return Math.min(FEATURE_COUNT - 1, Math.max(0, index));
+  return Math.min(count - 1, Math.max(0, index));
 }
 
-function featureIndexToScrollProgress(index: number) {
-  if (FEATURE_COUNT <= 1) {
+function featureIndexToScrollProgress(index: number, count: number) {
+  if (count <= 1) {
     return 0;
   }
 
-  return index / (FEATURE_COUNT - 1);
+  return index / (count - 1);
 }
 
 function FeatureTourNav({
+  blocks,
   activeId,
   onNavigate,
 }: {
+  blocks: FeatureBlock[];
   activeId: string;
   onNavigate: (id: string, index: number) => void;
 }) {
@@ -307,7 +310,7 @@ function FeatureTourNav({
         data-test="feature-tour-pills"
         className="flex flex-nowrap gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden"
       >
-        {FEATURE_TOUR_BLOCKS.map((block, index) => {
+        {blocks.map((block, index) => {
           const isActive = activeId === block.id;
 
           return (
@@ -362,12 +365,12 @@ function FeatureTourNav({
   );
 }
 
-function ScrollPinnedFeatureTour() {
+function ScrollPinnedFeatureTour({ blocks }: { blocks: FeatureBlock[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [activeId, setActiveId] = useState(FEATURE_TOUR_BLOCKS[0]?.id ?? '');
+  const [activeId, setActiveId] = useState(blocks[0]?.id ?? '');
   const activeIndex = Math.max(
     0,
-    FEATURE_TOUR_BLOCKS.findIndex((block) => block.id === activeId),
+    blocks.findIndex((block) => block.id === activeId),
   );
 
   const { scrollYProgress } = useScroll({
@@ -376,8 +379,8 @@ function ScrollPinnedFeatureTour() {
   });
 
   useMotionValueEvent(scrollYProgress, 'change', (progress) => {
-    const index = scrollProgressToFeatureIndex(progress);
-    const nextId = FEATURE_TOUR_BLOCKS[index]?.id;
+    const index = scrollProgressToFeatureIndex(progress, blocks.length);
+    const nextId = blocks[index]?.id;
 
     if (nextId) {
       setActiveId((current) => (current === nextId ? current : nextId));
@@ -395,7 +398,7 @@ function ScrollPinnedFeatureTour() {
       container.offsetHeight - window.innerHeight,
       1,
     );
-    const progress = featureIndexToScrollProgress(index);
+    const progress = featureIndexToScrollProgress(index, blocks.length);
     const target =
       window.scrollY +
       container.getBoundingClientRect().top +
@@ -413,7 +416,7 @@ function ScrollPinnedFeatureTour() {
       return;
     }
 
-    const index = FEATURE_TOUR_BLOCKS.findIndex((block) => block.id === hash);
+    const index = blocks.findIndex((block) => block.id === hash);
 
     if (index < 0) {
       return;
@@ -430,15 +433,20 @@ function ScrollPinnedFeatureTour() {
     <div
       ref={containerRef}
       className="relative"
-      style={{ height: `${FEATURE_COUNT * SCROLL_VH_PER_FEATURE}vh` }}
+      style={{ height: `${blocks.length * SCROLL_VH_PER_FEATURE}vh` }}
     >
       <div className="sticky top-20 lg:top-24">
         <div className="lg:grid lg:grid-cols-[11.5rem_minmax(0,1fr)] lg:gap-x-10 xl:grid-cols-[12.5rem_minmax(0,1fr)] xl:gap-x-12">
           <div className="mb-4 lg:mb-0">
-            <FeatureTourNav activeId={activeId} onNavigate={scrollToFeature} />
+            <FeatureTourNav
+              blocks={blocks}
+              activeId={activeId}
+              onNavigate={scrollToFeature}
+            />
           </div>
 
           <FeatureTourSlidePanel
+            blocks={blocks}
             activeId={activeId}
             activeIndex={activeIndex}
             scrollYProgress={scrollYProgress}
@@ -449,13 +457,13 @@ function ScrollPinnedFeatureTour() {
   );
 }
 
-function StackedFeatureTour() {
-  const [activeId, setActiveId] = useState(FEATURE_TOUR_BLOCKS[0]?.id ?? '');
+function StackedFeatureTour({ blocks }: { blocks: FeatureBlock[] }) {
+  const [activeId, setActiveId] = useState(blocks[0]?.id ?? '');
 
   useEffect(() => {
-    const sections = FEATURE_TOUR_BLOCKS.map((block) =>
-      document.getElementById(block.id),
-    ).filter((element): element is HTMLElement => Boolean(element));
+    const sections = blocks
+      .map((block) => document.getElementById(block.id))
+      .filter((element): element is HTMLElement => Boolean(element));
 
     if (sections.length === 0) {
       return;
@@ -484,7 +492,7 @@ function StackedFeatureTour() {
     }
 
     return () => observer.disconnect();
-  }, []);
+  }, [blocks]);
 
   const scrollToFeature = (id: string) => {
     const section = document.getElementById(id);
@@ -516,13 +524,14 @@ function StackedFeatureTour() {
     <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-x-12 xl:grid-cols-[14.5rem_minmax(0,1fr)] xl:gap-x-16">
       <div className="mb-8 lg:mb-0">
         <FeatureTourNav
+          blocks={blocks}
           activeId={activeId}
           onNavigate={(id) => scrollToFeature(id)}
         />
       </div>
 
       <div className="flex min-w-0 flex-col gap-6 md:gap-8">
-        {FEATURE_TOUR_BLOCKS.map((block) => (
+        {blocks.map((block) => (
           <article key={block.id} id={block.id} className="scroll-mt-28">
             <FeatureTourCard block={block} />
           </article>
@@ -532,12 +541,16 @@ function StackedFeatureTour() {
   );
 }
 
-export function FeatureTour() {
+export function FeatureTour({
+  blocks = FEATURE_TOUR_BLOCKS,
+}: {
+  blocks?: FeatureTourBlock[];
+}) {
   const reducedMotion = useReducedMotion();
 
   if (reducedMotion) {
-    return <StackedFeatureTour />;
+    return <StackedFeatureTour blocks={blocks} />;
   }
 
-  return <ScrollPinnedFeatureTour />;
+  return <ScrollPinnedFeatureTour blocks={blocks} />;
 }

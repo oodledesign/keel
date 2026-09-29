@@ -5,6 +5,14 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@kit/ui/utils';
 
 import {
+  AskAiMock,
+  BrochureMock,
+  CirculationMock,
+  DisposalsPipelineMock,
+  PublishPortalsMock,
+  RequirementsMatchMock,
+} from '~/(marketing)/_components/feature-tour-commercial-mocks';
+import {
   DemoCursor,
   DemoFrame,
   DemoHighlight,
@@ -603,6 +611,18 @@ export function FeatureTourMock({
         return <PlannerMock accent={accent} />;
       case 'ios':
         return <IosMock accent={accent} />;
+      case 'publish-portals':
+        return <PublishPortalsMock />;
+      case 'requirements-match':
+        return <RequirementsMatchMock accent={accent} />;
+      case 'circulation':
+        return <CirculationMock />;
+      case 'disposals-pipeline':
+        return <DisposalsPipelineMock />;
+      case 'ask-ai':
+        return <AskAiMock accent={accent} />;
+      case 'brochure':
+        return <BrochureMock accent={accent} />;
       default:
         return null;
     }
