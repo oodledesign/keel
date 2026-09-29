@@ -19,6 +19,7 @@ import {
   Bell,
   Building2,
   CircleDot,
+  Download,
   Edit2,
   Eye,
   LayoutGrid,
@@ -998,6 +999,30 @@ export function ListingsList({
               Add disposal
             </Button>
           ) : null}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="More disposal actions"
+                data-test="disposals-more-menu"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]/60 transition-colors hover:text-[var(--workspace-shell-text)]"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild className="gap-2">
+                <a
+                  href={`/api/disposals/schedule?accountId=${encodeURIComponent(accountId)}`}
+                  download
+                  data-test="disposals-download-schedule"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download full schedule (Excel)
+                </a>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
