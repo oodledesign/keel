@@ -211,6 +211,7 @@ export const loadPipelineData = cache(async (): Promise<PipelineData> => {
     let dealsQuery = (client as any)
       .from('pipeline_deals')
       .select(DEAL_SELECT)
+      .is('archived_at', null)
       .order('created_at', { ascending: false });
 
     dealsQuery =
@@ -289,7 +290,16 @@ export const loadPipelineDataForAccount = cache(
       .from('pipeline_deals')
       .select(DEAL_SELECT)
       .or(orParts.join(','))
+      .is('archived_at', null)
       .order('created_at', { ascending: false });
+
+    // Fail loudly. A swallowed error here shows up as an empty board, which
+    // looks exactly like lost data (it did when a migration lagged the code).
+    if (dealsResult.error) {
+      throw new Error(
+        `Could not load instructions: ${dealsResult.error.message}`,
+      );
+    }
 
     const deals: PipelineDeal[] = (dealsResult.data ?? []).map(
       (row: PipelineDealRow) => mapDealRow(row),

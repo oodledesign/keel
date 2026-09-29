@@ -25,6 +25,7 @@ export const listPotentialInstructionsForListing = enhanceAction(
       .select('id, name, contact_name, company_name, stage')
       .eq('account_id', input.accountId)
       .eq('commercial_listing_id', input.listingId)
+      .is('archived_at', null)
       .eq('stage', 'potential');
 
     if (error) {
@@ -61,6 +62,7 @@ export const movePotentialInstructionsToCurrent = enhanceAction(
       .update({ stage: 'current', completed_at: null })
       .eq('account_id', input.accountId)
       .eq('commercial_listing_id', input.listingId)
+      .is('archived_at', null)
       .eq('stage', 'potential');
 
     if (error) {

@@ -434,6 +434,7 @@ async function _buildWorkspaceOverview(
               .from('pipeline_deals')
               .select('value')
               .or(pipelineOr)
+              .is('archived_at', null)
               .not('stage', 'in', '("won","lost")'),
           ]);
 

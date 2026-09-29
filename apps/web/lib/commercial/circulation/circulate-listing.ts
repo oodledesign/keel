@@ -167,6 +167,7 @@ export async function listCirculationCandidates(
     .from('commercial_requirements')
     .select('*')
     .eq('account_id', input.accountId)
+    .is('archived_at', null)
     .not('contact_email', 'is', null)
     .in('stage', [
       'new',

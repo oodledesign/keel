@@ -16,7 +16,7 @@ type Row = Record<string, unknown>;
 const PAGE_SIZE = 1000;
 const IN_CHUNK = 200;
 
-async function fetchAllPages(build: () => LooseQuery): Promise<Row[]> {
+export async function fetchAllPages(build: () => LooseQuery): Promise<Row[]> {
   const rows: Row[] = [];
   for (let from = 0; ; from += PAGE_SIZE) {
     const { data, error } = await build().range(from, from + PAGE_SIZE - 1);

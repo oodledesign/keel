@@ -10,8 +10,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import {
   COMMERCIAL_PIPELINE_STAGES,
-  DEFAULT_COMMERCIAL_WIP_BOARD_NAME,
   type CommercialPipelineStage,
+  DEFAULT_COMMERCIAL_WIP_BOARD_NAME,
 } from '~/lib/commercial/commercial-constants';
 import {
   type PipelineStageConfigItem,

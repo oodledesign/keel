@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useTransition } from 'react';
+import { useCallback, useMemo, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
@@ -24,6 +24,7 @@ import {
   ChevronRight,
   ExternalLink,
   GripVertical,
+  Search,
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -49,23 +50,25 @@ import {
   isCommercialWonStage,
   normalizeCommercialPipelineStage,
 } from '~/lib/commercial/pipeline-stage-config';
+import {
+  compareInstructionOrder,
+  matchesWipQuery,
+  nextEndPosition,
+} from '~/lib/commercial/wip-order';
 import { wipStageColour } from '~/lib/commercial/wip-stage-colours';
 import {
   computeWipStageForecasts,
   formatWipStageForecast,
   wipStageForecast,
 } from '~/lib/commercial/wip-stage-forecasts';
-import {
-  WIP_WORK_TYPE_LABELS,
-  normalizeWipWorkType,
-  wipWorkTypeSurface,
-} from '~/lib/commercial/wip-work-type';
+import { wipWorkTypeSurface } from '~/lib/commercial/wip-work-type';
 import { workspacePanelCard, workspaceTextMuted } from '~/lib/workspace-ui';
 
 import { instructionTitle } from '../_lib/instruction-title';
 import type { WipDeskActivityItem } from '../_lib/server/wip-attachments.actions';
 import { WipAmlToggle } from './wip-aml-toggle';
 import { WipAttachmentsStrip } from './wip-attachments-strip';
+import { WipWorkTypePill } from './wip-work-type-pill';
 
 type StageColumn = { key: string; label: string };
 
@@ -77,6 +80,8 @@ type Props = {
   selectableStages?: StageColumn[];
   deskActivity: WipDeskActivityItem[];
   latestCareByDealId?: Record<string, string>;
+  /** Newest update date per instruction (covers every instruction). */
+  latestUpdateByDealId?: Record<string, string>;
   listings?: PipelineListingOption[];
   onDealsChange: (
     next: PipelineDeal[] | ((prev: PipelineDeal[]) => PipelineDeal[]),
@@ -126,6 +131,7 @@ export function WipLadderView({
   selectableStages,
   deskActivity,
   latestCareByDealId = {},
+  latestUpdateByDealId = {},
   listings = [],
   onDealsChange,
   onEditInstruction,
@@ -151,6 +157,14 @@ export function WipLadderView({
     return map;
   }, [deskActivity]);
 
+  const [query, setQuery] = useState('');
+  const searching = query.trim().length > 0;
+
+  const stageLabelByKey = useMemo(
+    () => new Map(stages.map((stage) => [stage.key, stage.label])),
+    [stages],
+  );
+
   const dealsByStage = useMemo(() => {
     const map = new Map<string, PipelineDeal[]>();
     for (const stage of stages) {
@@ -158,25 +172,39 @@ export function WipLadderView({
     }
     for (const deal of deals) {
       const key = normalizeCommercialPipelineStage(deal.stage);
+      if (
+        searching &&
+        !matchesWipQuery(query, [
+          deal.projectName,
+          deal.companyName,
+          deal.contactName,
+          deal.commercialListingId
+            ? listingById.get(deal.commercialListingId)?.name
+            : null,
+          deal.nextAction,
+          deal.description,
+          stageLabelByKey.get(key),
+        ])
+      ) {
+        continue;
+      }
       const list = map.get(key);
       if (list) list.push(deal);
       else map.set(key, [deal]);
     }
     for (const [key, list] of map) {
-      list.sort((a, b) => {
-        // Fallen-through rows always sort after non-fallen within a bucket.
-        const aFallen = a.stage === COMMERCIAL_PIPELINE_LOST_STAGE ? 1 : 0;
-        const bFallen = b.stage === COMMERCIAL_PIPELINE_LOST_STAGE ? 1 : 0;
-        if (aFallen !== bFallen) return aFallen - bFallen;
-        return (
-          (a.ladderPosition ?? 0) - (b.ladderPosition ?? 0) ||
-          a.id.localeCompare(b.id)
-        );
-      });
+      // Same order the board and sheet use; fallen-through rows sort last.
+      list.sort(compareInstructionOrder);
       map.set(key, list);
     }
     return map;
-  }, [deals, stages]);
+  }, [deals, stages, searching, query, listingById, stageLabelByKey]);
+
+  const matchCount = useMemo(() => {
+    let count = 0;
+    for (const list of dealsByStage.values()) count += list.length;
+    return count;
+  }, [dealsByStage]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -288,12 +316,15 @@ export function WipLadderView({
   const changeStage = (deal: PipelineDeal, nextStage: string) => {
     if (nextStage === deal.stage) return;
     const previousStage = deal.stage;
-    const position =
-      deals.filter(
-        (item) =>
-          item.id !== deal.id &&
-          normalizeCommercialPipelineStage(item.stage) === nextStage,
-      ).length + 1;
+    const position = nextEndPosition(
+      deals
+        .filter(
+          (item) =>
+            item.id !== deal.id &&
+            normalizeCommercialPipelineStage(item.stage) === nextStage,
+        )
+        .map((item) => item.ladderPosition),
+    );
     const updated = {
       ...deal,
       stage: nextStage,
@@ -367,129 +398,207 @@ export function WipLadderView({
   }, [stages]);
 
   return (
-    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-6 md:px-6 lg:px-8">
-      {ladderStages.map((stage) => {
-        const stageDeals = dealsByStage.get(stage.key) ?? [];
-        const colour = wipStageColour(stage.key);
-        const forecast = wipStageForecast(stageForecasts, stage.key);
-        return (
-          <section
-            key={stage.key}
-            className={workspacePanelCard}
-            style={{
-              borderLeftWidth: 4,
-              borderLeftColor: colour.bar,
-            }}
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 flex-wrap items-center gap-3 px-4 pb-3 md:px-6 lg:px-8">
+        <label className="relative w-full max-w-xs">
+          <span className="sr-only">Search instructions</span>
+          <Search
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-[var(--workspace-shell-text)]/40"
+          />
+          <input
+            type="search"
+            value={query}
+            placeholder="Search instructions…"
+            data-test="wip-ladder-search"
+            onChange={(event) => setQuery(event.target.value)}
+            className="h-8 w-full rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] pr-2 pl-8 text-sm text-[var(--workspace-shell-text)] outline-none placeholder:text-[var(--workspace-shell-text)]/35 focus:border-[var(--ozer-accent)]/50"
+          />
+        </label>
+        {searching ? (
+          <span
+            className={`text-xs tabular-nums ${workspaceTextMuted}`}
+            data-test="wip-ladder-search-count"
           >
-            <header
-              className="flex items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3"
-              style={{ background: colour.tint }}
+            {matchCount} of {deals.length}
+            {' · '}
+            Clear the search to reorder
+          </span>
+        ) : null}
+      </div>
+
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-6 md:px-6 lg:px-8">
+        {searching && matchCount === 0 ? (
+          <p
+            className={`px-1 py-6 text-sm ${workspaceTextMuted}`}
+            data-test="wip-ladder-search-empty"
+          >
+            No instructions match your search.
+          </p>
+        ) : null}
+        {ladderStages.map((stage) => {
+          const stageDeals = dealsByStage.get(stage.key) ?? [];
+          // While searching, only stages with a match are shown.
+          if (searching && stageDeals.length === 0) return null;
+          const colour = wipStageColour(stage.key);
+          const forecast = searching
+            ? {
+                count: stageDeals.length,
+                fee: stageDeals.reduce(
+                  (sum, deal) =>
+                    sum + (Number.isFinite(deal.value) ? deal.value : 0),
+                  0,
+                ),
+              }
+            : wipStageForecast(stageForecasts, stage.key);
+          return (
+            <section
+              key={stage.key}
+              className={workspacePanelCard}
+              style={{
+                borderLeftWidth: 4,
+                borderLeftColor: colour.bar,
+              }}
             >
-              <h3
-                className="text-sm font-semibold tracking-wide"
-                style={{ color: colour.label }}
+              {/*
+              Sticks to the top of the ladder's scroll area while its stage is
+              in view; the next stage's header pushes it out. The tint is
+              translucent, so it sits over the opaque panel colour, otherwise
+              rows would show through as they scroll underneath.
+            */}
+              <header
+                className="sticky top-0 z-10 flex items-center justify-between gap-3 rounded-t-2xl border-b border-[color:var(--workspace-shell-border)] px-4 py-3"
+                style={{
+                  backgroundColor: 'var(--workspace-shell-panel)',
+                  backgroundImage: `linear-gradient(${colour.tint}, ${colour.tint})`,
+                }}
+                data-test="wip-ladder-stage-header"
               >
-                {stage.label}
-              </h3>
-              <span
-                className="text-xs font-medium tabular-nums"
-                style={{ color: colour.label }}
-                data-test="wip-stage-forecast"
-              >
-                {formatWipStageForecast(forecast)}
-              </span>
-            </header>
-
-            {stageDeals.length === 0 ? (
-              <p className={`px-4 py-3 text-sm ${workspaceTextMuted}`}>
-                No instructions in this stage
-              </p>
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={(event) => onLadderDragEnd(stage.key, event)}
-              >
-                <SortableContext
-                  items={stageDeals.map((deal) => deal.id)}
-                  strategy={verticalListSortingStrategy}
+                <h3
+                  className="text-sm font-semibold tracking-wide"
+                  style={{ color: colour.label }}
                 >
-                  <ul className="divide-y divide-[color:var(--workspace-shell-border)]/70">
-                    <li
-                      className={`hidden border-b border-[color:var(--workspace-shell-border)]/50 px-3 py-1.5 text-[10px] font-medium tracking-wide uppercase sm:grid sm:grid-cols-[1.25rem_minmax(0,1fr)_6.5rem_5.5rem_4.5rem_9.5rem_auto] sm:gap-3 ${workspaceTextMuted}`}
-                      aria-hidden
-                    >
-                      <span />
-                      <span>Instruction</span>
-                      <span>Last contact</span>
-                      <span className="text-right">Value</span>
-                      <span>AML</span>
-                      <span>Stage</span>
-                      <span />
-                    </li>
-                    {stageDeals.map((deal) => {
-                      const open = expandedIds.has(deal.id);
-                      const latest = latestByDeal.get(deal.id);
-                      const oneLiner =
-                        previewText(latest?.content ?? '') ||
-                        (deal.nextAction?.trim()
-                          ? deal.nextAction.trim()
-                          : null);
-                      const listing = deal.commercialListingId
-                        ? (listingById.get(deal.commercialListingId) ??
-                          undefined)
-                        : undefined;
-                      const lastContactIso =
-                        latestCareByDealId[deal.id] ??
-                        latest?.createdAt ??
-                        null;
+                  {stage.label}
+                </h3>
+                <span
+                  className="text-xs font-medium tabular-nums"
+                  style={{ color: colour.label }}
+                  data-test="wip-stage-forecast"
+                >
+                  {formatWipStageForecast(forecast)}
+                </span>
+              </header>
 
-                      return (
-                        <LadderSortableRow
-                          key={deal.id}
-                          deal={deal}
-                          canDrag={stage.key !== COMMERCIAL_PIPELINE_LOST_STAGE}
-                          open={open}
-                          oneLiner={oneLiner}
-                          latest={latest}
-                          listing={listing}
-                          lastContactIso={lastContactIso}
-                          accountSlug={accountSlug}
-                          accountId={accountId}
-                          stages={stageOptionsForDeal(
-                            deal,
-                            stageChoices,
-                            stages,
-                          )}
-                          onToggle={() => toggleExpanded(deal.id)}
-                          onChangeStage={(next) => changeStage(deal, next)}
-                          onToggleAml={(next) => {
-                            const previous = {
-                              amlDone: deal.amlDone,
-                              amlDoneAt: deal.amlDoneAt,
-                              amlDoneBy: deal.amlDoneBy,
-                            };
-                            onDealsChange((prev) =>
-                              prev.map((item) =>
-                                item.id === deal.id
-                                  ? {
-                                      ...item,
-                                      amlDone: next,
-                                      amlDoneAt: next
-                                        ? new Date().toISOString()
-                                        : null,
-                                      amlDoneBy: next ? item.amlDoneBy : null,
-                                    }
-                                  : item,
-                              ),
-                            );
-                            startTransition(async () => {
-                              try {
-                                const result = await updateDeal(deal.id, {
-                                  amlDone: next,
-                                  accountSlug,
-                                });
-                                if (!result.success) {
+              {stageDeals.length === 0 ? (
+                <p className={`px-4 py-3 text-sm ${workspaceTextMuted}`}>
+                  No instructions in this stage
+                </p>
+              ) : (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={(event) => onLadderDragEnd(stage.key, event)}
+                >
+                  <SortableContext
+                    items={stageDeals.map((deal) => deal.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <ul className="divide-y divide-[color:var(--workspace-shell-border)]/70">
+                      <li
+                        className={`hidden border-b border-[color:var(--workspace-shell-border)]/50 px-3 py-1.5 text-[10px] font-medium tracking-wide uppercase sm:grid sm:grid-cols-[1.25rem_minmax(0,1fr)_6.5rem_5.5rem_4.5rem_9.5rem_auto] sm:gap-3 ${workspaceTextMuted}`}
+                        aria-hidden
+                      >
+                        <span />
+                        <span>Instruction</span>
+                        <span>Last contact</span>
+                        <span className="text-right">Value</span>
+                        <span>AML</span>
+                        <span>Stage</span>
+                        <span />
+                      </li>
+                      {stageDeals.map((deal) => {
+                        const open = expandedIds.has(deal.id);
+                        const latest = latestByDeal.get(deal.id);
+                        const oneLiner =
+                          previewText(latest?.content ?? '') ||
+                          (deal.nextAction?.trim()
+                            ? deal.nextAction.trim()
+                            : null);
+                        const listing = deal.commercialListingId
+                          ? (listingById.get(deal.commercialListingId) ??
+                            undefined)
+                          : undefined;
+                        const lastContactIso =
+                          latestCareByDealId[deal.id] ??
+                          latest?.createdAt ??
+                          null;
+                        const lastUpdateIso =
+                          latestUpdateByDealId[deal.id] ??
+                          latest?.createdAt ??
+                          null;
+
+                        return (
+                          <LadderSortableRow
+                            key={deal.id}
+                            deal={deal}
+                            canDrag={
+                              !searching &&
+                              stage.key !== COMMERCIAL_PIPELINE_LOST_STAGE
+                            }
+                            open={open}
+                            oneLiner={oneLiner}
+                            latest={latest}
+                            listing={listing}
+                            lastContactIso={lastContactIso}
+                            lastUpdateIso={lastUpdateIso}
+                            accountSlug={accountSlug}
+                            accountId={accountId}
+                            stages={stageOptionsForDeal(
+                              deal,
+                              stageChoices,
+                              stages,
+                            )}
+                            onToggle={() => toggleExpanded(deal.id)}
+                            onChangeStage={(next) => changeStage(deal, next)}
+                            onToggleAml={(next) => {
+                              const previous = {
+                                amlDone: deal.amlDone,
+                                amlDoneAt: deal.amlDoneAt,
+                                amlDoneBy: deal.amlDoneBy,
+                              };
+                              onDealsChange((prev) =>
+                                prev.map((item) =>
+                                  item.id === deal.id
+                                    ? {
+                                        ...item,
+                                        amlDone: next,
+                                        amlDoneAt: next
+                                          ? new Date().toISOString()
+                                          : null,
+                                        amlDoneBy: next ? item.amlDoneBy : null,
+                                      }
+                                    : item,
+                                ),
+                              );
+                              startTransition(async () => {
+                                try {
+                                  const result = await updateDeal(deal.id, {
+                                    amlDone: next,
+                                    accountSlug,
+                                  });
+                                  if (!result.success) {
+                                    onDealsChange((prev) =>
+                                      prev.map((item) =>
+                                        item.id === deal.id
+                                          ? { ...item, ...previous }
+                                          : item,
+                                      ),
+                                    );
+                                    toast.error(
+                                      result.error ?? 'Could not update AML',
+                                    );
+                                  }
+                                } catch (error) {
                                   onDealsChange((prev) =>
                                     prev.map((item) =>
                                       item.id === deal.id
@@ -498,37 +607,26 @@ export function WipLadderView({
                                     ),
                                   );
                                   toast.error(
-                                    result.error ?? 'Could not update AML',
+                                    error instanceof Error
+                                      ? error.message
+                                      : 'Could not update AML',
                                   );
                                 }
-                              } catch (error) {
-                                onDealsChange((prev) =>
-                                  prev.map((item) =>
-                                    item.id === deal.id
-                                      ? { ...item, ...previous }
-                                      : item,
-                                  ),
-                                );
-                                toast.error(
-                                  error instanceof Error
-                                    ? error.message
-                                    : 'Could not update AML',
-                                );
-                              }
-                            });
-                          }}
-                          onEdit={() => onEditInstruction(deal)}
-                          onActivityChanged={onActivityChanged}
-                        />
-                      );
-                    })}
-                  </ul>
-                </SortableContext>
-              </DndContext>
-            )}
-          </section>
-        );
-      })}
+                              });
+                            }}
+                            onEdit={() => onEditInstruction(deal)}
+                            onActivityChanged={onActivityChanged}
+                          />
+                        );
+                      })}
+                    </ul>
+                  </SortableContext>
+                </DndContext>
+              )}
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -553,6 +651,7 @@ function LadderSortableRow({
   latest,
   listing,
   lastContactIso,
+  lastUpdateIso,
   accountSlug,
   accountId,
   stages,
@@ -569,6 +668,7 @@ function LadderSortableRow({
   latest: WipDeskActivityItem | undefined;
   listing: PipelineListingOption | undefined;
   lastContactIso: string | null;
+  lastUpdateIso: string | null;
   accountSlug: string;
   accountId: string;
   stages: StageColumn[];
@@ -630,14 +730,7 @@ function LadderSortableRow({
           <span className="min-w-0">
             <span className="block text-sm font-medium text-[var(--workspace-shell-text)]">
               {instructionTitle(deal)}
-              {normalizeWipWorkType(deal.workType) &&
-              normalizeWipWorkType(deal.workType) !== 'agency' ? (
-                <span
-                  className={`ml-2 text-[11px] font-normal ${workspaceTextMuted}`}
-                >
-                  {WIP_WORK_TYPE_LABELS[normalizeWipWorkType(deal.workType)!]}
-                </span>
-              ) : null}
+              <WipWorkTypePill workType={deal.workType} className="ml-2" />
             </span>
             {deal.commercialListingId && listing?.name ? (
               <Link
@@ -650,15 +743,20 @@ function LadderSortableRow({
                 {listing.name}
               </Link>
             ) : null}
-            <span className={`mt-0.5 block text-xs ${workspaceTextMuted}`}>
+            <span
+              className={`mt-0.5 block text-xs ${workspaceTextMuted}`}
+              data-test="wip-ladder-last-update"
+            >
+              {lastUpdateIso ? (
+                <span className="font-medium text-[var(--workspace-shell-text)]">
+                  Updated {formatTimelineDate(lastUpdateIso)}
+                </span>
+              ) : (
+                'No updates yet'
+              )}
               {oneLiner ? (
                 <>
-                  {latest?.createdAt ? (
-                    <span className="font-medium text-[var(--workspace-shell-text)]">
-                      {formatTimelineDate(latest.createdAt)}
-                      {' · '}
-                    </span>
-                  ) : null}
+                  {' · '}
                   {oneLiner}
                   {latest?.assignedTo ? (
                     <span>
@@ -667,9 +765,7 @@ function LadderSortableRow({
                     </span>
                   ) : null}
                 </>
-              ) : (
-                'No chase update yet'
-              )}
+              ) : null}
             </span>
           </span>
         </button>
@@ -690,6 +786,7 @@ function LadderSortableRow({
           <WipAmlToggle
             done={deal.amlDone}
             doneAt={deal.amlDoneAt}
+            instructionName={deal.projectName || deal.companyName}
             onToggle={onToggleAml}
           />
         </div>

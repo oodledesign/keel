@@ -394,6 +394,7 @@ export async function listContactMatches(
           .from('commercial_requirements')
           .select(REQUIREMENT_SELECT)
           .eq('account_id', input.accountId)
+          .is('archived_at', null)
           .not('contact_email', 'is', null)
           .in('stage', [...ACTIVE_REQUIREMENT_STAGES_FOR_MATCH])
           .order('details_sent', { ascending: true, nullsFirst: true })

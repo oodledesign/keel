@@ -41,6 +41,8 @@ export type CommercialRequirement = {
   source: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Manual order within a WIP stage (lower first). */
+  boardPosition: number;
 };
 
 type Row = Record<string, unknown> & {
@@ -87,6 +89,7 @@ function mapRequirement(row: Row): CommercialRequirement {
     source: (row.source as string | null) ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    boardPosition: num(row.board_position) ?? 0,
   };
 }
 
@@ -128,6 +131,7 @@ export function createRequirementsService(client: SupabaseClient) {
         .from('commercial_requirements')
         .select('*')
         .eq('account_id', accountId)
+        .is('archived_at', null)
         .order('updated_at', { ascending: false });
 
       if (stage) query = query.eq('stage', stage);
@@ -235,6 +239,7 @@ export function createRequirementsService(client: SupabaseClient) {
         .select('*')
         .eq('id', requirementId)
         .eq('account_id', accountId)
+        .is('archived_at', null)
         .maybeSingle();
 
       if (existingError || !existingRow) {
@@ -293,6 +298,9 @@ export function createRequirementsService(client: SupabaseClient) {
           budget_max_pence: input.budgetMaxPence,
         }),
         ...(input.stage !== undefined && { stage: input.stage }),
+        ...(input.boardPosition !== undefined && {
+          board_position: input.boardPosition,
+        }),
         ...(input.notes !== undefined && { notes: input.notes }),
         ...(input.source !== undefined && { source: input.source }),
         updated_at: new Date().toISOString(),
@@ -370,6 +378,7 @@ export function createRequirementsService(client: SupabaseClient) {
         .select('*')
         .eq('id', requirementId)
         .eq('account_id', accountId)
+        .is('archived_at', null)
         .maybeSingle();
 
       if (existingError || !existingRow) {

@@ -3111,7 +3111,8 @@ export function createListingsService(client: SupabaseClient) {
       const { count: linkedDeals } = await client
         .from('pipeline_deals')
         .select('id', { count: 'exact', head: true })
-        .eq('commercial_listing_id', listingId);
+        .eq('commercial_listing_id', listingId)
+        .is('archived_at', null);
 
       return {
         active: enquiries.filter((e) => e.status !== 'archived').length,

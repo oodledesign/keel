@@ -134,6 +134,7 @@ class ClientCommercialService {
       .select('id, company_name, contact_name, stage, updated_at')
       .eq('account_id', input.accountId)
       .eq('client_id', input.clientId)
+      .is('archived_at', null)
       .order('updated_at', { ascending: false });
 
     if (error) throw error;

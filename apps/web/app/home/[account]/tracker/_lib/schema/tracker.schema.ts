@@ -69,7 +69,7 @@ export const CreateTrackerWatchSchema = z.object({
   categories: z
     .array(z.enum(COMPETITOR_CATEGORIES))
     .min(1)
-    .default(['industrial', 'retail', 'development']),
+    .default(['industrial', 'offices', 'retail', 'investments', 'land']),
   sizeMinSqft: z.number().nonnegative().optional().nullable(),
   sizeMaxSqft: z.number().nonnegative().optional().nullable(),
   notifyOnNew: z.boolean().default(true),

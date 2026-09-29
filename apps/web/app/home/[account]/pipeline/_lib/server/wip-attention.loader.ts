@@ -92,6 +92,7 @@ export async function loadWipAttentionDigest(
         'id, name, company_name, contact_name, stage, next_action, next_action_date, updated_at, commercial_listing_id',
       )
       .eq('account_id', accountId)
+      .is('archived_at', null)
       .order('updated_at', { ascending: true })
       .limit(200),
     db
@@ -118,6 +119,7 @@ export async function loadWipAttentionDigest(
         'id, company_name, contact_name, sector, location_text, stage, updated_at',
       )
       .eq('account_id', accountId)
+      .is('archived_at', null)
       .in('stage', [...ACTIVE_REQUIREMENT_STAGES_FOR_MATCH])
       .lt('updated_at', staleReqCutoff)
       .order('updated_at', { ascending: true })
@@ -125,7 +127,7 @@ export async function loadWipAttentionDigest(
     db
       .from('commercial_matches')
       .select(
-        'id, listing_id, requirement_id, status, last_activity_at, commercial_listings(name), commercial_requirements(company_name, contact_name)',
+        'id, listing_id, requirement_id, status, last_activity_at, commercial_listings(name), commercial_requirements(company_name, contact_name, archived_at)',
       )
       .eq('account_id', accountId)
       .in('status', ['new', 'viewing_arranged'])
@@ -252,9 +254,16 @@ export async function loadWipAttentionDigest(
     }))
     .slice(0, ITEM_LIMIT);
 
-  const interestItems: WipAttentionItem[] = (
+  // Interest on an archived requirement is not something to chase.
+  const liveMatchRows = (
     (matchesResult.data ?? []) as Array<Record<string, unknown>>
-  )
+  ).filter(
+    (row) =>
+      !(row.commercial_requirements as { archived_at?: string | null } | null)
+        ?.archived_at,
+  );
+
+  const interestItems: WipAttentionItem[] = liveMatchRows
     .map((row) => {
       const listing = row.commercial_listings as {
         name?: string | null;
@@ -332,7 +341,7 @@ export async function loadWipAttentionDigest(
     {
       kind: 'interest_stuck',
       label: 'Stuck interest',
-      count: (matchesResult.data ?? []).length,
+      count: liveMatchRows.length,
       items: interestItems,
     },
     {

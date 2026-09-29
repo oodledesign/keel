@@ -28,6 +28,7 @@ import {
 } from '@dnd-kit/core';
 import {
   SortableContext,
+  arrayMove,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
@@ -44,6 +45,7 @@ import {
   Table2,
 } from 'lucide-react';
 
+import { useTeamAccountWorkspace } from '@kit/team-accounts/hooks/use-team-account-workspace';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -76,6 +78,8 @@ import {
   reorderPipelineDeals,
 } from '~/home/(user)/pipeline/actions';
 import { CustomizePipelinePhasesDialog } from '~/home/[account]/pipeline/_components/customize-pipeline-phases-dialog';
+import { WipArchivedDialog } from '~/home/[account]/pipeline/_components/wip-archived-dialog';
+import { reorderWipRequirements } from '~/home/[account]/pipeline/_lib/server/wip-order.actions';
 import type { ClientOption } from '~/home/[account]/projects/_components/client-combobox';
 import { RequirementFormModal } from '~/home/[account]/requirements/_components/requirement-form-modal';
 import type { RequirementDraftPrefill } from '~/home/[account]/requirements/_lib/schema/requirements.schema';
@@ -122,6 +126,12 @@ import {
   sharedBoardStages,
   toSharedStatus,
 } from '~/lib/commercial/wip-board-mapping';
+import {
+  applyVisibleReorder,
+  compareInstructionOrder,
+  compareRequirementOrder,
+  nextEndPosition,
+} from '~/lib/commercial/wip-order';
 import { computeWipInstructionTotals } from '~/lib/commercial/wip-running-totals';
 import { wipStageColour } from '~/lib/commercial/wip-stage-colours';
 import {
@@ -136,8 +146,8 @@ import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 import type { WipDeskActivityItem } from '../_lib/server/wip-attachments.actions';
 import type { WipAttentionDigest } from '../_lib/server/wip-attention.loader';
 import { WipLadderView } from './wip-ladder-view';
-import { WipNeedsAttentionStrip } from './wip-needs-attention-strip';
-import { WipRecentUpdatesStrip } from './wip-recent-updates-strip';
+import { WipNeedsAttentionButton } from './wip-needs-attention-button';
+import { WipRecentUpdatesBell } from './wip-recent-updates-bell';
 import { WipRunningTotalsCards } from './wip-running-totals-cards';
 import { WipSheetView } from './wip-sheet-view';
 
@@ -179,6 +189,8 @@ type Props = {
   attentionDigest?: WipAttentionDigest | null;
   deskActivity?: WipDeskActivityItem[];
   latestCareByDealId?: Record<string, string>;
+  /** Newest update date per instruction, for the collapsed ladder row. */
+  latestUpdateByDealId?: Record<string, string>;
   onDealWon?: (deal: PipelineDeal) => void;
   onRequestCreateDisposal?: (deal: PipelineDeal) => void;
   onInstructionCreated?: (deal: PipelineDeal) => void;
@@ -247,6 +259,7 @@ export function CommercialWipBoard({
   attentionDigest = null,
   deskActivity: initialDeskActivity = [],
   latestCareByDealId: initialLatestCareByDealId = {},
+  latestUpdateByDealId = {},
   onDealWon,
   onRequestCreateDisposal,
   onInstructionCreated,
@@ -285,6 +298,13 @@ export function CommercialWipBoard({
   // `?create=1` (optionally with `view=requirements`) opens the requirement modal
   const createRequirementRequested = !createDismissed && createParam === '1';
 
+  const workspace = useTeamAccountWorkspace();
+  // RLS lets staff delete too, so the owner/admin rule is enforced on the
+  // server; this only decides whether to offer the button.
+  const workspaceRole = (workspace.account as { role?: string | null }).role;
+  const canDeleteWip = workspaceRole === 'owner' || workspaceRole === 'admin';
+  const [archivedOpen, setArchivedOpen] = useState(false);
+
   const [deals, setDeals] = useState<PipelineDeal[]>(initialData.deals);
   const [requirements, setRequirements] = useState(initialRequirements);
   const [requirementSearch, setRequirementSearch] = useState('');
@@ -314,7 +334,11 @@ export function CommercialWipBoard({
   useEffect(() => {
     if (!fullscreen) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setFullscreen(false);
+      // A dialog / popover that handled this Escape has already called
+      // preventDefault, so only leave full screen when nothing else did.
+      if (event.key === 'Escape' && !event.defaultPrevented) {
+        setFullscreen(false);
+      }
     };
     window.addEventListener('keydown', onKey);
     const previousOverflow = document.body.style.overflow;
@@ -575,12 +599,10 @@ export function CommercialWipBoard({
     for (const [key, list] of map) {
       list.sort((a, b) => {
         if (a.kind === 'instruction' && b.kind === 'instruction') {
-          const aPos = a.deal.ladderPosition ?? a.deal.boardPosition ?? 0;
-          const bPos = b.deal.ladderPosition ?? b.deal.boardPosition ?? 0;
-          return aPos - bPos || a.deal.id.localeCompare(b.deal.id);
+          return compareInstructionOrder(a.deal, b.deal);
         }
         if (a.kind === 'requirement' && b.kind === 'requirement') {
-          return a.requirement.id.localeCompare(b.requirement.id);
+          return compareRequirementOrder(a.requirement, b.requirement);
         }
         if (a.kind === 'instruction') return -1;
         return 1;
@@ -762,10 +784,20 @@ export function CommercialWipBoard({
       requirementId: string,
       nextStage: RequirementStatus,
       previousStage: RequirementStatus,
+      boardPosition?: number,
     ) => {
+      const previousPosition = requirements.find(
+        (item) => item.id === requirementId,
+      )?.boardPosition;
       setRequirements((prev) =>
         prev.map((item) =>
-          item.id === requirementId ? { ...item, stage: nextStage } : item,
+          item.id === requirementId
+            ? {
+                ...item,
+                stage: nextStage,
+                ...(typeof boardPosition === 'number' ? { boardPosition } : {}),
+              }
+            : item,
         ),
       );
 
@@ -775,13 +807,20 @@ export function CommercialWipBoard({
             requirementId,
             accountId,
             stage: nextStage,
+            ...(typeof boardPosition === 'number' ? { boardPosition } : {}),
           });
           router.refresh();
         } catch {
           setRequirements((prev) =>
             prev.map((item) =>
               item.id === requirementId
-                ? { ...item, stage: previousStage }
+                ? {
+                    ...item,
+                    stage: previousStage,
+                    ...(typeof previousPosition === 'number'
+                      ? { boardPosition: previousPosition }
+                      : {}),
+                  }
                 : item,
             ),
           );
@@ -789,7 +828,110 @@ export function CommercialWipBoard({
         }
       });
     },
-    [accountId, router],
+    [accountId, requirements, router],
+  );
+
+  /** Column a requirement sits in for the current view. */
+  const requirementColumnKey = useCallback(
+    (requirement: CommercialRequirement): string =>
+      view === 'both'
+        ? toSharedStatus('requirement', requirement.stage)
+        : normalizeRequirementStage(requirement.stage),
+    [view],
+  );
+
+  /** Where a requirement lands when dropped at the end of a column. */
+  const endPositionForRequirementColumn = useCallback(
+    (columnKey: string, excludeId: string) =>
+      nextEndPosition(
+        requirements
+          .filter(
+            (item) =>
+              item.id !== excludeId && requirementColumnKey(item) === columnKey,
+          )
+          .map((item) => item.boardPosition),
+      ),
+    [requirements, requirementColumnKey],
+  );
+
+  const persistRequirementOrder = useCallback(
+    (orderedIds: string[]) => {
+      const positionById = new Map(
+        orderedIds.map((id, index) => [id, index + 1]),
+      );
+      const previous = new Map(
+        requirements.map((item) => [item.id, item.boardPosition] as const),
+      );
+
+      setRequirements((prev) =>
+        prev.map((item) => {
+          const nextPos = positionById.get(item.id);
+          return typeof nextPos === 'number'
+            ? { ...item, boardPosition: nextPos }
+            : item;
+        }),
+      );
+
+      const restore = () =>
+        setRequirements((prev) =>
+          prev.map((item) => {
+            const prior = previous.get(item.id);
+            return positionById.has(item.id) && typeof prior === 'number'
+              ? { ...item, boardPosition: prior }
+              : item;
+          }),
+        );
+
+      startTransition(async () => {
+        try {
+          await reorderWipRequirements({
+            accountId,
+            accountSlug,
+            orderedIds,
+          });
+        } catch (error) {
+          restore();
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : 'Could not reorder requirements',
+          );
+        }
+      });
+    },
+    [accountId, accountSlug, requirements],
+  );
+
+  /**
+   * Drag a requirement over another one in its own column. Works on the full
+   * column so a search filter can't scramble the requirements it hides.
+   */
+  const reorderRequirementInColumn = useCallback(
+    (activeId: string, overId: string, columnKey: string) => {
+      const visibleIds = (cardsByStage.get(columnKey) ?? [])
+        .filter(
+          (
+            card,
+          ): card is {
+            kind: 'requirement';
+            requirement: CommercialRequirement;
+          } => card.kind === 'requirement',
+        )
+        .map((card) => card.requirement.id);
+      const fromIndex = visibleIds.indexOf(activeId);
+      const toIndex = visibleIds.indexOf(overId);
+      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+
+      const fullIds = requirements
+        .filter((item) => requirementColumnKey(item) === columnKey)
+        .sort(compareRequirementOrder)
+        .map((item) => item.id);
+
+      persistRequirementOrder(
+        applyVisibleReorder(fullIds, arrayMove(visibleIds, fromIndex, toIndex)),
+      );
+    },
+    [cardsByStage, requirements, requirementColumnKey, persistRequirementOrder],
   );
 
   const resolveDropStageKey = useCallback(
@@ -888,7 +1030,9 @@ export function CommercialWipBoard({
               (card): card is { kind: 'instruction'; deal: PipelineDeal } =>
                 card.kind === 'instruction',
             ) ?? [];
-        const boardPosition = targetCards.length + 1;
+        const boardPosition = nextEndPosition(
+          targetCards.map((card) => card.deal.ladderPosition),
+        );
         persistInstructionStage(deal.id, dropKey, deal.stage, boardPosition);
         return;
       }
@@ -899,8 +1043,22 @@ export function CommercialWipBoard({
         if (!requirement) return;
         const nextStage = dropKey as RequirementStatus;
         if (!REQUIREMENT_STATUSES.includes(nextStage)) return;
-        if (normalizeRequirementStage(requirement.stage) === nextStage) return;
-        persistRequirementStage(requirement.id, nextStage, requirement.stage);
+        if (normalizeRequirementStage(requirement.stage) === nextStage) {
+          if (overParsed?.kind === 'requirement') {
+            reorderRequirementInColumn(
+              requirement.id,
+              overParsed.id,
+              nextStage,
+            );
+          }
+          return;
+        }
+        persistRequirementStage(
+          requirement.id,
+          nextStage,
+          requirement.stage,
+          endPositionForRequirementColumn(nextStage, requirement.id),
+        );
         return;
       }
 
@@ -957,7 +1115,7 @@ export function CommercialWipBoard({
           deal.id,
           nextStage,
           deal.stage,
-          targetCards.length + 1,
+          nextEndPosition(targetCards.map((card) => card.deal.ladderPosition)),
         );
         return;
       }
@@ -965,7 +1123,12 @@ export function CommercialWipBoard({
       const requirement = requirements.find((item) => item.id === parsed.id);
       if (!requirement) return;
       const currentShared = toSharedStatus('requirement', requirement.stage);
-      if (currentShared === shared) return;
+      if (currentShared === shared) {
+        if (overParsed?.kind === 'requirement') {
+          reorderRequirementInColumn(requirement.id, overParsed.id, shared);
+        }
+        return;
+      }
 
       if (shared === 'closed') {
         setPendingClosed({
@@ -977,7 +1140,12 @@ export function CommercialWipBoard({
       }
 
       const nextStage = fromSharedStatus('requirement', shared);
-      persistRequirementStage(requirement.id, nextStage, requirement.stage);
+      persistRequirementStage(
+        requirement.id,
+        nextStage,
+        requirement.stage,
+        endPositionForRequirementColumn(shared, requirement.id),
+      );
     },
     [
       deals,
@@ -988,6 +1156,8 @@ export function CommercialWipBoard({
       persistInstructionStage,
       persistInstructionBoardOrder,
       persistRequirementStage,
+      reorderRequirementInColumn,
+      endPositionForRequirementColumn,
       cardsByStage,
     ],
   );
@@ -1004,7 +1174,20 @@ export function CommercialWipBoard({
           'closed',
           choice as InstructionClosedChoice,
         );
-        persistInstructionStage(pending.id, nextStage, pending.previousStage);
+        persistInstructionStage(
+          pending.id,
+          nextStage,
+          pending.previousStage,
+          nextEndPosition(
+            deals
+              .filter(
+                (deal) =>
+                  deal.id !== pending.id &&
+                  toSharedStatus('instruction', deal.stage) === 'closed',
+              )
+              .map((deal) => deal.ladderPosition),
+          ),
+        );
         return;
       }
 
@@ -1017,9 +1200,16 @@ export function CommercialWipBoard({
         pending.id,
         nextStage,
         normalizeRequirementStage(pending.previousStage),
+        endPositionForRequirementColumn('closed', pending.id),
       );
     },
-    [pendingClosed, persistInstructionStage, persistRequirementStage],
+    [
+      pendingClosed,
+      deals,
+      persistInstructionStage,
+      persistRequirementStage,
+      endPositionForRequirementColumn,
+    ],
   );
 
   const handleSaved = useCallback(() => router.refresh(), [router]);
@@ -1173,6 +1363,22 @@ export function CommercialWipBoard({
         ) : null}
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
+          {attentionDigest ? (
+            <WipNeedsAttentionButton
+              accountSlug={accountSlug}
+              digest={attentionDigest}
+            />
+          ) : null}
+          <WipRecentUpdatesBell
+            items={deskActivity}
+            onOpenInstruction={(pipelineDealId) => {
+              const deal = deals.find((item) => item.id === pipelineDealId);
+              if (!deal) return;
+              setDealToEdit(deal);
+              setEditDealOpen(true);
+            }}
+          />
+
           <Button
             type="button"
             variant="outline"
@@ -1235,6 +1441,12 @@ export function CommercialWipBoard({
               >
                 Draft requirement from email…
               </DropdownMenuItem>
+              <DropdownMenuItem
+                data-test="wip-open-archived"
+                onSelect={() => setArchivedOpen(true)}
+              >
+                Archived…
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -1258,25 +1470,6 @@ export function CommercialWipBoard({
         </div>
       </div>
 
-      {!fullscreen ? (
-        <div className="shrink-0 space-y-2">
-          {attentionDigest ? (
-            <WipNeedsAttentionStrip
-              accountSlug={accountSlug}
-              digest={attentionDigest}
-            />
-          ) : null}
-          <WipRecentUpdatesStrip
-            items={deskActivity}
-            onOpenInstruction={(pipelineDealId) => {
-              const deal = deals.find((item) => item.id === pipelineDealId);
-              if (!deal) return;
-              setDealToEdit(deal);
-              setEditDealOpen(true);
-            }}
-          />
-        </div>
-      ) : null}
       <CustomizePipelinePhasesDialog
         accountId={accountId}
         accountSlug={accountSlug}
@@ -1349,6 +1542,21 @@ export function CommercialWipBoard({
             [instructionId]: createdAt,
           }));
         }}
+        canDeleteWip={canDeleteWip}
+        onDealRemoved={(dealId) => {
+          setDeals((prev) => prev.filter((deal) => deal.id !== dealId));
+          handleSaved();
+        }}
+        onDealRestored={handleSaved}
+      />
+
+      <WipArchivedDialog
+        open={archivedOpen}
+        onOpenChange={setArchivedOpen}
+        accountId={accountId}
+        accountSlug={accountSlug}
+        canDelete={canDeleteWip}
+        onChanged={handleSaved}
       />
 
       <RequirementFormModal
@@ -1437,6 +1645,7 @@ export function CommercialWipBoard({
           selectableStages={selectableInstructionStages}
           deskActivity={deskActivity}
           latestCareByDealId={latestCareByDealId}
+          latestUpdateByDealId={latestUpdateByDealId}
           listings={listings}
           onDealsChange={setDeals}
           onEditInstruction={(deal) => {

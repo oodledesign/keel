@@ -23,13 +23,14 @@ export function normalizeWipWorkType(
 }
 
 /**
- * Subtle row/card wash mixed into the panel colour so it stays readable
+ * Faint row/card wash mixed into the panel colour so it stays readable
  * in light and dark mode. Professional is the light blue Abbey asked for.
+ * Kept light on purpose: the work-type pill carries the stronger colour.
  */
 export const WIP_WORK_TYPE_SURFACE: Record<WipWorkType, string> = {
-  professional: 'color-mix(in srgb, #38bdf8 18%, var(--workspace-shell-panel))',
-  agency: 'color-mix(in srgb, #f59e0b 10%, var(--workspace-shell-panel))',
-  management: 'color-mix(in srgb, #34d399 12%, var(--workspace-shell-panel))',
+  professional: 'color-mix(in srgb, #38bdf8 10%, var(--workspace-shell-panel))',
+  agency: 'color-mix(in srgb, #f59e0b 6%, var(--workspace-shell-panel))',
+  management: 'color-mix(in srgb, #34d399 7%, var(--workspace-shell-panel))',
 };
 
 export function wipWorkTypeSurface(

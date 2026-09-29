@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { Skeleton } from '@kit/ui/skeleton';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
@@ -254,11 +255,13 @@ export function WipAttachmentsStrip({
             <h4 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
               Tasks
             </h4>
-            {loading ? (
+            {loading && tasks.length > 0 ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--workspace-shell-text-muted)]" />
             ) : null}
           </div>
-          {tasks.length === 0 ? (
+          {loading && tasks.length === 0 ? (
+            <Skeleton className="h-7 w-full rounded-lg" />
+          ) : tasks.length === 0 ? (
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
               No open tasks yet.
             </p>
@@ -311,11 +314,13 @@ export function WipAttachmentsStrip({
           <h4 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
             Activity
           </h4>
-          {loading && activityOnly ? (
+          {loading && activityOnly && notes.length > 0 ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--workspace-shell-text-muted)]" />
           ) : null}
         </div>
-        {notes.length === 0 ? (
+        {loading && notes.length === 0 ? (
+          <ActivitySkeleton />
+        ) : notes.length === 0 ? (
           <p className="text-xs text-[var(--workspace-shell-text-muted)]">
             No updates yet
           </p>
@@ -507,6 +512,29 @@ export function WipAttachmentsStrip({
           </>
         )}
       </section>
+    </div>
+  );
+}
+
+/** Mirrors the timeline entries so the panel doesn't jump when data lands. */
+function ActivitySkeleton() {
+  return (
+    <div
+      role="status"
+      aria-busy="true"
+      aria-label="Loading updates"
+      className="relative space-y-3 border-l border-[color:var(--workspace-shell-border)] pl-3"
+    >
+      {[0, 1, 2].map((row) => (
+        <div key={row} className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-2.5 w-12" />
+            <Skeleton className="h-2.5 w-20" />
+          </div>
+          <Skeleton className="h-3 w-full" />
+          {row !== 1 ? <Skeleton className="h-3 w-2/3" /> : null}
+        </div>
+      ))}
     </div>
   );
 }

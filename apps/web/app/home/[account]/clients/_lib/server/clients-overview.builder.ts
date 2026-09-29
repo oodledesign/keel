@@ -554,6 +554,7 @@ async function buildCommercialClientsOverview(params: {
       .from('commercial_requirements')
       .select('id, company_name, contact_name, stage, client_id, updated_at')
       .eq('account_id', accountId)
+      .is('archived_at', null)
       .in('client_id', clientIds),
     db
       .from('commercial_viewings')

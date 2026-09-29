@@ -36,6 +36,7 @@ import { MeetingTranscriptsBlock } from '~/home/[account]/_components/meeting-tr
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 import { InstructionCareCompliancePanel } from '~/home/[account]/pipeline/_components/instruction-care-compliance-panel';
 import { WipAmlToggle } from '~/home/[account]/pipeline/_components/wip-aml-toggle';
+import { WipArchiveControls } from '~/home/[account]/pipeline/_components/wip-archive-controls';
 import { WipAttachmentsStrip } from '~/home/[account]/pipeline/_components/wip-attachments-strip';
 import { createSurveyorQuoteAction } from '~/home/[account]/pipeline/_lib/server/surveyor-quote-actions';
 import {
@@ -78,6 +79,12 @@ type Props = {
   surveyor?: boolean;
   onRequestCreateDisposal?: (deal: PipelineDeal) => void;
   onCareLogAdded?: (instructionId: string, createdAt: string) => void;
+  /** Owners and admins only: permanent delete is offered in the commercial workspace. */
+  canDeleteWip?: boolean;
+  /** Called after the instruction is archived or deleted from this dialog. */
+  onDealRemoved?: (dealId: string) => void;
+  /** Called after Undo restores an archived instruction. */
+  onDealRestored?: () => void;
 };
 
 const NONE_LISTING = '__none__';
@@ -97,6 +104,9 @@ export function EditDealDialog({
   surveyor = false,
   onRequestCreateDisposal,
   onCareLogAdded,
+  canDeleteWip = false,
+  onDealRemoved,
+  onDealRestored,
 }: Props) {
   const router = useRouter();
   const workspaceScoped = Boolean(accountSlug?.trim());
@@ -597,6 +607,7 @@ export function EditDealDialog({
               <WipAmlToggle
                 done={amlDone}
                 doneAt={deal.amlDoneAt}
+                instructionName={deal.projectName || deal.companyName}
                 onToggle={setAmlDone}
               />
             </div>
@@ -841,19 +852,37 @@ export function EditDealDialog({
           {error && <p className="text-sm text-rose-400">{error}</p>}
 
           <DialogFooter className="gap-2 sm:justify-between">
-            {commercial && onRequestCreateDisposal && deal ? (
-              <button
-                type="button"
-                onClick={() => onRequestCreateDisposal(deal)}
-                className="h-9 rounded-xl border border-[color:var(--workspace-shell-border)] px-4 text-sm font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
-              >
-                {deal.commercialListingId
-                  ? 'Create another disposal'
-                  : 'Create disposal'}
-              </button>
-            ) : (
-              <span />
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {commercial && onRequestCreateDisposal && deal ? (
+                <button
+                  type="button"
+                  onClick={() => onRequestCreateDisposal(deal)}
+                  className="h-9 rounded-xl border border-[color:var(--workspace-shell-border)] px-4 text-sm font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                >
+                  {deal.commercialListingId
+                    ? 'Create another disposal'
+                    : 'Create disposal'}
+                </button>
+              ) : null}
+              {commercial && accountId && deal ? (
+                <WipArchiveControls
+                  kind="instruction"
+                  accountId={accountId}
+                  accountSlug={accountSlug}
+                  recordId={deal.id}
+                  recordName={deal.projectName || deal.companyName}
+                  canDelete={canDeleteWip}
+                  onRemoved={() => {
+                    onDealRemoved?.(deal.id);
+                    onOpenChange(false);
+                  }}
+                  onRestored={() => {
+                    onDealRestored?.();
+                    router.refresh();
+                  }}
+                />
+              ) : null}
+            </div>
             <div className="flex gap-2">
               <button
                 type="button"

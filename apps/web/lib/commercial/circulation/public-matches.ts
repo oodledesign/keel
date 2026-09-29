@@ -119,6 +119,7 @@ export async function loadPublicRequirementForPreference(
     .from('commercial_requirements')
     .select(selectCols)
     .eq('account_id', preference.accountId)
+    .is('archived_at', null)
     .ilike('contact_email', email)
     .in('stage', [...ACTIVE_REQUIREMENT_STAGES_FOR_MATCH])
     .order('updated_at', { ascending: false })
@@ -134,6 +135,7 @@ export async function loadPublicRequirementForPreference(
     .from('commercial_requirements')
     .select(selectCols)
     .eq('account_id', preference.accountId)
+    .is('archived_at', null)
     .ilike('contact_email', email)
     .order('updated_at', { ascending: false })
     .limit(1);

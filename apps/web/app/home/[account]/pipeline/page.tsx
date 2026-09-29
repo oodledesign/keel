@@ -27,7 +27,10 @@ import { WorkspacePipelineBoardWrapper } from './_components/workspace-pipeline-
 import { loadLatestCareLogByInstruction } from './_lib/server/instruction-care-compliance.actions';
 import { loadPipelineBoardSettings } from './_lib/server/pipeline-stage-settings.loader';
 import { loadWipAttentionDigest } from './_lib/server/wip-attention.loader';
-import { loadWipDeskActivity } from './_lib/server/wip-desk-activity.loader';
+import {
+  loadLatestWipUpdateByDeal,
+  loadWipDeskActivity,
+} from './_lib/server/wip-desk-activity.loader';
 
 interface TeamAccountPipelinePageProps {
   params: Promise<{ account: string }>;
@@ -113,6 +116,7 @@ async function TeamAccountPipelinePage({
   > | null;
   let deskActivity = [] as Awaited<ReturnType<typeof loadWipDeskActivity>>;
   let latestCareByDealId: Record<string, string> = {};
+  let latestUpdateByDealId: Record<string, string> = {};
 
   if (isCommercial) {
     // commercial_* tables may lag generated Database types
@@ -207,9 +211,10 @@ async function TeamAccountPipelinePage({
     stageConfig = boardSettings.stages;
     boardName = boardSettings.boardName;
 
-    latestCareByDealId = await loadLatestCareLogByInstruction(
-      data.deals.map((deal) => deal.id),
-    );
+    [latestCareByDealId, latestUpdateByDealId] = await Promise.all([
+      loadLatestCareLogByInstruction(data.deals.map((deal) => deal.id)),
+      loadLatestWipUpdateByDeal(client, accountId),
+    ]);
   }
 
   const activeDeals = data.deals.filter((d) => {
@@ -259,6 +264,7 @@ async function TeamAccountPipelinePage({
           attentionDigest={attentionDigest}
           deskActivity={deskActivity}
           latestCareByDealId={latestCareByDealId}
+          latestUpdateByDealId={latestUpdateByDealId}
           hideBoardTitle
         />
       </PageBody>

@@ -133,6 +133,7 @@ async function loadAccessibleDeal(
     .select(DEAL_SELECT)
     .eq('id', dealId)
     .in('account_id', accountIds)
+    .is('archived_at', null)
     .maybeSingle();
 
   assertSupabaseOk(data, error, 'get pipeline deal');
@@ -173,6 +174,7 @@ export const registerPipelineTools: OzerMcpToolRegistrar = (
         .from('pipeline_deals')
         .select(DEAL_SELECT)
         .in('account_id', accountIds)
+        .is('archived_at', null)
         .order('updated_at', { ascending: false })
         .limit(input.limit);
 

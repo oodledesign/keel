@@ -78,6 +78,7 @@ export const OzerAIFeature = {
   commercial_match_explain: 'commercial_match_explain',
   commercial_match_triage: 'commercial_match_triage',
   commercial_match_outreach: 'commercial_match_outreach',
+  disposals_assistant: 'disposals_assistant',
   video_chapters: 'video_chapters',
   video_summary: 'video_summary',
   instagram_reply_draft: 'instagram_reply_draft',
@@ -529,6 +530,14 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     batchable: false,
     maxOutputTokens: 1024,
     structuredOutput: true,
+  },
+  disposals_assistant: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 3,
+    batchable: false,
+    maxOutputTokens: 1500,
+    structuredOutput: false,
   },
   video_chapters: {
     provider: 'anthropic',

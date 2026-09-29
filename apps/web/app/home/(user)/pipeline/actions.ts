@@ -94,11 +94,12 @@ export async function moveDealToStage(
     }
 
     const updates: Record<string, unknown> = { stage: newStage };
-    if (typeof options?.boardPosition === 'number') {
-      updates.board_position = options.boardPosition;
-    }
-    if (typeof options?.ladderPosition === 'number') {
-      updates.ladder_position = options.ladderPosition;
+    // The ladder, board and sheet share one manual order, so the two position
+    // columns always move together: either value sets both.
+    const movedTo = options?.ladderPosition ?? options?.boardPosition;
+    if (typeof movedTo === 'number') {
+      updates.board_position = movedTo;
+      updates.ladder_position = movedTo;
     }
     if (
       newStage === 'billed' ||
@@ -201,11 +202,11 @@ export async function reorderPipelineDeals(
 
     for (const update of updates) {
       const payload: Record<string, unknown> = {};
-      if (typeof update.ladderPosition === 'number') {
-        payload.ladder_position = update.ladderPosition;
-      }
-      if (typeof update.boardPosition === 'number') {
-        payload.board_position = update.boardPosition;
+      // Shared manual order: either value sets both position columns.
+      const position = update.ladderPosition ?? update.boardPosition;
+      if (typeof position === 'number') {
+        payload.ladder_position = position;
+        payload.board_position = position;
       }
       if (typeof update.stage === 'string') {
         payload.stage = update.stage;

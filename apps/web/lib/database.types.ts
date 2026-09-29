@@ -7190,7 +7190,10 @@ export type Database = {
       commercial_requirements: {
         Row: {
           account_id: string
+          archived_at: string | null
+          archived_by: string | null
           assigned_to: string | null
+          board_position: number
           branch_id: string | null
           budget_max_pence: number | null
           budget_min_pence: number | null
@@ -7223,7 +7226,10 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          archived_at?: string | null
+          archived_by?: string | null
           assigned_to?: string | null
+          board_position?: number
           branch_id?: string | null
           budget_max_pence?: number | null
           budget_min_pence?: number | null
@@ -7256,7 +7262,10 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          archived_at?: string | null
+          archived_by?: string | null
           assigned_to?: string | null
+          board_position?: number
           branch_id?: string | null
           budget_max_pence?: number | null
           budget_min_pence?: number | null
@@ -15032,6 +15041,8 @@ export type Database = {
           aml_done: boolean
           aml_done_at: string | null
           aml_done_by: string | null
+          archived_at: string | null
+          archived_by: string | null
         }
         Insert: {
           account_id?: string | null
@@ -15075,6 +15086,8 @@ export type Database = {
           aml_done?: boolean
           aml_done_at?: string | null
           aml_done_by?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
         }
         Update: {
           account_id?: string | null
@@ -15118,6 +15131,8 @@ export type Database = {
           aml_done?: boolean
           aml_done_at?: string | null
           aml_done_by?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
         }
         Relationships: [
           {

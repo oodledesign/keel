@@ -927,7 +927,8 @@ export const registerClientTools: OzerMcpToolRegistrar = (server, context) => {
             'id, name, contact_name, company_name, stage, value, next_action_date, client_org_id',
           )
           .eq('account_id', accountId)
-          .eq('client_org_id', input.id);
+          .eq('client_org_id', input.id)
+          .is('archived_at', null);
 
         assertSupabaseOk(dealRows, dealsError, 'load client pipeline deals');
         deals = (dealRows ?? []) as PipelineDealRow[];

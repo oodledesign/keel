@@ -227,21 +227,23 @@ export const listWipDeskActivity = enhanceAction(
 
     if (error) throw new Error(error.message);
 
-    const rows = (data ?? []) as NoteRow[];
+    const allRows = (data ?? []) as NoteRow[];
     const dealIds = [
       ...new Set(
-        rows
+        allRows
           .map((row) => row.pipeline_deal_id)
           .filter((id): id is string => Boolean(id)),
       ),
     ];
 
     const titleByDeal = new Map<string, string>();
+    // Updates on an archived instruction stay out of the desk feed.
+    const archivedDealIds = new Set<string>();
     if (dealIds.length > 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: deals } = await (client as any)
         .from('pipeline_deals')
-        .select('id, name, company_name, contact_name')
+        .select('id, name, company_name, contact_name, archived_at')
         .in('id', dealIds);
 
       for (const deal of (deals ?? []) as Array<{
@@ -249,7 +251,9 @@ export const listWipDeskActivity = enhanceAction(
         name?: string | null;
         company_name?: string | null;
         contact_name?: string | null;
+        archived_at?: string | null;
       }>) {
+        if (deal.archived_at) archivedDealIds.add(deal.id);
         const title =
           deal.name?.trim() ||
           deal.company_name?.trim() ||
@@ -258,6 +262,11 @@ export const listWipDeskActivity = enhanceAction(
         titleByDeal.set(deal.id, title);
       }
     }
+
+    const rows = allRows.filter(
+      (row) =>
+        !row.pipeline_deal_id || !archivedDealIds.has(row.pipeline_deal_id),
+    );
 
     const names = await resolveAccountNames(
       client,

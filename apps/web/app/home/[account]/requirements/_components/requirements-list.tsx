@@ -6,8 +6,10 @@ import { useRouter } from 'next/navigation';
 
 import { Edit2, Plus, Search, Trash2 } from 'lucide-react';
 
+import { useTeamAccountWorkspace } from '@kit/team-accounts/hooks/use-team-account-workspace';
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
+import { toast } from '@kit/ui/sonner';
 
 import { REQUIREMENT_STATUS_LABELS } from '~/lib/commercial/commercial-constants';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
@@ -30,14 +32,26 @@ export function RequirementsList({
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CommercialRequirement | null>(null);
   const [, startTransition] = useTransition();
+  // The server enforces owner/admin for delete; this only gates the button.
+  const workspace = useTeamAccountWorkspace();
+  const workspaceRole = (workspace.account as { role?: string | null }).role;
+  const canDelete = workspaceRole === 'owner' || workspaceRole === 'admin';
 
   const handleSaved = useCallback(() => router.refresh(), [router]);
 
   const handleDelete = (id: string) => {
     if (!confirm('Delete this requirement?')) return;
     startTransition(async () => {
-      await deleteRequirement({ requirementId: id, accountId });
-      setItems((prev) => prev.filter((r) => r.id !== id));
+      try {
+        await deleteRequirement({ requirementId: id, accountId });
+        setItems((prev) => prev.filter((r) => r.id !== id));
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not delete requirement',
+        );
+      }
     });
   };
 
@@ -134,14 +148,16 @@ export function RequirementsList({
                       >
                         <Edit2 className="h-3.5 w-3.5" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-rose-400"
-                        onClick={() => handleDelete(req.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      {canDelete ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-rose-400"
+                          onClick={() => handleDelete(req.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>

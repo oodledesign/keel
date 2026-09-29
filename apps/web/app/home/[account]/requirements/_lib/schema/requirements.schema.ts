@@ -65,6 +65,8 @@ export const UpdateRequirementSchema = CreateRequirementSchema.omit({
   .extend({
     requirementId: z.string().uuid(),
     accountId: z.string().uuid(),
+    /** Manual order within a WIP stage (lower first). */
+    boardPosition: z.number().int().min(0).optional(),
   });
 
 export const DeleteRequirementSchema = z.object({

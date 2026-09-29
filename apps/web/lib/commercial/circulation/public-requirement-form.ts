@@ -145,6 +145,7 @@ export async function upsertRequirementFromPublicForm(
     .from('commercial_requirements')
     .select('id')
     .eq('account_id', form.accountId)
+    .is('archived_at', null)
     .ilike('contact_email', email)
     .order('updated_at', { ascending: false })
     .limit(1)

@@ -194,6 +194,7 @@ export function getCachedActiveMatchRequirements(input: {
         .from('commercial_requirements')
         .select(input.select)
         .eq('account_id', input.accountId)
+        .is('archived_at', null)
         .in('stage', [...input.stages])
         .order('updated_at', { ascending: false })
         .limit(input.limit);

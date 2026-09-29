@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 
 import { Loader2, Sparkles } from 'lucide-react';
 
+import { useTeamAccountWorkspace } from '@kit/team-accounts/hooks/use-team-account-workspace';
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
 import {
@@ -24,8 +25,6 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
-
-import { useTeamAccountWorkspace } from '@kit/team-accounts/hooks/use-team-account-workspace';
 
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
@@ -48,6 +47,7 @@ import {
   emptyClientContactPickerValue,
 } from '../../clients/_components/client-contact-picker';
 import { CommercialInterestPanel } from '../../listings/_components/commercial-interest-panel';
+import { WipArchiveControls } from '../../pipeline/_components/wip-archive-controls';
 import { WipAttachmentsStrip } from '../../pipeline/_components/wip-attachments-strip';
 import type { RequirementDraftPrefill } from '../_lib/schema/requirements.schema';
 import { draftRequirementFromPaste } from '../_lib/server/requirement-draft-actions';
@@ -196,6 +196,8 @@ function briefFromRequirement(
 
 function RequirementFormFields({
   accountId,
+  accountSlug,
+  canDeleteWip,
   requirement,
   initialDraft,
   sourceEnquiryId,
@@ -204,6 +206,8 @@ function RequirementFormFields({
   onSaved,
 }: {
   accountId: string;
+  accountSlug?: string | null;
+  canDeleteWip: boolean;
   requirement?: CommercialRequirement | null;
   initialDraft?: RequirementDraftPrefill | null;
   sourceEnquiryId?: string | null;
@@ -638,17 +642,41 @@ function RequirementFormFields({
           {error}
         </p>
       ) : null}
-      <DialogFooter className="gap-2">
-        <Button type="button" variant="ghost" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          disabled={isPending || draftPending}
-          className={workspaceBtnPrimaryMd}
-        >
-          {isPending ? 'Saving…' : isEdit ? 'Save changes' : 'Add requirement'}
-        </Button>
+      <DialogFooter className="gap-2 sm:justify-between">
+        {requirement ? (
+          <WipArchiveControls
+            kind="requirement"
+            accountId={accountId}
+            accountSlug={accountSlug}
+            recordId={requirement.id}
+            recordName={
+              requirement.companyName ||
+              requirement.contactName ||
+              'this requirement'
+            }
+            canDelete={canDeleteWip}
+            onRemoved={onSaved}
+            onRestored={onSaved}
+          />
+        ) : (
+          <span />
+        )}
+        <div className="flex flex-col-reverse gap-2 sm:flex-row">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isPending || draftPending}
+            className={workspaceBtnPrimaryMd}
+          >
+            {isPending
+              ? 'Saving…'
+              : isEdit
+                ? 'Save changes'
+                : 'Add requirement'}
+          </Button>
+        </div>
       </DialogFooter>
     </form>
   );
@@ -667,7 +695,11 @@ export function RequirementFormModal({
 }: RequirementFormModalProps) {
   const workspace = useTeamAccountWorkspace();
   const canEditDisposals =
-    (workspace as { canMutateCommercial?: boolean }).canMutateCommercial ?? true;
+    (workspace as { canMutateCommercial?: boolean }).canMutateCommercial ??
+    true;
+  // The server enforces owner/admin for delete; this only gates the button.
+  const workspaceRole = (workspace.account as { role?: string | null }).role;
+  const canDeleteWip = workspaceRole === 'owner' || workspaceRole === 'admin';
   const draftKey = initialDraft
     ? JSON.stringify(initialDraft).slice(0, 80)
     : 'blank';
@@ -693,6 +725,8 @@ export function RequirementFormModal({
               `${sourceEnquiryId ?? 'new'}-${draftKey}-${openPastePanel ? 'paste' : 'form'}`
             }
             accountId={accountId}
+            accountSlug={accountSlug}
+            canDeleteWip={canDeleteWip}
             requirement={requirement}
             initialDraft={initialDraft}
             sourceEnquiryId={sourceEnquiryId}

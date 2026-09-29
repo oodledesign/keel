@@ -237,6 +237,7 @@ export const draftInterestOutreach = enhanceAction(
         )
         .eq('id', input.requirementId)
         .eq('account_id', input.accountId)
+        .is('archived_at', null)
         .maybeSingle(),
     ]);
 

@@ -419,6 +419,7 @@ async function loadDashboardPageDataImpl(
         'id, stage, value, contact_name, company_name, next_action, next_action_date, updated_at',
       )
       .eq('account_id', accountId)
+      .is('archived_at', null)
       .not('stage', 'in', '("won","lost")'),
     client
       .from('projects')

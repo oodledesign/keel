@@ -75,20 +75,22 @@ export async function loadWipDeskActivity(
     return [];
   }
 
-  const rows = (data ?? []) as NoteRow[];
+  const allRows = (data ?? []) as NoteRow[];
   const dealIds = [
     ...new Set(
-      rows
+      allRows
         .map((row) => row.pipeline_deal_id)
         .filter((id): id is string => Boolean(id)),
     ),
   ];
 
   const titleByDeal = new Map<string, string>();
+  // Updates on an archived instruction stay out of the desk feed.
+  const archivedDealIds = new Set<string>();
   if (dealIds.length > 0) {
     const { data: deals } = await db
       .from('pipeline_deals')
-      .select('id, name, company_name, contact_name')
+      .select('id, name, company_name, contact_name, archived_at')
       .in('id', dealIds);
 
     for (const deal of (deals ?? []) as Array<{
@@ -96,7 +98,9 @@ export async function loadWipDeskActivity(
       name?: string | null;
       company_name?: string | null;
       contact_name?: string | null;
+      archived_at?: string | null;
     }>) {
+      if (deal.archived_at) archivedDealIds.add(deal.id);
       titleByDeal.set(
         deal.id,
         deal.name?.trim() ||
@@ -106,6 +110,11 @@ export async function loadWipDeskActivity(
       );
     }
   }
+
+  const rows = allRows.filter(
+    (row) =>
+      !row.pipeline_deal_id || !archivedDealIds.has(row.pipeline_deal_id),
+  );
 
   const names = await resolveNames(
     db,
@@ -126,4 +135,34 @@ export async function loadWipDeskActivity(
       ? (titleByDeal.get(row.pipeline_deal_id) ?? 'Instruction')
       : null,
   }));
+}
+
+/**
+ * Date of the newest update on each instruction, for the collapsed ladder
+ * row. Grouped in the database so it covers every instruction, not just the
+ * few recent enough to be in the desk activity feed.
+ */
+export async function loadLatestWipUpdateByDeal(
+  client: SupabaseClient,
+  accountId: string,
+): Promise<Record<string, string>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = client as any;
+  const { data, error } = await db.rpc('latest_wip_update_by_deal', {
+    p_account_id: accountId,
+  });
+
+  if (error) {
+    console.error('[wip] latest update by deal failed', error.message);
+    return {};
+  }
+
+  const map: Record<string, string> = {};
+  for (const row of (data ?? []) as Array<{
+    pipeline_deal_id: string;
+    latest_at: string;
+  }>) {
+    map[row.pipeline_deal_id] = row.latest_at;
+  }
+  return map;
 }

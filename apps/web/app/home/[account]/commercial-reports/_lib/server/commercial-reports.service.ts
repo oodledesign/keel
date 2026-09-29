@@ -320,6 +320,7 @@ export function createCommercialReportsService(client: SupabaseClient) {
           .from('pipeline_deals')
           .select('stage')
           .eq('account_id', accountId)
+          .is('archived_at', null)
           .in('stage', [...COMMERCIAL_PIPELINE_STAGES]),
       ]);
 
@@ -906,7 +907,8 @@ export function createCommercialReportsService(client: SupabaseClient) {
         .select(
           'id, stage, size_min_sqft, size_max_sqft, created_at, updated_at, source',
         )
-        .eq('account_id', input.accountId);
+        .eq('account_id', input.accountId)
+        .is('archived_at', null);
 
       if (error) {
         console.error(
@@ -1116,6 +1118,7 @@ export function createCommercialReportsService(client: SupabaseClient) {
             'id, stage, value, created_at, updated_at, completed_at, commercial_listing_id, commercial_requirement_id, commercial_listings(size_min_sqft, size_max_sqft, disposal_type, on_market_at, created_at), commercial_requirements(created_at, source, size_min_sqft, size_max_sqft)',
           )
           .eq('account_id', input.accountId)
+          .is('archived_at', null)
           .in('stage', ['billed', 'completed', 'completed_exchanged']),
         client
           .from('commercial_leases')

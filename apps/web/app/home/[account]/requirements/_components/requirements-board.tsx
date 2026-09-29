@@ -31,6 +31,10 @@ import {
   REQUIREMENT_STATUS_LABELS,
   type RequirementStatus,
 } from '~/lib/commercial/commercial-constants';
+import {
+  compareRequirementOrder,
+  nextEndPosition,
+} from '~/lib/commercial/wip-order';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import type { CommercialRequirement } from '../_lib/server/requirements.service';
@@ -95,6 +99,8 @@ export function RequirementsBoard({
       const stage = BOARD_STAGES.includes(item.stage) ? item.stage : 'new';
       map.get(stage)!.push(item);
     }
+    // Same manual order as the WIP board and sheet.
+    for (const list of map.values()) list.sort(compareRequirementOrder);
     return map;
   }, [items]);
 
@@ -125,9 +131,18 @@ export function RequirementsBoard({
     const current = items.find((item) => item.id === requirementId);
     if (!current || current.stage === nextStage) return;
 
+    // Dropped on a new stage: goes to the end of that stage's manual order.
+    const boardPosition = nextEndPosition(
+      items
+        .filter((item) => item.id !== requirementId && item.stage === nextStage)
+        .map((item) => item.boardPosition),
+    );
+
     setItems((prev) =>
       prev.map((item) =>
-        item.id === requirementId ? { ...item, stage: nextStage } : item,
+        item.id === requirementId
+          ? { ...item, stage: nextStage, boardPosition }
+          : item,
       ),
     );
 
@@ -137,13 +152,18 @@ export function RequirementsBoard({
           requirementId,
           accountId,
           stage: nextStage,
+          boardPosition,
         });
         handleSaved();
       } catch {
         setItems((prev) =>
           prev.map((item) =>
             item.id === requirementId
-              ? { ...item, stage: current.stage }
+              ? {
+                  ...item,
+                  stage: current.stage,
+                  boardPosition: current.boardPosition,
+                }
               : item,
           ),
         );

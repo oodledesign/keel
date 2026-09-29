@@ -188,6 +188,7 @@ export function createMatchSuggestionsService(client: SupabaseClient) {
           .from('commercial_requirements')
           .select(REQUIREMENT_SELECT)
           .eq('account_id', input.accountId)
+          .is('archived_at', null)
           .in('stage', [...ACTIVE_REQUIREMENT_STAGES_FOR_MATCH])
           .order('updated_at', { ascending: false })
           .limit(250),
@@ -239,6 +240,7 @@ export function createMatchSuggestionsService(client: SupabaseClient) {
           .select(REQUIREMENT_SELECT)
           .eq('id', input.requirementId)
           .eq('account_id', input.accountId)
+          .is('archived_at', null)
           .maybeSingle(),
         db
           .from('commercial_listings')
@@ -313,6 +315,7 @@ export function createMatchSuggestionsService(client: SupabaseClient) {
           .from('commercial_requirements')
           .select(REQUIREMENT_SELECT)
           .eq('account_id', input.accountId)
+          .is('archived_at', null)
           .in('stage', [...ACTIVE_REQUIREMENT_STAGES_FOR_MATCH])
           .gte('updated_at', cutoff)
           .order('updated_at', { ascending: false })

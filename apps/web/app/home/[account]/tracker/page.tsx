@@ -34,7 +34,7 @@ async function TrackerPage({ params }: TrackerPageProps) {
       <TeamAccountLayoutPageHeader
         account={slug}
         title="Tracker"
-        description="Competitor industrial, retail and development stock"
+        description="Competitor industrial, office, retail, investment and land stock"
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 pt-2 pb-6 lg:px-6">
         <TrackerWorkspace

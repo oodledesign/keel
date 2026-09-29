@@ -9,6 +9,7 @@ import {
   getCachedDisposalsListPage,
   getCachedUnassignedListingsCount,
 } from '~/lib/cache/disposals-data-cache';
+import { canRoleUseDisposalsAi } from '~/lib/commercial/disposals-ai-presets';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
@@ -46,6 +47,7 @@ export type DisposalsPageData = {
   initialAgentUserId: string | null;
   unassignedCount: number;
   canEditDisposals: boolean;
+  canUseDisposalsAi: boolean;
 };
 
 async function loadDisposalsPageDataImpl(
@@ -123,6 +125,9 @@ async function loadDisposalsPageDataImpl(
   ]);
 
   const canEditDisposals = workspace.canMutateCommercial;
+  const canUseDisposalsAi = canRoleUseDisposalsAi(
+    (workspace.account as { role?: string | null }).role,
+  );
 
   return {
     accountId,
@@ -140,6 +145,7 @@ async function loadDisposalsPageDataImpl(
     initialAgentUserId,
     unassignedCount,
     canEditDisposals,
+    canUseDisposalsAi,
   };
 }
 

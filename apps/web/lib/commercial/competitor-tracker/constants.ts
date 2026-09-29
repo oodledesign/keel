@@ -2,16 +2,20 @@
 
 export const COMPETITOR_CATEGORIES = [
   'industrial',
+  'offices',
   'retail',
-  'development',
+  'investments',
+  'land',
 ] as const;
 
 export type CompetitorCategory = (typeof COMPETITOR_CATEGORIES)[number];
 
 export const COMPETITOR_CATEGORY_LABELS: Record<CompetitorCategory, string> = {
   industrial: 'Industrial',
-  retail: 'Retail',
-  development: 'Development',
+  offices: 'Offices',
+  retail: 'Retail (Class E)',
+  investments: 'Investments',
+  land: 'Land',
 };
 
 export const COMPETITOR_STATUSES = [
@@ -51,11 +55,32 @@ export function normalizeCompetitorCategory(
 ): CompetitorCategory {
   const key = (value ?? '').trim().toLowerCase();
   if (key === 'industrial' || key === 'ind') return 'industrial';
-  if (key === 'retail' || key === 'high street' || key === 'highstreet') {
+  if (key === 'offices' || key === 'office' || key === 'off') return 'offices';
+  if (
+    key === 'retail' ||
+    key === 'retail (class e)' ||
+    key === 'class e' ||
+    key === 'class_e' ||
+    key === 'high street' ||
+    key === 'highstreet'
+  ) {
     return 'retail';
   }
-  if (key === 'development' || key === 'dev' || key === 'land') {
-    return 'development';
+  if (
+    key === 'investments' ||
+    key === 'investment' ||
+    key === 'invest' ||
+    key === 'inv'
+  ) {
+    return 'investments';
+  }
+  if (
+    key === 'land' ||
+    key === 'development' ||
+    key === 'dev' ||
+    key === 'development land'
+  ) {
+    return 'land';
   }
   return 'industrial';
 }

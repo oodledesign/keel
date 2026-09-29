@@ -90,6 +90,9 @@ export const updateRequirement = enhanceAction(
 
 export const deleteRequirement = enhanceAction(
   async (input) => {
+    const { requireAccountAdminActor } =
+      await import('~/lib/commercial/require-account-admin-actor');
+    await requireAccountAdminActor(input.accountId, 'delete requirements');
     await getService().deleteRequirement(input.requirementId, input.accountId);
     const { revalidateMatchRequirementsCache } =
       await import('~/lib/cache/disposals-data-cache');

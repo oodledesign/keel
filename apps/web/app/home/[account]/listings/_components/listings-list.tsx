@@ -105,6 +105,7 @@ import {
   deleteListing,
   listListings,
 } from '../_lib/server/server-actions';
+import { DisposalsAiDialog } from './disposals-ai-dialog';
 import { DisposalsListSkeleton } from './disposals-list-skeleton';
 import {
   ListingAgentAvatarStack,
@@ -139,6 +140,7 @@ interface ListingsListProps {
   initialNeedsLocation: boolean;
   unassignedCount: number;
   canEditDisposals: boolean;
+  canUseDisposalsAi?: boolean;
 }
 
 type ViewMode = 'cards' | 'table' | 'map';
@@ -282,6 +284,7 @@ export function ListingsList({
   initialNeedsLocation,
   unassignedCount,
   canEditDisposals,
+  canUseDisposalsAi = false,
 }: ListingsListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -989,6 +992,9 @@ export function ListingsList({
               <MapIcon className="h-4 w-4" />
             </button>
           </div>
+          {canUseDisposalsAi ? (
+            <DisposalsAiDialog accountId={accountId} />
+          ) : null}
           {canEditDisposals ? (
             <Button
               onClick={openCreate}

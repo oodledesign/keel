@@ -80,6 +80,7 @@ async function DisposalsListBody({
         initialNeedsLocation={needsLocationParam}
         unassignedCount={data.unassignedCount}
         canEditDisposals={data.canEditDisposals}
+        canUseDisposalsAi={data.canUseDisposalsAi}
       />
     </DisposalAccessProvider>
   );
