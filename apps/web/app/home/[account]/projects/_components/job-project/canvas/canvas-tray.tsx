@@ -2,6 +2,8 @@
 
 import {
   Building2,
+  Contact,
+  FileText,
   Layers,
   ListTodo,
   Plus,
@@ -29,7 +31,9 @@ const GROUPS: Array<{
   { kind: 'task', title: 'Tasks', icon: ListTodo },
   { kind: 'member', title: 'Team', icon: Users },
   { kind: 'client', title: 'Client', icon: Building2 },
+  { kind: 'contact', title: 'Contacts', icon: Contact },
   { kind: 'note', title: 'Notes', icon: StickyNote },
+  { kind: 'doc', title: 'Files & docs', icon: FileText },
 ];
 
 export function CanvasTray({

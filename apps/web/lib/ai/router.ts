@@ -50,6 +50,7 @@ export const OzerAIFeature = {
   invoice_generate: 'invoice_generate',
   contract_generate: 'contract_generate',
   project_content_generate: 'project_content_generate',
+  project_canvas_assist: 'project_canvas_assist',
   meal_plan_generate: 'meal_plan_generate',
   meal_recipes_generate: 'meal_recipes_generate',
   recipe_extract: 'recipe_extract',
@@ -305,6 +306,14 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     credits: 8,
     batchable: false,
     maxOutputTokens: 8192,
+    structuredOutput: false,
+  },
+  project_canvas_assist: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 3,
+    batchable: false,
+    maxOutputTokens: 4096,
     structuredOutput: false,
   },
   meal_plan_generate: {

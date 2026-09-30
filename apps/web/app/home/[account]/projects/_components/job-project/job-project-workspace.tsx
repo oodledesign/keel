@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, useTransition } from 'react';
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 import {
   Columns3,
@@ -115,7 +116,17 @@ export function JobProjectWorkspace({
   isContractorView: boolean;
   onAssignmentsChange?: () => void;
 }) {
-  const [view, setView] = useState<ViewMode>('board');
+  const searchParams = useSearchParams();
+  const viewParam = searchParams.get('view');
+  const canvasItemParam = searchParams.get('canvasItem');
+  const [view, setView] = useState<ViewMode>(
+    viewParam === 'canvas' ? 'canvas' : 'board',
+  );
+  const [seenLink, setSeenLink] = useState(`${viewParam}:${canvasItemParam}`);
+  if (seenLink !== `${viewParam}:${canvasItemParam}`) {
+    setSeenLink(`${viewParam}:${canvasItemParam}`);
+    if (viewParam === 'canvas') setView('canvas');
+  }
   const isPhased = Boolean(job.is_phased);
   const [boardMode, setBoardMode] = useState<BoardMode>(
     isPhased ? 'phase' : 'progress',
@@ -525,6 +536,7 @@ export function JobProjectWorkspace({
                 canEdit={canEditJobs && !isContractorView}
                 onBoardChange={setBoard}
                 onRefreshBoard={refreshBoardSilently}
+                focusItemId={canvasItemParam}
               />
             )}
           </>

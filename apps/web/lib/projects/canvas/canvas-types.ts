@@ -4,6 +4,8 @@ export const LINKED_CANVAS_KINDS = [
   'member',
   'client',
   'note',
+  'contact',
+  'doc',
 ] as const;
 
 export const FREEFORM_CANVAS_KINDS = [
@@ -12,7 +14,9 @@ export const FREEFORM_CANVAS_KINDS = [
   'shape',
   'frame',
   'image',
+  'link',
   'draw',
+  'timeline',
 ] as const;
 
 export const CANVAS_ITEM_KINDS = [
@@ -34,6 +38,15 @@ export function isCanvasItemKind(value: unknown): value is CanvasItemKind {
 
 export type CanvasShapeType = 'rectangle' | 'ellipse' | 'diamond';
 
+/** Sections created from a template remember it so they can be re-laid out. */
+export const CANVAS_SECTION_PRESETS = [
+  'team',
+  'marketing',
+  'brief',
+  'content_calendar',
+] as const;
+export type CanvasSectionPreset = (typeof CANVAS_SECTION_PRESETS)[number];
+
 export const CANVAS_SHAPE_TYPES: CanvasShapeType[] = [
   'rectangle',
   'ellipse',
@@ -49,7 +62,21 @@ export type CanvasItemData = {
   points?: Array<[number, number]>;
   strokeWidth?: number;
   url?: string;
+  /** Uploaded image in the `project-canvas` bucket: `{account}/{project}/{file}`. */
+  path?: string;
   title?: string;
+  fontSize?: number;
+  bold?: boolean;
+  italic?: boolean;
+  preset?: CanvasSectionPreset;
+  /** Timeline: plot task due dates on the phase rows. */
+  showTasks?: boolean;
+  /** Link card preview, fetched when the card is added. */
+  description?: string;
+  faviconUrl?: string;
+  imageUrl?: string;
+  /** Link card saved to the project's links in Notes (`workspace_links.id`). */
+  linkId?: string;
   /** Connector endpoints are canvas item ids. */
   source?: string;
   target?: string;
@@ -138,6 +165,43 @@ export function canvasColor(
   return CANVAS_COLORS[key && key in CANVAS_COLORS ? key : fallback];
 }
 
+export const CANVAS_TEXT_KINDS = ['sticky', 'text', 'shape', 'frame'] as const;
+export type CanvasTextKind = (typeof CANVAS_TEXT_KINDS)[number];
+
+export function isCanvasTextKind(kind: string): kind is CanvasTextKind {
+  return (CANVAS_TEXT_KINDS as readonly string[]).includes(kind);
+}
+
+export const CANVAS_FONT_SIZES = [12, 14, 16, 20, 24, 32, 40, 48, 64, 80];
+
+const TEXT_STYLE_DEFAULTS: Record<
+  CanvasTextKind,
+  { fontSize: number; bold: boolean }
+> = {
+  text: { fontSize: 20, bold: true },
+  sticky: { fontSize: 14, bold: false },
+  shape: { fontSize: 14, bold: false },
+  frame: { fontSize: 16, bold: true },
+};
+
+export type CanvasTextStyle = {
+  fontSize: number;
+  bold: boolean;
+  italic: boolean;
+};
+
+export function canvasTextStyle(
+  kind: CanvasTextKind,
+  data: CanvasItemData,
+): CanvasTextStyle {
+  const defaults = TEXT_STYLE_DEFAULTS[kind];
+  return {
+    fontSize: data.fontSize ?? defaults.fontSize,
+    bold: data.bold ?? defaults.bold,
+    italic: data.italic ?? false,
+  };
+}
+
 export function isLinkedCanvasKind(kind: string): kind is LinkedCanvasKind {
   return (LINKED_CANVAS_KINDS as readonly string[]).includes(kind);
 }
@@ -153,15 +217,19 @@ export const CANVAS_DEFAULT_SIZES: Record<
 > = {
   phase: { w: 320, h: 260 },
   task: { w: 280, h: 76 },
-  member: { w: 220, h: 72 },
+  member: { w: 260, h: 104 },
   client: { w: 260, h: 88 },
   note: { w: 260, h: 140 },
+  contact: { w: 260, h: 104 },
+  doc: { w: 260, h: 72 },
   sticky: { w: 200, h: 200 },
   text: { w: 240, h: 48 },
   shape: { w: 180, h: 120 },
   frame: { w: 480, h: 320 },
   image: { w: 280, h: 200 },
+  link: { w: 320, h: 150 },
   draw: { w: 1, h: 1 },
+  timeline: { w: 1200, h: 280 },
 };
 
 export function canvasItemSize(item: Pick<CanvasItem, 'kind' | 'w' | 'h'>) {

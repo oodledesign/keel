@@ -7,7 +7,11 @@ import type {
   CanvasItemData,
 } from '~/lib/projects/canvas/canvas-types';
 
-import type { ProjectCanvasNote } from '../../../_lib/schema/project-canvas.schema';
+import type {
+  ProjectCanvasContact,
+  ProjectCanvasDoc,
+  ProjectCanvasNote,
+} from '../../../_lib/schema/project-canvas.schema';
 import type {
   JobBoardTask,
   PhaseListItem,
@@ -19,6 +23,7 @@ export type CanvasPerson = {
   email: string | null;
   pictureUrl: string | null;
   role?: string | null;
+  description?: string | null;
 };
 
 export type CanvasClient = {
@@ -43,7 +48,11 @@ export type CanvasLookups = {
   openTaskCountByPerson: Map<string, number>;
   client: CanvasClient | null;
   notesById: Map<string, ProjectCanvasNote>;
+  contactsById: Map<string, ProjectCanvasContact>;
+  docsById: Map<string, ProjectCanvasDoc>;
 };
+
+export type CanvasPersonRef = { kind: 'member' | 'contact'; id: string };
 
 export type CanvasActions = {
   updateItemData: (id: string, patch: Partial<CanvasItemData>) => void;
@@ -52,6 +61,12 @@ export type CanvasActions = {
     box: { x: number; y: number; width: number; height: number },
   ) => void;
   openTask: (taskId: string) => void;
+  editNote: (noteId: string) => void;
+  editPerson: (person: CanvasPersonRef) => void;
+  openDoc: (docId: string) => void;
+  /** Save a link card to the project's links in Notes. */
+  saveLink: (id: string) => void;
+  linkBusy: ReadonlyMap<string, 'fetching' | 'saving'>;
   editingId: string | null;
   setEditingId: (id: string | null) => void;
 };

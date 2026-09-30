@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { itemsInsideContainer, pickConnectorHandles } from './canvas-geometry';
+import {
+  containerAt,
+  itemsInsideContainer,
+  pickConnectorHandles,
+} from './canvas-geometry';
 import {
   applyCanvasChanges,
   emptyCanvasHistory,
@@ -12,6 +16,8 @@ import {
 import { linkedCanvasItemId } from './canvas-ids';
 import {
   type CanvasLinkedEntities,
+  arrangeCanvasByPhase,
+  arrangeTeamSection,
   layoutUnplacedLinkedItems,
   orphanedLinkedItems,
   unplacedLinkedRefs,
@@ -27,6 +33,11 @@ import {
   normalizeCanvasStroke,
   simplifyCanvasPath,
 } from './canvas-path';
+import {
+  MARKETING_TEMPLATE,
+  buildSectionTemplate,
+  sectionTemplateSize,
+} from './canvas-templates';
 import type { CanvasItem } from './canvas-types';
 
 const PROJECT = '11111111-1111-4111-8111-111111111111';
@@ -61,6 +72,8 @@ const entities: CanvasLinkedEntities = {
     { id: 'n1', phaseId: 'p1' },
     { id: 'n2', phaseId: null },
   ],
+  contacts: [{ id: 'k1' }],
+  docs: [{ id: 'd1' }],
 };
 
 describe('linkedCanvasItemId', () => {
@@ -83,7 +96,7 @@ describe('layoutUnplacedLinkedItems', () => {
       [],
     );
     expect(updates).toEqual([]);
-    expect(creates).toHaveLength(10);
+    expect(creates).toHaveLength(12);
 
     const byRef = new Map(creates.map((c) => [`${c.kind}:${c.refId}`, c]));
     const phase = byRef.get('phase:p1')!;
@@ -94,7 +107,9 @@ describe('layoutUnplacedLinkedItems', () => {
       expect(task.y + task.h!).toBeLessThanOrEqual(phase.y + phase.h!);
     }
     expect(byRef.get('client:c1')!.y).toBeLessThan(phase.y);
+    expect(byRef.get('contact:k1')!.y).toBe(byRef.get('client:c1')!.y);
     expect(byRef.get('note:n1')!.y).toBeGreaterThan(phase.y + phase.h!);
+    expect(byRef.get('doc:d1')!.x).toBeGreaterThan(phase.x);
   });
 
   it('slots a new task into its placed phase and grows the phase', () => {
@@ -126,6 +141,173 @@ describe('layoutUnplacedLinkedItems', () => {
     expect(orphanedLinkedItems(fewer, initial).map((i) => i.refId)).toEqual([
       't1',
     ]);
+  });
+});
+
+describe('arrangeCanvasByPhase', () => {
+  const linked = (
+    kind: CanvasItem['kind'],
+    refId: string,
+    x: number,
+    y: number,
+    size: { w: number; h: number } = { w: 280, h: 76 },
+  ) =>
+    item({
+      id: linkedCanvasItemId(PROJECT, kind as 'task', refId),
+      kind,
+      refId,
+      x,
+      y,
+      ...size,
+    });
+
+  it('moves loose task cards into their phase columns and grows the phase', () => {
+    const phase = linked('phase', 'p1', 1000, 0, { w: 320, h: 260 });
+    const tasks = ['t1', 't2'].map((id, index) =>
+      linked('task', id, 0, index * 100),
+    );
+    const { creates, updates } = arrangeCanvasByPhase(PROJECT, entities, [
+      phase,
+      ...tasks,
+    ]);
+
+    expect(creates).toHaveLength(0);
+    const byRef = new Map(updates.map((u) => [u.refId, u]));
+    const t1 = byRef.get('t1')!;
+    const t2 = byRef.get('t2')!;
+    expect(t1.x).toBe(1020);
+    expect(t2.y).toBeGreaterThan(t1.y);
+    for (const task of [t1, t2]) {
+      expect(itemsInsideContainer(phase, [task])).toHaveLength(1);
+    }
+  });
+
+  it('adds missing phases that have tasks on the canvas, in board order', () => {
+    const tasks = [linked('task', 't1', 0, 0), linked('task', 't3', 0, 100)];
+    const { creates, updates } = arrangeCanvasByPhase(PROJECT, entities, tasks);
+    expect(creates.map((c) => c.refId)).toEqual(['p1', 'p2']);
+    const [p1, p2] = creates;
+    expect(p2!.x).toBeGreaterThan(p1!.x);
+    const t3 = updates.find((u) => u.refId === 't3')!;
+    expect(t3.x).toBeGreaterThanOrEqual(p2!.x);
+  });
+
+  it('carries items inside a phase and pushes overlapping items aside', () => {
+    const phase = linked('phase', 'p1', 500, 500, { w: 320, h: 260 });
+    const task = linked('task', 't1', 0, 0);
+    const sticky = item({ id: 's', x: 560, y: 600 });
+    const blocker = item({ id: 'b', x: 400, y: 420, w: 50, h: 100 });
+    const phase2 = linked('phase', 'p2', 0, 500, { w: 320, h: 260 });
+    const { updates } = arrangeCanvasByPhase(PROJECT, entities, [
+      phase2,
+      phase,
+      task,
+      sticky,
+      blocker,
+    ]);
+    const byId = new Map(updates.map((u) => [u.id, u]));
+    const movedPhase = byId.get(phase.id)!;
+    expect(movedPhase.x).toBe(0);
+    expect(byId.get('s')!.x).toBe(sticky.x + (movedPhase.x - phase.x));
+    const movedP2 = byId.get(phase2.id)!;
+    expect(byId.get('b')!.x).toBeGreaterThanOrEqual(
+      movedP2.x + (movedP2.w ?? 0),
+    );
+  });
+});
+
+describe('arrangeTeamSection', () => {
+  const section = { id: 'team-frame', zIndex: 5 };
+
+  it('creates a team section holding the client, contacts and members', () => {
+    const { creates, updates } = arrangeTeamSection(
+      PROJECT,
+      entities,
+      [],
+      section,
+    );
+    expect(updates).toEqual([]);
+    const frame = creates.find((c) => c.id === section.id)!;
+    expect(frame.kind).toBe('frame');
+    expect(frame.data.preset).toBe('team');
+    const people = creates.filter((c) => c.id !== section.id);
+    expect(people.map((c) => `${c.kind}:${c.refId}`).sort()).toEqual([
+      'client:c1',
+      'contact:k1',
+      'member:m1',
+    ]);
+    expect(itemsInsideContainer(frame, people)).toHaveLength(3);
+  });
+
+  it('reuses and grows an existing team section and pushes blockers down', () => {
+    const first = arrangeTeamSection(PROJECT, entities, [], section).creates;
+    const frame = first.find((c) => c.id === section.id)!;
+    const blocker = item({
+      id: 'b',
+      x: frame.x + 10,
+      y: frame.y + frame.h! + 10,
+    });
+    const more = {
+      ...entities,
+      members: [{ id: 'm1' }, { id: 'm2' }, { id: 'm3' }, { id: 'm4' }],
+    };
+    const { creates, updates } = arrangeTeamSection(
+      PROJECT,
+      more,
+      [...first, blocker],
+      { id: 'unused', zIndex: 9 },
+    );
+    expect(creates.map((c) => c.refId).sort()).toEqual(['m2', 'm3', 'm4']);
+    const grown = updates.find((u) => u.id === section.id)!;
+    expect(grown.h!).toBeGreaterThan(frame.h!);
+    const movedBlocker = updates.find((u) => u.id === 'b')!;
+    expect(movedBlocker.y).toBeGreaterThanOrEqual(grown.y + grown.h!);
+  });
+});
+
+describe('buildSectionTemplate', () => {
+  it('builds an outer section with an area and prompt sticky per area', () => {
+    let n = 0;
+    const created = buildSectionTemplate(
+      MARKETING_TEMPLATE,
+      { x: 100, y: 200 },
+      { container: 3, item: 10 },
+      () => `id${n++}`,
+    );
+    const [outer, ...rest] = created;
+    const size = sectionTemplateSize(MARKETING_TEMPLATE);
+    expect(outer).toMatchObject({
+      kind: 'frame',
+      x: 100,
+      y: 200,
+      w: size.w,
+      h: size.h,
+      zIndex: 3,
+    });
+    expect(outer!.data.preset).toBe('marketing');
+    const areas = rest.filter((c) => c.kind === 'frame');
+    const stickies = rest.filter((c) => c.kind === 'sticky');
+    expect(areas).toHaveLength(MARKETING_TEMPLATE.areas.length);
+    expect(stickies).toHaveLength(MARKETING_TEMPLATE.areas.length);
+    expect(itemsInsideContainer(outer!, areas)).toHaveLength(areas.length);
+    areas.forEach((area, index) => {
+      expect(area.zIndex).toBe(4);
+      expect(itemsInsideContainer(area, [stickies[index]!])).toHaveLength(1);
+    });
+    expect(new Set(created.map((c) => c.id)).size).toBe(created.length);
+  });
+});
+
+describe('containerAt', () => {
+  it('picks the smallest container under the point', () => {
+    const big = item({ id: 'big', kind: 'frame', w: 1000, h: 1000 });
+    const small = item({ id: 'small', kind: 'phase', x: 100, y: 100 });
+    expect(containerAt({ x: 150, y: 150 }, [big, small])?.id).toBe('small');
+    expect(containerAt({ x: 500, y: 500 }, [big, small])?.id).toBe('big');
+    expect(
+      containerAt({ x: 150, y: 150 }, [big, small], { kinds: ['frame'] })?.id,
+    ).toBe('big');
+    expect(containerAt({ x: 2000, y: 0 }, [big, small])).toBeNull();
   });
 });
 

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   CANVAS_COLOR_KEYS,
   CANVAS_ITEM_KINDS,
+  CANVAS_SECTION_PRESETS,
   CANVAS_SHAPE_TYPES,
   type CanvasColorKey,
   type CanvasShapeType,
@@ -17,6 +18,11 @@ const httpUrl = z
   .trim()
   .max(2000)
   .refine((value) => /^https?:\/\//i.test(value), 'Use an http(s) link');
+
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+const CANVAS_IMAGE_PATH = new RegExp(
+  `^${UUID}/${UUID}/${UUID}\\.(png|jpg|webp|gif)$`,
+);
 
 export const CanvasItemDataSchema = z
   .object({
@@ -33,7 +39,17 @@ export const CanvasItemDataSchema = z
       .optional(),
     strokeWidth: z.number().min(1).max(40).optional(),
     url: httpUrl.optional(),
+    path: z.string().regex(CANVAS_IMAGE_PATH).optional(),
     title: z.string().max(500).optional(),
+    fontSize: z.number().int().min(8).max(200).optional(),
+    bold: z.boolean().optional(),
+    italic: z.boolean().optional(),
+    preset: z.enum(CANVAS_SECTION_PRESETS).optional(),
+    showTasks: z.boolean().optional(),
+    description: z.string().max(1000).optional(),
+    faviconUrl: httpUrl.optional(),
+    imageUrl: httpUrl.optional(),
+    linkId: z.string().uuid().optional(),
     source: z.string().uuid().optional(),
     target: z.string().uuid().optional(),
     sourceHandle: z.string().max(40).nullable().optional(),
@@ -79,16 +95,41 @@ const accountProject = {
 
 export const LoadProjectCanvasSchema = z.object(accountProject);
 
-export const UpsertProjectCanvasItemsSchema = z.object({
-  ...accountProject,
-  items: z.array(CanvasItemInputSchema).min(1).max(300),
-  /** Seeding: keep rows someone else already created. */
-  ignoreExisting: z.boolean().optional(),
-});
+export const UpsertProjectCanvasItemsSchema = z
+  .object({
+    ...accountProject,
+    items: z.array(CanvasItemInputSchema).min(1).max(300),
+    /** Seeding: keep rows someone else already created. */
+    ignoreExisting: z.boolean().optional(),
+  })
+  .superRefine((input, ctx) => {
+    const prefix = `${input.accountId}/${input.jobId}/`;
+    input.items.forEach((item, index) => {
+      if (item.data.path && !item.data.path.startsWith(prefix)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Image belongs to a different project',
+          path: ['items', index, 'data', 'path'],
+        });
+      }
+    });
+  });
 
 export const DeleteProjectCanvasItemsSchema = z.object({
   ...accountProject,
   ids: z.array(z.string().uuid()).min(1).max(500),
+});
+
+export const LoadProjectCanvasNoteSchema = z.object({
+  ...accountProject,
+  noteId: z.string().uuid(),
+});
+
+export const UpdateProjectCanvasNoteSchema = z.object({
+  ...accountProject,
+  noteId: z.string().uuid(),
+  title: z.string().max(500),
+  content: z.string().max(200_000),
 });
 
 export type CanvasItemInput = z.infer<typeof CanvasItemInputSchema>;
@@ -99,12 +140,61 @@ export type UpsertProjectCanvasItemsInput = z.infer<
 export type DeleteProjectCanvasItemsInput = z.infer<
   typeof DeleteProjectCanvasItemsSchema
 >;
+export type LoadProjectCanvasNoteInput = z.infer<
+  typeof LoadProjectCanvasNoteSchema
+>;
+export type UpdateProjectCanvasNoteInput = z.infer<
+  typeof UpdateProjectCanvasNoteSchema
+>;
 
 export type ProjectCanvasNote = {
   id: string;
   title: string | null;
-  preview: string;
+  /** Markdown, capped for display; load the note to edit the full text. */
+  content: string;
+  truncated: boolean;
   phaseId: string | null;
   isPinned: boolean;
+  updatedAt: string | null;
+};
+
+/** Project-specific details for a team member (people data comes from the board). */
+export type ProjectCanvasMember = {
+  userId: string;
+  role: string | null;
+  description: string | null;
+};
+
+/** A contact (client contact, consultant, supplier…) on this project. */
+export type ProjectCanvasContact = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  pictureUrl: string | null;
+  companyName: string | null;
+  role: string | null;
+  description: string | null;
+  isClientContact: boolean;
+};
+
+export type ProjectCanvasComment = {
+  id: string;
+  itemId: string;
+  body: string;
+  mentions: string[];
+  authorId: string;
+  resolvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProjectCanvasDoc = {
+  id: string;
+  title: string;
+  kind: 'written' | 'uploaded';
+  mimeType: string | null;
+  sizeBytes: number | null;
+  docType: string | null;
   updatedAt: string | null;
 };

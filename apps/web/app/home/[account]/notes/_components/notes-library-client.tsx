@@ -167,7 +167,11 @@ export function NotesLibraryClient({
   const [docs, setDocs] = useState(initialDocs);
   const [links, setLinks] = useState(initialLinks);
   const [folders, setFolders] = useState(initialFolders);
-  const [contentMode, setContentMode] = useState<ContentMode>('notes');
+  const [contentMode, setContentMode] = useState<ContentMode>(() =>
+    searchParams.get('view') === 'links' && linksTableAvailable
+      ? 'links'
+      : 'notes',
+  );
   const [selection, setSelection] = useState<SidebarSelection>('all');
   const [layout, setLayout] = useState<LayoutMode>('list');
   const [query, setQuery] = useState('');
