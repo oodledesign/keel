@@ -19,12 +19,14 @@ import {
 import {
   AddSurveyStyleExampleSchema,
   AddSurveyTranscriptSchema,
+  ApplySurveyTranscriptNotesSchema,
   AutoCaptionSurveyPhotosSchema,
   CheckSurveyPublishGapsSchema,
   CreateSurveyObservationSchema,
   DeleteSurveyObservationSchema,
   DeleteSurveyStyleExampleSchema,
   GenerateSurveyDraftSchema,
+  PreviewSurveyTranscriptNotesSchema,
   ProposeSurveyPhotoCurationSchema,
   RebuildSurveyReportSchema,
   ReorderSurveyPhotosSchema,
@@ -32,6 +34,7 @@ import {
   UpdateSurveyObservationSchema,
   UpdateSurveyPhotoCurationSchema,
   UpdateSurveyStyleExampleSchema,
+  UpdateSurveyTranscriptSchema,
   UpdateSurveyTypeSchema,
 } from '../schema/survey-capture.schema';
 import { createSurveyCaptureService } from './survey-capture.service';
@@ -82,6 +85,63 @@ export const addSurveyTranscriptAction = enhanceAction(
     return result;
   },
   { schema: AddSurveyTranscriptSchema },
+);
+
+export const updateSurveyTranscriptAction = enhanceAction(
+  async (data, user) => {
+    const logger = await getLogger();
+    logger.info(
+      {
+        name: 'update-survey-transcript',
+        userId: user.id,
+        proposalId: data.proposalId,
+        transcriptId: data.transcriptId,
+      },
+      'Updating survey transcript',
+    );
+    const result = await getService().updateTranscript(data);
+    revalidateSurveyHub(data.accountSlug, data.proposalId);
+    return result;
+  },
+  { schema: UpdateSurveyTranscriptSchema },
+);
+
+export const previewSurveyTranscriptNotesAction = enhanceAction(
+  async (data, user) => {
+    const logger = await getLogger();
+    logger.info(
+      {
+        name: 'preview-survey-transcript-notes',
+        userId: user.id,
+        proposalId: data.proposalId,
+        transcriptId: data.transcriptId,
+      },
+      'Previewing survey transcript notes',
+    );
+    return getService().previewTranscriptNotes(data);
+  },
+  { schema: PreviewSurveyTranscriptNotesSchema },
+);
+
+export const applySurveyTranscriptNotesAction = enhanceAction(
+  async (data, user) => {
+    const logger = await getLogger();
+    logger.info(
+      {
+        name: 'apply-survey-transcript-notes',
+        userId: user.id,
+        proposalId: data.proposalId,
+        transcriptId: data.transcriptId,
+        added: data.notes.length,
+        removing: data.removeObservationIds.length,
+      },
+      'Sorting survey transcript into notes',
+    );
+    const result = await getService().applyTranscriptNotes(data);
+    revalidateSurveyHub(data.accountSlug, data.proposalId);
+    return result;
+  },
+  { schema: ApplySurveyTranscriptNotesSchema },
 );
 
 export const createSurveyObservationAction = enhanceAction(

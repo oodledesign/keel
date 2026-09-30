@@ -53,10 +53,12 @@ import type { Database } from '~/lib/database.types';
 
 import type {
   AddSurveyTranscriptInput,
+  ApplySurveyTranscriptNotesInput,
   AutoCaptionSurveyPhotosInput,
   CreateSurveyObservationInput,
   DeleteSurveyObservationInput,
   GenerateSurveyDraftInput,
+  PreviewSurveyTranscriptNotesInput,
   ProposeSurveyPhotoCurationInput,
   RebuildSurveyReportInput,
   ReorderSurveyPhotosInput,
@@ -65,9 +67,11 @@ import type {
   SurveyObservation,
   SurveyPhotoShare,
   SurveyStyleExample,
+  SurveyTranscriptNotesPreview,
   SurveyTranscriptSummary,
   UpdateSurveyObservationInput,
   UpdateSurveyPhotoCurationInput,
+  UpdateSurveyTranscriptInput,
   UpdateSurveyTypeInput,
 } from '../schema/survey-capture.schema';
 import { createSurveyTemplatesService } from './survey-templates.service';
@@ -100,6 +104,14 @@ type SurveyRow = {
 
 function isKnownSectionKey(key: string) {
   return Boolean(buildingSurveySectionByKey(key) || surveySectionByKey(key));
+}
+
+function sectionLabelForKey(key: string) {
+  return (
+    buildingSurveySectionByKey(key)?.heading ??
+    surveySectionByKey(key)?.heading ??
+    key
+  );
 }
 
 function mapObservation(row: Record<string, unknown>): SurveyObservation {
@@ -249,14 +261,177 @@ class SurveyCaptureService {
     const { data, error } = await query;
     if (error) this.throwErr(error);
 
-    return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
-      id: row.id as string,
-      title: ((row.title as string | null) ?? 'Site transcript').trim(),
-      content: (row.content as string | null) ?? '',
-      source: (row.source as string | null) ?? 'paste',
-      meetingDate: (row.meeting_date as string | null) ?? null,
-      createdAt: row.created_at as string,
-    }));
+    return ((data ?? []) as Array<Record<string, unknown>>).map(
+      mapTranscriptSummary,
+    );
+  }
+
+  /** Edits the saved transcript only; notes already sorted from it are kept. */
+  async updateTranscript(
+    input: UpdateSurveyTranscriptInput,
+  ): Promise<SurveyTranscriptSummary> {
+    await this.assertBuildingSurveyorAccount(input.accountId);
+    await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    await this.getLinkedTranscript(
+      input.accountId,
+      input.proposalId,
+      input.transcriptId,
+    );
+
+    const { data, error } = await this.db
+      .from('meeting_transcripts')
+      .update({ title: input.title, content: input.content })
+      .eq('id', input.transcriptId)
+      .eq('account_id', input.accountId)
+      .select('id, title, content, source, meeting_date, created_at')
+      .maybeSingle();
+    if (error) this.throwErr(error, 'Could not save the site visit');
+    if (!data) throw new Error('Site visit not found');
+    return mapTranscriptSummary(data as Record<string, unknown>);
+  }
+
+  /** Sorts a saved visit into proposed notes without saving anything. */
+  async previewTranscriptNotes(
+    input: PreviewSurveyTranscriptNotesInput,
+  ): Promise<SurveyTranscriptNotesPreview> {
+    await this.assertBuildingSurveyorAccount(input.accountId);
+    await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const transcript = await this.getLinkedTranscript(
+      input.accountId,
+      input.proposalId,
+      input.transcriptId,
+    );
+
+    const grouping = await groupSurveyObservations({
+      transcript: transcript.content,
+      accountId: input.accountId,
+      supabase: this.client,
+    });
+    const drafts = await cleanSurveyObservationBodies({
+      drafts: grouping.drafts,
+      accountId: input.accountId,
+      supabase: this.client,
+    });
+
+    const { data: existing, error } = await this.db
+      .from('survey_observations')
+      .select('id, section_key, body')
+      .eq('account_id', input.accountId)
+      .eq('proposal_id', input.proposalId)
+      .eq('transcript_id', input.transcriptId)
+      .order('sort_order', { ascending: true });
+    if (error) this.throwErr(error);
+
+    return {
+      drafts: drafts
+        .filter((draft) => isKnownSectionKey(draft.sectionKey))
+        .map((draft) => ({
+          sectionKey: draft.sectionKey,
+          sectionLabel: sectionLabelForKey(draft.sectionKey),
+          body: draft.body,
+          sourceBody: draft.sourceBody,
+          cleanupSource: draft.cleanupSource,
+        })),
+      existingNotes: (
+        (existing ?? []) as Array<{
+          id: string;
+          section_key: string;
+          body: string | null;
+        }>
+      ).map((row) => ({
+        id: row.id,
+        sectionLabel: sectionLabelForKey(row.section_key),
+        body: row.body ?? '',
+      })),
+      groupingSource: grouping.source,
+      groupingFallbackReason: grouping.fallbackReason ?? null,
+    };
+  }
+
+  /** Saves the chosen notes from a visit and removes the chosen old ones. */
+  async applyTranscriptNotes(input: ApplySurveyTranscriptNotesInput) {
+    await this.assertBuildingSurveyorAccount(input.accountId);
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
+    await this.getLinkedTranscript(
+      input.accountId,
+      input.proposalId,
+      input.transcriptId,
+    );
+
+    let removed = 0;
+    if (input.removeObservationIds.length > 0) {
+      const { data, error } = await this.db
+        .from('survey_observations')
+        .delete()
+        .in('id', input.removeObservationIds)
+        .eq('account_id', input.accountId)
+        .eq('proposal_id', input.proposalId)
+        .eq('transcript_id', input.transcriptId)
+        .select('id');
+      if (error) this.throwErr(error, 'Could not remove the old notes');
+      removed = (data ?? []).length;
+    }
+
+    if (input.notes.length === 0) {
+      return { observations: [] as SurveyObservation[], removed };
+    }
+
+    const { data: maxRow } = await this.db
+      .from('survey_observations')
+      .select('sort_order')
+      .eq('account_id', input.accountId)
+      .eq('proposal_id', input.proposalId)
+      .order('sort_order', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const startOrder = Number(maxRow?.sort_order ?? -1) + 1;
+
+    const { data: inserted, error: insertError } = await this.db
+      .from('survey_observations')
+      .insert(
+        input.notes.map((note, index) => ({
+          account_id: input.accountId,
+          proposal_id: input.proposalId,
+          transcript_id: input.transcriptId,
+          section_key: note.sectionKey,
+          rics_code: ricsCodeForSectionKey(note.sectionKey),
+          body: note.body,
+          source_body: note.sourceBody,
+          cleanup_source: note.cleanupSource,
+          sort_order: startOrder + index,
+          created_by: user.id,
+        })),
+      )
+      .select(OBSERVATION_SELECT);
+    if (insertError) this.throwErr(insertError, 'Could not add the notes');
+
+    return {
+      observations: ((inserted ?? []) as Array<Record<string, unknown>>).map(
+        mapObservation,
+      ),
+      removed,
+    };
+  }
+
+  /** Throws unless the visit is one of those listed on this survey. */
+  private async getLinkedTranscript(
+    accountId: string,
+    proposalId: string,
+    transcriptId: string,
+  ): Promise<SurveyTranscriptSummary> {
+    const survey = await this.getSurvey(accountId, proposalId);
+    const linked = await this.listLinkedTranscripts(
+      accountId,
+      proposalId,
+      survey.client_id,
+      survey.deal_id,
+    );
+    const transcript = linked.find((row) => row.id === transcriptId);
+    if (!transcript) throw new Error('Site visit not found');
+    return transcript;
   }
 
   async listPinnedPhotos(accountId: string, proposalId: string) {
@@ -1122,4 +1297,17 @@ function editableSectionHtml(
         html.replace(/<[^>]+>/g, '').trim().length > 0,
     ),
   );
+}
+
+function mapTranscriptSummary(
+  row: Record<string, unknown>,
+): SurveyTranscriptSummary {
+  return {
+    id: row.id as string,
+    title: ((row.title as string | null) ?? 'Site transcript').trim(),
+    content: (row.content as string | null) ?? '',
+    source: (row.source as string | null) ?? 'paste',
+    meetingDate: (row.meeting_date as string | null) ?? null,
+    createdAt: row.created_at as string,
+  };
 }

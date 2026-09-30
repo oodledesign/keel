@@ -71,6 +71,7 @@ import { SurveyClientLinkCard } from './survey-client-link-card';
 import { SurveyLevelSetting } from './survey-level-setting';
 import { SurveyPropertyPanel } from './survey-property-panel';
 import { SurveyReportDetailsCard } from './survey-report-details-card';
+import { SurveyTranscriptItem } from './survey-transcript-item';
 
 type ClientInfo = {
   id: string;
@@ -159,6 +160,14 @@ export function SurveyHubContent({
   const noteCount = observations.length;
   const noteSectionCount = new Set(observations.map((item) => item.sectionKey))
     .size;
+  const notesByTranscript = new Map<string, number>();
+  for (const item of observations) {
+    if (!item.transcriptId) continue;
+    notesByTranscript.set(
+      item.transcriptId,
+      (notesByTranscript.get(item.transcriptId) ?? 0) + 1,
+    );
+  }
   const [surveyLevel, setSurveyLevel] =
     useState<SurveyLevel>(initialSurveyLevel);
   const [pasteTitle, setPasteTitle] = useState('');
@@ -555,16 +564,23 @@ export function SurveyHubContent({
                 ) : (
                   <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
                     {transcripts.map((item) => (
-                      <li key={item.id} className="py-3 first:pt-0">
-                        <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                          {item.title}
-                        </p>
-                        <p
-                          className={`mt-1 line-clamp-3 text-xs ${workspaceTextMuted}`}
-                        >
-                          {item.content}
-                        </p>
-                      </li>
+                      <SurveyTranscriptItem
+                        key={item.id}
+                        accountId={accountId}
+                        accountSlug={accountSlug}
+                        proposalId={proposal.id}
+                        canEdit={canEdit}
+                        transcript={item}
+                        noteCount={notesByTranscript.get(item.id) ?? 0}
+                        contentHref={contentHref}
+                        onSaved={(next) =>
+                          setTranscripts((prev) =>
+                            prev.map((row) =>
+                              row.id === next.id ? next : row,
+                            ),
+                          )
+                        }
+                      />
                     ))}
                   </ul>
                 )}

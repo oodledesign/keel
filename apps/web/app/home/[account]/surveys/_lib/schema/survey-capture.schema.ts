@@ -26,6 +26,34 @@ export const SurveyAccountSchema = z.object({
   proposalId: z.string().uuid(),
 });
 
+export const UpdateSurveyTranscriptSchema = SurveyAccountSchema.extend({
+  transcriptId: z.string().uuid(),
+  title: z.string().trim().min(1).max(500),
+  content: z.string().trim().min(1).max(120_000),
+});
+
+export const PreviewSurveyTranscriptNotesSchema = SurveyAccountSchema.extend({
+  transcriptId: z.string().uuid(),
+});
+
+export const ApplySurveyTranscriptNotesSchema = SurveyAccountSchema.extend({
+  transcriptId: z.string().uuid(),
+  notes: z
+    .array(
+      z.object({
+        sectionKey: SurveySectionKeySchema,
+        body: z.string().trim().min(1).max(20_000),
+        sourceBody: z.string().max(20_000).nullable(),
+        cleanupSource: z.enum(['ai', 'passthrough']).nullable(),
+      }),
+    )
+    .max(300),
+  removeObservationIds: z.array(z.string().uuid()).max(300),
+}).refine(
+  (value) => value.notes.length > 0 || value.removeObservationIds.length > 0,
+  { message: 'Choose at least one note to add or replace', path: ['notes'] },
+);
+
 export const AddSurveyTranscriptSchema = SurveyAccountSchema.extend({
   title: z.string().min(1).max(500).optional(),
   content: z.string().min(20).max(120_000),
@@ -122,6 +150,15 @@ export const DeleteSurveyStyleExampleSchema = z.object({
   exampleId: z.string().uuid(),
 });
 
+export type UpdateSurveyTranscriptInput = z.infer<
+  typeof UpdateSurveyTranscriptSchema
+>;
+export type PreviewSurveyTranscriptNotesInput = z.infer<
+  typeof PreviewSurveyTranscriptNotesSchema
+>;
+export type ApplySurveyTranscriptNotesInput = z.infer<
+  typeof ApplySurveyTranscriptNotesSchema
+>;
 export type AddSurveyTranscriptInput = z.infer<
   typeof AddSurveyTranscriptSchema
 >;
@@ -203,6 +240,21 @@ export type SurveyTranscriptSummary = {
   source: string;
   meetingDate: string | null;
   createdAt: string;
+};
+
+export type SurveyNoteDraft = {
+  sectionKey: string;
+  sectionLabel: string;
+  body: string;
+  sourceBody: string | null;
+  cleanupSource: 'ai' | 'passthrough' | null;
+};
+
+export type SurveyTranscriptNotesPreview = {
+  drafts: SurveyNoteDraft[];
+  existingNotes: Array<{ id: string; sectionLabel: string; body: string }>;
+  groupingSource: 'ai' | 'keyword_fallback';
+  groupingFallbackReason: string | null;
 };
 
 export type SurveyStyleExample = {
