@@ -175,7 +175,10 @@ class ProjectTeamService {
   }
 
   async updateContact(input: UpdateProjectContactInput) {
-    await this.requireEditableProject(input.accountId, input.jobId);
+    const clientId = await this.requireEditableProject(
+      input.accountId,
+      input.jobId,
+    );
     const { data, error } = await this.loose
       .from('project_contacts')
       .update({ role: input.role, description: input.description })
@@ -183,7 +186,26 @@ class ProjectTeamService {
       .eq('contact_id', input.contactId)
       .select('id');
     if (error) throw new Error(error.message);
-    if (!data?.length) throw new Error('Not on the project');
+    if (data?.length) return;
+
+    // Client contacts join the team automatically; their first project-specific
+    // role or description gives them a row of their own.
+    if (!(await this.isClientContact(clientId, input.contactId))) {
+      throw new Error('Not on the project');
+    }
+    await this.insertProjectContact(input);
+  }
+
+  private async isClientContact(clientId: string | null, contactId: string) {
+    if (!clientId) return false;
+    const { data, error } = await this.client
+      .from('client_contacts')
+      .select('contact_id')
+      .eq('client_id', clientId)
+      .eq('contact_id', contactId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return Boolean(data);
   }
 
   async removeContact(input: RemoveProjectContactInput) {
@@ -196,7 +218,7 @@ class ProjectTeamService {
     if (error) throw new Error(error.message);
   }
 
-  /** Client contacts first, then other workspace contacts not yet on the project. */
+  /** Workspace contacts not already on the team (client contacts always are). */
   async searchContacts(
     input: SearchProjectContactsInput,
   ): Promise<ProjectContactCandidate[]> {
@@ -219,11 +241,10 @@ class ProjectTeamService {
     if (clientLinks.error) throw new Error(clientLinks.error.message);
     if (onProject.error) throw new Error(onProject.error.message);
 
-    const clientContactIds = new Set(
-      (clientLinks.data ?? []).map((row) => row.contact_id as string),
-    );
     const taken = new Set(
-      (onProject.data ?? []).map((row) => row.contact_id as string),
+      [...(clientLinks.data ?? []), ...(onProject.data ?? [])].map(
+        (row) => row.contact_id as string,
+      ),
     );
 
     let query = this.client
@@ -231,48 +252,25 @@ class ProjectTeamService {
       .select('id, full_name, email, company_name, picture_url')
       .eq('account_id', input.accountId)
       .order('full_name', { ascending: true })
-      .limit(CANDIDATE_LIMIT * 2);
+      .limit(CANDIDATE_LIMIT + taken.size);
     const term = input.query.replace(/[%,()*\\"':]/g, ' ').trim();
     if (term) {
       query = query.or(
         `full_name.ilike.%${term}%,email.ilike.%${term}%,company_name.ilike.%${term}%`,
       );
     }
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
 
-    const [matches, clientRows] = await Promise.all([
-      query,
-      !term && clientContactIds.size > 0
-        ? this.client
-            .from('contacts')
-            .select('id, full_name, email, company_name, picture_url')
-            .in('id', [...clientContactIds])
-        : Promise.resolve({ data: [] as ContactRow[], error: null }),
-    ]);
-    if (matches.error) throw new Error(matches.error.message);
-    if (clientRows.error) throw new Error(clientRows.error.message);
-
-    const byId = new Map<string, ContactRow>();
-    for (const row of [
-      ...((clientRows.data ?? []) as ContactRow[]),
-      ...((matches.data ?? []) as ContactRow[]),
-    ]) {
-      if (!taken.has(row.id)) byId.set(row.id, row);
-    }
-
-    return [...byId.values()]
+    return ((data ?? []) as ContactRow[])
+      .filter((row) => !taken.has(row.id))
+      .slice(0, CANDIDATE_LIMIT)
       .map((row) => ({
         id: row.id,
         name: row.full_name,
         email: row.email,
         companyName: row.company_name,
         pictureUrl: row.picture_url,
-        isClientContact: clientContactIds.has(row.id),
-      }))
-      .sort(
-        (a, b) =>
-          Number(b.isClientContact) - Number(a.isClientContact) ||
-          a.name.localeCompare(b.name),
-      )
-      .slice(0, CANDIDATE_LIMIT);
+      }));
   }
 }

@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { queueBrainIndexSource } from '~/lib/brain/sync';
 
 import {
+  CreateProjectCanvasNoteSchema,
   DeleteProjectCanvasItemsSchema,
   LoadProjectCanvasNoteSchema,
   LoadProjectCanvasSchema,
@@ -45,4 +46,13 @@ export const updateProjectCanvasNote = enhanceAction(
     return note;
   },
   { schema: UpdateProjectCanvasNoteSchema },
+);
+
+export const createProjectCanvasNote = enhanceAction(
+  async (input) => {
+    const note = await getService().createNote(input);
+    queueBrainIndexSource(input.accountId, 'note', note.id);
+    return note;
+  },
+  { schema: CreateProjectCanvasNoteSchema },
 );

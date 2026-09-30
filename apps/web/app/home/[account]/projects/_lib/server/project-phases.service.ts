@@ -852,6 +852,66 @@ class ProjectPhasesService {
     };
   }
 
+  /**
+   * The board as a project guest sees it: phases and tasks only. No client,
+   * team or money — those tables are closed to guests by design.
+   */
+  async listGuestJobBoard(input: {
+    accountId: string;
+    jobId: string;
+  }): Promise<JobBoardResult> {
+    await this.ensureUser();
+    const job = await this.verifyJob(input.accountId, input.jobId);
+
+    const [
+      { data: phaseRows, error: phaseErr },
+      { data: taskRows, error: tasksErr },
+    ] = await Promise.all([
+      this.db
+        .from('project_phases')
+        .select('*')
+        .eq('account_id', input.accountId)
+        .eq('project_id', input.jobId)
+        .order('sort_order', { ascending: true }),
+      this.db
+        .from('tasks')
+        .select(JOB_BOARD_TASK_SELECT)
+        .eq('project_id', input.jobId)
+        .order('sort_order', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: true }),
+    ]);
+    if (phaseErr) this.throwErr(phaseErr);
+    if (tasksErr) this.throwErr(tasksErr);
+
+    const rows = (taskRows ?? []) as ProgressTaskRow[];
+    const tasksByPhase: Record<string, JobBoardTask[]> = {};
+    for (const row of rows) {
+      const task = mapJobBoardTask(row as Record<string, unknown>);
+      const key = task.phase_id ?? '__unphased__';
+      (tasksByPhase[key] ??= []).push(task);
+    }
+
+    return {
+      job: { id: job.id, title: job.title, name: job.name, status: job.status },
+      client: null,
+      assignees: [],
+      contactAssignees: [],
+      members: [],
+      phases: this.buildPhaseListItems(
+        (phaseRows ?? []) as Array<Record<string, unknown>>,
+        rows,
+        new Map(),
+        new Map(),
+      ),
+      tasksByPhase,
+      valuePence: null,
+      costPence: null,
+      progressPct: computeTaskProgress(
+        rows.map((task, index) => toProgressInput(task, `job-${index}`)),
+      ).progressPct,
+    };
+  }
+
   async ensurePhasePage(input: EnsurePhasePageInput) {
     const user = await this.ensureUser();
 

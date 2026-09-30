@@ -116,5 +116,4 @@ export type ProjectContactCandidate = {
   email: string | null;
   companyName: string | null;
   pictureUrl: string | null;
-  isClientContact: boolean;
 };

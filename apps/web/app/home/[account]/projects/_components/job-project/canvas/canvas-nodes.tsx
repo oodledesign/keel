@@ -40,6 +40,7 @@ import {
   Image as ImageIcon,
   Link2,
   ListChecks,
+  Lock,
   NotebookPen,
   PencilLine,
   Pin,
@@ -76,6 +77,7 @@ import {
 } from '../job-project.constants';
 import {
   type CanvasNodeData,
+  taskAssigneeId,
   useCanvasActions,
   useCanvasLookups,
 } from './canvas-context';
@@ -276,7 +278,7 @@ function TextEditor({
 }
 
 function PhaseNode({ id, data, selected }: CanvasNodeProps) {
-  const { phasesById, accountSlug, jobId } = useCanvasLookups();
+  const { phasesById, accountSlug, jobId, guest } = useCanvasLookups();
   const phase = phasesById.get(data.item.refId ?? '');
   if (!phase) return null;
 
@@ -316,13 +318,15 @@ function PhaseNode({ id, data, selected }: CanvasNodeProps) {
         >
           {PHASE_STATUS_LABELS[phase.status]}
         </span>
-        <Link
-          href={projectPhaseHref(accountSlug, jobId, phase.id)}
-          className={iconLinkClass}
-          title="Open phase"
-        >
-          <ExternalLink className="h-3.5 w-3.5" />
-        </Link>
+        {guest ? null : (
+          <Link
+            href={projectPhaseHref(accountSlug, jobId, phase.id)}
+            className={iconLinkClass}
+            title="Open phase"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+        )}
       </div>
       <div className="flex items-center gap-3 px-4 pt-1 text-[11px] text-[var(--workspace-shell-text-muted)]">
         <span>{phase.progressPct}%</span>
@@ -352,7 +356,7 @@ function TaskNode({ data, selected }: CanvasNodeProps) {
   if (!task) return null;
 
   const done = task.status === 'done' || task.status === 'cancelled';
-  const assigneeId = task.user_id ?? task.assignee_contact_id;
+  const assigneeId = taskAssigneeId(task);
   const assignee = assigneeId ? peopleById.get(assigneeId) : undefined;
   const subtasks = subtaskCounts.get(task.id);
 
@@ -482,9 +486,33 @@ function PersonCard({
   );
 }
 
+function LockedCard({ label, selected }: { label: string; selected: boolean }) {
+  return (
+    <div
+      className={cn(
+        cardClass,
+        'flex items-center gap-3 px-3',
+        selected && 'ring-2 ring-[var(--ozer-accent)]',
+      )}
+    >
+      <ConnectHandles />
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]">
+        <Lock className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">{label}</p>
+        <p className="truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
+          Only visible to the team
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function MemberNode({ id, data, selected }: CanvasNodeProps) {
-  const { teamById, openTaskCountByPerson } = useCanvasLookups();
+  const { teamById, openTaskCountByPerson, guest } = useCanvasLookups();
   const { editPerson } = useCanvasActions();
+  if (guest) return <LockedCard label="Team member" selected={selected} />;
   const person = teamById.get(data.item.refId ?? '');
   if (!person) return null;
   const openTasks = openTaskCountByPerson.get(person.id) ?? 0;
@@ -505,8 +533,9 @@ function MemberNode({ id, data, selected }: CanvasNodeProps) {
 }
 
 function ContactNode({ id, data, selected }: CanvasNodeProps) {
-  const { contactsById } = useCanvasLookups();
+  const { contactsById, guest } = useCanvasLookups();
   const { editPerson } = useCanvasActions();
+  if (guest) return <LockedCard label="Contact" selected={selected} />;
   const contact = contactsById.get(data.item.refId ?? '');
   if (!contact) return null;
   const badge = contact.isClientContact ? 'Client contact' : 'Contact';
@@ -613,7 +642,8 @@ function DocNode({ id, data, selected }: CanvasNodeProps) {
 }
 
 function ClientNode({ selected }: CanvasNodeProps) {
-  const { client, accountSlug } = useCanvasLookups();
+  const { client, accountSlug, guest } = useCanvasLookups();
+  if (guest) return <LockedCard label="Client" selected={selected} />;
   if (!client) return null;
   const href = pathsConfig.app.accountClientDetail
     .replace('[account]', accountSlug)
@@ -672,7 +702,7 @@ function MarkdownRuns({ runs }: { runs: NoteMarkdownRun[] }) {
   ));
 }
 
-function NoteBody({ markdown }: { markdown: string }) {
+export function NoteBody({ markdown }: { markdown: string }) {
   const blocks = useMemo(() => parseNoteMarkdown(markdown), [markdown]);
   return blocks.map((block, index) => {
     if (block.kind === 'heading1' || block.kind === 'heading2') {
@@ -707,7 +737,7 @@ function NoteBody({ markdown }: { markdown: string }) {
 }
 
 function NoteNode({ id, data, selected }: CanvasNodeProps) {
-  const { notesById, accountSlug, canEdit } = useCanvasLookups();
+  const { notesById, accountSlug, canEdit, guest } = useCanvasLookups();
   const { editNote } = useCanvasActions();
   const note = notesById.get(data.item.refId ?? '');
   if (!note) return null;
@@ -722,7 +752,13 @@ function NoteNode({ id, data, selected }: CanvasNodeProps) {
         'flex flex-col overflow-hidden border-l-4 border-l-[var(--ozer-info)] px-3 py-2',
         selected && 'ring-2 ring-[var(--ozer-accent)]',
       )}
-      title={canEdit ? 'Double-click to edit' : undefined}
+      title={
+        canEdit
+          ? 'Double-click to edit'
+          : guest
+            ? 'Double-click to read'
+            : undefined
+      }
     >
       <Resizer id={id} selected={selected} minWidth={180} minHeight={80} />
       <ConnectHandles />
@@ -744,15 +780,26 @@ function NoteNode({ id, data, selected }: CanvasNodeProps) {
             <PencilLine className="h-3.5 w-3.5" />
           </button>
         ) : null}
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={iconLinkClass}
-          title="Open note"
-        >
-          <ExternalLink className="h-3.5 w-3.5" />
-        </a>
+        {guest ? (
+          <button
+            type="button"
+            className={iconLinkClass}
+            title="Read note"
+            onClick={() => editNote(note.id)}
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </button>
+        ) : (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={iconLinkClass}
+            title="Open note"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        )}
       </div>
       <div
         className={cn(
@@ -1065,7 +1112,7 @@ function RemoteImage({
 }
 
 function LinkNode({ id, data, selected }: CanvasNodeProps) {
-  const { canEdit, accountSlug } = useCanvasLookups();
+  const { canEdit, accountSlug, guest } = useCanvasLookups();
   const { saveLink, linkBusy } = useCanvasActions();
   const { url, title, description, faviconUrl, imageUrl, linkId } =
     data.item.data;
@@ -1123,7 +1170,12 @@ function LinkNode({ id, data, selected }: CanvasNodeProps) {
         ) : null}
       </div>
       <div className="flex items-center gap-2 border-t border-[color:var(--workspace-shell-border)] px-3 py-1.5 text-xs">
-        {linkId ? (
+        {linkId && guest ? (
+          <span className="inline-flex items-center gap-1 font-medium text-[var(--workspace-shell-text-muted)]">
+            <Check className="h-3.5 w-3.5" />
+            In notes
+          </span>
+        ) : linkId ? (
           <Link
             href={notesHref}
             className="nodrag inline-flex items-center gap-1 font-medium text-[var(--workspace-shell-accent-text)] hover:underline"
@@ -1219,7 +1271,7 @@ function formatTimelineDate(date: Date) {
 }
 
 function TimelineNode({ id, data, selected }: CanvasNodeProps) {
-  const { phasesById, tasksById, canEdit, accountSlug, jobId } =
+  const { phasesById, tasksById, canEdit, accountSlug, jobId, guest } =
     useCanvasLookups();
   const { openTask, updateItemData } = useCanvasActions();
   const showTasks = data.item.data.showTasks ?? true;
@@ -1305,7 +1357,7 @@ function TimelineNode({ id, data, selected }: CanvasNodeProps) {
                         row.colour || 'var(--workspace-shell-text-muted)',
                     }}
                   />
-                  {row.id ? (
+                  {row.id && !guest ? (
                     <Link
                       href={projectPhaseHref(accountSlug, jobId, row.id)}
                       className="nodrag truncate hover:underline"

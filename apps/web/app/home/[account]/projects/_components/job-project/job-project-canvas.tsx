@@ -5,10 +5,13 @@ import {
   type MouseEvent as ReactMouseEvent,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from 'react';
+
+import { createPortal } from 'react-dom';
 
 import {
   Background,
@@ -37,10 +40,13 @@ import {
   ChevronDown,
   ClipboardList,
   GanttChart,
+  Keyboard,
   LayoutGrid,
   type LucideIcon,
+  Maximize2,
   Megaphone,
   MessageSquare,
+  Minimize2,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
@@ -73,6 +79,14 @@ import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import type { CanvasAiItem } from '~/lib/projects/canvas/canvas-ai';
+import {
+  CANVAS_CLIPBOARD_MIME,
+  type CanvasClipboard,
+  canvasPasteOffset,
+  copyCanvasItems,
+  parseCanvasClipboard,
+  pasteCanvasItems,
+} from '~/lib/projects/canvas/canvas-clipboard';
 import { groupCanvasComments } from '~/lib/projects/canvas/canvas-comments';
 import {
   type CanvasSectionOutline,
@@ -160,14 +174,17 @@ import type {
   ProjectCanvasDoc,
   ProjectCanvasMember,
   ProjectCanvasNote,
+  ProjectCanvasPerson,
 } from '../../_lib/schema/project-canvas.schema';
 import type {
   JobBoardResult,
   JobBoardTask,
 } from '../../_lib/schema/project-phases.schema';
 import {
+  createProjectCanvasNote,
   deleteProjectCanvasItems,
   loadProjectCanvas,
+  loadProjectCanvasNote,
   upsertProjectCanvasItems,
 } from '../../_lib/server/project-canvas.actions';
 import { createJobTask, moveTask } from '../../_lib/server/server-actions';
@@ -196,6 +213,7 @@ import {
   type CanvasNodeData,
   type CanvasPerson,
   type CanvasPersonRef,
+  taskAssigneeId,
 } from './canvas/canvas-context';
 import {
   CANVAS_IMAGE_ACCEPT,
@@ -211,7 +229,12 @@ import {
   canvasNodeTypes,
 } from './canvas/canvas-nodes';
 import { CanvasNoteDialog } from './canvas/canvas-note-dialog';
+import {
+  type CanvasReading,
+  CanvasReadingDialog,
+} from './canvas/canvas-reading-dialog';
 import { CanvasSearchDialog } from './canvas/canvas-search';
+import { CanvasShortcutsDialog } from './canvas/canvas-shortcuts-dialog';
 import { CanvasTeamDialog } from './canvas/canvas-team-dialog';
 import {
   CANVAS_TRAY_DRAG_TYPE,
@@ -227,6 +250,17 @@ import { JobProjectTaskSheet } from './job-project-task-sheet';
 type FlowNode = Node<CanvasNodeData>;
 type FlowEdge = Edge<CanvasEdgeData>;
 
+export type CanvasGuestDoc =
+  | { kind: 'written'; title: string; content: string }
+  | { kind: 'uploaded'; url: string };
+
+/** A project guest is viewing: read only, commenting per their invite. */
+export type CanvasGuestMode = {
+  canComment: boolean;
+  onOpenTask: (taskId: string) => void;
+  loadDoc: (docId: string) => Promise<CanvasGuestDoc>;
+};
+
 type JobProjectCanvasProps = {
   accountId: string;
   accountSlug: string;
@@ -237,11 +271,26 @@ type JobProjectCanvasProps = {
   onRefreshBoard: () => Promise<void>;
   /** Deep link: select this item and open its comments. */
   focusItemId?: string | null;
+  guest?: CanvasGuestMode;
 };
 
 const UPSERT_CHUNK = 300;
 const DELETE_CHUNK = 500;
 const DUPLICATE_OFFSET = 24;
+const NUDGE_SAVE_DELAY_MS = 400;
+const ARROW_NUDGE: Record<string, { x: number; y: number }> = {
+  ArrowUp: { x: 0, y: -1 },
+  ArrowDown: { x: 0, y: 1 },
+  ArrowLeft: { x: -1, y: 0 },
+  ArrowRight: { x: 1, y: 0 },
+};
+const ZOOM_DURATION_MS = 200;
+
+/**
+ * Last canvas copy in this tab. Some browsers drop custom clipboard types,
+ * so a paste whose plain text matches falls back to this.
+ */
+let lastCanvasCopy: { text: string; clip: CanvasClipboard } | null = null;
 
 const TEXT_EDIT_KINDS = new Set(['sticky', 'text', 'shape', 'frame']);
 const PLACE_TOOLS: Partial<Record<CanvasTool, FreeformCanvasKind>> = {
@@ -420,13 +469,13 @@ function isLinkedPresent(item: CanvasItem, lookups: CanvasLookups) {
     case 'task':
       return lookups.tasksById.has(id);
     case 'member':
-      return lookups.teamById.has(id);
+      return lookups.guest || lookups.teamById.has(id);
     case 'client':
-      return lookups.client?.id === id;
+      return lookups.guest || lookups.client?.id === id;
     case 'note':
       return lookups.notesById.has(id);
     case 'contact':
-      return lookups.contactsById.has(id);
+      return lookups.guest || lookups.contactsById.has(id);
     case 'doc':
       return lookups.docsById.has(id);
     default:
@@ -462,8 +511,10 @@ function ProjectCanvasInner({
   onBoardChange,
   onRefreshBoard,
   focusItemId = null,
+  guest,
 }: JobProjectCanvasProps) {
-  const { screenToFlowPosition, fitView } = useReactFlow();
+  const { screenToFlowPosition, fitView, zoomIn, zoomOut, zoomTo } =
+    useReactFlow();
   const { resolvedTheme } = useTheme();
   const { data: user } = useUser();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -477,6 +528,8 @@ function ProjectCanvasInner({
   const [memberDetails, setMemberDetails] = useState<ProjectCanvasMember[]>([]);
   const [contacts, setContacts] = useState<ProjectCanvasContact[]>([]);
   const [docs, setDocs] = useState<ProjectCanvasDoc[]>([]);
+  const [people, setPeople] = useState<ProjectCanvasPerson[]>([]);
+  const [reading, setReading] = useState<CanvasReading | null>(null);
   const [teamOpen, setTeamOpen] = useState(false);
   const [teamFocus, setTeamFocus] = useState<CanvasPersonRef | null>(null);
   const [nodes, setNodes] = useState<FlowNode[]>([]);
@@ -495,7 +548,18 @@ function ProjectCanvasInner({
   const [uploadingImages, setUploadingImages] = useState(0);
   const [uploadingFiles, setUploadingFiles] = useState(0);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  /** A note id, or `'new'` while writing a new project note. */
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const newNoteAtRef = useRef<{ x: number; y: number } | null>(null);
+  /** Items to select once they reach React Flow (pasted, duplicated, new). */
+  const pendingSelectionRef = useRef<Set<string> | null>(null);
+  const pasteCountRef = useRef(0);
+  const savingNoteRef = useRef(false);
+  const nudgeRef = useRef<{
+    before: Map<string, CanvasItem>;
+    timer: number;
+  } | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [comments, setComments] = useState<ProjectCanvasComment[]>([]);
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -503,6 +567,17 @@ function ProjectCanvasInner({
   const [searchOpen, setSearchOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const inlineSlotRef = useRef<HTMLDivElement>(null);
+  // The canvas renders into this node, which moves between the page and
+  // <body>, so going full screen never remounts React Flow. The app shell's
+  // wrappers can't trap a fixed overlay, and dialogs, menus and toasts
+  // (portalled to <body>) still show above it.
+  const [frameHost] = useState(() => {
+    const host = document.createElement('div');
+    host.style.display = 'contents';
+    return host;
+  });
   const [linkUrl, setLinkUrl] = useState('');
   const [linkBusy, setLinkBusy] = useState<
     ReadonlyMap<string, 'fetching' | 'saving'>
@@ -524,7 +599,8 @@ function ProjectCanvasInner({
   const initialisedRef = useRef(false);
   const fittedRef = useRef(false);
 
-  const editable = canEdit && available;
+  const editable = canEdit && available && !guest;
+  const isGuest = Boolean(guest);
 
   const updateItems = useCallback(
     (fn: (prev: CanvasItem[]) => CanvasItem[]) => {
@@ -545,6 +621,7 @@ function ProjectCanvasInner({
       setContacts(snapshot.contacts);
       setDocs(snapshot.docs);
       setComments(snapshot.comments);
+      setPeople(snapshot.people);
       updateItems((prev) => {
         const local = prev.filter((item) =>
           isPending(pendingCounts.current, item.id),
@@ -587,7 +664,7 @@ function ProjectCanvasInner({
         subtaskCounts.set(task.parent_task_id, counts);
         continue;
       }
-      const owner = task.user_id ?? task.assignee_contact_id;
+      const owner = taskAssigneeId(task);
       if (owner && task.status !== 'done' && task.status !== 'cancelled') {
         openTaskCountByPerson.set(
           owner,
@@ -597,6 +674,14 @@ function ProjectCanvasInner({
     }
 
     const peopleById = new Map<string, CanvasPerson>();
+    for (const person of people) {
+      peopleById.set(person.id, {
+        id: person.id,
+        name: person.name,
+        email: null,
+        pictureUrl: person.pictureUrl,
+      });
+    }
     for (const member of board.members) {
       peopleById.set(member.user_id, {
         id: member.user_id,
@@ -650,6 +735,7 @@ function ProjectCanvasInner({
       accountSlug,
       jobId,
       canEdit: editable,
+      guest: isGuest,
       phasesById: new Map(board.phases.map((phase) => [phase.id, phase])),
       tasksById,
       subtaskCounts,
@@ -672,9 +758,11 @@ function ProjectCanvasInner({
     contacts,
     docs,
     editable,
+    isGuest,
     jobId,
     memberDetails,
     notes,
+    people,
   ]);
 
   const entities = useMemo<CanvasLinkedEntities>(
@@ -703,12 +791,18 @@ function ProjectCanvasInner({
   const me = useMemo(() => {
     if (!user?.id) return null;
     const member = board.members.find((m) => m.user_id === user.id);
+    const person = people.find((p) => p.id === user.id);
     return {
       userId: user.id,
-      name: member?.name || member?.email || user.email || 'Teammate',
-      pictureUrl: member?.picture_url ?? null,
+      name:
+        member?.name ||
+        member?.email ||
+        person?.name ||
+        user.email ||
+        'Teammate',
+      pictureUrl: member?.picture_url ?? person?.pictureUrl ?? null,
     };
-  }, [board.members, user?.email, user?.id]);
+  }, [board.members, people, user?.email, user?.id]);
 
   const realtime = useProjectCanvasRealtime({
     projectId: jobId,
@@ -892,6 +986,7 @@ function ProjectCanvasInner({
 
   useEffect(() => {
     const remoteDrags = realtime.remoteDrags;
+    const pendingSelection = pendingSelectionRef.current;
     setNodes((prev) => {
       const prevById = new Map(prev.map((node) => [node.id, node]));
       return displayItems
@@ -909,7 +1004,9 @@ function ProjectCanvasInner({
               ? item.zIndex
               : 1000 + item.zIndex,
             data: { item },
-            selected: old?.selected ?? false,
+            selected: pendingSelection
+              ? pendingSelection.has(item.id)
+              : (old?.selected ?? false),
             measured: old?.measured,
             style: item.kind === 'draw' ? { pointerEvents: 'none' } : undefined,
             className:
@@ -940,10 +1037,13 @@ function ProjectCanvasInner({
         .filter((item) => item.kind !== 'connector')
         .map((item) => item.id),
     );
+    // Runs after the node sync (same render), so both see the pending selection.
+    const pendingSelection = pendingSelectionRef.current;
+    pendingSelectionRef.current = null;
     setEdges((prev) => {
-      const selected = new Set(
-        prev.filter((edge) => edge.selected).map((edge) => edge.id),
-      );
+      const selected =
+        pendingSelection ??
+        new Set(prev.filter((edge) => edge.selected).map((edge) => edge.id));
       return displayItems
         .filter(
           (item) =>
@@ -1325,8 +1425,46 @@ function ProjectCanvasInner({
     [commit, penColor, penWidth],
   );
 
-  const openTask = useCallback((taskId: string) => {
-    setSelectedTaskId(taskId);
+  const openTask = useCallback(
+    (taskId: string) => {
+      if (guest) guest.onOpenTask(taskId);
+      else setSelectedTaskId(taskId);
+    },
+    [guest],
+  );
+
+  const readingRequestRef = useRef(0);
+  const showReading = useCallback(
+    (load: () => Promise<{ title: string; markdown: string }>) => {
+      const request = ++readingRequestRef.current;
+      setReading({ status: 'loading' });
+      load()
+        .then((result) => {
+          if (request === readingRequestRef.current) {
+            setReading({ status: 'ready', ...result });
+          }
+        })
+        .catch((error: unknown) => {
+          if (request === readingRequestRef.current) {
+            setReading({ status: 'error', message: getErrorMessage(error) });
+          }
+        });
+    },
+    [],
+  );
+
+  const readNote = useCallback(
+    (noteId: string) =>
+      showReading(async () => {
+        const note = await loadProjectCanvasNote({ accountId, jobId, noteId });
+        return { title: note.title || 'Untitled note', markdown: note.content };
+      }),
+    [accountId, jobId, showReading],
+  );
+
+  const closeReading = useCallback(() => {
+    readingRequestRef.current += 1;
+    setReading(null);
   }, []);
 
   const editPerson = useCallback((person: CanvasPersonRef) => {
@@ -1338,6 +1476,33 @@ function ProjectCanvasInner({
     (docId: string) => {
       const doc = docs.find((entry) => entry.id === docId);
       if (!doc) return;
+      if (guest && doc.kind === 'written') {
+        showReading(async () => {
+          const result = await guest.loadDoc(docId);
+          return result.kind === 'written'
+            ? { title: result.title, markdown: result.content }
+            : { title: doc.title, markdown: '' };
+        });
+        return;
+      }
+      if (guest) {
+        const tab = window.open('about:blank', '_blank');
+        if (tab) tab.opener = null;
+        guest
+          .loadDoc(docId)
+          .then((result) => {
+            if (result.kind !== 'uploaded') {
+              throw new Error('This file is no longer available');
+            }
+            if (tab) tab.location.href = result.url;
+            else window.open(result.url, '_blank', 'noopener');
+          })
+          .catch((error: unknown) => {
+            tab?.close();
+            toast.error(getErrorMessage(error));
+          });
+        return;
+      }
       if (doc.kind === 'written') {
         window.open(
           pathsConfig.app.accountDocDetail
@@ -1362,7 +1527,7 @@ function ProjectCanvasInner({
           toast.error(getErrorMessage(error));
         });
     },
-    [accountId, accountSlug, docs],
+    [accountId, accountSlug, docs, guest, showReading],
   );
 
   const onNodeClick = useCallback(
@@ -1396,30 +1561,38 @@ function ProjectCanvasInner({
     [editable, removeItems, tool],
   );
 
-  const onNodeDoubleClick = useCallback(
-    (_event: ReactMouseEvent, node: FlowNode) => {
-      if (node.type === 'task' && node.data.item.refId) {
-        openTask(node.data.item.refId);
-      } else if (node.type === 'doc' && node.data.item.refId) {
-        openDoc(node.data.item.refId);
-      } else if (node.type === 'link') {
-        const url = node.data.item.data.url;
+  /** Double-click or Enter: open, edit or follow the item. */
+  const openItem = useCallback(
+    (item: CanvasItem) => {
+      if (item.kind === 'task' && item.refId) {
+        openTask(item.refId);
+      } else if (item.kind === 'doc' && item.refId) {
+        openDoc(item.refId);
+      } else if (item.kind === 'link') {
+        const url = item.data.url;
         if (url && /^https?:\/\//i.test(url)) {
           window.open(url, '_blank', 'noopener,noreferrer');
         }
-      } else if (editable && node.type === 'note' && node.data.item.refId) {
-        setEditingNoteId(node.data.item.refId);
+      } else if (editable && item.kind === 'note' && item.refId) {
+        setEditingNoteId(item.refId);
+      } else if (isGuest && item.kind === 'note' && item.refId) {
+        readNote(item.refId);
       } else if (
         editable &&
-        (node.type === 'member' || node.type === 'contact') &&
-        node.data.item.refId
+        (item.kind === 'member' || item.kind === 'contact') &&
+        item.refId
       ) {
-        editPerson({ kind: node.type, id: node.data.item.refId });
-      } else if (editable && TEXT_EDIT_KINDS.has(node.type ?? '')) {
-        setEditingId(node.id);
+        editPerson({ kind: item.kind, id: item.refId });
+      } else if (editable && TEXT_EDIT_KINDS.has(item.kind)) {
+        setEditingId(item.id);
       }
     },
-    [editPerson, editable, openDoc, openTask],
+    [editPerson, editable, isGuest, openDoc, openTask, readNote],
+  );
+
+  const onNodeDoubleClick = useCallback(
+    (_event: ReactMouseEvent, node: FlowNode) => openItem(node.data.item),
+    [openItem],
   );
 
   const placeLinked = useCallback(
@@ -1429,8 +1602,8 @@ function ProjectCanvasInner({
         x: center.x - size.w / 2,
         y: center.y - size.h / 2,
       });
-      if (itemById(item.id)) return;
-      commit([{ before: null, after: item }]);
+      if (!itemById(item.id)) commit([{ before: null, after: item }]);
+      return item.id;
     },
     [commit, itemById, jobId],
   );
@@ -1847,6 +2020,10 @@ function ProjectCanvasInner({
         .filter((item): item is CanvasItem => Boolean(item)),
     [items, selectedIds],
   );
+  const singleSelected =
+    selectedItems.length === 1 && selectedItems[0]!.kind !== 'connector'
+      ? selectedItems[0]!
+      : null;
 
   const wrapInSection = useCallback(() => {
     const bounds = canvasItemsBounds(selectedItems);
@@ -2392,44 +2569,254 @@ function ProjectCanvasInner({
     commit(result.changes, { record: false });
   }, [commit, history]);
 
+  const addAndSelect = useCallback(
+    (created: CanvasItem[]) => {
+      if (!editable || created.length === 0) return;
+      pendingSelectionRef.current = new Set(created.map((item) => item.id));
+      commit(created.map((after) => ({ before: null, after })));
+    },
+    [commit, editable],
+  );
+
+  const pasteCopies = useCallback(
+    (
+      source: CanvasItem[],
+      offset: { dx: number; dy: number },
+      keepLinkIds: boolean,
+    ) => {
+      addAndSelect(
+        pasteCanvasItems(source, {
+          ...offset,
+          newId: createCanvasItemId,
+          zBase: (container) => nextZIndex(itemsRef.current, container),
+          keepLinkIds,
+        }),
+      );
+    },
+    [addAndSelect],
+  );
+
   const duplicateSelection = useCallback(() => {
-    const sources = selectedItems.filter(
-      (item) => !isLinkedCanvasKind(item.kind) && item.kind !== 'connector',
-    );
-    if (sources.length === 0) return;
-    const idMap = new Map<string, string>();
-    const clones: CanvasItem[] = sources.map((item) => {
-      const id = createCanvasItemId();
-      idMap.set(item.id, id);
-      return {
-        ...item,
-        id,
-        x: item.x + DUPLICATE_OFFSET,
-        y: item.y + DUPLICATE_OFFSET,
-        updatedAt: PENDING_CANVAS_TIMESTAMP,
-      };
+    const source = copyCanvasItems(selectedItems, itemsRef.current);
+    if (source.length === 0) {
+      if (selectedItems.length > 0) {
+        toast.info(
+          "Project cards can't be duplicated — they're on the canvas once",
+        );
+      }
+      return;
+    }
+    pasteCopies(source, { dx: DUPLICATE_OFFSET, dy: DUPLICATE_OFFSET }, true);
+  }, [pasteCopies, selectedItems]);
+
+  const visibleFlowBox = useCallback(() => {
+    const rect = wrapperRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0, w: 0, h: 0 };
+    const topLeft = screenToFlowPosition({ x: rect.left, y: rect.top });
+    const bottomRight = screenToFlowPosition({
+      x: rect.right,
+      y: rect.bottom,
     });
-    const connectorClones = itemsRef.current
-      .filter(
-        (item) =>
-          item.kind === 'connector' &&
-          idMap.has(item.data.source ?? '') &&
-          idMap.has(item.data.target ?? ''),
-      )
-      .map((item) => ({
-        ...item,
-        id: createCanvasItemId(),
-        data: {
-          ...item.data,
-          source: idMap.get(item.data.source!)!,
-          target: idMap.get(item.data.target!)!,
+    return {
+      x: topLeft.x,
+      y: topLeft.y,
+      w: bottomRight.x - topLeft.x,
+      h: bottomRight.y - topLeft.y,
+    };
+  }, [screenToFlowPosition]);
+
+  const pasteClipboard = useCallback(
+    (clip: CanvasClipboard) => {
+      if (clip.accountId !== accountId) {
+        toast.error(
+          'Canvas items can only be pasted within the same workspace',
+        );
+        return;
+      }
+      const sameProject = clip.projectId === jobId;
+      pasteCountRef.current += 1;
+      const offset = canvasPasteOffset(clip.items, visibleFlowBox(), {
+        sameProject,
+        nudge: DUPLICATE_OFFSET * pasteCountRef.current,
+      });
+      pasteCopies(clip.items, offset, sameProject);
+    },
+    [accountId, jobId, pasteCopies, visibleFlowBox],
+  );
+
+  const sendToBack = useCallback(() => {
+    const current = itemsRef.current;
+    const lowest = (container: boolean) =>
+      current
+        .filter(
+          (item) =>
+            item.kind !== 'connector' &&
+            isContainerCanvasKind(item.kind) === container,
+        )
+        .reduce((min, item) => Math.min(min, item.zIndex), 0);
+    const targets = selectedItems.filter((item) => item.kind !== 'connector');
+    patchItems(
+      targets.map((item, index) => ({
+        id: item.id,
+        patch: {
+          zIndex:
+            lowest(isContainerCanvasKind(item.kind)) - targets.length + index,
         },
-        updatedAt: PENDING_CANVAS_TIMESTAMP,
-      }));
-    commit(
-      [...clones, ...connectorClones].map((after) => ({ before: null, after })),
+      })),
     );
-  }, [commit, selectedItems]);
+  }, [patchItems, selectedItems]);
+
+  const flushNudge = useCallback(() => {
+    const pending = nudgeRef.current;
+    if (!pending) return;
+    nudgeRef.current = null;
+    window.clearTimeout(pending.timer);
+    const changes: CanvasChange[] = [];
+    for (const before of pending.before.values()) {
+      const after = itemById(before.id);
+      if (after && (after.x !== before.x || after.y !== before.y)) {
+        changes.push({ before, after });
+      }
+    }
+    commit(changes);
+  }, [commit, itemById]);
+
+  /**
+   * Arrow keys move the selection (and anything inside a selected section)
+   * straight away; the move is saved as one change once the keys go quiet.
+   */
+  const nudgeSelection = useCallback(
+    (dx: number, dy: number) => {
+      if (!editable) return;
+      const current = itemsRef.current;
+      const moving = new Map<string, CanvasItem>();
+      for (const item of selectedItems) {
+        if (item.kind === 'connector') continue;
+        moving.set(item.id, item);
+        if (isContainerCanvasKind(item.kind)) {
+          for (const child of itemsInsideContainer(item, current)) {
+            moving.set(child.id, child);
+          }
+        }
+      }
+      if (moving.size === 0) return;
+
+      const pending = nudgeRef.current ?? {
+        before: new Map<string, CanvasItem>(),
+        timer: 0,
+      };
+      for (const id of moving.keys()) {
+        const original = itemById(id);
+        if (original && !pending.before.has(id)) {
+          pending.before.set(id, original);
+        }
+      }
+      window.clearTimeout(pending.timer);
+      pending.timer = window.setTimeout(flushNudge, NUDGE_SAVE_DELAY_MS);
+      nudgeRef.current = pending;
+
+      updateItems((prev) =>
+        prev.map((item) =>
+          moving.has(item.id)
+            ? { ...item, x: item.x + dx, y: item.y + dy }
+            : item,
+        ),
+      );
+    },
+    [editable, flushNudge, itemById, selectedItems, updateItems],
+  );
+
+  useEffect(() => () => flushNudge(), [flushNudge]);
+
+  const selectAll = useCallback(() => {
+    setNodes((prev) =>
+      prev.map((node) => (node.selected ? node : { ...node, selected: true })),
+    );
+    setEdges((prev) =>
+      prev.map((edge) => (edge.selected ? edge : { ...edge, selected: true })),
+    );
+  }, []);
+
+  const startNewNote = useCallback(
+    (at?: { x: number; y: number }) => {
+      if (!editable || !available) return;
+      newNoteAtRef.current = at ?? viewportCenter();
+      setEditingNoteId('new');
+    },
+    [available, editable, viewportCenter],
+  );
+
+  const onNoteCreated = useCallback(
+    (note: ProjectCanvasNote) => {
+      setNotes((prev) => [note, ...prev.filter((n) => n.id !== note.id)]);
+      const cardId = placeLinked(
+        { kind: 'note', refId: note.id },
+        newNoteAtRef.current ?? viewportCenter(),
+      );
+      newNoteAtRef.current = null;
+      pendingSelectionRef.current = new Set([cardId]);
+      broadcastLinkedChanged();
+      toast.success("Note added to the project's notes");
+    },
+    [broadcastLinkedChanged, placeLinked, viewportCenter],
+  );
+
+  /** Turn a sticky or text box into a project note, keeping its spot. */
+  const saveAsProjectNote = useCallback(
+    async (item: CanvasItem) => {
+      const text = item.data.text?.trim();
+      if (!editable || !text || savingNoteRef.current) return;
+      savingNoteRef.current = true;
+      const [firstLine, ...rest] = text.split('\n');
+      try {
+        const note = await createProjectCanvasNote({
+          accountId,
+          jobId,
+          title: (firstLine ?? '').slice(0, 200),
+          content: rest.join('\n').trim(),
+        });
+        setNotes((prev) => [note, ...prev]);
+        const card = buildLinkedCanvasItem(
+          jobId,
+          { kind: 'note', refId: note.id },
+          { x: item.x, y: item.y },
+        );
+        const before = itemById(item.id);
+        const rewired = connectorsTouching(itemsRef.current, [item.id]).map(
+          (connector) => ({
+            before: connector,
+            after: {
+              ...connector,
+              data: {
+                ...connector.data,
+                source:
+                  connector.data.source === item.id
+                    ? card.id
+                    : connector.data.source,
+                target:
+                  connector.data.target === item.id
+                    ? card.id
+                    : connector.data.target,
+              },
+            },
+          }),
+        );
+        pendingSelectionRef.current = new Set([card.id]);
+        commit([
+          { before: null, after: card },
+          ...rewired,
+          ...(before ? [{ before, after: null }] : []),
+        ]);
+        broadcastLinkedChanged();
+        toast.success("Saved to the project's notes");
+      } catch (error) {
+        toast.error(getErrorMessage(error));
+      } finally {
+        savingNoteRef.current = false;
+      }
+    },
+    [accountId, broadcastLinkedChanged, commit, editable, itemById, jobId],
+  );
 
   const bringToFront = useCallback(() => {
     const current = itemsRef.current;
@@ -2446,6 +2833,39 @@ function ProjectCanvasInner({
     );
   }, [patchItems, selectedItems]);
 
+  const enterFullscreen = useCallback(() => {
+    setFullscreen(true);
+    if (document.fullscreenEnabled && !document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {
+        // Browser full screen is optional; the canvas still fills the window.
+      });
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    const parent = fullscreen ? document.body : inlineSlotRef.current;
+    parent?.appendChild(frameHost);
+    return () => frameHost.remove();
+  }, [frameHost, fullscreen, status]);
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    // Leaving browser full screen (Esc) leaves canvas full screen too.
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) setFullscreen(false);
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    };
+  }, [fullscreen]);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -2453,7 +2873,7 @@ function ProjectCanvasInner({
         target &&
         (target.isContentEditable ||
           ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) ||
-          target.closest('[role="listbox"]'))
+          target.closest('[role="listbox"],[role="menu"],[role="dialog"]'))
       ) {
         return;
       }
@@ -2464,13 +2884,27 @@ function ProjectCanvasInner({
         teamOpen ||
         searchOpen ||
         aiOpen ||
-        linkOpen
+        linkOpen ||
+        shortcutsOpen ||
+        reading
       ) {
         return;
       }
 
       const key = event.key.toLowerCase();
       const mod = event.metaKey || event.ctrlKey;
+      const onControl = target?.tagName === 'BUTTON' || target?.tagName === 'A';
+      if (mod && !event.altKey && key === 'a') {
+        event.preventDefault();
+        selectAll();
+        return;
+      }
+      if (editable && mod && (event.key === ']' || event.key === '[')) {
+        event.preventDefault();
+        if (event.key === ']') bringToFront();
+        else sendToBack();
+        return;
+      }
       if (mod && !event.altKey && (key === 'f' || key === 'k')) {
         event.preventDefault();
         setSearchOpen(true);
@@ -2508,7 +2942,71 @@ function ProjectCanvasInner({
         return;
       }
       if (mod || event.altKey) return;
+      if (event.shiftKey && key === 'f') {
+        event.preventDefault();
+        if (fullscreen) setFullscreen(false);
+        else enterFullscreen();
+        return;
+      }
+      if (event.key === '?') {
+        event.preventDefault();
+        setShortcutsOpen(true);
+        return;
+      }
+      if (event.shiftKey && event.code === 'Digit1') {
+        event.preventDefault();
+        void fitView({ padding: 0.15, duration: ZOOM_DURATION_MS * 2 });
+        return;
+      }
+      if (event.shiftKey && event.code === 'Digit2') {
+        event.preventDefault();
+        if (selectedIds.length > 0) {
+          void fitView({
+            nodes: selectedIds.map((id) => ({ id })),
+            padding: 0.3,
+            maxZoom: 1.5,
+            duration: ZOOM_DURATION_MS * 2,
+          });
+        }
+        return;
+      }
+      if (event.shiftKey && event.code === 'Digit0') {
+        event.preventDefault();
+        void zoomTo(1, { duration: ZOOM_DURATION_MS });
+        return;
+      }
+      if (event.key === '+' || event.key === '=') {
+        event.preventDefault();
+        void zoomIn({ duration: ZOOM_DURATION_MS });
+        return;
+      }
+      if (event.key === '-' || event.key === '_') {
+        event.preventDefault();
+        void zoomOut({ duration: ZOOM_DURATION_MS });
+        return;
+      }
+      const arrow = ARROW_NUDGE[event.key];
+      if (arrow && !onControl && selectedItems.length > 0) {
+        event.preventDefault();
+        const step = event.shiftKey ? 10 : 1;
+        nudgeSelection(arrow.x * step, arrow.y * step);
+        return;
+      }
+      if (event.key === 'Enter' && !onControl && singleSelected) {
+        event.preventDefault();
+        openItem(singleSelected);
+        return;
+      }
+      if (key === 'n' && !event.shiftKey && editable) {
+        event.preventDefault();
+        startNewNote();
+        return;
+      }
       if (event.key === 'Escape') {
+        if (fullscreen && tool === 'select' && !connectFrom && !commentsOpen) {
+          setFullscreen(false);
+          return;
+        }
         setTool('select');
         setConnectFrom(null);
         return;
@@ -2523,19 +3021,39 @@ function ProjectCanvasInner({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [
     aiOpen,
+    bringToFront,
+    commentsOpen,
+    connectFrom,
     duplicateSelection,
     editable,
     editingNoteId,
+    enterFullscreen,
+    fitView,
+    fullscreen,
     imageOpen,
     linkOpen,
+    nudgeSelection,
+    openItem,
+    reading,
     redo,
     searchOpen,
+    selectAll,
+    selectedIds,
+    selectedItems.length,
     selectedTaskId,
+    sendToBack,
+    shortcutsOpen,
+    singleSelected,
+    startNewNote,
     styledItems.length,
     teamOpen,
     toggleTextStyle,
+    tool,
     undo,
     wrapInSection,
+    zoomIn,
+    zoomOut,
+    zoomTo,
   ]);
 
   useEffect(() => {
@@ -2562,15 +3080,26 @@ function ProjectCanvasInner({
         teamOpen ||
         searchOpen ||
         aiOpen ||
-        linkOpen
+        linkOpen ||
+        shortcutsOpen
       ) {
+        return;
+      }
+      const plain = event.clipboardData?.getData('text/plain') ?? '';
+      const raw = event.clipboardData?.getData(CANVAS_CLIPBOARD_MIME);
+      const clip = raw
+        ? parseCanvasClipboard(raw)
+        : lastCanvasCopy && plain === lastCanvasCopy.text
+          ? lastCanvasCopy.clip
+          : null;
+      if (clip) {
+        event.preventDefault();
+        pasteClipboard(clip);
         return;
       }
       const files = Array.from(event.clipboardData?.files ?? []);
       if (files.length === 0) {
-        const url = canvasUrlFromText(
-          event.clipboardData?.getData('text/plain') ?? '',
-        );
+        const url = canvasUrlFromText(plain);
         if (!url) return;
         event.preventDefault();
         if (isCanvasImageUrl(url)) addImageFromUrl(url, viewportCenter());
@@ -2593,13 +3122,73 @@ function ProjectCanvasInner({
     editingNoteId,
     imageOpen,
     linkOpen,
+    pasteClipboard,
     searchOpen,
     selectedTaskId,
+    shortcutsOpen,
     teamOpen,
     uploadDocs,
     uploadImages,
     viewportCenter,
   ]);
+
+  useEffect(() => {
+    const onCopy = (event: ClipboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        target !== document.body &&
+        !wrapperRef.current?.contains(target)
+      ) {
+        return;
+      }
+      if (
+        target?.isContentEditable ||
+        ['INPUT', 'TEXTAREA'].includes(target?.tagName ?? '') ||
+        window.getSelection()?.toString()
+      ) {
+        return;
+      }
+      if (selectedItems.length === 0) return;
+      const items = copyCanvasItems(selectedItems, itemsRef.current);
+      if (items.length === 0) {
+        toast.info(
+          "Project cards can't be copied — they're on the canvas once",
+        );
+        return;
+      }
+      const clip: CanvasClipboard = {
+        v: 1,
+        accountId,
+        projectId: jobId,
+        items,
+      };
+      const text =
+        items
+          .map((item) => item.data.text?.trim() || item.data.title?.trim())
+          .filter(Boolean)
+          .join('\n') || `${items.length} canvas item(s)`;
+      event.preventDefault();
+      event.clipboardData?.setData(CANVAS_CLIPBOARD_MIME, JSON.stringify(clip));
+      event.clipboardData?.setData('text/plain', text);
+      lastCanvasCopy = { text, clip };
+      pasteCountRef.current = 0;
+      if (event.type === 'cut' && editable) {
+        removeItems(
+          items
+            .filter((item) => item.kind !== 'connector')
+            .map((item) => item.id),
+        );
+        pasteCountRef.current = -1;
+      }
+    };
+    document.addEventListener('copy', onCopy);
+    document.addEventListener('cut', onCopy);
+    return () => {
+      document.removeEventListener('copy', onCopy);
+      document.removeEventListener('cut', onCopy);
+    };
+  }, [accountId, editable, jobId, removeItems, selectedItems]);
 
   const actions = useMemo<CanvasActions>(
     () => ({
@@ -2615,7 +3204,7 @@ function ProjectCanvasInner({
           { id, patch: { x: box.x, y: box.y, w: box.width, h: box.height } },
         ]),
       openTask,
-      editNote: setEditingNoteId,
+      editNote: isGuest ? readNote : setEditingNoteId,
       editPerson,
       openDoc,
       saveLink: (id) => void saveLinks([id]),
@@ -2627,11 +3216,13 @@ function ProjectCanvasInner({
       commit,
       editPerson,
       editingId,
+      isGuest,
       itemById,
       linkBusy,
       openDoc,
       openTask,
       patchItems,
+      readNote,
       saveLinks,
     ],
   );
@@ -2751,14 +3342,16 @@ function ProjectCanvasInner({
         onAi={() => setAiOpen(true)}
         saveLinksCount={unsavedLinkIds.length}
         onSaveLinks={() => void saveLinks(unsavedLinkIds)}
+        onSaveAsNote={
+          single &&
+          (single.kind === 'sticky' || single.kind === 'text') &&
+          single.data.text?.trim()
+            ? () => void saveAsProjectNote(single)
+            : undefined
+        }
       />
     );
   })();
-
-  const singleSelected =
-    selectedItems.length === 1 && selectedItems[0]!.kind !== 'connector'
-      ? selectedItems[0]!
-      : null;
 
   const presenceMe = me ? { ...me, color: canvasPeerColor(me.userId) } : null;
   const placing = Boolean(PLACE_TOOLS[tool]) || tool === 'connect';
@@ -2811,334 +3404,370 @@ function ProjectCanvasInner({
             </p>
           ) : null}
 
-          <div
-            className="flex h-[calc(100vh-15rem)] min-h-[560px] overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)]"
-            data-test="project-canvas"
-          >
-            {trayOpen && editable ? (
-              <CanvasTray
-                entries={trayEntries}
-                onClose={() => setTrayOpen(false)}
-                onPlace={(entry) => placeLinked(entry, viewportCenter())}
-                onPlaceAll={placeAllLinked}
-              />
-            ) : null}
-
+          <div ref={inlineSlotRef} className="contents" />
+          {createPortal(
             <div
-              ref={wrapperRef}
               className={cn(
-                'relative min-w-0 flex-1 bg-[var(--ozer-surface-canvas)]',
-                placing && '[&_.react-flow__pane]:cursor-crosshair',
-                tool === 'hand' && '[&_.react-flow__pane]:cursor-grab',
-                tool === 'eraser' && '[&_.react-flow__pane]:cursor-cell',
+                'flex overflow-hidden bg-[var(--ozer-surface-canvas)]',
+                fullscreen
+                  ? 'fixed inset-0 z-50 h-dvh w-screen'
+                  : 'h-[calc(100vh-15rem)] min-h-[560px] rounded-xl border border-[color:var(--workspace-shell-border)]',
               )}
-              onPointerMove={(event) => {
-                if (!realtime.connected) return;
-                const point = screenToFlowPosition({
-                  x: event.clientX,
-                  y: event.clientY,
-                });
-                realtime.broadcastCursor(point.x, point.y);
-              }}
-              onPointerLeave={realtime.broadcastCursorLeave}
-              onDragOver={onDragOver}
-              onDrop={onDrop}
+              data-test="project-canvas"
+              data-fullscreen={fullscreen || undefined}
             >
-              <ReactFlow<FlowNode, FlowEdge>
-                nodes={nodes}
-                edges={edges}
-                nodeTypes={canvasNodeTypes}
-                edgeTypes={canvasEdgeTypes}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onDelete={editable ? onDelete : undefined}
-                onConnect={editable ? onConnect : undefined}
-                isValidConnection={(connection) =>
-                  connection.source !== connection.target
-                }
-                connectionMode={ConnectionMode.Loose}
-                onNodeDragStart={onNodeDragStart}
-                onNodeDrag={onNodeDrag}
-                onNodeDragStop={onNodeDragStop}
-                onNodeClick={onNodeClick}
-                onNodeDoubleClick={onNodeDoubleClick}
-                onNodeMouseEnter={onNodeMouseEnter}
-                onPaneClick={onPaneClick}
-                nodesDraggable={editable && tool === 'select'}
-                nodesConnectable={
-                  editable && (tool === 'select' || tool === 'connect')
-                }
-                elementsSelectable={tool === 'select'}
-                selectionOnDrag={tool === 'select'}
-                selectionMode={SelectionMode.Partial}
-                panOnDrag={
-                  tool === 'hand' ? true : tool === 'select' ? [1, 2] : false
-                }
-                panOnScroll
-                zoomOnPinch
-                zoomOnDoubleClick={false}
-                deleteKeyCode={editable ? ['Backspace', 'Delete'] : null}
-                multiSelectionKeyCode="Shift"
-                minZoom={0.1}
-                maxZoom={2.5}
-                onlyRenderVisibleElements
-                colorMode={resolvedTheme === 'dark' ? 'dark' : 'light'}
-                proOptions={{ hideAttribution: true }}
-              >
-                <Background
-                  variant={BackgroundVariant.Dots}
-                  gap={20}
-                  size={1.2}
+              {trayOpen && editable ? (
+                <CanvasTray
+                  entries={trayEntries}
+                  onClose={() => setTrayOpen(false)}
+                  onPlace={(entry) => placeLinked(entry, viewportCenter())}
+                  onPlaceAll={placeAllLinked}
                 />
-                <Controls showInteractive={false} position="bottom-left" />
-                <MiniMap
-                  pannable
-                  zoomable
-                  position="bottom-right"
-                  nodeColor={minimapColor}
-                  nodeStrokeColor={(node) =>
-                    (node.data as CanvasNodeData).item.kind === 'phase' ||
-                    (node.data as CanvasNodeData).item.kind === 'frame'
-                      ? 'var(--workspace-shell-text-muted)'
-                      : 'transparent'
-                  }
-                />
-                <CanvasRemoteCursors cursors={realtime.cursors} />
-                {available ? (
-                  <CanvasCommentPins
-                    threads={commentThreads}
-                    itemsById={displayById}
-                    activeItemId={commentsOpen ? commentItemId : null}
-                    onOpen={openComments}
-                  />
-                ) : null}
-                {DRAW_TOOLS.has(tool) && editable ? (
-                  <CanvasRectOverlay onDraw={onDrawRect} />
-                ) : null}
-                {tool === 'pen' && editable ? (
-                  <CanvasPenOverlay
-                    color={CANVAS_COLORS[penColor].stroke}
-                    width={penWidth}
-                    onStroke={onStroke}
-                  />
-                ) : null}
-              </ReactFlow>
+              ) : null}
 
-              {editable ? (
-                <div className="pointer-events-none absolute top-3 left-3 z-10 flex items-center gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="pointer-events-auto h-8 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] shadow-sm"
-                    onClick={() => setTrayOpen((open) => !open)}
-                  >
-                    {trayOpen ? (
-                      <PanelLeftClose className="mr-1.5 h-3.5 w-3.5" />
-                    ) : (
-                      <PanelLeftOpen className="mr-1.5 h-3.5 w-3.5" />
-                    )}
-                    Add from project
-                    {trayEntries.length > 0 ? ` (${trayEntries.length})` : ''}
-                  </Button>
-                  {board.phases.length > 0 ? (
+              <div
+                ref={wrapperRef}
+                className={cn(
+                  'relative min-w-0 flex-1 bg-[var(--ozer-surface-canvas)]',
+                  placing && '[&_.react-flow__pane]:cursor-crosshair',
+                  tool === 'hand' && '[&_.react-flow__pane]:cursor-grab',
+                  tool === 'eraser' && '[&_.react-flow__pane]:cursor-cell',
+                )}
+                onPointerMove={(event) => {
+                  if (!realtime.connected) return;
+                  const point = screenToFlowPosition({
+                    x: event.clientX,
+                    y: event.clientY,
+                  });
+                  realtime.broadcastCursor(point.x, point.y);
+                }}
+                onPointerLeave={realtime.broadcastCursorLeave}
+                onDragOver={onDragOver}
+                onDrop={onDrop}
+              >
+                <ReactFlow<FlowNode, FlowEdge>
+                  nodes={nodes}
+                  edges={edges}
+                  nodeTypes={canvasNodeTypes}
+                  edgeTypes={canvasEdgeTypes}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onDelete={editable ? onDelete : undefined}
+                  onConnect={editable ? onConnect : undefined}
+                  isValidConnection={(connection) =>
+                    connection.source !== connection.target
+                  }
+                  connectionMode={ConnectionMode.Loose}
+                  onNodeDragStart={onNodeDragStart}
+                  onNodeDrag={onNodeDrag}
+                  onNodeDragStop={onNodeDragStop}
+                  onNodeClick={onNodeClick}
+                  onNodeDoubleClick={onNodeDoubleClick}
+                  onNodeMouseEnter={onNodeMouseEnter}
+                  onPaneClick={onPaneClick}
+                  nodesDraggable={editable && tool === 'select'}
+                  nodesConnectable={
+                    editable && (tool === 'select' || tool === 'connect')
+                  }
+                  elementsSelectable={tool === 'select'}
+                  selectionOnDrag={tool === 'select'}
+                  selectionMode={SelectionMode.Partial}
+                  panOnDrag={
+                    tool === 'hand' ? true : tool === 'select' ? [1, 2] : false
+                  }
+                  panOnScroll
+                  zoomOnPinch
+                  zoomOnDoubleClick={false}
+                  deleteKeyCode={editable ? ['Backspace', 'Delete'] : null}
+                  disableKeyboardA11y
+                  multiSelectionKeyCode="Shift"
+                  minZoom={0.1}
+                  maxZoom={2.5}
+                  onlyRenderVisibleElements
+                  colorMode={resolvedTheme === 'dark' ? 'dark' : 'light'}
+                  proOptions={{ hideAttribution: true }}
+                >
+                  <Background
+                    variant={BackgroundVariant.Dots}
+                    gap={20}
+                    size={1.2}
+                  />
+                  <Controls showInteractive={false} position="bottom-left" />
+                  <MiniMap
+                    pannable
+                    zoomable
+                    position="bottom-right"
+                    nodeColor={minimapColor}
+                    nodeStrokeColor={(node) =>
+                      (node.data as CanvasNodeData).item.kind === 'phase' ||
+                      (node.data as CanvasNodeData).item.kind === 'frame'
+                        ? 'var(--workspace-shell-text-muted)'
+                        : 'transparent'
+                    }
+                  />
+                  <CanvasRemoteCursors cursors={realtime.cursors} />
+                  {available ? (
+                    <CanvasCommentPins
+                      threads={commentThreads}
+                      itemsById={displayById}
+                      activeItemId={commentsOpen ? commentItemId : null}
+                      onOpen={openComments}
+                    />
+                  ) : null}
+                  {DRAW_TOOLS.has(tool) && editable ? (
+                    <CanvasRectOverlay onDraw={onDrawRect} />
+                  ) : null}
+                  {tool === 'pen' && editable ? (
+                    <CanvasPenOverlay
+                      color={CANVAS_COLORS[penColor].stroke}
+                      width={penWidth}
+                      onStroke={onStroke}
+                    />
+                  ) : null}
+                </ReactFlow>
+
+                {editable ? (
+                  <div className="pointer-events-none absolute top-3 left-3 z-10 flex items-center gap-2">
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
                       className="pointer-events-auto h-8 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] shadow-sm"
-                      title="Lay phases out as columns with their tasks and notes inside"
-                      onClick={arrangeByPhase}
+                      onClick={() => setTrayOpen((open) => !open)}
                     >
-                      <LayoutGrid className="mr-1.5 h-3.5 w-3.5" />
-                      Arrange by phase
+                      {trayOpen ? (
+                        <PanelLeftClose className="mr-1.5 h-3.5 w-3.5" />
+                      ) : (
+                        <PanelLeftOpen className="mr-1.5 h-3.5 w-3.5" />
+                      )}
+                      Add from project
+                      {trayEntries.length > 0 ? ` (${trayEntries.length})` : ''}
                     </Button>
-                  ) : null}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="pointer-events-auto h-8 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] shadow-sm"
-                    title="Client contacts and team members, with their roles"
-                    onClick={() => {
-                      setTeamFocus(null);
-                      setTeamOpen(true);
-                    }}
-                  >
-                    <Users className="mr-1.5 h-3.5 w-3.5" />
-                    Team
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                    {board.phases.length > 0 ? (
                       <Button
                         type="button"
                         size="sm"
                         variant="outline"
                         className="pointer-events-auto h-8 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] shadow-sm"
+                        title="Lay phases out as columns with their tasks and notes inside"
+                        onClick={arrangeByPhase}
                       >
-                        Templates
-                        <ChevronDown className="ml-1 h-3.5 w-3.5" />
+                        <LayoutGrid className="mr-1.5 h-3.5 w-3.5" />
+                        Arrange by phase
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-72">
-                      <DropdownMenuItem onSelect={insertTimeline}>
-                        <GanttChart className="mr-2 h-4 w-4" />
-                        <div className="min-w-0">
-                          <div className="text-sm">Timeline lane</div>
-                          <div className="text-xs text-[var(--workspace-shell-text-muted)]">
-                            Phases, milestones and task due dates, live
-                          </div>
-                        </div>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={arrangeTeam}>
-                        <Users className="mr-2 h-4 w-4" />
-                        <div className="min-w-0">
-                          <div className="text-sm">Team</div>
-                          <div className="text-xs text-[var(--workspace-shell-text-muted)]">
-                            Client, contacts and team with roles
-                          </div>
-                        </div>
-                      </DropdownMenuItem>
-                      {CANVAS_SECTION_TEMPLATES.map((template) => {
-                        const Icon =
-                          TEMPLATE_ICONS[template.preset] ?? LayoutGrid;
-                        return (
-                          <DropdownMenuItem
-                            key={template.preset}
-                            onSelect={() => insertTemplate(template)}
-                          >
-                            <Icon className="mr-2 h-4 w-4" />
-                            <div className="min-w-0">
-                              <div className="text-sm">{template.title}</div>
-                              <div className="text-xs text-[var(--workspace-shell-text-muted)]">
-                                {template.description}
-                              </div>
-                            </div>
-                          </DropdownMenuItem>
-                        );
-                      })}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  {uploadingImages + uploadingFiles > 0 ? (
-                    <span className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] px-2.5 py-1.5 text-xs text-[var(--workspace-shell-text-muted)] shadow-sm">
-                      Uploading {uploadingImages + uploadingFiles} file
-                      {uploadingImages + uploadingFiles === 1 ? '' : 's'}…
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {selectionBar}
-
-              <CanvasPresence
-                peers={realtime.peers}
-                me={presenceMe}
-                connected={realtime.connected}
-                actions={
-                  <>
-                    <ToolButton
-                      label="Search the canvas (⌘F)"
-                      onClick={() => setSearchOpen(true)}
+                    ) : null}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="pointer-events-auto h-8 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] shadow-sm"
+                      title="Client contacts and team members, with their roles"
+                      onClick={() => {
+                        setTeamFocus(null);
+                        setTeamOpen(true);
+                      }}
                     >
-                      <Search className="h-4 w-4" />
-                    </ToolButton>
-                    {available ? (
-                      <span className="relative">
-                        <ToolButton
-                          label="Comments"
-                          active={commentsOpen}
-                          onClick={() => {
-                            if (commentsOpen) {
-                              setCommentsOpen(false);
-                            } else {
-                              openComments(null);
-                            }
-                          }}
+                      <Users className="mr-1.5 h-3.5 w-3.5" />
+                      Team
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="pointer-events-auto h-8 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] shadow-sm"
                         >
-                          <MessageSquare className="h-4 w-4" />
-                        </ToolButton>
-                        {openCommentCount > 0 && !commentsOpen ? (
-                          <span className="pointer-events-none absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--ozer-accent)] px-1 text-[9px] font-bold text-[var(--ozer-white)]">
-                            {openCommentCount}
-                          </span>
-                        ) : null}
+                          Templates
+                          <ChevronDown className="ml-1 h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-72">
+                        <DropdownMenuItem onSelect={insertTimeline}>
+                          <GanttChart className="mr-2 h-4 w-4" />
+                          <div className="min-w-0">
+                            <div className="text-sm">Timeline lane</div>
+                            <div className="text-xs text-[var(--workspace-shell-text-muted)]">
+                              Phases, milestones and task due dates, live
+                            </div>
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={arrangeTeam}>
+                          <Users className="mr-2 h-4 w-4" />
+                          <div className="min-w-0">
+                            <div className="text-sm">Team</div>
+                            <div className="text-xs text-[var(--workspace-shell-text-muted)]">
+                              Client, contacts and team with roles
+                            </div>
+                          </div>
+                        </DropdownMenuItem>
+                        {CANVAS_SECTION_TEMPLATES.map((template) => {
+                          const Icon =
+                            TEMPLATE_ICONS[template.preset] ?? LayoutGrid;
+                          return (
+                            <DropdownMenuItem
+                              key={template.preset}
+                              onSelect={() => insertTemplate(template)}
+                            >
+                              <Icon className="mr-2 h-4 w-4" />
+                              <div className="min-w-0">
+                                <div className="text-sm">{template.title}</div>
+                                <div className="text-xs text-[var(--workspace-shell-text-muted)]">
+                                  {template.description}
+                                </div>
+                              </div>
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    {uploadingImages + uploadingFiles > 0 ? (
+                      <span className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] px-2.5 py-1.5 text-xs text-[var(--workspace-shell-text-muted)] shadow-sm">
+                        Uploading {uploadingImages + uploadingFiles} file
+                        {uploadingImages + uploadingFiles === 1 ? '' : 's'}…
                       </span>
                     ) : null}
-                    {editable ? (
+                  </div>
+                ) : null}
+
+                {selectionBar}
+
+                <CanvasPresence
+                  peers={realtime.peers}
+                  me={presenceMe}
+                  connected={realtime.connected}
+                  actions={
+                    <>
                       <ToolButton
-                        label="Canvas AI"
-                        onClick={() => setAiOpen(true)}
+                        label="Search the canvas (⌘F)"
+                        onClick={() => setSearchOpen(true)}
                       >
-                        <Sparkles className="h-4 w-4" />
+                        <Search className="h-4 w-4" />
                       </ToolButton>
-                    ) : null}
-                  </>
-                }
-              />
+                      <ToolButton
+                        label={
+                          fullscreen
+                            ? 'Exit full screen (Esc)'
+                            : 'Full screen (⇧F)'
+                        }
+                        active={fullscreen}
+                        onClick={() =>
+                          fullscreen ? setFullscreen(false) : enterFullscreen()
+                        }
+                      >
+                        {fullscreen ? (
+                          <Minimize2 className="h-4 w-4" />
+                        ) : (
+                          <Maximize2 className="h-4 w-4" />
+                        )}
+                      </ToolButton>
+                      <ToolButton
+                        label="Keyboard shortcuts (?)"
+                        onClick={() => setShortcutsOpen(true)}
+                      >
+                        <Keyboard className="h-4 w-4" />
+                      </ToolButton>
+                      {available ? (
+                        <span className="relative">
+                          <ToolButton
+                            label="Comments"
+                            active={commentsOpen}
+                            onClick={() => {
+                              if (commentsOpen) {
+                                setCommentsOpen(false);
+                              } else {
+                                openComments(null);
+                              }
+                            }}
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                          </ToolButton>
+                          {openCommentCount > 0 && !commentsOpen ? (
+                            <span className="pointer-events-none absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--ozer-accent)] px-1 text-[9px] font-bold text-[var(--ozer-white)]">
+                              {openCommentCount}
+                            </span>
+                          ) : null}
+                        </span>
+                      ) : null}
+                      {editable ? (
+                        <ToolButton
+                          label="Canvas AI"
+                          onClick={() => setAiOpen(true)}
+                        >
+                          <Sparkles className="h-4 w-4" />
+                        </ToolButton>
+                      ) : null}
+                    </>
+                  }
+                />
 
-              <CanvasToolbar
-                tool={tool}
-                onToolChange={(next) => {
-                  setTool(next);
-                  setConnectFrom(null);
-                }}
-                canEdit={editable}
-                canUndo={history.past.length > 0}
-                canRedo={history.future.length > 0}
-                onUndo={undo}
-                onRedo={redo}
-                onAddImage={() => setImageOpen(true)}
-                onAddLink={() => setLinkOpen(true)}
-                onAddFile={() => docInputRef.current?.click()}
-                penColor={penColor}
-                onPenColorChange={setPenColor}
-                penWidth={penWidth}
-                onPenWidthChange={setPenWidth}
-                shapeType={shapeType}
-                onShapeTypeChange={setShapeType}
-                connectPending={Boolean(connectFrom)}
-              />
-              <input
-                ref={docInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={(event) => {
-                  const files = Array.from(event.target.files ?? []);
-                  event.target.value = '';
-                  void uploadDocs(files);
-                }}
-              />
-            </div>
+                <CanvasToolbar
+                  tool={tool}
+                  onToolChange={(next) => {
+                    setTool(next);
+                    setConnectFrom(null);
+                  }}
+                  canEdit={editable}
+                  canUndo={history.past.length > 0}
+                  canRedo={history.future.length > 0}
+                  onUndo={undo}
+                  onRedo={redo}
+                  onAddImage={() => setImageOpen(true)}
+                  onAddLink={() => setLinkOpen(true)}
+                  onAddFile={() => docInputRef.current?.click()}
+                  onAddNote={available ? () => startNewNote() : undefined}
+                  penColor={penColor}
+                  onPenColorChange={setPenColor}
+                  penWidth={penWidth}
+                  onPenWidthChange={setPenWidth}
+                  shapeType={shapeType}
+                  onShapeTypeChange={setShapeType}
+                  connectPending={Boolean(connectFrom)}
+                />
+                <input
+                  ref={docInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(event) => {
+                    const files = Array.from(event.target.files ?? []);
+                    event.target.value = '';
+                    void uploadDocs(files);
+                  }}
+                />
+              </div>
 
-            {commentsOpen && available ? (
-              <CanvasCommentsPanel
-                accountId={accountId}
-                accountSlug={accountSlug}
-                jobId={jobId}
-                threads={commentThreads}
-                itemLabel={itemLabel}
-                activeItemId={commentItemId}
-                onActiveItemChange={setCommentItemId}
-                onFocusItem={focusItem}
-                selection={
-                  singleSelected
-                    ? {
-                        id: singleSelected.id,
-                        label: canvasItemText(singleSelected, lookups).label,
-                      }
-                    : null
-                }
-                people={lookups.peopleById}
-                mentionable={workspaceMembers}
-                currentUserId={user?.id ?? null}
-                canModerate={editable}
-                onUpsert={upsertComment}
-                onRemove={removeComment}
-                onClose={() => setCommentsOpen(false)}
-              />
-            ) : null}
-          </div>
+              {commentsOpen && available ? (
+                <CanvasCommentsPanel
+                  accountId={accountId}
+                  accountSlug={accountSlug}
+                  jobId={jobId}
+                  threads={commentThreads}
+                  itemLabel={itemLabel}
+                  activeItemId={commentItemId}
+                  onActiveItemChange={setCommentItemId}
+                  onFocusItem={focusItem}
+                  selection={
+                    singleSelected
+                      ? {
+                          id: singleSelected.id,
+                          label: canvasItemText(singleSelected, lookups).label,
+                        }
+                      : null
+                  }
+                  people={lookups.peopleById}
+                  mentionable={guest ? [] : workspaceMembers}
+                  currentUserId={user?.id ?? null}
+                  canModerate={editable}
+                  canComment={guest ? guest.canComment : true}
+                  onUpsert={upsertComment}
+                  onRemove={removeComment}
+                  onClose={() => setCommentsOpen(false)}
+                />
+              ) : null}
+            </div>,
+            frameHost,
+          )}
         </div>
 
         <CanvasSearchDialog
@@ -3280,7 +3909,15 @@ function ProjectCanvasInner({
           noteId={editingNoteId}
           onOpenChange={closeNoteDialog}
           onSaved={onNoteSaved}
+          onCreated={onNoteCreated}
         />
+
+        <CanvasShortcutsDialog
+          open={shortcutsOpen}
+          onOpenChange={setShortcutsOpen}
+        />
+
+        <CanvasReadingDialog reading={reading} onClose={closeReading} />
 
         <CanvasTeamDialog
           open={teamOpen}

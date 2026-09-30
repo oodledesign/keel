@@ -73,7 +73,7 @@ class ProjectCanvasAiService {
     if (!project) throw new Error('Project not found');
     const p = project as Row;
 
-    const [client, phases, tasks, notes, team] = await Promise.all([
+    const [client, phases, tasks, notes, team, clientTeam] = await Promise.all([
       p.client_id
         ? this.client
             .from('clients')
@@ -105,9 +105,16 @@ class ProjectCanvasAiService {
         .limit(6),
       this.loose
         .from('project_contacts')
-        .select('role, contact:contacts(full_name)')
+        .select('contact_id, role, contact:contacts(full_name)')
         .eq('project_id', jobId)
         .limit(20),
+      p.client_id
+        ? this.client
+            .from('client_contacts')
+            .select('contact_id, role, contact:contacts(full_name)')
+            .eq('client_id', str(p.client_id))
+            .limit(20)
+        : Promise.resolve({ data: [] }),
     ]);
 
     const lines: string[] = [];
@@ -151,7 +158,14 @@ class ProjectCanvasAiService {
       }
     }
 
-    const teamRows = (team.data ?? []) as Row[];
+    const projectRows = (team.data ?? []) as Row[];
+    const onProject = new Set(projectRows.map((row) => str(row.contact_id)));
+    const teamRows = [
+      ...((clientTeam.data ?? []) as Row[]).filter(
+        (row) => !onProject.has(str(row.contact_id)),
+      ),
+      ...projectRows,
+    ];
     if (teamRows.length) {
       lines.push('', 'People:');
       for (const row of teamRows) {

@@ -199,9 +199,13 @@ export function CanvasTeamDialog({
             {client ? (
               <div className="flex items-center gap-2 rounded-lg bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2 text-xs text-[var(--workspace-shell-text-muted)]">
                 <Building2 className="h-3.5 w-3.5 shrink-0" />
-                Client:
-                <span className="font-medium text-[var(--workspace-shell-text)]">
-                  {client.displayName || client.companyName}
+                <span>
+                  Client:{' '}
+                  <span className="font-medium text-[var(--workspace-shell-text)]">
+                    {client.displayName || client.companyName}
+                  </span>
+                  . Their contacts join the team automatically; manage them on
+                  the client record.
                 </span>
               </div>
             ) : null}
@@ -240,15 +244,18 @@ export function CanvasTeamDialog({
                       }),
                     )
                   }
-                  onRemove={() =>
-                    run(
-                      () =>
-                        removeProjectContact({
-                          ...project,
-                          contactId: contact.id,
-                        }),
-                      'Removed from the project',
-                    )
+                  onRemove={
+                    contact.isClientContact
+                      ? undefined
+                      : () =>
+                          run(
+                            () =>
+                              removeProjectContact({
+                                ...project,
+                                contactId: contact.id,
+                              }),
+                            'Removed from the project',
+                          )
                   }
                 />
               ))
@@ -328,7 +335,7 @@ function PersonRow({
   canEdit: boolean;
   highlighted: boolean;
   onSave: (details: PersonDetails) => Promise<boolean>;
-  onRemove: () => Promise<boolean>;
+  onRemove?: () => Promise<boolean>;
 }) {
   const [role, setRole] = useState(details.role ?? '');
   const [description, setDescription] = useState(details.description ?? '');
@@ -388,7 +395,7 @@ function PersonRow({
             </p>
           ) : null}
         </div>
-        {canEdit ? (
+        {canEdit && onRemove ? (
           <button
             type="button"
             onClick={() => void onRemove()}
@@ -610,11 +617,6 @@ function AddContact({
                     .join(' · ')}
                 </span>
               </span>
-              {candidate.isClientContact ? (
-                <span className="shrink-0 rounded-full bg-[var(--ozer-accent-subtle)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-accent-text)]">
-                  Client contact
-                </span>
-              ) : null}
             </button>
           </li>
         ))}

@@ -18,6 +18,7 @@ import {
   Link2,
   MessageSquare,
   MousePointer2,
+  NotebookPen,
   Pencil,
   Redo2,
   Sparkles,
@@ -334,6 +335,7 @@ export function CanvasToolbar({
   onAddImage,
   onAddLink,
   onAddFile,
+  onAddNote,
   penColor,
   onPenColorChange,
   penWidth,
@@ -352,6 +354,8 @@ export function CanvasToolbar({
   onAddImage: () => void;
   onAddLink: () => void;
   onAddFile: () => void;
+  /** Absent when notes can't be saved yet (canvas migration missing). */
+  onAddNote?: () => void;
   penColor: CanvasColorKey;
   onPenColorChange: (color: CanvasColorKey) => void;
   penWidth: number;
@@ -446,6 +450,14 @@ export function CanvasToolbar({
           ))}
         {canEdit ? (
           <>
+            {onAddNote ? (
+              <ToolButton
+                label="New project note (N) — saved to the project's notes"
+                onClick={onAddNote}
+              >
+                <NotebookPen className="h-4 w-4" />
+              </ToolButton>
+            ) : null}
             <ToolButton
               label="Add image — or drop / paste one onto the canvas"
               onClick={onAddImage}
@@ -503,6 +515,7 @@ export function CanvasSelectionBar({
   onAi,
   saveLinksCount = 0,
   onSaveLinks,
+  onSaveAsNote,
 }: {
   count: number;
   color: CanvasColorKey | undefined;
@@ -527,6 +540,7 @@ export function CanvasSelectionBar({
   onAi?: () => void;
   saveLinksCount?: number;
   onSaveLinks?: () => void;
+  onSaveAsNote?: () => void;
 }) {
   const [labelDraft, setLabelDraft] = useState(label ?? '');
 
@@ -607,6 +621,16 @@ export function CanvasSelectionBar({
             {saveLinksCount === 1
               ? 'Save link to notes'
               : `Save ${saveLinksCount} links to notes`}
+          </button>
+        ) : null}
+        {onSaveAsNote ? (
+          <button
+            type="button"
+            onClick={onSaveAsNote}
+            title="Turn this into a note in the project's notes"
+            className="rounded-lg px-2 py-1 text-xs font-medium text-[var(--workspace-shell-accent-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+          >
+            Save as project note
           </button>
         ) : null}
         {onAi ? (

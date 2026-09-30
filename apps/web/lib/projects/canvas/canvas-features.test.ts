@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { buildCanvasAiPrompt, parseCanvasAiResponse } from './canvas-ai';
 import {
+  canvasPasteOffset,
+  copyCanvasItems,
+  parseCanvasClipboard,
+  pasteCanvasItems,
+} from './canvas-clipboard';
+import {
   activeMentionIds,
   groupCanvasComments,
   mentionQueryAt,
@@ -458,5 +464,91 @@ describe('canvas link cards', () => {
       imageUrl: 'https://example.com/og.png',
     });
     expect(linkCardPreview({ title: 'x'.repeat(600) }).title).toHaveLength(500);
+  });
+});
+
+describe('canvas clipboard', () => {
+  const item = (
+    id: string,
+    kind: CanvasItem['kind'],
+    extra: Partial<CanvasItem> = {},
+  ): CanvasItem => ({
+    id,
+    kind,
+    refId: null,
+    x: 0,
+    y: 0,
+    w: 100,
+    h: 100,
+    zIndex: 1,
+    data: {},
+    updatedAt: '2026-09-30T00:00:00.000Z',
+    updatedBy: 'u1',
+    ...extra,
+  });
+
+  const a = item('a', 'sticky', { zIndex: 2 });
+  const b = item('b', 'link', { x: 200, zIndex: 1, data: { linkId: 'l1' } });
+  const task = item('t', 'task', { refId: 'task-1' });
+  const arrow = item('c', 'connector', { data: { source: 'a', target: 'b' } });
+  const loose = item('d', 'connector', { data: { source: 'a', target: 't' } });
+  const all = [a, b, task, arrow, loose];
+
+  it('copies freeform items and the arrows between them only', () => {
+    expect(copyCanvasItems([a, b, task], all).map((i) => i.id)).toEqual([
+      'a',
+      'b',
+      'c',
+    ]);
+  });
+
+  it('pastes fresh, offset copies stacked on top with arrows rewired', () => {
+    const pasted = pasteCanvasItems([a, b, arrow], {
+      dx: 24,
+      dy: 24,
+      newId: ids('n'),
+      zBase: () => 10,
+      keepLinkIds: false,
+    });
+    const map = byId(pasted);
+    // b sat below a, so it keeps the lower z-index.
+    expect(map.get('n0')).toMatchObject({ x: 224, y: 24, zIndex: 10 });
+    expect(map.get('n0')?.data.linkId).toBeUndefined();
+    expect(map.get('n1')).toMatchObject({ x: 24, zIndex: 11 });
+    expect(map.get('n2')?.data).toMatchObject({ source: 'n1', target: 'n0' });
+    expect(pasted.every((i) => i.updatedBy === null)).toBe(true);
+
+    const same = pasteCanvasItems([b], {
+      dx: 0,
+      dy: 0,
+      newId: ids('m'),
+      zBase: () => 1,
+      keepLinkIds: true,
+    });
+    expect(same[0]?.data.linkId).toBe('l1');
+  });
+
+  it('offsets next to visible originals, otherwise centres in view', () => {
+    const view = { x: 0, y: 0, w: 1000, h: 800 };
+    expect(
+      canvasPasteOffset([a], view, { sameProject: true, nudge: 48 }),
+    ).toEqual({ dx: 48, dy: 48 });
+    expect(
+      canvasPasteOffset([a], view, { sameProject: false, nudge: 48 }),
+    ).toEqual({ dx: 450, dy: 350 });
+    const far = item('f', 'sticky', { x: 5000, y: 5000 });
+    expect(
+      canvasPasteOffset([far], view, { sameProject: true, nudge: 24 }),
+    ).toEqual({ dx: -4550, dy: -4650 });
+  });
+
+  it('rejects clipboard data that is not canvas items', () => {
+    const clip = { v: 1, accountId: 'acc', projectId: 'p', items: [a, task] };
+    expect(parseCanvasClipboard(JSON.stringify(clip))?.items).toEqual([a]);
+    expect(parseCanvasClipboard('hello')).toBeNull();
+    expect(
+      parseCanvasClipboard(JSON.stringify({ ...clip, items: [task] })),
+    ).toBeNull();
+    expect(parseCanvasClipboard(JSON.stringify({ ...clip, v: 2 }))).toBeNull();
   });
 });

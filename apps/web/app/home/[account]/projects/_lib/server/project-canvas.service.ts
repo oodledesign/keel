@@ -3,6 +3,7 @@ import 'server-only';
 import { SupabaseClient } from '@supabase/supabase-js';
 
 import { requireUser } from '@kit/supabase/require-user';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import type { Database } from '~/lib/database.types';
 import {
@@ -16,6 +17,7 @@ import {
   logMissingRelation,
 } from '../../../_lib/server/supabase-errors';
 import type {
+  CreateProjectCanvasNoteInput,
   DeleteProjectCanvasItemsInput,
   LoadProjectCanvasInput,
   LoadProjectCanvasNoteInput,
@@ -24,6 +26,7 @@ import type {
   ProjectCanvasDoc,
   ProjectCanvasMember,
   ProjectCanvasNote,
+  ProjectCanvasPerson,
   UpdateProjectCanvasNoteInput,
   UpsertProjectCanvasItemsInput,
 } from '../schema/project-canvas.schema';
@@ -44,6 +47,7 @@ export type ProjectCanvasSnapshot = {
   contacts: ProjectCanvasContact[];
   docs: ProjectCanvasDoc[];
   comments: ProjectCanvasComment[];
+  people: ProjectCanvasPerson[];
 };
 
 const UNDEFINED_COLUMN = '42703';
@@ -52,17 +56,28 @@ const DOC_LIMIT = 200;
 /** Internal pages that already show up as phases or the brief. */
 const HIDDEN_DOC_TYPES = ['phase_page'];
 
+const CONTACT_COLUMNS = 'full_name, email, phone, picture_url, company_name';
+
+type ContactDetails = {
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  picture_url: string | null;
+  company_name: string | null;
+};
+
 type ProjectContactRow = {
   contact_id: string;
   role: string | null;
   description: string | null;
-  contact: {
-    full_name: string | null;
-    email: string | null;
-    phone: string | null;
-    picture_url: string | null;
-    company_name: string | null;
-  } | null;
+  contact: ContactDetails | null;
+};
+
+type ClientContactRow = {
+  contact_id: string;
+  role: string | null;
+  is_primary: boolean | null;
+  contact: ContactDetails | null;
 };
 
 type DocRow = {
@@ -135,7 +150,7 @@ class ProjectCanvasService {
   }
 
   async load(input: LoadProjectCanvasInput): Promise<ProjectCanvasSnapshot> {
-    await this.requireUserId();
+    const userId = await this.requireUserId();
     await this.verifyProject(input.accountId, input.jobId);
 
     const phaseIds = await this.projectPhaseIds(input);
@@ -154,7 +169,8 @@ class ProjectCanvasService {
         this.loadComments(input),
       ]);
 
-    const linked = { notes, members, contacts, docs, comments };
+    const people = await this.loadPeople(input, userId, comments);
+    const linked = { notes, members, contacts, docs, comments, people };
     if (itemsResult.error) {
       if (isMissingRelationError(itemsResult.error)) {
         logMissingRelation('project_canvas.load', itemsResult.error);
@@ -168,6 +184,53 @@ class ProjectCanvasService {
       items: (itemsResult.data ?? []).map(canvasItemFromRow),
       ...linked,
     };
+  }
+
+  /**
+   * Names for comment authors, task assignees and the viewer. Guests can't
+   * read workspace members, and the team can't read guests, so this reads
+   * personal accounts directly — only once `verifyProject` has passed, and
+   * never emails.
+   */
+  private async loadPeople(
+    input: LoadProjectCanvasInput,
+    userId: string,
+    comments: ProjectCanvasComment[],
+  ): Promise<ProjectCanvasPerson[]> {
+    const client = looseClient(this.client);
+    const [viewer, guest] = await Promise.all([
+      client.rpc('can_view_project_canvas', { p_project_id: input.jobId }),
+      client.rpc('is_accepted_project_guest', {
+        target_project_id: input.jobId,
+      }),
+    ]);
+    if (viewer.data !== true && guest.data !== true) return [];
+
+    const { data: tasks, error } = await this.client
+      .from('tasks')
+      .select('user_id')
+      .eq('project_id', input.jobId)
+      .not('user_id', 'is', null);
+    if (error) throw new Error(error.message);
+
+    const ids = new Set<string>([userId]);
+    for (const comment of comments) ids.add(comment.authorId);
+    for (const task of tasks ?? []) {
+      if (task.user_id) ids.add(task.user_id);
+    }
+
+    const { data, error: accountsError } = await getSupabaseServerAdminClient()
+      .from('accounts')
+      .select('id, name, picture_url')
+      .eq('is_personal_account', true)
+      .in('id', [...ids]);
+    if (accountsError) throw new Error(accountsError.message);
+
+    return (data ?? []).map((account) => ({
+      id: account.id,
+      name: account.name?.trim() || null,
+      pictureUrl: account.picture_url ?? null,
+    }));
   }
 
   private async loadComments(
@@ -209,6 +272,10 @@ class ProjectCanvasService {
     }));
   }
 
+  /**
+   * People added to the project, plus everyone on the project's client
+   * record. Client contacts use their client role until given a project one.
+   */
   private async loadContacts(
     input: LoadProjectCanvasInput,
   ): Promise<ProjectCanvasContact[]> {
@@ -216,46 +283,59 @@ class ProjectCanvasService {
       looseClient(this.client)
         .from('project_contacts')
         .select(
-          'contact_id, role, description, contact:contacts(full_name, email, phone, picture_url, company_name)',
+          `contact_id, role, description, contact:contacts(${CONTACT_COLUMNS})`,
         )
         .eq('project_id', input.jobId)
         .eq('account_id', input.accountId)
         .order('created_at', { ascending: true }),
       this.projectClientId(input),
     ]);
+
+    let rows: ProjectContactRow[] = [];
     if (contactsResult.error) {
-      if (isMissingRelationError(contactsResult.error)) {
-        logMissingRelation('project_canvas.contacts', contactsResult.error);
-        return [];
+      if (!isMissingRelationError(contactsResult.error)) {
+        throw new Error(contactsResult.error.message);
       }
-      throw new Error(contactsResult.error.message);
+      logMissingRelation('project_canvas.contacts', contactsResult.error);
+    } else {
+      rows = (contactsResult.data ?? []) as unknown as ProjectContactRow[];
     }
 
-    const rows = (contactsResult.data ?? []) as unknown as ProjectContactRow[];
-    const clientContactIds = new Set<string>();
-    if (clientId && rows.length > 0) {
+    const clientRows: ClientContactRow[] = [];
+    if (clientId) {
       const { data, error } = await this.client
         .from('client_contacts')
-        .select('contact_id')
+        .select(
+          `contact_id, role, is_primary, contact:contacts(${CONTACT_COLUMNS})`,
+        )
         .eq('client_id', clientId)
-        .in(
-          'contact_id',
-          rows.map((row) => row.contact_id),
-        );
+        .order('is_primary', { ascending: false })
+        .order('created_at', { ascending: true });
       if (error) throw new Error(error.message);
-      for (const row of data ?? []) clientContactIds.add(row.contact_id);
+      clientRows.push(...((data ?? []) as unknown as ClientContactRow[]));
     }
 
-    return rows.map((row) => ({
+    const clientRoles = new Map(
+      clientRows.map((row) => [row.contact_id, row.role]),
+    );
+    const onProject = new Set(rows.map((row) => row.contact_id));
+    const merged: ProjectContactRow[] = [
+      ...clientRows
+        .filter((row) => !onProject.has(row.contact_id))
+        .map((row) => ({ ...row, role: null, description: null })),
+      ...rows,
+    ];
+
+    return merged.map((row) => ({
       id: row.contact_id,
       name: row.contact?.full_name || row.contact?.email || 'Contact',
       email: row.contact?.email ?? null,
       phone: row.contact?.phone ?? null,
       pictureUrl: row.contact?.picture_url ?? null,
       companyName: row.contact?.company_name ?? null,
-      role: row.role,
+      role: row.role ?? clientRoles.get(row.contact_id) ?? null,
       description: row.description,
-      isClientContact: clientContactIds.has(row.contact_id),
+      isClientContact: clientRoles.has(row.contact_id),
     }));
   }
 
@@ -357,16 +437,47 @@ class ProjectCanvasService {
     return toCanvasNote(await this.requireProjectNote(input), null);
   }
 
+  private async requireCanEdit(accountId: string) {
+    const userId = await this.requireUserId();
+    const { data: canEdit, error } = await looseClient(this.client).rpc(
+      'can_edit_project_canvas',
+      { p_account_id: accountId },
+    );
+    if (error) throw new Error(error.message);
+    if (canEdit !== true) throw new Error('Permission denied');
+    return userId;
+  }
+
+  /** A new note on the project, created from the canvas. */
+  async createNote(
+    input: CreateProjectCanvasNoteInput,
+  ): Promise<ProjectCanvasNote> {
+    const userId = await this.requireCanEdit(input.accountId);
+    await this.verifyProject(input.accountId, input.jobId);
+
+    const { data, error } = await this.client
+      .from('notes')
+      .insert({
+        account_id: input.accountId,
+        project_id: input.jobId,
+        user_id: userId,
+        created_by: userId,
+        title: input.title.trim(),
+        content: input.content,
+        category: 'idea',
+        tags: [],
+        is_pinned: false,
+      })
+      .select(NOTE_COLUMNS)
+      .single();
+    if (error) throw new Error(error.message);
+    return toCanvasNote(data as NoteRow, NOTE_DISPLAY_CHARS);
+  }
+
   async updateNote(
     input: UpdateProjectCanvasNoteInput,
   ): Promise<ProjectCanvasNote> {
-    await this.requireUserId();
-    const { data: canEdit, error: permissionError } = await looseClient(
-      this.client,
-    ).rpc('can_edit_project_canvas', { p_account_id: input.accountId });
-    if (permissionError) throw new Error(permissionError.message);
-    if (canEdit !== true) throw new Error('Permission denied');
-
+    await this.requireCanEdit(input.accountId);
     await this.verifyProject(input.accountId, input.jobId);
     const note = await this.requireProjectNote(input);
 

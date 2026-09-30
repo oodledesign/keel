@@ -132,6 +132,16 @@ export const UpdateProjectCanvasNoteSchema = z.object({
   content: z.string().max(200_000),
 });
 
+export const CreateProjectCanvasNoteSchema = z
+  .object({
+    ...accountProject,
+    title: z.string().max(500),
+    content: z.string().max(200_000),
+  })
+  .refine((note) => note.title.trim() || note.content.trim(), {
+    message: 'Give the note a title or some content',
+  });
+
 export type CanvasItemInput = z.infer<typeof CanvasItemInputSchema>;
 export type LoadProjectCanvasInput = z.infer<typeof LoadProjectCanvasSchema>;
 export type UpsertProjectCanvasItemsInput = z.infer<
@@ -145,6 +155,9 @@ export type LoadProjectCanvasNoteInput = z.infer<
 >;
 export type UpdateProjectCanvasNoteInput = z.infer<
   typeof UpdateProjectCanvasNoteSchema
+>;
+export type CreateProjectCanvasNoteInput = z.infer<
+  typeof CreateProjectCanvasNoteSchema
 >;
 
 export type ProjectCanvasNote = {
@@ -163,6 +176,13 @@ export type ProjectCanvasMember = {
   userId: string;
   role: string | null;
   description: string | null;
+};
+
+/** Name and avatar for comment authors and task assignees, including guests. */
+export type ProjectCanvasPerson = {
+  id: string;
+  name: string | null;
+  pictureUrl: string | null;
 };
 
 /** A contact (client contact, consultant, supplier…) on this project. */

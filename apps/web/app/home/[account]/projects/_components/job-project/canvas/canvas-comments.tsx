@@ -125,6 +125,8 @@ type PanelProps = {
   mentionable: CanvasPerson[];
   currentUserId: string | null;
   canModerate: boolean;
+  /** False for guests invited without the comment permission. */
+  canComment: boolean;
   onUpsert: (comment: ProjectCanvasComment) => void;
   onRemove: (commentId: string) => void;
   onClose: () => void;
@@ -186,6 +188,7 @@ function ThreadList({
   itemLabel,
   selection,
   people,
+  canComment,
   onActiveItemChange,
   onFocusItem,
   filter,
@@ -201,7 +204,7 @@ function ThreadList({
 
   return (
     <>
-      {selection ? (
+      {selection && canComment ? (
         <button
           type="button"
           onClick={() => onActiveItemChange(selection.id)}
@@ -292,13 +295,15 @@ function ThreadView({
   mentionable,
   currentUserId,
   canModerate,
+  canComment,
   onUpsert,
   onRemove,
 }: PanelProps & { itemId: string; thread: CanvasThread | null }) {
   const [busy, setBusy] = useState(false);
   const exists = itemLabel(itemId) !== null;
   const canResolve =
-    thread !== null && (canModerate || thread.root.authorId === currentUserId);
+    thread !== null &&
+    (canModerate || (canComment && thread.root.authorId === currentUserId));
 
   const toggleResolved = async () => {
     if (!thread) return;
@@ -384,12 +389,14 @@ function ThreadView({
           ))
         ) : (
           <p className="py-6 text-center text-sm text-[var(--workspace-shell-text-muted)]">
-            Start the conversation — type @ to mention a teammate.
+            {canComment
+              ? 'Start the conversation — type @ to mention a teammate.'
+              : 'No comments on this item yet.'}
           </p>
         )}
       </div>
 
-      {exists || thread ? (
+      {canComment && (exists || thread) ? (
         <CommentComposer
           mentionable={mentionable}
           placeholder={

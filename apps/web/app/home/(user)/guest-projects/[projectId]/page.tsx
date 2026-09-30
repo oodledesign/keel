@@ -7,12 +7,13 @@ import { PageBody } from '@kit/ui/page';
 
 import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
-import { GuestProjectBoard } from '~/lib/projects/components/guest-project-board';
 import {
   linkPendingProjectGuestsForUser,
   listAcceptedGuestsForUser,
 } from '~/lib/projects/project-guests.service';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+
+import { GuestProjectView } from './_components/guest-project-view';
 
 interface PageProps {
   params: Promise<{ projectId: string }>;
@@ -59,7 +60,7 @@ async function PersonalGuestProjectPage(props: PageProps) {
 
   return (
     <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-6">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
@@ -70,7 +71,7 @@ async function PersonalGuestProjectPage(props: PageProps) {
               {projectName}
             </h1>
             <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-              You can work on this project&apos;s tasks only.
+              You can see this project&apos;s tasks and canvas.
             </p>
           </div>
           <Link
@@ -81,9 +82,10 @@ async function PersonalGuestProjectPage(props: PageProps) {
           </Link>
         </div>
 
-        <GuestProjectBoard
+        <GuestProjectView
           projectId={projectId}
           accountId={access.accountId}
+          accountSlug={access.accountSlug ?? access.accountId}
           permissions={access.permissions}
           initialTasks={(tasks ?? []) as Array<Record<string, unknown>>}
         />

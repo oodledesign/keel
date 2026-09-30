@@ -6,6 +6,7 @@ import { Button } from '@kit/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -17,39 +18,56 @@ import { NoteBodyEditor } from '../../../../notes/_components/note-body-editor';
 import { getErrorMessage } from '../../../_lib/error-message';
 import type { ProjectCanvasNote } from '../../../_lib/schema/project-canvas.schema';
 import {
+  createProjectCanvasNote,
   loadProjectCanvasNote,
   updateProjectCanvasNote,
 } from '../../../_lib/server/project-canvas.actions';
 
 type NoteDraft = { title: string; content: string };
 
+const EMPTY_DRAFT: NoteDraft = { title: '', content: '' };
+
+/**
+ * Edit a project note, or write a new one (`noteId` of `'new'`) that's saved
+ * to the project and placed on the canvas.
+ */
 export function CanvasNoteDialog({
   accountId,
   jobId,
   noteId,
   onOpenChange,
   onSaved,
+  onCreated,
 }: {
   accountId: string;
   jobId: string;
-  noteId: string | null;
+  noteId: string | 'new' | null;
   onOpenChange: (open: boolean) => void;
   onSaved: (note: ProjectCanvasNote) => void;
+  onCreated: (note: ProjectCanvasNote) => void;
 }) {
+  const creating = noteId === 'new';
   return (
     <Dialog open={Boolean(noteId)} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[85vh] flex-col gap-3 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)] sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Edit note</DialogTitle>
+          <DialogTitle>
+            {creating ? 'New project note' : 'Edit note'}
+          </DialogTitle>
+          {creating ? (
+            <DialogDescription>
+              Saved to this project&apos;s notes and added to the canvas.
+            </DialogDescription>
+          ) : null}
         </DialogHeader>
         {noteId ? (
           <NoteEditorBody
             key={noteId}
             accountId={accountId}
             jobId={jobId}
-            noteId={noteId}
+            noteId={creating ? null : noteId}
             onClose={() => onOpenChange(false)}
-            onSaved={onSaved}
+            onSaved={creating ? onCreated : onSaved}
           />
         ) : null}
       </DialogContent>
@@ -66,16 +84,20 @@ function NoteEditorBody({
 }: {
   accountId: string;
   jobId: string;
-  noteId: string;
+  /** Null while writing a new note. */
+  noteId: string | null;
   onClose: () => void;
   onSaved: (note: ProjectCanvasNote) => void;
 }) {
-  const [initial, setInitial] = useState<NoteDraft | null>(null);
-  const [draft, setDraft] = useState<NoteDraft>({ title: '', content: '' });
+  const [initial, setInitial] = useState<NoteDraft | null>(
+    noteId ? null : EMPTY_DRAFT,
+  );
+  const [draft, setDraft] = useState<NoteDraft>(EMPTY_DRAFT);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (!noteId) return;
     let cancelled = false;
     loadProjectCanvasNote({ accountId, jobId, noteId })
       .then((note) => {
@@ -95,6 +117,7 @@ function NoteEditorBody({
   const dirty =
     initial !== null &&
     (draft.title !== initial.title || draft.content !== initial.content);
+  const empty = !draft.title.trim() && !draft.content.trim();
 
   const save = async () => {
     if (!dirty) {
@@ -103,13 +126,20 @@ function NoteEditorBody({
     }
     setSaving(true);
     try {
-      const note = await updateProjectCanvasNote({
-        accountId,
-        jobId,
-        noteId,
-        title: draft.title,
-        content: draft.content,
-      });
+      const note = noteId
+        ? await updateProjectCanvasNote({
+            accountId,
+            jobId,
+            noteId,
+            title: draft.title,
+            content: draft.content,
+          })
+        : await createProjectCanvasNote({
+            accountId,
+            jobId,
+            title: draft.title,
+            content: draft.content,
+          });
       onSaved(note);
       onClose();
     } catch (error) {
@@ -137,10 +167,17 @@ function NoteEditorBody({
     <>
       <Input
         value={draft.title}
+        autoFocus={!noteId}
         placeholder="Untitled note"
         onChange={(event) =>
           setDraft((prev) => ({ ...prev, title: event.target.value }))
         }
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+            event.preventDefault();
+            void save();
+          }
+        }}
         className="font-heading h-10 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-base font-semibold"
       />
       <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-[color:var(--workspace-shell-border)] [&_.note-body-editor]:min-h-[40vh] [&_.note-body-editor]:px-4 [&_.note-body-editor]:pb-6 [&_.note-body-editor]:lg:px-5">
@@ -154,8 +191,12 @@ function NoteEditorBody({
         <Button type="button" variant="ghost" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="button" disabled={saving} onClick={save}>
-          {saving ? 'Saving…' : 'Save note'}
+        <Button
+          type="button"
+          disabled={saving || (!noteId && empty)}
+          onClick={save}
+        >
+          {saving ? 'Saving…' : noteId ? 'Save note' : 'Add note'}
         </Button>
       </DialogFooter>
     </>

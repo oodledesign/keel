@@ -38,6 +38,8 @@ export type CanvasLookups = {
   accountSlug: string;
   jobId: string;
   canEdit: boolean;
+  /** A project guest is viewing: people and the client are locked, and there are no workspace links. */
+  guest: boolean;
   phasesById: Map<string, PhaseListItem>;
   tasksById: Map<string, JobBoardTask>;
   subtaskCounts: Map<string, { total: number; done: number }>;
@@ -53,6 +55,16 @@ export type CanvasLookups = {
 };
 
 export type CanvasPersonRef = { kind: 'member' | 'contact'; id: string };
+
+/**
+ * Who a task is assigned to. A contact assignee wins: `user_id` stays set to
+ * the internal owner when a task is handed to a contact.
+ */
+export function taskAssigneeId(
+  task: Pick<JobBoardTask, 'user_id' | 'assignee_contact_id'>,
+): string | null {
+  return task.assignee_contact_id ?? task.user_id ?? null;
+}
 
 export type CanvasActions = {
   updateItemData: (id: string, patch: Partial<CanvasItemData>) => void;
