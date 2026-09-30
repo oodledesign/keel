@@ -77,6 +77,17 @@ OAuth is user-level (not bound to one workspace). `list_tasks` defaults to outst
 | `update_subtask` | Patch a subtask with the same fields as `update_task`.                                                                                                                                                                                                              |
 | `extract_tasks`  | Parse a chat dump or bullets into proposed tasks (`mode=dry_run`, default) or create them (`mode=commit`). Includes `duration_minutes` (estimated when omitted). Links client/project on explicit ids or high-confidence name matches.                              |
 
+### Assigning tasks
+
+`list_task_assignees` (`account_id`, optional `client_id`, `q`, `kind`) returns the workspace's team members (`kind=member`, `id` = user id) and CRM contacts (`kind=contact`, `id` = contact id). Pass `client_id` to limit contacts to that client's contacts.
+
+`create_task`, `update_task`, `create_subtask`, and `update_subtask` accept:
+
+- `assignee_user_id`: a team member of the task's workspace. On update, `null` resets the owner to the calling user.
+- `assignee_contact_id`: a CRM contact in the task's workspace. When the task has a client, the contact must be linked to that client. The calling user stays the internal owner (`tasks.user_id`), matching the web app. On update, `null` clears the contact.
+
+Only one of the two may be set per call. Assigning to someone other than yourself requires a workspace task (a `project_id` or `client_id`). `list_tasks` accepts `assignee_user_id` / `assignee_contact_id` filters, and task results include `assignee_kind`, `assignee_name`, `assignee_user_id`, `assignee_contact_id`, and `owner_user_id`.
+
 Subtasks are the same `tasks` rows as the web app: `parent_task_id` points at the root parent. Nesting a subtask under another subtask is rejected.
 
 `list_tasks` does not apply an implicit client or project filter. Pass `account_id` from `list_workspaces`, or `client_id` / `project_id`, only when the user asks to narrow the list. Use `offset` when `meta.truncated` is true.

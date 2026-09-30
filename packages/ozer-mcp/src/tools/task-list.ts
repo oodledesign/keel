@@ -57,6 +57,20 @@ export const listTasksSchema = z.object({
     .describe(
       'When true, only tasks assigned to the authenticated user (tasks.user_id).',
     ),
+  assignee_user_id: z
+    .string()
+    .uuid()
+    .optional()
+    .describe(
+      'Only tasks assigned to this team member (user id from list_task_assignees). Excludes tasks assigned to a contact.',
+    ),
+  assignee_contact_id: z
+    .string()
+    .uuid()
+    .optional()
+    .describe(
+      'Only tasks assigned to this CRM contact (contact id from list_task_assignees).',
+    ),
   q: z.string().trim().min(1).max(200).optional().describe('Title search.'),
   sort: taskListSortSchema
     .optional()

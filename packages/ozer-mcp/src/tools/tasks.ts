@@ -4,6 +4,13 @@ import { z } from 'zod';
 
 import { createTaskForUser } from '@kit/tasks/create-task';
 
+import {
+  type TaskAssigneeName,
+  createAssigneeFields,
+  loadTaskAssigneeNames,
+  resolveTaskAssigneePatch,
+  updateAssigneeFields,
+} from './assignees';
 import { resolveMcpCreateDurationMinutes } from './duration';
 import { loadLinkedNames, uniqueIds } from './lookup';
 import {
@@ -70,6 +77,7 @@ export const createTaskSchema = z.object({
   client_id: z.string().uuid().optional(),
   area_id: z.string().uuid().optional(),
   notes: z.string().optional(),
+  ...createAssigneeFields,
 });
 
 export const updateTaskSchema = z.object({
@@ -91,6 +99,7 @@ export const updateTaskSchema = z.object({
   client_id: z.string().uuid().nullable().optional(),
   area_id: z.string().uuid().nullable().optional(),
   notes: z.string().nullable().optional(),
+  ...updateAssigneeFields,
 });
 
 const listSubtasksSchema = z.object({
@@ -105,11 +114,12 @@ const createSubtaskSchema = z.object({
   due_date: z.string().trim().optional(),
   duration_minutes: durationMinutesCreateSchema,
   notes: z.string().optional(),
+  ...createAssigneeFields,
 });
 
 const TASK_LIST_SELECT =
-  'id, title, status, priority, due_date, duration_minutes, updated_at, project_id, phase_id, client_id, area_id, account_id, parent_task_id';
-const TASK_DETAIL_SELECT = `${TASK_LIST_SELECT}, notes, user_id`;
+  'id, title, status, priority, due_date, duration_minutes, updated_at, project_id, phase_id, client_id, area_id, account_id, parent_task_id, user_id, assignee_contact_id';
+const TASK_DETAIL_SELECT = `${TASK_LIST_SELECT}, notes`;
 
 type TaskRow = {
   id: string;
@@ -127,9 +137,10 @@ type TaskRow = {
   notes?: string | null;
   account_id?: string | null;
   user_id?: string | null;
+  assignee_contact_id?: string | null;
 };
 
-type TaskListExtras = {
+type TaskListExtras = Partial<TaskAssigneeName> & {
   project_name?: string | null;
   client_name?: string | null;
   area_name?: string | null;
@@ -156,6 +167,11 @@ function mapTask(row: TaskRow, extras?: TaskListExtras) {
     workspace_name: extras?.workspace_name ?? null,
     workspace_slug: extras?.workspace_slug ?? null,
     parent_task_id: row.parent_task_id ?? null,
+    owner_user_id: row.user_id ?? null,
+    assignee_kind: extras?.assignee_kind ?? null,
+    assignee_name: extras?.assignee_name ?? null,
+    assignee_user_id: row.assignee_contact_id ? null : (row.user_id ?? null),
+    assignee_contact_id: row.assignee_contact_id ?? null,
   };
 }
 
@@ -317,8 +333,9 @@ async function loadAssignmentNames(
   row: TaskRow,
   workspaces?: McpWorkspace[],
 ): Promise<TaskListExtras> {
-  const [extras, areaResult] = await Promise.all([
+  const [extras, assigneeNames, areaResult] = await Promise.all([
     loadLinkedNames(supabase, [row], workspaces),
+    loadTaskAssigneeNames(supabase, [row]),
     row.area_id
       ? supabase
           .from('areas')
@@ -337,6 +354,7 @@ async function loadAssignmentNames(
 
   return {
     ...(extras.get(row.id) ?? {}),
+    ...(assigneeNames.get(row.id) ?? {}),
     area_name:
       (areaResult.data as { name?: string | null } | null)?.name?.trim() ||
       null,
@@ -353,8 +371,63 @@ async function mapNamedTask(
   return mapTaskDetail(row, extras);
 }
 
+/** Workspace/client a new root task will land in, for assignee validation. */
+async function resolveCreateAssigneeContext(
+  supabase: SupabaseClient,
+  input: { project_id?: string; client_id?: string },
+): Promise<{ accountId: string | null; clientId: string | null }> {
+  let accountId: string | null = null;
+  let clientId: string | null = input.client_id ?? null;
+
+  if (input.project_id) {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('account_id, client_id')
+      .eq('id', input.project_id)
+      .maybeSingle();
+
+    assertSupabaseOk(data, error, 'resolve project');
+
+    const project = data as {
+      account_id?: string | null;
+      client_id?: string | null;
+    } | null;
+    if (!project?.account_id) {
+      throw new Error('Project not found');
+    }
+
+    accountId = project.account_id;
+    clientId = clientId ?? project.client_id ?? null;
+  }
+
+  if (input.client_id) {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('account_id')
+      .eq('id', input.client_id)
+      .maybeSingle();
+
+    assertSupabaseOk(data, error, 'resolve client');
+
+    const clientAccountId = (data as { account_id?: string | null } | null)
+      ?.account_id;
+    if (!clientAccountId) {
+      throw new Error('Client not found');
+    }
+
+    if (accountId && accountId !== clientAccountId) {
+      throw new Error('Client and project must belong to the same workspace');
+    }
+
+    accountId = accountId ?? clientAccountId;
+  }
+
+  return { accountId, clientId };
+}
+
 async function applyTaskFieldUpdates(
   supabase: SupabaseClient,
+  userId: string,
   input: z.infer<typeof updateTaskSchema>,
   options?: { requireSubtask?: boolean },
 ) {
@@ -461,6 +534,23 @@ async function applyTaskFieldUpdates(
     }
   }
 
+  const assigneePatch = await resolveTaskAssigneePatch(
+    supabase,
+    userId,
+    input,
+    {
+      accountId:
+        typeof updates.account_id === 'string'
+          ? updates.account_id
+          : (existing.account_id ?? null),
+      clientId:
+        'client_id' in updates
+          ? ((updates.client_id as string | null | undefined) ?? null)
+          : (existing.client_id ?? null),
+    },
+  );
+  Object.assign(updates, assigneePatch);
+
   if (Object.keys(updates).length === 0) {
     throw new Error('Provide at least one field to update');
   }
@@ -510,6 +600,12 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         throw new Error('Access denied for this workspace');
       }
 
+      if (input.mine && input.assignee_user_id) {
+        throw new Error(
+          'mine and assignee_user_id cannot be combined. Use assignee_user_id with your own user id (see list_task_assignees) to exclude contact-assigned tasks, or mine=true for everything you own.',
+        );
+      }
+
       const statuses = resolveTaskListStatuses(input.status);
       const from = input.offset;
       const to = input.offset + input.limit - 1;
@@ -553,6 +649,14 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
       if (input.mine) {
         query = query.eq('user_id', userId);
       }
+      if (input.assignee_user_id) {
+        query = query
+          .eq('user_id', input.assignee_user_id)
+          .is('assignee_contact_id', null);
+      }
+      if (input.assignee_contact_id) {
+        query = query.eq('assignee_contact_id', input.assignee_contact_id);
+      }
       if (input.q) {
         query = query.ilike('title', ilikeContains(input.q));
       }
@@ -563,7 +667,16 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
       const fetched = (data ?? []) as TaskRow[];
       const rows =
         input.sort === 'priority' ? sortTaskRows(fetched, 'priority') : fetched;
-      const extras = await loadLinkedNames(supabase, rows, workspaces);
+      const [linkedNames, assigneeNames] = await Promise.all([
+        loadLinkedNames(supabase, rows, workspaces),
+        loadTaskAssigneeNames(supabase, rows),
+      ]);
+      const extras = new Map(
+        rows.map((row) => [
+          row.id,
+          { ...linkedNames.get(row.id), ...assigneeNames.get(row.id) },
+        ]),
+      );
       const totalCount = count ?? rows.length;
       const truncated = input.offset + rows.length < totalCount;
       const nextOffset = truncated ? input.offset + rows.length : null;
@@ -598,6 +711,8 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
             parent_task_id: input.parent_task_id ?? null,
             include_subtasks: input.include_subtasks,
             mine: input.mine,
+            assignee_user_id: input.assignee_user_id ?? null,
+            assignee_contact_id: input.assignee_contact_id ?? null,
             q: input.q ?? null,
           },
           hint: buildTaskListHint({
@@ -615,7 +730,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     'get_task',
     {
       description:
-        'Fetch one task by id, including notes, duration_minutes, project/client/workspace/area names, parent_task_id, and a subtasks summary (id, title, status, duration, due date).',
+        'Fetch one task by id, including notes, duration_minutes, assignee (assignee_kind, assignee_name, assignee_user_id / assignee_contact_id), project/client/workspace/area names, parent_task_id, and a subtasks summary (id, title, status, duration, due date).',
       inputSchema: getTaskSchema,
     },
     async (input) => {
@@ -638,7 +753,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     'create_task',
     {
       description:
-        'Create a root task for the authenticated user. Always include duration_minutes (estimated effort in integer minutes, 1–10080). If omitted, the server estimates from the title and notes (keyword bands; default 30). Optional project_id, phase_id, and client_id link it to a project/phase/client (use search_projects / list_project_phases / search_clients). phase_id must belong to that project. To add children, use create_subtask with the returned id as parent_task_id.',
+        'Create a root task for the authenticated user. Always include duration_minutes (estimated effort in integer minutes, 1–10080). If omitted, the server estimates from the title and notes (keyword bands; default 30). Optional project_id, phase_id, and client_id link it to a project/phase/client (use search_projects / list_project_phases / search_clients). phase_id must belong to that project. To assign it, pass assignee_user_id (team member) or assignee_contact_id (a contact of the task’s client) using ids from list_task_assignees; the task must be in a workspace (set project_id or client_id). To add children, use create_subtask with the returned id as parent_task_id.',
       inputSchema: createTaskSchema,
     },
     async (input) => {
@@ -653,6 +768,17 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         phaseId = assignment.phase_id ?? undefined;
         projectId = input.project_id ?? assignment.inferred_project_id;
       }
+
+      const assigneeContext = await resolveCreateAssigneeContext(supabase, {
+        project_id: projectId,
+        client_id: input.client_id,
+      });
+      const assigneePatch = await resolveTaskAssigneePatch(
+        supabase,
+        userId,
+        input,
+        assigneeContext,
+      );
 
       const result = await createTaskForUser(supabase, userId, {
         title: input.title,
@@ -669,6 +795,8 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         clientId: input.client_id,
         areaId: input.area_id,
         notes: input.notes,
+        assigneeUserId: assigneePatch.user_id,
+        assigneeContactId: assigneePatch.assignee_contact_id,
         source: 'mcp',
       });
 
@@ -685,11 +813,11 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     'update_task',
     {
       description:
-        'Update a task (root or subtask) owned by the authenticated user. Only provided fields are changed. Supports title, status, priority, due_date, duration_minutes, notes, project_id, phase_id, client_id, and area_id. Set phase_id to assign a task on a phased project; pass null to unphase. The phase must belong to the task’s project. Moving project_id without a new phase_id clears the old phase. Use create_subtask / list_subtasks / update_subtask for child tasks.',
+        'Update a task (root or subtask) owned by the authenticated user. Only provided fields are changed. Supports title, status, priority, due_date, duration_minutes, notes, project_id, phase_id, client_id, and area_id. Set phase_id to assign a task on a phased project; pass null to unphase. The phase must belong to the task’s project. Moving project_id without a new phase_id clears the old phase. Reassign with assignee_user_id (team member; null resets to you) or assignee_contact_id (contact of the task’s client; null clears) using ids from list_task_assignees. Use create_subtask / list_subtasks / update_subtask for child tasks.',
       inputSchema: updateTaskSchema,
     },
     async (input) => {
-      const task = await applyTaskFieldUpdates(supabase, input);
+      const task = await applyTaskFieldUpdates(supabase, userId, input);
       return toolJson({ task: await mapNamedTask(supabase, task, userId) });
     },
   );
@@ -723,7 +851,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     'create_subtask',
     {
       description:
-        'Create a subtask under a root parent task. Inherits project/area from the parent. Always include duration_minutes (integer minutes, 1–10080); if omitted, the server estimates from the title and notes (keyword bands; default 30). Also accepts optional status, priority, due_date, and notes.',
+        'Create a subtask under a root parent task. Inherits project/area from the parent. Always include duration_minutes (integer minutes, 1–10080); if omitted, the server estimates from the title and notes (keyword bands; default 30). Also accepts optional status, priority, due_date, notes, and assignee_user_id / assignee_contact_id (from list_task_assignees, validated against the parent’s workspace and client).',
       inputSchema: createSubtaskSchema,
     },
     async (input) => {
@@ -739,6 +867,16 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         );
       }
 
+      const assigneePatch = await resolveTaskAssigneePatch(
+        supabase,
+        userId,
+        input,
+        {
+          accountId: parent.account_id ?? null,
+          clientId: parent.client_id ?? null,
+        },
+      );
+
       const result = await createTaskForUser(supabase, userId, {
         title: input.title,
         status: input.status,
@@ -750,6 +888,8 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
           notes: input.notes,
         }),
         notes: input.notes,
+        assigneeUserId: assigneePatch.user_id,
+        assigneeContactId: assigneePatch.assignee_contact_id,
         parentTaskId: parent.id,
         phaseId: parent.phase_id ?? undefined,
         parentTaskContext: {
@@ -781,11 +921,11 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     'update_subtask',
     {
       description:
-        'Update a subtask (a task with parent_task_id set). Same fields as update_task: title, status, priority, due_date, duration_minutes, notes, and optional project_id/area_id if the child should move independently of its parent. Only provided fields are changed.',
+        'Update a subtask (a task with parent_task_id set). Same fields as update_task: title, status, priority, due_date, duration_minutes, notes, optional project_id/area_id if the child should move independently of its parent, and assignee_user_id / assignee_contact_id. Only provided fields are changed.',
       inputSchema: updateTaskSchema,
     },
     async (input) => {
-      const subtask = await applyTaskFieldUpdates(supabase, input, {
+      const subtask = await applyTaskFieldUpdates(supabase, userId, input, {
         requireSubtask: true,
       });
       return toolJson({
