@@ -519,6 +519,7 @@ export async function buildClientsOverview(params: {
       viewingCount: 0,
       leaseCount: 0,
       highlights: [],
+      comms: null,
     };
   });
 }
@@ -758,6 +759,7 @@ async function buildCommercialClientsOverview(params: {
       viewingCount: viewingsByClient.get(client.id) ?? 0,
       leaseCount: leasesByClient.get(client.id) ?? 0,
       highlights,
+      comms: null,
     };
   });
 }

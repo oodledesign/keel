@@ -23,6 +23,7 @@ import {
   ChevronDown,
   ChevronRight,
   ExternalLink,
+  FilePlus2,
   GripVertical,
   Search,
 } from 'lucide-react';
@@ -46,16 +47,24 @@ import {
   updateDeal,
 } from '~/home/(user)/pipeline/actions';
 import { COMMERCIAL_PIPELINE_LOST_STAGE } from '~/lib/commercial/commercial-constants';
+import { formatInstructionAddress } from '~/lib/commercial/instruction-to-disposal';
 import {
   isCommercialWonStage,
   normalizeCommercialPipelineStage,
 } from '~/lib/commercial/pipeline-stage-config';
 import {
+  type WipLatestUpdate,
+  cleanWipUpdateText,
+} from '~/lib/commercial/wip-latest-update';
+import {
   compareInstructionOrder,
   matchesWipQuery,
   nextEndPosition,
 } from '~/lib/commercial/wip-order';
-import { wipStageColour } from '~/lib/commercial/wip-stage-colours';
+import {
+  wipStageColour,
+  wipStageControlStyle,
+} from '~/lib/commercial/wip-stage-colours';
 import {
   computeWipStageForecasts,
   formatWipStageForecast,
@@ -68,6 +77,7 @@ import { instructionTitle } from '../_lib/instruction-title';
 import type { WipDeskActivityItem } from '../_lib/server/wip-attachments.actions';
 import { WipAmlToggle } from './wip-aml-toggle';
 import { WipAttachmentsStrip } from './wip-attachments-strip';
+import { WipStageDot } from './wip-stage-dot';
 import { WipWorkTypePill } from './wip-work-type-pill';
 
 type StageColumn = { key: string; label: string };
@@ -81,12 +91,14 @@ type Props = {
   deskActivity: WipDeskActivityItem[];
   latestCareByDealId?: Record<string, string>;
   /** Newest update date per instruction (covers every instruction). */
-  latestUpdateByDealId?: Record<string, string>;
+  latestUpdateByDealId?: Record<string, WipLatestUpdate>;
   listings?: PipelineListingOption[];
   onDealsChange: (
     next: PipelineDeal[] | ((prev: PipelineDeal[]) => PipelineDeal[]),
   ) => void;
   onEditInstruction: (deal: PipelineDeal) => void;
+  /** Builds a populated disposal from the instruction and opens it. */
+  onCreateDisposal?: (deal: PipelineDeal) => void;
   onDealWon?: (deal: PipelineDeal) => void;
   onActivityChanged?: () => void;
   expandedIds: Set<string>;
@@ -103,20 +115,36 @@ function formatCurrency(value: number) {
 
 function formatTimelineDate(iso: string) {
   try {
-    return new Date(iso).toLocaleDateString('en-GB', {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return '';
+    const sameYear = date.getFullYear() === new Date().getFullYear();
+    return date.toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'short',
+      ...(sameYear ? {} : { year: 'numeric' }),
     });
   } catch {
     return '';
   }
 }
 
-function previewText(content: string, max = 90) {
-  const trimmed = content.trim().replace(/\s+/g, ' ');
-  if (!trimmed) return null;
-  if (trimmed.length <= max) return trimmed;
-  return `${trimmed.slice(0, max - 1)}…`;
+/**
+ * Newest update for a row: the database value covers every instruction, the
+ * desk feed can be fresher right after an update is logged, so take the later.
+ */
+function pickLatestUpdate(
+  fromDb: WipLatestUpdate | undefined,
+  fromDesk: WipDeskActivityItem | undefined,
+): WipLatestUpdate | null {
+  const desk = fromDesk
+    ? {
+        at: fromDesk.createdAt,
+        text: cleanWipUpdateText(fromDesk.content),
+      }
+    : null;
+  if (!fromDb) return desk;
+  if (desk && desk.at > fromDb.at) return desk;
+  return fromDb;
 }
 
 function isWonStage(stage: string) {
@@ -135,6 +163,7 @@ export function WipLadderView({
   listings = [],
   onDealsChange,
   onEditInstruction,
+  onCreateDisposal,
   onDealWon,
   onActivityChanged,
   expandedIds,
@@ -519,21 +548,16 @@ export function WipLadderView({
                       {stageDeals.map((deal) => {
                         const open = expandedIds.has(deal.id);
                         const latest = latestByDeal.get(deal.id);
-                        const oneLiner =
-                          previewText(latest?.content ?? '') ||
-                          (deal.nextAction?.trim()
-                            ? deal.nextAction.trim()
-                            : null);
+                        const lastUpdate = pickLatestUpdate(
+                          latestUpdateByDealId[deal.id],
+                          latest,
+                        );
                         const listing = deal.commercialListingId
                           ? (listingById.get(deal.commercialListingId) ??
                             undefined)
                           : undefined;
                         const lastContactIso =
                           latestCareByDealId[deal.id] ??
-                          latest?.createdAt ??
-                          null;
-                        const lastUpdateIso =
-                          latestUpdateByDealId[deal.id] ??
                           latest?.createdAt ??
                           null;
 
@@ -546,11 +570,9 @@ export function WipLadderView({
                               stage.key !== COMMERCIAL_PIPELINE_LOST_STAGE
                             }
                             open={open}
-                            oneLiner={oneLiner}
-                            latest={latest}
+                            lastUpdate={lastUpdate}
                             listing={listing}
                             lastContactIso={lastContactIso}
-                            lastUpdateIso={lastUpdateIso}
                             accountSlug={accountSlug}
                             accountId={accountId}
                             stages={stageOptionsForDeal(
@@ -615,6 +637,11 @@ export function WipLadderView({
                               });
                             }}
                             onEdit={() => onEditInstruction(deal)}
+                            onCreateDisposal={
+                              onCreateDisposal
+                                ? () => onCreateDisposal(deal)
+                                : undefined
+                            }
                             onActivityChanged={onActivityChanged}
                           />
                         );
@@ -647,11 +674,9 @@ function LadderSortableRow({
   deal,
   canDrag,
   open,
-  oneLiner,
-  latest,
+  lastUpdate,
   listing,
   lastContactIso,
-  lastUpdateIso,
   accountSlug,
   accountId,
   stages,
@@ -659,16 +684,15 @@ function LadderSortableRow({
   onChangeStage,
   onToggleAml,
   onEdit,
+  onCreateDisposal,
   onActivityChanged,
 }: {
   deal: PipelineDeal;
   canDrag: boolean;
   open: boolean;
-  oneLiner: string | null;
-  latest: WipDeskActivityItem | undefined;
+  lastUpdate: WipLatestUpdate | null;
   listing: PipelineListingOption | undefined;
   lastContactIso: string | null;
-  lastUpdateIso: string | null;
   accountSlug: string;
   accountId: string;
   stages: StageColumn[];
@@ -676,6 +700,7 @@ function LadderSortableRow({
   onChangeStage: (next: string) => void;
   onToggleAml: (next: boolean) => void;
   onEdit: () => void;
+  onCreateDisposal?: () => void;
   onActivityChanged?: () => void;
 }) {
   const {
@@ -686,6 +711,7 @@ function LadderSortableRow({
     transition,
     isDragging,
   } = useSortable({ id: deal.id, disabled: !canDrag });
+  const addressSummary = formatInstructionAddress(deal);
 
   return (
     <li
@@ -742,30 +768,31 @@ function LadderSortableRow({
               >
                 {listing.name}
               </Link>
+            ) : addressSummary ? (
+              <span
+                className={`mt-0.5 block truncate text-xs ${workspaceTextMuted}`}
+                data-test="wip-ladder-address"
+              >
+                {addressSummary}
+              </span>
             ) : null}
             <span
-              className={`mt-0.5 block text-xs ${workspaceTextMuted}`}
+              className={`mt-0.5 block truncate text-xs ${workspaceTextMuted}`}
               data-test="wip-ladder-last-update"
             >
-              {lastUpdateIso ? (
-                <span className="font-medium text-[var(--workspace-shell-text)]">
-                  Updated {formatTimelineDate(lastUpdateIso)}
-                </span>
+              {lastUpdate ? (
+                <>
+                  <time
+                    dateTime={lastUpdate.at}
+                    className="font-medium text-[var(--workspace-shell-text)]"
+                  >
+                    {formatTimelineDate(lastUpdate.at)}
+                  </time>
+                  {lastUpdate.text ? ` ${lastUpdate.text}` : null}
+                </>
               ) : (
                 'No updates yet'
               )}
-              {oneLiner ? (
-                <>
-                  {' · '}
-                  {oneLiner}
-                  {latest?.assignedTo ? (
-                    <span>
-                      {' → '}
-                      {latest.assignedTo.name}
-                    </span>
-                  ) : null}
-                </>
-              ) : null}
             </span>
           </span>
         </button>
@@ -796,20 +823,42 @@ function LadderSortableRow({
             value={normalizeCommercialPipelineStage(deal.stage)}
             onValueChange={onChangeStage}
           >
-            <SelectTrigger className="h-8 w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs">
+            <SelectTrigger
+              className="h-8 w-full text-xs font-medium"
+              style={wipStageControlStyle(deal.stage)}
+              data-test="wip-ladder-stage-select"
+              aria-label="Stage"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="z-[100] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
               {stages.map((option) => (
                 <SelectItem key={option.key} value={option.key}>
-                  {option.label}
+                  <span className="flex items-center gap-2">
+                    <WipStageDot stageKey={option.key} />
+                    {option.label}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        <div className="pl-6 sm:pl-0">
+        <div className="flex items-center gap-1 pl-6 sm:pl-0">
+          {onCreateDisposal && !deal.commercialListingId ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1 border-[color:var(--workspace-shell-border)] text-xs"
+              onClick={onCreateDisposal}
+              title="Create a disposal pre-filled from this instruction"
+              data-test="wip-ladder-create-disposal"
+            >
+              <FilePlus2 className="h-3.5 w-3.5" />
+              Disposal
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="ghost"

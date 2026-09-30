@@ -283,9 +283,7 @@ async function enrichCommercialAccountEvents(
     if (event.entityType === 'listing') {
       entityLabel =
         listingMap.get(event.entityId) ??
-        (typeof event.metadata.name === 'string'
-          ? event.metadata.name
-          : null);
+        (typeof event.metadata.name === 'string' ? event.metadata.name : null);
     } else if (event.entityType === 'client') {
       entityLabel = clientMap.get(event.entityId) ?? null;
     } else if (event.entityType === 'requirement') {

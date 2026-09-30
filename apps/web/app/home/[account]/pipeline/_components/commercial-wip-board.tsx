@@ -81,6 +81,7 @@ import { CustomizePipelinePhasesDialog } from '~/home/[account]/pipeline/_compon
 import { WipArchivedDialog } from '~/home/[account]/pipeline/_components/wip-archived-dialog';
 import { reorderWipRequirements } from '~/home/[account]/pipeline/_lib/server/wip-order.actions';
 import type { ClientOption } from '~/home/[account]/projects/_components/client-combobox';
+import { RequirementCirculationBadge } from '~/home/[account]/requirements/_components/requirement-circulation-badge';
 import { RequirementFormModal } from '~/home/[account]/requirements/_components/requirement-form-modal';
 import type { RequirementDraftPrefill } from '~/home/[account]/requirements/_lib/schema/requirements.schema';
 import type { CommercialRequirement } from '~/home/[account]/requirements/_lib/server/requirements.service';
@@ -126,6 +127,7 @@ import {
   sharedBoardStages,
   toSharedStatus,
 } from '~/lib/commercial/wip-board-mapping';
+import type { WipLatestUpdate } from '~/lib/commercial/wip-latest-update';
 import {
   applyVisibleReorder,
   compareInstructionOrder,
@@ -190,7 +192,7 @@ type Props = {
   deskActivity?: WipDeskActivityItem[];
   latestCareByDealId?: Record<string, string>;
   /** Newest update date per instruction, for the collapsed ladder row. */
-  latestUpdateByDealId?: Record<string, string>;
+  latestUpdateByDealId?: Record<string, WipLatestUpdate>;
   onDealWon?: (deal: PipelineDeal) => void;
   onRequestCreateDisposal?: (deal: PipelineDeal) => void;
   onInstructionCreated?: (deal: PipelineDeal) => void;
@@ -1652,6 +1654,7 @@ export function CommercialWipBoard({
             setDealToEdit(deal);
             setEditDealOpen(true);
           }}
+          onCreateDisposal={onRequestCreateDisposal}
           onDealWon={onDealWon}
           onActivityChanged={() => router.refresh()}
           expandedIds={ladderExpandedIds}
@@ -2064,6 +2067,8 @@ const InstructionCardBody = ({
       style={{
         ...style,
         ...(workSurface ? { backgroundColor: workSurface } : null),
+        borderLeftWidth: 4,
+        borderLeftColor: wipStageColour(deal.stage).bar,
       }}
       className={`${panelClass} cursor-grab p-4 active:cursor-grabbing ${
         overlay
@@ -2232,6 +2237,10 @@ const RequirementCardBody = ({
               borderColor: 'transparent',
             }
           : null),
+        borderLeftWidth: 4,
+        borderLeftColor: wipStageColour(
+          normalizeRequirementStage(requirement.stage),
+        ).bar,
       }}
       className={`${panelClass} cursor-grab p-4 active:cursor-grabbing ${
         overlay
@@ -2276,6 +2285,10 @@ const RequirementCardBody = ({
             {tenure ? <span>{tenure}</span> : null}
             {budget ? <span>{budget}</span> : null}
           </div>
+          <RequirementCirculationBadge
+            accountId={requirement.accountId}
+            requirementId={requirement.id}
+          />
         </div>
         <button
           type="button"

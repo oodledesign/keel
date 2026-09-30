@@ -14,13 +14,7 @@ describe('listingStatusPublishesToPortals', () => {
     ]);
     expect(listingStatusPublishesToPortals('marketing')).toBe(true);
     expect(listingStatusPublishesToPortals('under_offer')).toBe(true);
-    for (const status of [
-      'draft',
-      'instructed',
-      'let',
-      'sold',
-      'withdrawn',
-    ]) {
+    for (const status of ['draft', 'instructed', 'let', 'sold', 'withdrawn']) {
       expect(listingStatusPublishesToPortals(status)).toBe(false);
     }
   });

@@ -10,6 +10,11 @@ import {
 } from '~/lib/commercial/circulation/circulation-eligibility';
 import type { ListingChange } from '~/lib/commercial/circulation/circulation-rematch';
 import { createCommercialCirculationService } from '~/lib/commercial/circulation/circulation.service';
+import {
+  type RecipientPerson,
+  type RequirementRecipient,
+  resolveRequirementRecipient,
+} from '~/lib/commercial/circulation/requirement-recipient';
 import { DISPOSAL_TYPE_LABELS } from '~/lib/commercial/commercial-constants';
 import { loadListingCoverUrlsForDigest } from '~/lib/commercial/commercial-match-digest';
 import { resolveSiteUrlForPublicMedia } from '~/lib/commercial/listing-media-public-url';
@@ -52,6 +57,8 @@ export type ContactMatchListing = {
 
 export type ContactMatchRow = {
   email: string;
+  /** Contacts page record behind this address, when a requirement links one. */
+  clientId: string | null;
   contactName: string | null;
   companyName: string | null;
   requirementIds: string[];
@@ -118,6 +125,8 @@ type ListingRow = {
 
 type RequirementRow = {
   id: string;
+  client_id: string | null;
+  contact_id: string | null;
   company_name: string | null;
   contact_name: string | null;
   contact_email: string | null;
@@ -340,6 +349,8 @@ const LISTING_SELECT = [
 
 const REQUIREMENT_SELECT = [
   'id',
+  'client_id',
+  'contact_id',
   'company_name',
   'contact_name',
   'contact_email',
@@ -357,6 +368,108 @@ const REQUIREMENT_SELECT = [
   'stage',
   'updated_at',
 ].join(', ');
+
+const ID_CHUNK = 200;
+
+async function selectByIds<T>(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any,
+  table: 'contacts' | 'clients',
+  columns: string,
+  accountId: string,
+  ids: string[],
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let i = 0; i < ids.length; i += ID_CHUNK) {
+    let query = db
+      .from(table)
+      .select(columns)
+      .in('id', ids.slice(i, i + ID_CHUNK));
+    // Older contacts rows can predate contacts.account_id; the ids already
+    // come from this account's requirements.
+    if (table === 'clients') query = query.eq('account_id', accountId);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    rows.push(...((data ?? []) as T[]));
+  }
+  return rows;
+}
+
+/**
+ * Resolved circulation recipient per requirement id: linked person, then
+ * linked contact, then the address typed on the requirement.
+ */
+export async function loadRequirementRecipients(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any,
+  accountId: string,
+  requirements: Array<{
+    id: string;
+    client_id: string | null;
+    contact_id: string | null;
+    contact_email: string | null;
+    contact_name: string | null;
+  }>,
+): Promise<Map<string, RequirementRecipient>> {
+  const personIds = [
+    ...new Set(requirements.map((r) => r.contact_id).filter(Boolean)),
+  ] as string[];
+  const clientIds = [
+    ...new Set(requirements.map((r) => r.client_id).filter(Boolean)),
+  ] as string[];
+
+  const [people, clients] = await Promise.all([
+    selectByIds<{
+      id: string;
+      email: string | null;
+      first_name: string | null;
+      full_name: string | null;
+    }>(
+      db,
+      'contacts',
+      'id, email, first_name, full_name',
+      accountId,
+      personIds,
+    ),
+    selectByIds<{
+      id: string;
+      email: string | null;
+      first_name: string | null;
+      display_name: string | null;
+    }>(
+      db,
+      'clients',
+      'id, email, first_name, display_name',
+      accountId,
+      clientIds,
+    ),
+  ]);
+
+  const personById = new Map<string, RecipientPerson>(
+    people.map((p) => [
+      p.id,
+      { email: p.email, firstName: p.first_name, fullName: p.full_name },
+    ]),
+  );
+  const clientById = new Map<string, RecipientPerson>(
+    clients.map((c) => [
+      c.id,
+      { email: c.email, firstName: c.first_name, fullName: c.display_name },
+    ]),
+  );
+
+  const out = new Map<string, RequirementRecipient>();
+  for (const req of requirements) {
+    const recipient = resolveRequirementRecipient({
+      contactEmail: req.contact_email,
+      contactName: req.contact_name,
+      person: req.contact_id ? (personById.get(req.contact_id) ?? null) : null,
+      client: req.client_id ? (clientById.get(req.client_id) ?? null) : null,
+    });
+    if (recipient) out.set(req.id, recipient);
+  }
+  return out;
+}
 
 export async function listContactMatches(
   client: SupabaseClient,
@@ -395,7 +508,9 @@ export async function listContactMatches(
           .select(REQUIREMENT_SELECT)
           .eq('account_id', input.accountId)
           .is('archived_at', null)
-          .not('contact_email', 'is', null)
+          .or(
+            'contact_email.not.is.null,client_id.not.is.null,contact_id.not.is.null',
+          )
           .in('stage', [...ACTIVE_REQUIREMENT_STAGES_FOR_MATCH])
           .order('details_sent', { ascending: true, nullsFirst: true })
           .order('updated_at', { ascending: false })
@@ -417,23 +532,24 @@ export async function listContactMatches(
       input.accountId,
     );
   }
+  const recipients = await loadRequirementRecipients(
+    db,
+    input.accountId,
+    reqRows,
+  );
+  const wantedEmail = input.email
+    ? normalizeCirculationEmail(input.email)
+    : null;
   const requirements = reqRows.filter((row) => {
-    const email = normalizeCirculationEmail(String(row.contact_email ?? ''));
-    if (!email) return false;
-    if (input.email && email !== normalizeCirculationEmail(input.email)) {
-      return false;
-    }
-    return true;
+    const recipient = recipients.get(row.id);
+    if (!recipient) return false;
+    return !wantedEmail || recipient.email === wantedEmail;
   });
 
   if (listings.length === 0 || requirements.length === 0) return [];
 
   const emails = [
-    ...new Set(
-      requirements.map((row) =>
-        normalizeCirculationEmail(String(row.contact_email ?? '')),
-      ),
-    ),
+    ...new Set(requirements.map((row) => recipients.get(row.id)!.email)),
   ];
 
   const circulation = createCommercialCirculationService(client);
@@ -445,8 +561,9 @@ export async function listContactMatches(
   const byEmail = new Map<string, ContactMatchRow>();
 
   for (const req of requirements) {
-    const email = normalizeCirculationEmail(String(req.contact_email ?? ''));
-    if (!email) continue;
+    const recipient = recipients.get(req.id);
+    if (!recipient) continue;
+    const email = recipient.email;
     const reqSnap = asRequirementSnapshot(req);
     const preference = preferenceRows.get(email);
     const consentStatus: CirculationConsentStatus =
@@ -456,7 +573,8 @@ export async function listContactMatches(
     if (!row) {
       row = {
         email,
-        contactName: req.contact_name,
+        clientId: req.client_id,
+        contactName: recipient.name,
         companyName: req.company_name,
         requirementIds: [],
         consentStatus,
@@ -469,8 +587,8 @@ export async function listContactMatches(
       };
       byEmail.set(email, row);
     } else {
-      if (!row.contactName && req.contact_name)
-        row.contactName = req.contact_name;
+      if (!row.clientId && req.client_id) row.clientId = req.client_id;
+      if (!row.contactName && recipient.name) row.contactName = recipient.name;
       if (!row.companyName && req.company_name)
         row.companyName = req.company_name;
     }

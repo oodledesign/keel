@@ -22,6 +22,7 @@ import {
   createCommercialCirculationService,
   sendCirculationEmailViaSes,
 } from '~/lib/commercial/circulation/circulation.service';
+import { loadRequirementRecipients } from '~/lib/commercial/circulation/contact-matches';
 import { loadListingCoverUrlsForDigest } from '~/lib/commercial/commercial-match-digest';
 import { resolveSiteUrlForPublicMedia } from '~/lib/commercial/listing-media-public-url';
 import { isPublicListingPageUrl } from '~/lib/commercial/listing-website-url';
@@ -144,6 +145,22 @@ function asRequirementSnapshot(
   };
 }
 
+function toRecipientRow(row: {
+  id?: unknown;
+  client_id?: unknown;
+  contact_id?: unknown;
+  contact_email?: unknown;
+  contact_name?: unknown;
+}) {
+  return {
+    id: String(row.id),
+    client_id: (row.client_id as string | null) ?? null,
+    contact_id: (row.contact_id as string | null) ?? null,
+    contact_email: (row.contact_email as string | null) ?? null,
+    contact_name: (row.contact_name as string | null) ?? null,
+  };
+}
+
 export async function listCirculationCandidates(
   client: SupabaseClient,
   input: { accountId: string; listingId: string; minScore?: number },
@@ -168,7 +185,9 @@ export async function listCirculationCandidates(
     .select('*')
     .eq('account_id', input.accountId)
     .is('archived_at', null)
-    .not('contact_email', 'is', null)
+    .or(
+      'contact_email.not.is.null,client_id.not.is.null,contact_id.not.is.null',
+    )
     .in('stage', [
       'new',
       'actively_searching',
@@ -182,9 +201,12 @@ export async function listCirculationCandidates(
   const listingSnap = asListingSnapshot(listing as Record<string, unknown>);
   const circulation = createCommercialCirculationService(client);
   const rows = (requirements ?? []) as Array<Record<string, unknown>>;
-  const emails = rows
-    .map((row) => normalizeCirculationEmail(String(row.contact_email ?? '')))
-    .filter(Boolean);
+  const recipients = await loadRequirementRecipients(
+    client,
+    input.accountId,
+    rows.map(toRecipientRow),
+  );
+  const emails = [...new Set([...recipients.values()].map((r) => r.email))];
   const statuses = await circulation.getPreferenceStatuses(
     input.accountId,
     emails,
@@ -192,8 +214,9 @@ export async function listCirculationCandidates(
   const candidates: CirculationCandidate[] = [];
 
   for (const row of rows) {
-    const email = normalizeCirculationEmail(String(row.contact_email ?? ''));
-    if (!email) continue;
+    const recipient = recipients.get(row.id as string);
+    if (!recipient) continue;
+    const email = recipient.email;
 
     const score = scoreListingRequirementMatch(
       listingSnap,
@@ -205,7 +228,7 @@ export async function listCirculationCandidates(
     candidates.push({
       requirementId: row.id as string,
       email,
-      contactName: (row.contact_name as string | null) ?? null,
+      contactName: recipient.name,
       companyName: (row.company_name as string | null) ?? null,
       score: score.score,
       reasons: score.reasons,
@@ -536,7 +559,9 @@ export async function circulateListing(
 
   const { data: requirements, error: reqError } = await client
     .from('commercial_requirements')
-    .select('id, contact_email, contact_name, company_name')
+    .select(
+      'id, client_id, contact_id, contact_email, contact_name, company_name',
+    )
     .eq('account_id', input.accountId)
     .in('id', input.requirementIds);
 
@@ -569,13 +594,20 @@ export async function circulateListing(
   const circulation = createCommercialCirculationService(client);
   const reqRows = (requirements ?? []) as Array<{
     id: string;
+    client_id?: string | null;
+    contact_id?: string | null;
     contact_email?: string | null;
     contact_name?: string | null;
     company_name?: string | null;
   }>;
+  const recipients = await loadRequirementRecipients(
+    client,
+    input.accountId,
+    reqRows.map(toRecipientRow),
+  );
   const preferenceStatuses = await circulation.getPreferenceStatuses(
     input.accountId,
-    reqRows.map((r) => String(r.contact_email ?? '')),
+    [...recipients.values()].map((r) => r.email),
   );
   const alreadySent = input.skipAlreadySent
     ? await listAlreadySentEmails(client, {
@@ -671,9 +703,8 @@ export async function circulateListing(
   let dryRunEligible = 0;
 
   for (const req of reqRows) {
-    const email = String(req.contact_email ?? '')
-      .trim()
-      .toLowerCase();
+    const recipient = recipients.get(req.id);
+    const email = recipient?.email ?? '';
     const requirementId = req.id;
 
     if (!email) {
@@ -755,7 +786,7 @@ export async function circulateListing(
         viewUrlLabel,
         coverImageUrl,
         manageUrl,
-        contactName: req.contact_name,
+        contactName: recipient?.name ?? req.contact_name,
       });
 
       if (input.dryRun) {

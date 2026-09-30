@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
@@ -15,18 +15,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@kit/ui/alert-dialog';
+import { toast } from '@kit/ui/sonner';
 
+import pathsConfig from '~/config/paths.config';
 import type {
   PipelineData,
   PipelineDeal,
 } from '~/home/(user)/_lib/server/pipeline.loader';
 import type { PipelineListingOption } from '~/home/(user)/pipeline/_components/pipeline-board';
 import { WonDealFollowUp } from '~/home/(user)/pipeline/_components/won-deal-follow-up';
-import { buildNewDisposalPath } from '~/home/[account]/listings/_lib/disposal-create-url';
+import { createDisposalFromInstruction } from '~/home/[account]/listings/_lib/server/server-actions';
 import type { ClientOption } from '~/home/[account]/projects/_components/client-combobox';
 import type { CommercialRequirement } from '~/home/[account]/requirements/_lib/server/requirements.service';
 import { DEFAULT_COMMERCIAL_WIP_BOARD_NAME } from '~/lib/commercial/commercial-constants';
 import type { PipelineStageConfigItem } from '~/lib/commercial/pipeline-stage-config';
+import type { WipLatestUpdate } from '~/lib/commercial/wip-latest-update';
 
 import { instructionTitle } from '../_lib/instruction-title';
 import type { WipDeskActivityItem } from '../_lib/server/wip-attachments.actions';
@@ -59,7 +62,7 @@ type Props = {
   attentionDigest?: WipAttentionDigest | null;
   deskActivity?: WipDeskActivityItem[];
   latestCareByDealId?: Record<string, string>;
-  latestUpdateByDealId?: Record<string, string>;
+  latestUpdateByDealId?: Record<string, WipLatestUpdate>;
   /** When true, rely on the page header for title/description. */
   hideBoardTitle?: boolean;
 };
@@ -86,21 +89,46 @@ export function WorkspacePipelineBoardWrapper({
   const [newInstructionDeal, setNewInstructionDeal] =
     useState<PipelineDeal | null>(null);
 
+  // One disposal at a time: a second click while one is being built would
+  // create a duplicate draft.
+  const creatingDisposalRef = useRef(false);
+
   const openDisposalForm = useCallback(
-    (deal: PipelineDeal) => {
+    async (deal: PipelineDeal) => {
+      if (creatingDisposalRef.current) {
+        toast.info('A disposal is already being created, one moment…');
+        return;
+      }
+      creatingDisposalRef.current = true;
       setPromptDeal(null);
       setNewInstructionDeal(null);
-      router.push(
-        buildNewDisposalPath(accountSlug, {
-          name: instructionTitle(deal),
-          askingRent: deal.value > 0 ? String(deal.value) : null,
-          notes: deal.description?.trim() || null,
-          clientId: deal.clientId,
-          dealId: deal.id,
-        }),
+      const toastId = toast.loading(
+        `Creating a disposal from “${instructionTitle(deal)}”…`,
       );
+      try {
+        const { listingId } = await createDisposalFromInstruction({
+          accountId,
+          accountSlug,
+          dealId: deal.id,
+        });
+        toast.success('Disposal created from the instruction', { id: toastId });
+        router.push(
+          pathsConfig.app.accountListingEdit
+            .replace('[account]', accountSlug)
+            .replace('[id]', listingId),
+        );
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not create the disposal',
+          { id: toastId },
+        );
+      } finally {
+        creatingDisposalRef.current = false;
+      }
     },
-    [accountSlug, router],
+    [accountId, accountSlug, router],
   );
 
   const handleDealWon = async (deal: PipelineDeal) => {
@@ -184,7 +212,7 @@ export function WorkspacePipelineBoardWrapper({
             <AlertDialogTitle>Create a disposal?</AlertDialogTitle>
             <AlertDialogDescription className="text-[var(--workspace-shell-text-muted)]">
               {newInstructionDeal
-                ? `Link “${instructionTitle(newInstructionDeal)}” to a disposal now so marketing, viewings and the register stay connected.`
+                ? `Build a disposal from “${instructionTitle(newInstructionDeal)}” now. It is filled in from the instruction (address, type, size, asking terms and client) and stays linked, so marketing, viewings and the register stay connected.`
                 : null}
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -10,6 +10,12 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { isCampaignsModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
+import { createCommercialCirculationService } from '~/lib/commercial/circulation/circulation.service';
+import { forEachLimited } from '~/lib/commercial/circulation/contact-comms-summary';
+import {
+  loadContactCommunications,
+  loadContactEmailSet,
+} from '~/lib/commercial/circulation/contact-communications';
 import { loadAccountModuleSettings } from '~/lib/quick-action/module-access';
 
 import {
@@ -36,6 +42,7 @@ import {
   UpdateContactLinkSchema,
   UpdateContactSchema,
 } from '../schema/clients.schema';
+import type { ListClientsInput } from '../schema/clients.schema';
 import { createClientCommercialService } from './client-commercial.service';
 import { createClientsService } from './clients.service';
 
@@ -82,16 +89,105 @@ export const listClientProperties = enhanceAction(
   { schema: ClientScopedListSchema },
 );
 
-async function resolveClientsAudience(
+export const getClientCommunications = enhanceAction(
+  async (input) => loadContactCommunications(getSupabaseServerClient(), input),
+  { schema: ClientScopedListSchema },
+);
+
+async function requireCirculationActor(accountId: string) {
+  const { requireCommercialBillableActor } =
+    await import('~/lib/commercial/require-commercial-billable-actor');
+  await requireCommercialBillableActor(accountId, 'manage circulation');
+}
+
+/**
+ * Pause, resume or opt in one of the contact's addresses. Opting in needs a
+ * lawful basis; unsubscribed and suppressed addresses are never re-enabled.
+ */
+export const setClientCirculationConsent = enhanceAction(
+  async (input) => {
+    await requireCirculationActor(input.accountId);
+    const client = getSupabaseServerClient();
+    const email = input.email.trim().toLowerCase();
+    const owned = await loadContactEmailSet(client, input);
+    if (!owned.has(email)) {
+      throw new Error('That email address does not belong to this contact');
+    }
+    await createCommercialCirculationService(client).setContactAutoSend({
+      accountId: input.accountId,
+      email,
+      enabled: input.enabled,
+      lawfulBasis: input.lawfulBasis,
+      consentSource: 'agent_contact_page',
+      clientId: input.clientId,
+    });
+    revalidatePath('/home', 'layout');
+    return { ok: true };
+  },
+  {
+    schema: ClientScopedListSchema.extend({
+      email: z.string().email(),
+      enabled: z.boolean(),
+      lawfulBasis: z.enum(['manual_opt_in', 'legitimate_interests']).optional(),
+    }),
+  },
+);
+
+/** Bulk pause only. Bulk opt-in is deliberately not offered. */
+export const pauseClientsCirculation = enhanceAction(
+  async (input) => {
+    await requireCirculationActor(input.accountId);
+    const client = getSupabaseServerClient();
+    const emailSet = new Set<string>();
+    await forEachLimited(input.clientIds, async (clientId) => {
+      const set = await loadContactEmailSet(client, {
+        accountId: input.accountId,
+        clientId,
+      });
+      for (const email of set) emailSet.add(email);
+    });
+    const emails = [...emailSet];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = client as any;
+    const base = () =>
+      db
+        .from('commercial_marketing_preferences')
+        .update({ auto_send_enabled: false })
+        .eq('account_id', input.accountId)
+        .eq('purpose', 'matching_disposals')
+        .eq('marketing_status', 'subscribed')
+        .eq('auto_send_enabled', true);
+
+    for (let i = 0; i < emails.length; i += 150) {
+      const { error } = await base().in('email', emails.slice(i, i + 150));
+      if (error) throw new Error(error.message);
+    }
+    const { error } = await base().in('client_id', input.clientIds);
+    if (error) throw new Error(error.message);
+
+    revalidatePath('/home', 'layout');
+    return { ok: true, contacts: input.clientIds.length };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      clientIds: z.array(z.string().uuid()).min(1).max(100),
+    }),
+  },
+);
+
+/** The Newsletter view belongs to the Email Campaigns add-on. */
+async function resolveClientsView(
   accountId: string,
-  audience: 'all' | 'mailing_list' | undefined,
+  view: ListClientsInput['view'],
 ) {
-  if (audience !== 'mailing_list') return audience;
+  if (view !== 'newsletter') return view;
   const settings = await loadAccountModuleSettings(
     getSupabaseServerClient(),
     accountId,
   );
-  return isCampaignsModuleEnabled(settings) ? audience : 'all';
+  return isCampaignsModuleEnabled(settings) ? view : 'all';
 }
 
 export const listClients = enhanceAction(
@@ -99,7 +195,7 @@ export const listClients = enhanceAction(
     const service = getService();
     return service.listClients({
       ...input,
-      audience: await resolveClientsAudience(input.accountId, input.audience),
+      view: await resolveClientsView(input.accountId, input.view),
     });
   },
   { schema: ListClientsSchema },
@@ -108,13 +204,9 @@ export const listClients = enhanceAction(
 export const listClientsOverview = enhanceAction(
   async (input) => {
     const service = getService();
-    const audience = await resolveClientsAudience(
-      input.accountId,
-      input.audience,
-    );
     return service.listClientsOverview({
       ...input,
-      audience,
+      view: await resolveClientsView(input.accountId, input.view),
     });
   },
   {

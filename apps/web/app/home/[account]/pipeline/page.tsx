@@ -16,6 +16,7 @@ import {
 import { isBuildingSurveyorTerminalStage } from '~/lib/building-surveyor/pipeline-stages';
 import { DEFAULT_COMMERCIAL_WIP_BOARD_NAME } from '~/lib/commercial/commercial-constants';
 import { isCommercialTerminalStage } from '~/lib/commercial/pipeline-stage-config';
+import type { WipLatestUpdate } from '~/lib/commercial/wip-latest-update';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
@@ -116,7 +117,7 @@ async function TeamAccountPipelinePage({
   > | null;
   let deskActivity = [] as Awaited<ReturnType<typeof loadWipDeskActivity>>;
   let latestCareByDealId: Record<string, string> = {};
-  let latestUpdateByDealId: Record<string, string> = {};
+  let latestUpdateByDealId: Record<string, WipLatestUpdate> = {};
 
   if (isCommercial) {
     // commercial_* tables may lag generated Database types

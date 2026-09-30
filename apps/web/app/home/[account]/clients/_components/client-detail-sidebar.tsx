@@ -9,6 +9,7 @@ import {
 } from 'react';
 
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 import {
   Archive,
@@ -94,6 +95,7 @@ import {
   ClientSalesBlock,
   ClientViewingsBlock,
 } from './client-commercial-blocks';
+import { ClientCommunicationsBlock } from './client-communications-block';
 import { ClientContactsBlock } from './client-contacts-block';
 import { ClientFinancePanel } from './client-finance-panel';
 import { ClientForm } from './client-form';
@@ -153,6 +155,7 @@ type DetailTab =
   | 'disposals'
   | 'properties'
   | 'requirements'
+  | 'emails'
   | 'viewings'
   | 'leases'
   | 'sales';
@@ -339,7 +342,12 @@ export function ClientDetailSidebar({
   const [jobs, setJobs] = useState<ClientJobSummary[]>(
     (overviewSeed?.jobs as ClientJobSummary[] | undefined) ?? [],
   );
-  const [activeTab, setActiveTab] = useState<DetailTab>('overview');
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<DetailTab>(() =>
+    variant === 'commercial' && searchParams.get('tab') === 'emails'
+      ? 'emails'
+      : 'overview',
+  );
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
   const [loading, setLoading] = useState(!hasServerSeed);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -557,6 +565,7 @@ export function ClientDetailSidebar({
           ['properties', 'Properties'],
           ['disposals', 'Disposals'],
           ['requirements', 'Requirements'],
+          ['emails', 'Emails'],
           ['viewings', 'Viewings'],
           ['leases', 'Leases'],
           ['sales', 'Sales'],
@@ -1389,6 +1398,17 @@ export function ClientDetailSidebar({
     if (isCommercial && activeTab === 'requirements') {
       return (
         <ClientRequirementsBlock
+          accountSlug={accountSlug}
+          accountId={accountId}
+          clientId={client.id}
+          canEdit={canEditClients}
+        />
+      );
+    }
+
+    if (isCommercial && activeTab === 'emails') {
+      return (
+        <ClientCommunicationsBlock
           accountSlug={accountSlug}
           accountId={accountId}
           clientId={client.id}

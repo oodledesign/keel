@@ -1,6 +1,8 @@
 /**
  * Ladder / board / sheet stage colour accents for commercial WIP.
  */
+import type { CSSProperties } from 'react';
+
 import {
   type CommercialPipelineStage,
   REQUIREMENT_STATUSES,
@@ -85,4 +87,18 @@ export function wipStageColour(stageKey: string): StageColour {
     WIP_STAGE_COLOURS[normalized as CommercialPipelineStage] ??
     FALLBACK_STAGE_COLOUR
   );
+}
+
+/**
+ * Inline style for a stage dropdown so the chosen stage reads at a glance.
+ * The tint is translucent, so it is layered over the opaque panel colour.
+ */
+export function wipStageControlStyle(stageKey: string): CSSProperties {
+  const colour = wipStageColour(stageKey);
+  return {
+    color: colour.label,
+    borderColor: colour.bar,
+    backgroundColor: 'var(--workspace-shell-panel)',
+    backgroundImage: `linear-gradient(${colour.tint}, ${colour.tint})`,
+  };
 }

@@ -41,7 +41,10 @@ export const ListClientsSchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
   archived: z.coerce.boolean().optional(),
-  audience: z.enum(['all', 'mailing_list']).optional(),
+  view: z.enum(['all', 'requirements', 'newsletter', 'attention']).optional(),
+  circ: z
+    .enum(['subscribed', 'paused', 'not_subscribed', 'unsubscribed'])
+    .optional(),
 });
 
 export const GetClientSchema = z.object({

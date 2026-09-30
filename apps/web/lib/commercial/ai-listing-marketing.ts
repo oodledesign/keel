@@ -1,8 +1,8 @@
 import 'server-only';
 
-import { z } from 'zod';
-
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { z } from 'zod';
 
 import { callAI } from '~/lib/ai/router';
 import { extractJson } from '~/lib/websites/extract-json';

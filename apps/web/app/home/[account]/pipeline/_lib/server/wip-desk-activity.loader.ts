@@ -2,6 +2,11 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import {
+  type WipLatestUpdate,
+  cleanWipUpdateText,
+} from '~/lib/commercial/wip-latest-update';
+
 import type {
   WipDeskActivityItem,
   WipPersonRef,
@@ -138,14 +143,14 @@ export async function loadWipDeskActivity(
 }
 
 /**
- * Date of the newest update on each instruction, for the collapsed ladder
- * row. Grouped in the database so it covers every instruction, not just the
- * few recent enough to be in the desk activity feed.
+ * Date and text of the newest update on each instruction, for the collapsed
+ * ladder row. Grouped in the database so it covers every instruction, not just
+ * the few recent enough to be in the desk activity feed.
  */
 export async function loadLatestWipUpdateByDeal(
   client: SupabaseClient,
   accountId: string,
-): Promise<Record<string, string>> {
+): Promise<Record<string, WipLatestUpdate>> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = client as any;
   const { data, error } = await db.rpc('latest_wip_update_by_deal', {
@@ -157,12 +162,16 @@ export async function loadLatestWipUpdateByDeal(
     return {};
   }
 
-  const map: Record<string, string> = {};
+  const map: Record<string, WipLatestUpdate> = {};
   for (const row of (data ?? []) as Array<{
     pipeline_deal_id: string;
     latest_at: string;
+    latest_content: string | null;
   }>) {
-    map[row.pipeline_deal_id] = row.latest_at;
+    map[row.pipeline_deal_id] = {
+      at: row.latest_at,
+      text: cleanWipUpdateText(row.latest_content),
+    };
   }
   return map;
 }

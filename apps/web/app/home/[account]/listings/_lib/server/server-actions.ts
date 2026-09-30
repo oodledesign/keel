@@ -1,7 +1,12 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
+
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+
+import pathsConfig from '~/config/paths.config';
+import { buildDisposalFromInstruction } from '~/lib/commercial/instruction-to-disposal';
 
 import {
   AddListingCoAgentSchema,
@@ -10,6 +15,7 @@ import {
   BackfillListingLocationsSchema,
   CountSuggestedMatchesSchema,
   CountUnassignedListingsSchema,
+  CreateDisposalFromInstructionSchema,
   CreateListingEnquirySchema,
   CreateListingMediaSchema,
   CreateListingSchema,
@@ -142,6 +148,131 @@ export const createListing = enhanceAction(
       });
   },
   { schema: CreateListingSchema },
+);
+
+type InstructionRow = {
+  id: string;
+  account_id: string | null;
+  company_name: string | null;
+  contact_name: string | null;
+  notes: string | null;
+  client_id: string | null;
+  archived_at: string | null;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  town: string | null;
+  county: string | null;
+  postcode: string | null;
+  latitude: number | string | null;
+  longitude: number | string | null;
+  disposal_type: string | null;
+  property_type: string | null;
+  size_sqft: number | string | null;
+  asking_rent_pence: number | string | null;
+  asking_price_pence: number | string | null;
+  clients: { display_name: string | null } | null;
+};
+
+function numberOrNull(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Turns an instruction into a fully populated draft disposal (address, map
+ * pin, type, size, asking terms, client, brief) and links the two, so nothing
+ * has to be retyped. Runs under the caller's RLS.
+ */
+export const createDisposalFromInstruction = enhanceAction(
+  async (input, user) => {
+    await requireBillableDisposalActor(input.accountId);
+    const client = getSupabaseServerClient();
+
+    // The new pipeline_deals columns can lag the generated client types.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = client as any;
+    const { data, error } = await db
+      .from('pipeline_deals')
+      .select(
+        'id, account_id, company_name, contact_name, notes, client_id, archived_at, address_line_1, address_line_2, town, county, postcode, latitude, longitude, disposal_type, property_type, size_sqft, asking_rent_pence, asking_price_pence, clients(display_name)',
+      )
+      .eq('id', input.dealId)
+      .maybeSingle();
+
+    const deal = data as InstructionRow | null;
+    if (error || !deal) throw new Error('Instruction not found');
+    if (deal.account_id !== input.accountId) {
+      throw new Error('That instruction belongs to another workspace');
+    }
+    if (deal.archived_at) {
+      throw new Error('Restore this instruction before creating a disposal');
+    }
+
+    const draft = buildDisposalFromInstruction({
+      title:
+        deal.company_name?.trim() ||
+        deal.contact_name?.trim() ||
+        deal.clients?.display_name?.trim() ||
+        '',
+      description: deal.notes,
+      clientId: deal.client_id,
+      addressLine1: deal.address_line_1,
+      addressLine2: deal.address_line_2,
+      town: deal.town,
+      county: deal.county,
+      postcode: deal.postcode,
+      latitude: numberOrNull(deal.latitude),
+      longitude: numberOrNull(deal.longitude),
+      disposalType: deal.disposal_type,
+      propertyType: deal.property_type,
+      sizeSqft: numberOrNull(deal.size_sqft),
+      askingRentPence: numberOrNull(deal.asking_rent_pence),
+      askingPricePence: numberOrNull(deal.asking_price_pence),
+    });
+
+    const service = createListingsService(client);
+    const listing = await service.createListing({
+      ...draft,
+      accountId: input.accountId,
+      createdBy: user.id,
+    });
+
+    const { error: linkError } = await db
+      .from('pipeline_deals')
+      .update({ commercial_listing_id: listing.id })
+      .eq('id', deal.id);
+
+    if (linkError) {
+      // Do not leave an unlinked draft behind.
+      try {
+        await service.deleteListing(listing.id, input.accountId, {
+          actorUserId: user.id,
+        });
+      } catch (rollbackError) {
+        console.error(
+          `createDisposalFromInstruction: orphaned draft disposal ${listing.id} for instruction ${deal.id}`,
+          rollbackError,
+        );
+      }
+      throw new Error('Could not link the new disposal to the instruction');
+    }
+
+    await invalidateDisposalsData({
+      accountId: input.accountId,
+      listingId: listing.id,
+    });
+    revalidatePath('/home/pipeline');
+    const slug = input.accountSlug?.trim();
+    if (slug) {
+      revalidatePath(
+        pathsConfig.app.accountPipeline.replace('[account]', slug),
+      );
+    }
+
+    return { listingId: listing.id };
+  },
+  { schema: CreateDisposalFromInstructionSchema },
 );
 
 export const updateListing = enhanceAction(

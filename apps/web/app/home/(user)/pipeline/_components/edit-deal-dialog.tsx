@@ -35,9 +35,12 @@ import {
 import { MeetingTranscriptsBlock } from '~/home/[account]/_components/meeting-transcripts-block';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 import { InstructionCareCompliancePanel } from '~/home/[account]/pipeline/_components/instruction-care-compliance-panel';
+import { InstructionPropertySection } from '~/home/[account]/pipeline/_components/instruction-property-section';
 import { WipAmlToggle } from '~/home/[account]/pipeline/_components/wip-aml-toggle';
 import { WipArchiveControls } from '~/home/[account]/pipeline/_components/wip-archive-controls';
 import { WipAttachmentsStrip } from '~/home/[account]/pipeline/_components/wip-attachments-strip';
+import { WipCollapsibleSection } from '~/home/[account]/pipeline/_components/wip-collapsible-section';
+import { WipStageDot } from '~/home/[account]/pipeline/_components/wip-stage-dot';
 import { createSurveyorQuoteAction } from '~/home/[account]/pipeline/_lib/server/surveyor-quote-actions';
 import {
   ClientCombobox,
@@ -45,7 +48,13 @@ import {
 } from '~/home/[account]/projects/_components/client-combobox';
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
 import { unwrapListClientsResult } from '~/lib/clients/unwrap-list-clients-result';
+import {
+  type InstructionPropertyDraft,
+  draftFromInstruction,
+  draftToInstructionInput,
+} from '~/lib/commercial/instruction-property-draft';
 import { normalizeCommercialPipelineStage } from '~/lib/commercial/pipeline-stage-config';
+import { wipStageControlStyle } from '~/lib/commercial/wip-stage-colours';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import type { PipelineDeal } from '../../_lib/server/pipeline.loader';
@@ -88,6 +97,7 @@ type Props = {
 };
 
 const NONE_LISTING = '__none__';
+const formId = 'edit-deal-form';
 
 export function EditDealDialog({
   deal,
@@ -113,6 +123,7 @@ export function EditDealDialog({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const createDisposalAfterSaveRef = useRef(false);
 
   const [stage, setStage] = useState(deal?.stage ?? 'lead');
   const [businessId, setBusinessId] = useState(
@@ -129,6 +140,9 @@ export function EditDealDialog({
   );
   const [followUpCall, setFollowUpCall] = useState(Boolean(deal?.followUpCall));
   const [amlDone, setAmlDone] = useState(Boolean(deal?.amlDone));
+  const [property, setProperty] = useState<InstructionPropertyDraft>(() =>
+    draftFromInstruction(deal),
+  );
   const [quoteAddress, setQuoteAddress] = useState('');
   const [quotePending, setQuotePending] = useState(false);
 
@@ -161,6 +175,7 @@ export function EditDealDialog({
       setListingId(deal.commercialListingId ?? NONE_LISTING);
       setFollowUpCall(Boolean(deal.followUpCall));
       setAmlDone(Boolean(deal.amlDone));
+      setProperty(draftFromInstruction(deal));
       setQuoteAddress(deal.projectName || deal.companyName || '');
       setError(null);
     }
@@ -217,6 +232,10 @@ export function EditDealDialog({
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // "Save & create disposal" sets this; read and clear it on every submit so
+    // a validation error never leaves it armed for the next plain save.
+    const createDisposalAfterSave = createDisposalAfterSaveRef.current;
+    createDisposalAfterSaveRef.current = false;
     if (!deal) return;
     setError(null);
     const form = new FormData(e.currentTarget);
@@ -292,6 +311,9 @@ export function EditDealDialog({
       ? formString('hotsTargetExchangeDate') || null
       : null;
     const hotsNotes = commercial ? formString('hotsNotes') || null : null;
+    const propertyInput = commercial
+      ? draftToInstructionInput(property)
+      : undefined;
 
     startTransition(async () => {
       const result = await updateDeal(deal.id, {
@@ -309,6 +331,7 @@ export function EditDealDialog({
         commercialListingId: commercial ? commercialListingId : undefined,
         followUpCall: surveyor ? followUpCall : undefined,
         amlDone: commercial ? amlDone : undefined,
+        property: propertyInput,
         ...(commercial
           ? {
               hotsRentPsf,
@@ -328,7 +351,7 @@ export function EditDealDialog({
       }
 
       const biz = businesses.find((b) => b.id === resolvedBusinessId);
-      onDealUpdated({
+      const updatedDeal: PipelineDeal = {
         ...deal,
         contactName,
         companyName: projectName || companyName,
@@ -356,6 +379,7 @@ export function EditDealDialog({
               hotsSolicitorName,
               hotsTargetExchangeDate,
               hotsNotes,
+              ...propertyInput,
               completedAt:
                 stage === 'billed' ||
                 stage === 'completed' ||
@@ -370,17 +394,113 @@ export function EditDealDialog({
               amlDoneBy: amlDone ? deal.amlDoneBy : null,
             }
           : {}),
-      });
+      };
+      onDealUpdated(updatedDeal);
 
       onOpenChange(false);
+      if (createDisposalAfterSave) onRequestCreateDisposal?.(updatedDeal);
     });
   }
 
   if (!deal) return null;
 
+  const hotsFilled = [
+    deal.hotsRentPsf,
+    deal.hotsSizeSqft,
+    deal.hotsLeaseYears,
+    deal.hotsIncentives,
+    deal.hotsSolicitorName,
+    deal.hotsTargetExchangeDate,
+    deal.hotsNotes,
+  ].filter(
+    (value) => value !== null && value !== undefined && value !== '',
+  ).length;
+  const hotsSummary = hotsFilled > 0 ? `${hotsFilled} of 7 filled in` : 'Empty';
+
+  const propertySummary =
+    [property.addressLine1.trim(), property.postcode.trim()]
+      .filter(Boolean)
+      .join(', ') || 'Not set';
+
+  const errorNode = error ? (
+    <p role="alert" className="text-sm text-rose-400">
+      {error}
+    </p>
+  ) : null;
+
+  const footer = (
+    <DialogFooter className="gap-2 sm:justify-between">
+      <div className="flex flex-wrap items-center gap-2">
+        {commercial && onRequestCreateDisposal && deal ? (
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => {
+              createDisposalAfterSaveRef.current = true;
+              formRef.current?.requestSubmit();
+            }}
+            className="h-9 rounded-xl border border-[color:var(--workspace-shell-border)] px-4 text-sm font-medium text-[var(--workspace-shell-text)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] disabled:opacity-50"
+            data-test="edit-instruction-create-disposal"
+          >
+            {deal.commercialListingId
+              ? 'Save & create another disposal'
+              : 'Save & create disposal'}
+          </button>
+        ) : null}
+        {commercial && accountId && deal ? (
+          <WipArchiveControls
+            kind="instruction"
+            accountId={accountId}
+            accountSlug={accountSlug}
+            recordId={deal.id}
+            recordName={deal.projectName || deal.companyName}
+            canDelete={canDeleteWip}
+            onRemoved={() => {
+              onDealRemoved?.(deal.id);
+              onOpenChange(false);
+            }}
+            onRestored={() => {
+              onDealRestored?.();
+              router.refresh();
+            }}
+          />
+        ) : null}
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => onOpenChange(false)}
+          className="h-9 rounded-xl border border-[color:var(--workspace-shell-border)] px-4 text-sm font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          form={formId}
+          disabled={isPending}
+          className={workspaceBtnPrimaryMd}
+        >
+          {isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save changes'
+          )}
+        </button>
+      </div>
+    </DialogFooter>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
+      <DialogContent
+        className={cn(
+          'max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]',
+          commercial ? 'sm:max-w-5xl' : 'sm:max-w-lg',
+        )}
+      >
         <DialogHeader>
           <DialogTitle>
             {commercial ? 'Edit instruction' : 'Edit pipeline item'}
@@ -392,529 +512,538 @@ export function EditDealDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {canLinkClient ? (
-          <div className="flex rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-1 text-sm">
-            <button
-              type="button"
-              onClick={() => setMode('lead')}
-              className={cn(
-                'flex-1 rounded-lg px-3 py-1.5 font-medium transition-colors',
-                mode === 'lead'
-                  ? 'bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-sm'
-                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
-              )}
-            >
-              {commercial ? 'New contact' : 'New lead'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('client')}
-              className={cn(
-                'flex-1 rounded-lg px-3 py-1.5 font-medium transition-colors',
-                mode === 'client'
-                  ? 'bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-sm'
-                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
-              )}
-            >
-              {commercial ? 'Existing contact' : 'Existing client'}
-            </button>
-          </div>
-        ) : null}
-
-        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-          {mode === 'client' ? (
-            <>
-              <div className="space-y-2">
-                <Label className="text-[var(--workspace-shell-text-muted)]">
-                  {commercial ? 'Contact *' : 'Client *'}
-                </Label>
-                <ClientCombobox
-                  clients={clients}
-                  value={clientId}
-                  onValueChange={setClientId}
-                  loading={clientsLoading}
-                  placeholder={
-                    commercial
-                      ? 'Select an existing contact'
-                      : 'Select an existing client'
-                  }
-                  loadError={clientsError}
-                  addClientHref={
-                    accountSlug
-                      ? `${pathsConfig.app.accountClients.replace('[account]', accountSlug)}?create=client`
-                      : undefined
-                  }
-                />
-              </div>
-              {!commercial ? (
-                <>
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="edit-projectName"
-                      className="text-[var(--workspace-shell-text-muted)]"
-                    >
-                      Project name
-                    </Label>
-                    <Input
-                      id="edit-projectName"
-                      name="projectName"
-                      key={`projectName-${deal.id}-${deal.projectName ?? ''}`}
-                      defaultValue={deal.projectName ?? ''}
-                      placeholder="Website redesign"
-                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-                    />
-                    <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
-                      Optional — used when this opportunity is marked Won.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="edit-description"
-                      className="text-[var(--workspace-shell-text-muted)]"
-                    >
-                      Description
-                    </Label>
-                    <Textarea
-                      id="edit-description"
-                      name="description"
-                      key={`description-${deal.id}-${deal.description ?? ''}`}
-                      rows={3}
-                      defaultValue={deal.description ?? ''}
-                      placeholder="Brief for the new project…"
-                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-                    />
-                  </div>
-                </>
-              ) : null}
-            </>
-          ) : (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label
-                  htmlFor="edit-contactName"
-                  className="text-[var(--workspace-shell-text-muted)]"
-                >
-                  Contact name *
-                </Label>
-                <Input
-                  id="edit-contactName"
-                  name="contactName"
-                  defaultValue={deal.contactName}
-                  placeholder="Full name"
-                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="edit-companyName"
-                  className="text-[var(--workspace-shell-text-muted)]"
-                >
-                  Company
-                </Label>
-                <Input
-                  id="edit-companyName"
-                  name="companyName"
-                  defaultValue={deal.companyName}
-                  placeholder="Acme Ltd"
-                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-                />
-              </div>
-            </div>
+        <div
+          className={cn(
+            commercial && 'grid gap-6 lg:grid-cols-2 lg:items-start',
           )}
-
-          {commercial && listings.length > 0 ? (
-            <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">
-                Disposal
-              </Label>
-              <Select value={listingId} onValueChange={setListingId}>
-                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
-                  <SelectValue placeholder="Link a disposal (optional)" />
-                </SelectTrigger>
-                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                  <SelectItem value={NONE_LISTING}>None</SelectItem>
-                  {listings.map((listing) => (
-                    <SelectItem key={listing.id} value={listing.id}>
-                      {listing.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
-
-          <div
-            className={`grid gap-4 ${showAssignField ? 'grid-cols-2' : 'grid-cols-1'}`}
-          >
-            {showAssignField ? (
-              <div className="space-y-2">
-                <Label className="text-[var(--workspace-shell-text-muted)]">
-                  Workspace *
-                </Label>
-                <Select value={businessId} onValueChange={setBusinessId}>
-                  <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
-                    <SelectValue placeholder="Select workspace" />
-                  </SelectTrigger>
-                  <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                    {businesses.map((biz) => (
-                      <SelectItem key={biz.id} value={biz.id}>
-                        <span className="flex items-center gap-2">
-                          {biz.color ? (
-                            <span
-                              className="inline-block h-2 w-2 rounded-full"
-                              style={{ backgroundColor: biz.color }}
-                            />
-                          ) : null}
-                          {biz.name}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
-            <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">
-                Stage
-              </Label>
-              <Select value={stage} onValueChange={setStage}>
-                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                  {stages.map((s) => (
-                    <SelectItem key={s.key} value={s.key}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {commercial ? (
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-2">
-              <div>
-                <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                  AML
-                </p>
-                <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
-                  {amlDone
-                    ? 'Marked done for this instruction'
-                    : 'Not done yet'}
-                </p>
-              </div>
-              <WipAmlToggle
-                done={amlDone}
-                doneAt={deal.amlDoneAt}
-                instructionName={deal.projectName || deal.companyName}
-                onToggle={setAmlDone}
-              />
-            </div>
-          ) : null}
-
-          {surveyor ? (
-            <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]">
-              <Checkbox
-                checked={followUpCall}
-                onCheckedChange={(checked) => setFollowUpCall(checked === true)}
-              />
-              Follow-up call
-            </label>
-          ) : null}
-
-          {surveyor && accountId && accountSlug ? (
-            <div className="space-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] p-3">
-              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                Standardised quote
-              </p>
-              <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
-                Address, Level 2 and Level 3 together, form of appointment, and
-                Terms of Business. Accepting the quote or signing ToB moves the
-                card to Accepted.
-              </p>
-              <Input
-                value={quoteAddress}
-                onChange={(event) => setQuoteAddress(event.target.value)}
-                placeholder="Property address"
-                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
-              />
-              <button
-                type="button"
-                className={`${workspaceBtnPrimaryMd} h-8 px-3 text-xs`}
-                disabled={quotePending || !quoteAddress.trim()}
-                onClick={() => {
-                  setQuotePending(true);
-                  void createSurveyorQuoteAction({
-                    accountId,
-                    accountSlug,
-                    dealId: deal.id,
-                    address: quoteAddress.trim(),
-                    clientName:
-                      deal.clientName || deal.contactName || undefined,
-                  })
-                    .then((result) => {
-                      router.push(
-                        pathsConfig.app.accountProposalEdit
-                          .replace('[account]', accountSlug)
-                          .replace('[id]', result.proposalId),
-                      );
-                    })
-                    .catch((error: unknown) => {
-                      setError(getErrorMessage(error));
-                    })
-                    .finally(() => setQuotePending(false));
-                }}
-              >
-                {quotePending ? 'Creating quote…' : 'Create quote'}
-              </button>
-            </div>
-          ) : null}
-
-          <div className="space-y-2">
-            <Label
-              htmlFor="edit-value"
-              className="text-[var(--workspace-shell-text-muted)]"
-            >
-              Value (£)
-            </Label>
-            <Input
-              id="edit-value"
-              name="value"
-              type="number"
-              min="0"
-              step="1"
-              defaultValue={deal.value}
-              placeholder="5000"
-              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label
-                htmlFor="edit-nextAction"
-                className="text-[var(--workspace-shell-text-muted)]"
-              >
-                Short description / next action
-              </Label>
-              <Input
-                id="edit-nextAction"
-                name="nextAction"
-                defaultValue={deal.nextAction}
-                placeholder="Short description"
-                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label
-                htmlFor="edit-nextActionDate"
-                className="text-[var(--workspace-shell-text-muted)]"
-              >
-                Action date
-              </Label>
-              <Input
-                id="edit-nextActionDate"
-                name="nextActionDate"
-                type="date"
-                defaultValue={deal.nextActionDate ?? ''}
-                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-              />
-            </div>
-          </div>
-
-          {commercial ? (
-            <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] p-3">
-              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                Heads of Terms
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="hotsRentPsf"
-                    className="text-[var(--workspace-shell-text-muted)]"
-                  >
-                    Rent (£/ft²)
-                  </Label>
-                  <Input
-                    id="hotsRentPsf"
-                    name="hotsRentPsf"
-                    type="number"
-                    step="0.01"
-                    defaultValue={deal.hotsRentPsf ?? ''}
-                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="hotsSizeSqft"
-                    className="text-[var(--workspace-shell-text-muted)]"
-                  >
-                    Size (ft²)
-                  </Label>
-                  <Input
-                    id="hotsSizeSqft"
-                    name="hotsSizeSqft"
-                    type="number"
-                    step="1"
-                    defaultValue={deal.hotsSizeSqft ?? ''}
-                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="hotsLeaseYears"
-                    className="text-[var(--workspace-shell-text-muted)]"
-                  >
-                    Lease (years)
-                  </Label>
-                  <Input
-                    id="hotsLeaseYears"
-                    name="hotsLeaseYears"
-                    type="number"
-                    step="0.5"
-                    defaultValue={deal.hotsLeaseYears ?? ''}
-                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="hotsTargetExchangeDate"
-                    className="text-[var(--workspace-shell-text-muted)]"
-                  >
-                    Target exchange
-                  </Label>
-                  <Input
-                    id="hotsTargetExchangeDate"
-                    name="hotsTargetExchangeDate"
-                    type="date"
-                    defaultValue={deal.hotsTargetExchangeDate ?? ''}
-                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="hotsSolicitorName"
-                  className="text-[var(--workspace-shell-text-muted)]"
-                >
-                  Solicitor
-                </Label>
-                <Input
-                  id="hotsSolicitorName"
-                  name="hotsSolicitorName"
-                  defaultValue={deal.hotsSolicitorName ?? ''}
-                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="hotsIncentives"
-                  className="text-[var(--workspace-shell-text-muted)]"
-                >
-                  Incentives
-                </Label>
-                <Input
-                  id="hotsIncentives"
-                  name="hotsIncentives"
-                  defaultValue={deal.hotsIncentives ?? ''}
-                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="hotsNotes"
-                  className="text-[var(--workspace-shell-text-muted)]"
-                >
-                  HoTs notes
-                </Label>
-                <Textarea
-                  id="hotsNotes"
-                  name="hotsNotes"
-                  rows={2}
-                  defaultValue={deal.hotsNotes ?? ''}
-                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
-                />
-              </div>
-            </div>
-          ) : null}
-
-          {commercial && deal ? (
-            <InstructionCareCompliancePanel
-              instructionId={deal.id}
-              accountSlug={accountSlug}
-              onCareLogAdded={(createdAt) =>
-                onCareLogAdded?.(deal.id, createdAt)
-              }
-            />
-          ) : null}
-
-          {error && <p className="text-sm text-rose-400">{error}</p>}
-
-          <DialogFooter className="gap-2 sm:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              {commercial && onRequestCreateDisposal && deal ? (
+        >
+          <div className="min-w-0 space-y-4">
+            {canLinkClient ? (
+              <div className="flex rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-1 text-sm">
                 <button
                   type="button"
-                  onClick={() => onRequestCreateDisposal(deal)}
-                  className="h-9 rounded-xl border border-[color:var(--workspace-shell-border)] px-4 text-sm font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                  onClick={() => setMode('lead')}
+                  className={cn(
+                    'flex-1 rounded-lg px-3 py-1.5 font-medium transition-colors',
+                    mode === 'lead'
+                      ? 'bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-sm'
+                      : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+                  )}
                 >
-                  {deal.commercialListingId
-                    ? 'Create another disposal'
-                    : 'Create disposal'}
+                  {commercial ? 'New contact' : 'New lead'}
                 </button>
-              ) : null}
-              {commercial && accountId && deal ? (
-                <WipArchiveControls
-                  kind="instruction"
-                  accountId={accountId}
-                  accountSlug={accountSlug}
-                  recordId={deal.id}
-                  recordName={deal.projectName || deal.companyName}
-                  canDelete={canDeleteWip}
-                  onRemoved={() => {
-                    onDealRemoved?.(deal.id);
-                    onOpenChange(false);
-                  }}
-                  onRestored={() => {
-                    onDealRestored?.();
-                    router.refresh();
-                  }}
-                />
-              ) : null}
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => onOpenChange(false)}
-                className="h-9 rounded-xl border border-[color:var(--workspace-shell-border)] px-4 text-sm font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isPending}
-                className={workspaceBtnPrimaryMd}
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save changes'
-                )}
-              </button>
-            </div>
-          </DialogFooter>
-        </form>
+                <button
+                  type="button"
+                  onClick={() => setMode('client')}
+                  className={cn(
+                    'flex-1 rounded-lg px-3 py-1.5 font-medium transition-colors',
+                    mode === 'client'
+                      ? 'bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-sm'
+                      : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+                  )}
+                >
+                  {commercial ? 'Existing contact' : 'Existing client'}
+                </button>
+              </div>
+            ) : null}
 
-        {accountId && deal && commercial ? (
-          <WipAttachmentsStrip
-            accountId={accountId}
-            accountSlug={accountSlug}
-            pipelineDealId={deal.id}
-          />
+            <form
+              id={formId}
+              ref={formRef}
+              onSubmit={handleSubmit}
+              className="space-y-4"
+            >
+              {mode === 'client' ? (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-[var(--workspace-shell-text-muted)]">
+                      {commercial ? 'Contact *' : 'Client *'}
+                    </Label>
+                    <ClientCombobox
+                      clients={clients}
+                      value={clientId}
+                      onValueChange={setClientId}
+                      loading={clientsLoading}
+                      placeholder={
+                        commercial
+                          ? 'Select an existing contact'
+                          : 'Select an existing client'
+                      }
+                      loadError={clientsError}
+                      addClientHref={
+                        accountSlug
+                          ? `${pathsConfig.app.accountClients.replace('[account]', accountSlug)}?create=client`
+                          : undefined
+                      }
+                    />
+                  </div>
+                  {!commercial ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="edit-projectName"
+                          className="text-[var(--workspace-shell-text-muted)]"
+                        >
+                          Project name
+                        </Label>
+                        <Input
+                          id="edit-projectName"
+                          name="projectName"
+                          key={`projectName-${deal.id}-${deal.projectName ?? ''}`}
+                          defaultValue={deal.projectName ?? ''}
+                          placeholder="Website redesign"
+                          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                        />
+                        <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                          Optional — used when this opportunity is marked Won.
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="edit-description"
+                          className="text-[var(--workspace-shell-text-muted)]"
+                        >
+                          Description
+                        </Label>
+                        <Textarea
+                          id="edit-description"
+                          name="description"
+                          key={`description-${deal.id}-${deal.description ?? ''}`}
+                          rows={3}
+                          defaultValue={deal.description ?? ''}
+                          placeholder="Brief for the new project…"
+                          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                        />
+                      </div>
+                    </>
+                  ) : null}
+                </>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="edit-contactName"
+                      className="text-[var(--workspace-shell-text-muted)]"
+                    >
+                      Contact name *
+                    </Label>
+                    <Input
+                      id="edit-contactName"
+                      name="contactName"
+                      defaultValue={deal.contactName}
+                      placeholder="Full name"
+                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="edit-companyName"
+                      className="text-[var(--workspace-shell-text-muted)]"
+                    >
+                      Company
+                    </Label>
+                    <Input
+                      id="edit-companyName"
+                      name="companyName"
+                      defaultValue={deal.companyName}
+                      placeholder="Acme Ltd"
+                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {commercial && listings.length > 0 ? (
+                <div className="space-y-2">
+                  <Label className="text-[var(--workspace-shell-text-muted)]">
+                    Disposal
+                  </Label>
+                  <Select value={listingId} onValueChange={setListingId}>
+                    <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
+                      <SelectValue placeholder="Link a disposal (optional)" />
+                    </SelectTrigger>
+                    <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                      <SelectItem value={NONE_LISTING}>None</SelectItem>
+                      {listings.map((listing) => (
+                        <SelectItem key={listing.id} value={listing.id}>
+                          {listing.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+
+              {commercial ? (
+                <WipCollapsibleSection
+                  title="Property & asking terms"
+                  summary={propertySummary}
+                  defaultOpen
+                  dataTest="edit-instruction-property"
+                >
+                  <InstructionPropertySection
+                    value={property}
+                    onChange={setProperty}
+                  />
+                </WipCollapsibleSection>
+              ) : null}
+
+              <div
+                className={`grid gap-4 ${showAssignField ? 'grid-cols-2' : 'grid-cols-1'}`}
+              >
+                {showAssignField ? (
+                  <div className="space-y-2">
+                    <Label className="text-[var(--workspace-shell-text-muted)]">
+                      Workspace *
+                    </Label>
+                    <Select value={businessId} onValueChange={setBusinessId}>
+                      <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
+                        <SelectValue placeholder="Select workspace" />
+                      </SelectTrigger>
+                      <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                        {businesses.map((biz) => (
+                          <SelectItem key={biz.id} value={biz.id}>
+                            <span className="flex items-center gap-2">
+                              {biz.color ? (
+                                <span
+                                  className="inline-block h-2 w-2 rounded-full"
+                                  style={{ backgroundColor: biz.color }}
+                                />
+                              ) : null}
+                              {biz.name}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
+                <div className="space-y-2">
+                  <Label className="text-[var(--workspace-shell-text-muted)]">
+                    Stage
+                  </Label>
+                  <Select value={stage} onValueChange={setStage}>
+                    <SelectTrigger
+                      className={cn(
+                        commercial
+                          ? 'font-medium'
+                          : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]',
+                      )}
+                      style={
+                        commercial ? wipStageControlStyle(stage) : undefined
+                      }
+                      data-test="edit-instruction-stage"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                      {stages.map((s) => (
+                        <SelectItem key={s.key} value={s.key}>
+                          {commercial ? (
+                            <span className="flex items-center gap-2">
+                              <WipStageDot stageKey={s.key} />
+                              {s.label}
+                            </span>
+                          ) : (
+                            s.label
+                          )}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {commercial ? (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                      AML
+                    </p>
+                    <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                      {amlDone
+                        ? 'Marked done for this instruction'
+                        : 'Not done yet'}
+                    </p>
+                  </div>
+                  <WipAmlToggle
+                    done={amlDone}
+                    doneAt={deal.amlDoneAt}
+                    instructionName={deal.projectName || deal.companyName}
+                    onToggle={setAmlDone}
+                  />
+                </div>
+              ) : null}
+
+              {surveyor ? (
+                <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]">
+                  <Checkbox
+                    checked={followUpCall}
+                    onCheckedChange={(checked) =>
+                      setFollowUpCall(checked === true)
+                    }
+                  />
+                  Follow-up call
+                </label>
+              ) : null}
+
+              {surveyor && accountId && accountSlug ? (
+                <div className="space-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] p-3">
+                  <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                    Standardised quote
+                  </p>
+                  <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                    Address, Level 2 and Level 3 together, form of appointment,
+                    and Terms of Business. Accepting the quote or signing ToB
+                    moves the card to Accepted.
+                  </p>
+                  <Input
+                    value={quoteAddress}
+                    onChange={(event) => setQuoteAddress(event.target.value)}
+                    placeholder="Property address"
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                  />
+                  <button
+                    type="button"
+                    className={`${workspaceBtnPrimaryMd} h-8 px-3 text-xs`}
+                    disabled={quotePending || !quoteAddress.trim()}
+                    onClick={() => {
+                      setQuotePending(true);
+                      void createSurveyorQuoteAction({
+                        accountId,
+                        accountSlug,
+                        dealId: deal.id,
+                        address: quoteAddress.trim(),
+                        clientName:
+                          deal.clientName || deal.contactName || undefined,
+                      })
+                        .then((result) => {
+                          router.push(
+                            pathsConfig.app.accountProposalEdit
+                              .replace('[account]', accountSlug)
+                              .replace('[id]', result.proposalId),
+                          );
+                        })
+                        .catch((error: unknown) => {
+                          setError(getErrorMessage(error));
+                        })
+                        .finally(() => setQuotePending(false));
+                    }}
+                  >
+                    {quotePending ? 'Creating quote…' : 'Create quote'}
+                  </button>
+                </div>
+              ) : null}
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="edit-value"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
+                  Value (£)
+                </Label>
+                <Input
+                  id="edit-value"
+                  name="value"
+                  type="number"
+                  min="0"
+                  step="1"
+                  defaultValue={deal.value}
+                  placeholder="5000"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="edit-nextAction"
+                    className="text-[var(--workspace-shell-text-muted)]"
+                  >
+                    Short description / next action
+                  </Label>
+                  <Input
+                    id="edit-nextAction"
+                    name="nextAction"
+                    defaultValue={deal.nextAction}
+                    placeholder="Short description"
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="edit-nextActionDate"
+                    className="text-[var(--workspace-shell-text-muted)]"
+                  >
+                    Action date
+                  </Label>
+                  <Input
+                    id="edit-nextActionDate"
+                    name="nextActionDate"
+                    type="date"
+                    defaultValue={deal.nextActionDate ?? ''}
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                  />
+                </div>
+              </div>
+
+              {commercial ? (
+                <WipCollapsibleSection
+                  title="Heads of Terms"
+                  summary={hotsSummary}
+                  dataTest="edit-instruction-hots"
+                >
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="hotsRentPsf"
+                          className="text-[var(--workspace-shell-text-muted)]"
+                        >
+                          Rent (£/ft²)
+                        </Label>
+                        <Input
+                          id="hotsRentPsf"
+                          name="hotsRentPsf"
+                          type="number"
+                          step="0.01"
+                          defaultValue={deal.hotsRentPsf ?? ''}
+                          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="hotsSizeSqft"
+                          className="text-[var(--workspace-shell-text-muted)]"
+                        >
+                          Size (ft²)
+                        </Label>
+                        <Input
+                          id="hotsSizeSqft"
+                          name="hotsSizeSqft"
+                          type="number"
+                          step="1"
+                          defaultValue={deal.hotsSizeSqft ?? ''}
+                          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="hotsLeaseYears"
+                          className="text-[var(--workspace-shell-text-muted)]"
+                        >
+                          Lease (years)
+                        </Label>
+                        <Input
+                          id="hotsLeaseYears"
+                          name="hotsLeaseYears"
+                          type="number"
+                          step="0.5"
+                          defaultValue={deal.hotsLeaseYears ?? ''}
+                          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="hotsTargetExchangeDate"
+                          className="text-[var(--workspace-shell-text-muted)]"
+                        >
+                          Target exchange
+                        </Label>
+                        <Input
+                          id="hotsTargetExchangeDate"
+                          name="hotsTargetExchangeDate"
+                          type="date"
+                          defaultValue={deal.hotsTargetExchangeDate ?? ''}
+                          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="hotsSolicitorName"
+                        className="text-[var(--workspace-shell-text-muted)]"
+                      >
+                        Solicitor
+                      </Label>
+                      <Input
+                        id="hotsSolicitorName"
+                        name="hotsSolicitorName"
+                        defaultValue={deal.hotsSolicitorName ?? ''}
+                        className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="hotsIncentives"
+                        className="text-[var(--workspace-shell-text-muted)]"
+                      >
+                        Incentives
+                      </Label>
+                      <Input
+                        id="hotsIncentives"
+                        name="hotsIncentives"
+                        defaultValue={deal.hotsIncentives ?? ''}
+                        className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="hotsNotes"
+                        className="text-[var(--workspace-shell-text-muted)]"
+                      >
+                        HoTs notes
+                      </Label>
+                      <Textarea
+                        id="hotsNotes"
+                        name="hotsNotes"
+                        rows={2}
+                        defaultValue={deal.hotsNotes ?? ''}
+                        className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                      />
+                    </div>
+                  </div>
+                </WipCollapsibleSection>
+              ) : null}
+
+              {!commercial ? errorNode : null}
+              {!commercial ? footer : null}
+            </form>
+          </div>
+
+          {commercial ? (
+            <div className="min-w-0 space-y-4">
+              {accountId ? (
+                <div className="[&>div]:mt-0 [&>div]:border-t-0 [&>div]:pt-0">
+                  <WipAttachmentsStrip
+                    accountId={accountId}
+                    accountSlug={accountSlug}
+                    pipelineDealId={deal.id}
+                  />
+                </div>
+              ) : null}
+              <WipCollapsibleSection
+                title="Client care & compliance"
+                lazy
+                dataTest="edit-instruction-care"
+              >
+                <InstructionCareCompliancePanel
+                  instructionId={deal.id}
+                  accountSlug={accountSlug}
+                  onCareLogAdded={(createdAt) =>
+                    onCareLogAdded?.(deal.id, createdAt)
+                  }
+                />
+              </WipCollapsibleSection>
+            </div>
+          ) : null}
+        </div>
+
+        {commercial ? (
+          <div className="sticky -bottom-6 z-10 -mx-6 -mb-6 space-y-2 border-t border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-6 py-3">
+            {errorNode}
+            {footer}
+          </div>
         ) : null}
 
         {accountId && deal && !commercial ? (

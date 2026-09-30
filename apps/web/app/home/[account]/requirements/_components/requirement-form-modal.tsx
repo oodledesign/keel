@@ -429,6 +429,10 @@ function RequirementFormFields({
         allowNone={false}
         terminology="commercial"
       />
+      <p className="-mt-2 text-[11px] text-[var(--workspace-shell-text)]/45">
+        Circulation emails go to the linked contact&rsquo;s email. Edit the
+        contact to change where they go.
+      </p>
 
       <div className="space-y-1.5">
         <Label>Location</Label>

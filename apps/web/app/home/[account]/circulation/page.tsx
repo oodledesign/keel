@@ -39,6 +39,7 @@ async function CirculationPage({ params }: CirculationPageProps) {
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 pt-2 pb-6 lg:px-6">
         <CirculationWorkspaceClient
           accountId={accountId}
+          accountSlug={slug}
           agencyName={data.agencyName}
           fromEmail={data.fromEmail}
           fromName={data.fromName}

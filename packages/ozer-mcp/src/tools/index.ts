@@ -1,4 +1,5 @@
 import { registerAssigneeTools } from './assignees';
+import { registerCanvasTools } from './canvas';
 import { registerClientTools } from './clients';
 import { registerContactTools } from './contacts';
 import { registerExtractTaskTools } from './extract-tasks';
@@ -20,6 +21,7 @@ export const ozerMcpTools: OzerMcpToolRegistrar[] = [
   registerExtractTaskTools,
   registerProjectTools,
   registerPhaseTools,
+  registerCanvasTools,
   registerPipelineTools,
   registerClientTools,
   registerContactTools,

@@ -55,6 +55,23 @@ return **200** JSON.
 
 MCP tools do not delete projects, clients, contacts, tasks, or notes. `delete_project_phase` is the exception: it removes a phase and unphases its tasks (`phase_id` SET NULL), matching the web app.
 
+## Canvas tools
+
+The project canvas is the shared whiteboard on delivery projects. Edits are written to the same `project_canvas_items` rows as the web app, so people viewing the canvas see changes live. Requires the same permission as the web canvas (workspace owner, or `jobs.edit` and not a contractor).
+
+| Tool                  | Purpose                                                                                                                                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `get_project_canvas`  | Read every item with position (`x`, `y`, `w`, `h` in canvas px, y grows downward), content, stacking order, content `bounds`, and per-kind `counts`. Linked cards include a live `label`; connectors include ids.        |
+| `add_canvas_items`    | Add up to 100 items in one call: `sticky`, `text`, `shape` (rectangle/ellipse/diamond), `frame`, `link`, `draw` (freehand stroke from `[x, y]` points) and `connector` arrows. Omit `x`/`y` to auto-place below content. |
+| `update_canvas_items` | Patch items by id: move/resize/restack anything; edit text, colour, font, url, strokes or connector labels on freeform items. Linked cards (tasks, phases, …) can only be moved.                                         |
+
+Notes:
+
+- Give items a `key` in `add_canvas_items` so a `connector` in the same call can use it as `source`/`target`; connectors can also point at existing item ids. Arrows attach to the facing sides of the two items.
+- `draw` points are absolute canvas coordinates; the server smooths and simplifies them and sets the item's position from the stroke bounds.
+- Unsupported fields for a kind are rejected rather than ignored (for example `text` on a frame, which uses `title`).
+- MCP cannot create linked cards, images, or timelines, and does not delete canvas items. Canvas constants mirror `apps/web/lib/projects/canvas/canvas-types.ts`; a test fails if they drift.
+
 ## Workspace tools
 
 | Tool              | Purpose                                                                                             |

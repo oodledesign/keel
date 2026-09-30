@@ -65,6 +65,7 @@ export async function loadCirculationWorkspaceData(
     ),
     contacts: contacts.map((contact) => ({
       email: contact.email,
+      clientId: contact.clientId,
       contactName: contact.contactName,
       companyName: contact.companyName,
       consentStatus: contact.consentStatus,

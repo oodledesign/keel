@@ -16,6 +16,7 @@ import {
   redirectIfSpaceNotIn,
 } from '../../../_lib/server/workspace-route-guard';
 import type { ClientOverviewItem } from '../clients-overview.types';
+import type { ContactsViewCounts, ContactsViewState } from '../contacts-view';
 import { createClientsService } from './clients.service';
 
 export const loadClientsPageData = cache(loadClientsPageDataImpl);
@@ -24,7 +25,7 @@ async function loadClientsPageDataImpl(
   accountSlug: string,
   options?: {
     variant?: 'work' | 'commercial';
-    audience?: 'all' | 'mailing_list';
+    viewState?: ContactsViewState;
   },
 ) {
   const workspace = await loadTeamWorkspace(accountSlug);
@@ -51,6 +52,7 @@ async function loadClientsPageDataImpl(
 
   let initialOverview: ClientOverviewItem[] = [];
   let initialTotal = 0;
+  let initialCounts: ContactsViewCounts | null = null;
   if (canViewClients) {
     try {
       const client = getSupabaseServerClient();
@@ -62,10 +64,12 @@ async function loadClientsPageDataImpl(
         page: 1,
         pageSize: 20,
         variant,
-        audience: options?.audience ?? 'all',
+        view: options?.viewState?.view ?? 'all',
+        circ: options?.viewState?.circ ?? undefined,
       });
       initialOverview = result.data;
       initialTotal = result.total ?? 0;
+      initialCounts = result.counts;
     } catch (e) {
       console.error('[clients-page.loader] listClients error:', e);
     }
@@ -80,6 +84,7 @@ async function loadClientsPageDataImpl(
     isContractorView: access.isContractor,
     initialOverview,
     initialTotal,
+    initialCounts,
     variant,
   };
 }

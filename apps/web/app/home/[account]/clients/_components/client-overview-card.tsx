@@ -15,6 +15,11 @@ import type {
   ClientProjectHealth,
   ClientsWorkspaceVariant,
 } from '../_lib/clients-overview.types';
+import {
+  ContactCommsPills,
+  LastEmailedLabel,
+  NotEmailedHint,
+} from './contact-comms-pills';
 
 const HEALTH_STYLES: Record<
   ClientProjectHealth,
@@ -48,6 +53,7 @@ type ClientOverviewCardProps = {
   client: ClientOverviewItem;
   accountSlug: string;
   variant?: ClientsWorkspaceVariant;
+  showNewsletter?: boolean;
   isFavorite: boolean;
   onToggleFavorite: () => void;
 };
@@ -56,6 +62,7 @@ export function ClientOverviewCard({
   client,
   accountSlug,
   variant = 'work',
+  showNewsletter = false,
   isFavorite,
   onToggleFavorite,
 }: ClientOverviewCardProps) {
@@ -136,6 +143,13 @@ export function ClientOverviewCard({
               ? commercialSubtitle || client.tagline
               : client.tagline}
           </p>
+          <ContactCommsPills
+            comms={client.comms}
+            requirementCount={client.requirementCount}
+            showCirculation={isCommercial}
+            showNewsletter={showNewsletter}
+            className="mt-2"
+          />
         </div>
       </div>
 
@@ -291,6 +305,17 @@ export function ClientOverviewCard({
         ) : (
           <span />
         )}
+
+        {isCommercial ? (
+          <div className="flex items-center gap-1.5 text-xs text-[var(--workspace-shell-text-muted)]">
+            <NotEmailedHint comms={client.comms} />
+            <span>Last emailed</span>
+            <LastEmailedLabel
+              comms={client.comms}
+              className="text-[var(--workspace-shell-text)]"
+            />
+          </div>
+        ) : null}
 
         {!isCommercial && client.teamMembers.length > 0 ? (
           <div className="flex items-center -space-x-2">

@@ -14991,6 +14991,18 @@ export type Database = {
       }
       pipeline_deals: {
         Row: {
+          address_line_1: string | null
+          address_line_2: string | null
+          asking_price_pence: number | null
+          asking_rent_pence: number | null
+          county: string | null
+          disposal_type: string | null
+          latitude: number | null
+          longitude: number | null
+          postcode: string | null
+          property_type: string | null
+          size_sqft: number | null
+          town: string | null
           account_id: string | null
           board_position: number
           business_id: string | null
@@ -15031,6 +15043,18 @@ export type Database = {
           work_type: string | null
         }
         Insert: {
+          address_line_1?: string | null
+          address_line_2?: string | null
+          asking_price_pence?: number | null
+          asking_rent_pence?: number | null
+          county?: string | null
+          disposal_type?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          postcode?: string | null
+          property_type?: string | null
+          size_sqft?: number | null
+          town?: string | null
           account_id?: string | null
           board_position?: number
           business_id?: string | null
@@ -15071,6 +15095,18 @@ export type Database = {
           work_type?: string | null
         }
         Update: {
+          address_line_1?: string | null
+          address_line_2?: string | null
+          asking_price_pence?: number | null
+          asking_rent_pence?: number | null
+          county?: string | null
+          disposal_type?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          postcode?: string | null
+          property_type?: string | null
+          size_sqft?: number | null
+          town?: string | null
           account_id?: string | null
           board_position?: number
           business_id?: string | null

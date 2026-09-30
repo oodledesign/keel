@@ -1,3 +1,5 @@
+import type { ContactCommsSummary } from '~/lib/commercial/circulation/contact-comms';
+
 export type ClientProjectHealth = 'on_track' | 'at_risk' | 'behind';
 
 export type ClientsWorkspaceVariant = 'work' | 'commercial';
@@ -46,6 +48,8 @@ export type ClientOverviewItem = {
   viewingCount: number;
   leaseCount: number;
   highlights: ClientOverviewHighlight[];
+  /** Consent and last Ozer email; null when the summary could not load. */
+  comms: ContactCommsSummary | null;
 };
 
 export type ClientRow = {

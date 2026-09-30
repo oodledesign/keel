@@ -10,11 +10,12 @@ import {
   loadTeamAccountIdsForUser,
   loadUserWorkspaceAccounts,
 } from '~/home/_lib/server/workspace-scope';
+import type { InstructionPropertyFields } from '~/lib/commercial/instruction-to-disposal';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
-export type PipelineDeal = {
+export type PipelineDeal = InstructionPropertyFields & {
   id: string;
   contactName: string;
   companyName: string;
@@ -95,7 +96,26 @@ type PipelineDealRow = {
   aml_done?: boolean | null;
   aml_done_at?: string | null;
   aml_done_by?: string | null;
+  address_line_1?: string | null;
+  address_line_2?: string | null;
+  town?: string | null;
+  county?: string | null;
+  postcode?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  disposal_type?: string | null;
+  property_type?: string | null;
+  size_sqft?: number | string | null;
+  asking_rent_pence?: number | string | null;
+  asking_price_pence?: number | string | null;
 };
+
+/** Postgres numeric / bigint can arrive as strings. */
+function toNumberOrNull(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
 
 type BusinessRow = {
   id: string;
@@ -161,13 +181,25 @@ function mapDealRow(row: PipelineDealRow): PipelineDeal {
     amlDone: Boolean(row.aml_done),
     amlDoneAt: row.aml_done_at ?? null,
     amlDoneBy: row.aml_done_by ?? null,
+    addressLine1: row.address_line_1?.trim() || null,
+    addressLine2: row.address_line_2?.trim() || null,
+    town: row.town?.trim() || null,
+    county: row.county?.trim() || null,
+    postcode: row.postcode?.trim() || null,
+    latitude: toNumberOrNull(row.latitude),
+    longitude: toNumberOrNull(row.longitude),
+    disposalType: row.disposal_type ?? null,
+    propertyType: row.property_type ?? null,
+    sizeSqft: toNumberOrNull(row.size_sqft),
+    askingRentPence: toNumberOrNull(row.asking_rent_pence),
+    askingPricePence: toNumberOrNull(row.asking_price_pence),
   };
 }
 
 export { PIPELINE_WORKSPACE_BUSINESS_PREFIX } from '~/home/(user)/_lib/pipeline-constants';
 
 const DEAL_SELECT =
-  'id, name, contact_name, company_name, notes, value, stage, work_type, next_action, next_action_date, business_id, account_id, client_id, commercial_listing_id, hots_rent_psf, hots_size_sqft, hots_lease_years, hots_incentives, hots_solicitor_name, hots_target_exchange_date, hots_notes, completed_at, ladder_position, board_position, follow_up_call, aml_done, aml_done_at, aml_done_by, businesses(name, colour), accounts(name), clients(display_name)';
+  'id, name, contact_name, company_name, notes, value, stage, work_type, next_action, next_action_date, business_id, account_id, client_id, commercial_listing_id, hots_rent_psf, hots_size_sqft, hots_lease_years, hots_incentives, hots_solicitor_name, hots_target_exchange_date, hots_notes, completed_at, ladder_position, board_position, follow_up_call, aml_done, aml_done_at, aml_done_by, address_line_1, address_line_2, town, county, postcode, latitude, longitude, disposal_type, property_type, size_sqft, asking_rent_pence, asking_price_pence, businesses(name, colour), accounts(name), clients(display_name)';
 
 // ─── Loader ──────────────────────────────────────────────────────────
 

@@ -1,7 +1,11 @@
 'use server';
 
+import { z } from 'zod';
+
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+
+import { loadRequirementCirculationStates } from '~/lib/commercial/circulation/contact-comms-summary';
 
 import {
   CreateRequirementSchema,
@@ -19,6 +23,15 @@ function getService() {
 export const listRequirements = enhanceAction(
   async (input) => getService().listRequirements(input.accountId, input.stage),
   { schema: ListRequirementsSchema },
+);
+
+export const listRequirementCirculationStates = enhanceAction(
+  async (input) =>
+    loadRequirementCirculationStates(
+      getSupabaseServerClient(),
+      input.accountId,
+    ),
+  { schema: z.object({ accountId: z.string().uuid() }) },
 );
 
 export const createRequirement = enhanceAction(

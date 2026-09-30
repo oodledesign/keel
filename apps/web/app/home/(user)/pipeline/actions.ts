@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { normalizeDisposalType } from '~/lib/commercial/instruction-to-disposal';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { PIPELINE_WORKSPACE_BUSINESS_PREFIX } from '../_lib/pipeline-constants';
@@ -257,7 +258,53 @@ export type CreateDealInput = {
   accountSlug?: string | null;
   /** Commercial disposal link (agency workspaces). */
   commercialListingId?: string | null;
+  /** Property details (commercial instructions). */
+  property?: InstructionPropertyInput;
 };
+
+/** Property / asking terms captured on an instruction. Pence, not pounds. */
+export type InstructionPropertyInput = {
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  town?: string | null;
+  county?: string | null;
+  postcode?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  disposalType?: string | null;
+  propertyType?: string | null;
+  sizeSqft?: number | null;
+  askingRentPence?: number | null;
+  askingPricePence?: number | null;
+};
+
+/** Maps property input to pipeline_deals columns (only keys that were sent). */
+function propertyInputToColumns(
+  property: InstructionPropertyInput | undefined,
+): Record<string, unknown> {
+  if (!property) return {};
+  const text = (value: string | null | undefined) => value?.trim() || null;
+  const out: Record<string, unknown> = {};
+  if (property.addressLine1 !== undefined)
+    out.address_line_1 = text(property.addressLine1);
+  if (property.addressLine2 !== undefined)
+    out.address_line_2 = text(property.addressLine2);
+  if (property.town !== undefined) out.town = text(property.town);
+  if (property.county !== undefined) out.county = text(property.county);
+  if (property.postcode !== undefined) out.postcode = text(property.postcode);
+  if (property.latitude !== undefined) out.latitude = property.latitude;
+  if (property.longitude !== undefined) out.longitude = property.longitude;
+  if (property.disposalType !== undefined)
+    out.disposal_type = normalizeDisposalType(property.disposalType);
+  if (property.propertyType !== undefined)
+    out.property_type = text(property.propertyType);
+  if (property.sizeSqft !== undefined) out.size_sqft = property.sizeSqft;
+  if (property.askingRentPence !== undefined)
+    out.asking_rent_pence = property.askingRentPence;
+  if (property.askingPricePence !== undefined)
+    out.asking_price_pence = property.askingPricePence;
+  return out;
+}
 
 export async function createDeal(input: CreateDealInput) {
   const client = getSupabaseServerClient();
@@ -291,6 +338,7 @@ export async function createDeal(input: CreateDealInput) {
       account_id: resolvedAccountId,
       client_id: input.clientId || null,
       commercial_listing_id: input.commercialListingId || null,
+      ...propertyInputToColumns(input.property),
     })
     .select('id')
     .single();
@@ -325,6 +373,8 @@ export type UpdateDealInput = {
   hotsSolicitorName?: string | null;
   hotsTargetExchangeDate?: string | null;
   hotsNotes?: string | null;
+  /** Property details; only the keys you send are changed. */
+  property?: InstructionPropertyInput;
   followUpCall?: boolean;
   /** Instruction AML tick. Audit columns are set on the server. */
   amlDone?: boolean;
@@ -368,6 +418,7 @@ export async function updateDeal(dealId: string, input: UpdateDealInput) {
   if (input.hotsNotes !== undefined) {
     updates.hots_notes = input.hotsNotes?.trim() || null;
   }
+  Object.assign(updates, propertyInputToColumns(input.property));
   if (input.followUpCall !== undefined) {
     updates.follow_up_call = input.followUpCall;
   }

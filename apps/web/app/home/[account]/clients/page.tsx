@@ -17,11 +17,12 @@ import {
 } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { ClientsPageContent } from './_components/clients-page-content';
+import { parseContactsView } from './_lib/contacts-view';
 import { loadClientsPageData } from './_lib/server/clients-page.loader';
 
 interface ClientsPageProps {
   params: Promise<{ account: string }>;
-  searchParams: Promise<{ list?: string }>;
+  searchParams: Promise<{ list?: string; view?: string; circ?: string }>;
 }
 
 export async function generateMetadata({ params }: ClientsPageProps) {
@@ -41,7 +42,7 @@ export async function generateMetadata({ params }: ClientsPageProps) {
 
 async function ClientsPage({ params, searchParams }: ClientsPageProps) {
   const accountSlug = (await params).account;
-  const listParam = (await searchParams).list;
+  const query = await searchParams;
   const workspace = await loadTeamWorkspace(accountSlug);
   const spaceType = getSpaceTypeFromAccount(
     workspace.account as { space_type?: string | null },
@@ -67,8 +68,10 @@ async function ClientsPage({ params, searchParams }: ClientsPageProps) {
   const isCommercial = spaceType === 'commercial-property';
   const variant = isCommercial ? 'commercial' : 'work';
   const campaignsEnabled = isCampaignsModuleEnabled(workspace.moduleSettings);
-  const mailingAudience =
-    campaignsEnabled && listParam === 'mailing' ? 'mailing_list' : 'all';
+  const viewState = parseContactsView(query, {
+    commercial: isCommercial,
+    campaignsEnabled,
+  });
 
   const {
     accountId,
@@ -77,9 +80,10 @@ async function ClientsPage({ params, searchParams }: ClientsPageProps) {
     isContractorView,
     initialOverview,
     initialTotal,
+    initialCounts,
   } = await loadClientsPageData(accountSlug, {
     variant,
-    audience: mailingAudience,
+    viewState,
   });
 
   const pageTitle = isProperty
@@ -112,7 +116,8 @@ async function ClientsPage({ params, searchParams }: ClientsPageProps) {
           }
           showCommercialRole={isCommercial}
           showLinkedInImport={!isCommercial}
-          initialAudience={mailingAudience}
+          initialViewState={viewState}
+          initialCounts={initialCounts}
           campaignsEnabled={campaignsEnabled}
         />
       </PageBody>

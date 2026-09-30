@@ -12,6 +12,16 @@ import {
   LISTING_STATUSES,
 } from '~/lib/commercial/commercial-constants';
 
+export const CreateDisposalFromInstructionSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1).optional(),
+  dealId: z.string().uuid(),
+});
+
+export type CreateDisposalFromInstructionInput = z.infer<
+  typeof CreateDisposalFromInstructionSchema
+>;
+
 export const ListListingsSchema = z.object({
   accountId: z.string().uuid(),
   status: z.enum(LISTING_STATUSES).optional(),

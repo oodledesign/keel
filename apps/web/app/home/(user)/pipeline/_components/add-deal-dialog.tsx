@@ -31,11 +31,17 @@ import {
   pickDefaultPipelineTargetId,
 } from '~/home/(user)/_lib/pipeline-constants';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
+import { InstructionPropertySection } from '~/home/[account]/pipeline/_components/instruction-property-section';
 import {
   ClientCombobox,
   type ClientOption,
 } from '~/home/[account]/projects/_components/client-combobox';
 import { unwrapListClientsResult } from '~/lib/clients/unwrap-list-clients-result';
+import {
+  EMPTY_PROPERTY_DRAFT,
+  type InstructionPropertyDraft,
+  draftToInstructionInput,
+} from '~/lib/commercial/instruction-property-draft';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import type { PipelineDeal } from '../../_lib/server/pipeline.loader';
@@ -103,6 +109,8 @@ export function AddDealDialog({
   const [clientsLoading, setClientsLoading] = useState(false);
   const [clientsError, setClientsError] = useState<string | null>(null);
   const [listingId, setListingId] = useState(NONE_LISTING);
+  const [property, setProperty] =
+    useState<InstructionPropertyDraft>(EMPTY_PROPERTY_DRAFT);
 
   // Resolve the account this deal belongs to: explicit (workspace board) or
   // derived from the selected workspace target on the personal board.
@@ -181,6 +189,19 @@ export function AddDealDialog({
   const showAssignField = !workspaceScoped && businesses.length > 1;
   const canLinkClient = Boolean(resolvedAccountId);
 
+  /** Picking an address names a nameless lead after the property. */
+  function handlePropertyChange(next: InstructionPropertyDraft) {
+    const pickedFromSearch =
+      next.latitude !== property.latitude && next.addressLine1.trim() !== '';
+    setProperty(next);
+    if (pickedFromSearch && mode === 'lead') {
+      const company = formRef.current?.elements.namedItem('companyName');
+      if (company instanceof HTMLInputElement && !company.value.trim()) {
+        company.value = next.addressLine1.trim();
+      }
+    }
+  }
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -234,6 +255,9 @@ export function AddDealDialog({
     const value = valueStr ? Math.round(parseFloat(valueStr)) : 0;
     const commercialListingId =
       commercial && listingId !== NONE_LISTING ? listingId : null;
+    const propertyInput = commercial
+      ? draftToInstructionInput(property)
+      : undefined;
 
     startTransition(async () => {
       const result = await createDeal({
@@ -249,6 +273,7 @@ export function AddDealDialog({
         description: description || null,
         accountSlug: accountSlug ?? null,
         commercialListingId,
+        property: propertyInput,
       });
 
       if (!result.success) {
@@ -288,6 +313,7 @@ export function AddDealDialog({
         amlDone: false,
         amlDoneAt: null,
         amlDoneBy: null,
+        ...(propertyInput ?? draftToInstructionInput(EMPTY_PROPERTY_DRAFT)),
       });
 
       setOpen(false);
@@ -295,6 +321,7 @@ export function AddDealDialog({
       setMode('lead');
       setClientId('');
       setListingId(NONE_LISTING);
+      setProperty(EMPTY_PROPERTY_DRAFT);
       setBusinessId(
         pickDefaultPipelineTargetId(businesses, { workspaceScoped }),
       );
@@ -312,7 +339,12 @@ export function AddDealDialog({
           </button>
         </DialogTrigger>
       ) : null}
-      <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
+      <DialogContent
+        className={cn(
+          'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md',
+          commercial && 'max-h-[90vh] overflow-y-auto sm:max-w-lg',
+        )}
+      >
         <DialogHeader>
           <DialogTitle>
             {commercial ? 'Add instruction' : 'Add to pipeline'}
@@ -447,6 +479,22 @@ export function AddDealDialog({
               </div>
             </div>
           )}
+
+          {commercial ? (
+            <div className="space-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] p-3">
+              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                Property{' '}
+                <span className="font-normal text-[var(--workspace-shell-text-muted)]">
+                  (optional)
+                </span>
+              </p>
+              <InstructionPropertySection
+                compact
+                value={property}
+                onChange={handlePropertyChange}
+              />
+            </div>
+          ) : null}
 
           {commercial && listings.length > 0 ? (
             <div className="space-y-2">

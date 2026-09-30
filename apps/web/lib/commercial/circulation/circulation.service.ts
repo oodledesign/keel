@@ -709,7 +709,12 @@ class CommercialCirculationService {
     accountId: string;
     email: string;
     enabled: boolean;
+    lawfulBasis?: 'manual_opt_in' | 'legitimate_interests';
+    consentSource?: string;
+    clientId?: string | null;
   }) {
+    const lawfulBasis = input.lawfulBasis ?? 'manual_opt_in';
+    const consentSource = input.consentSource ?? 'agent_circulation_ui';
     const email = normalizeEmail(input.email);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = this.client as any;
@@ -760,8 +765,8 @@ class CommercialCirculationService {
         .from('commercial_marketing_preferences')
         .update({
           marketing_status: 'subscribed',
-          lawful_basis: 'manual_opt_in',
-          consent_source: 'agent_circulation_ui',
+          lawful_basis: lawfulBasis,
+          consent_source: consentSource,
           consent_copy_version: CONSENT_COPY_VERSION,
           consented_at: new Date().toISOString(),
           auto_send_enabled: true,
@@ -777,11 +782,12 @@ class CommercialCirculationService {
       email,
       purpose: PURPOSE,
       marketing_status: 'subscribed',
-      lawful_basis: 'manual_opt_in',
-      consent_source: 'agent_circulation_ui',
+      lawful_basis: lawfulBasis,
+      consent_source: consentSource,
       consent_copy_version: CONSENT_COPY_VERSION,
       consented_at: new Date().toISOString(),
       auto_send_enabled: true,
+      ...(input.clientId ? { client_id: input.clientId } : {}),
     });
     if (error) throw new Error(error.message);
   }

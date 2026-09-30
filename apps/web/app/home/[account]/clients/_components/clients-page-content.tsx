@@ -7,7 +7,6 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import {
   Archive,
-  Filter,
   LayoutGrid,
   Linkedin,
   List,
@@ -31,10 +30,19 @@ import { Trans } from '@kit/ui/trans';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
+import type { ContactCirculationFilter } from '~/lib/commercial/circulation/contact-comms';
 
 import { listAccountMembers } from '../../jobs/_lib/server/server-actions';
 import type { ClientOverviewItem } from '../_lib/clients-overview.types';
-import { listClientsOverview } from '../_lib/server/server-actions';
+import type {
+  ContactsView,
+  ContactsViewCounts,
+  ContactsViewState,
+} from '../_lib/contacts-view';
+import {
+  listClientsOverview,
+  pauseClientsCirculation,
+} from '../_lib/server/server-actions';
 import { ArchivedClientsList } from './archived-clients-list';
 import {
   ClientCard,
@@ -46,7 +54,29 @@ import { ClientOverviewCard } from './client-overview-card';
 
 type ViewMode = 'cards' | 'list';
 type SortKey = 'name-asc' | 'name-desc' | 'recent' | 'projects' | 'disposals';
-type ContactAudience = 'all' | 'mailing_list';
+
+const DEFAULT_VIEW_STATE: ContactsViewState = { view: 'all', circ: null };
+
+function viewStateKey(state: ContactsViewState) {
+  return `${state.view}:${state.circ ?? ''}`;
+}
+
+const CIRCULATION_FILTER_OPTIONS: Array<{
+  value: ContactCirculationFilter;
+  label: string;
+}> = [
+  { value: 'subscribed', label: 'Subscribed' },
+  { value: 'paused', label: 'Paused' },
+  { value: 'not_subscribed', label: 'Not subscribed' },
+  { value: 'unsubscribed', label: 'Unsubscribed' },
+];
+
+const EMPTY_VIEW_COPY: Record<Exclude<ContactsView, 'all'>, string> = {
+  requirements: 'No contacts match this filter.',
+  newsletter:
+    'No newsletter subscribers yet. People who join from a mailing-list form appear here and stay on All contacts.',
+  attention: 'Nothing needs attention right now.',
+};
 
 const panelToolbarClass =
   'border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
@@ -153,7 +183,8 @@ export function ClientsPageContent({
   addClientLabel = 'Add client',
   showCommercialRole = false,
   showLinkedInImport = true,
-  initialAudience = 'all',
+  initialViewState = DEFAULT_VIEW_STATE,
+  initialCounts = null,
   campaignsEnabled = false,
 }: {
   accountSlug: string;
@@ -169,8 +200,9 @@ export function ClientsPageContent({
   addClientLabel?: string;
   showCommercialRole?: boolean;
   showLinkedInImport?: boolean;
-  initialAudience?: ContactAudience;
-  /** Email Campaigns add-on. Mailing-list contacts stay hidden when off. */
+  initialViewState?: ContactsViewState;
+  initialCounts?: ContactsViewCounts | null;
+  /** Email Campaigns add-on. The Newsletter view stays hidden when off. */
   campaignsEnabled?: boolean;
 }) {
   const isCommercial = variant === 'commercial';
@@ -191,10 +223,16 @@ export function ClientsPageContent({
   const [sort, setSort] = useState<SortKey>('name-asc');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [showArchived, setShowArchived] = useState(false);
-  const [audience, setAudience] = useState<ContactAudience>(
-    campaignsEnabled ? initialAudience : 'all',
+  const [viewState, setViewState] =
+    useState<ContactsViewState>(initialViewState);
+  const [counts, setCounts] = useState<ContactsViewCounts | null>(
+    initialCounts,
   );
+  const viewKey = viewStateKey(viewState);
+  const initialViewKey = viewStateKey(initialViewState);
   const [favorites, setFavorites] = useState<Set<string>>(() => new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkPending, setBulkPending] = useState(false);
   const [members, setMembers] = useState<
     Array<{ user_id: string; name: string | null; picture_url?: string | null }>
   >([]);
@@ -227,7 +265,7 @@ export function ClientsPageContent({
       return;
     }
 
-    if (audience !== initialAudience) {
+    if (viewKey !== initialViewKey) {
       return;
     }
 
@@ -235,8 +273,8 @@ export function ClientsPageContent({
     setCachedClients(initialOverview);
     setTotal(Number(initialTotal) || 0);
   }, [
-    audience,
-    initialAudience,
+    viewKey,
+    initialViewKey,
     initialOverview,
     initialTotal,
     page,
@@ -270,7 +308,8 @@ export function ClientsPageContent({
           pageSize,
           members,
           variant,
-          audience: campaignsEnabled ? audience : 'all',
+          view: viewState.view,
+          circ: viewState.circ ?? undefined,
         });
         const list = Array.isArray((result as { data?: unknown })?.data)
           ? ((result as { data: ClientOverviewItem[] }).data ?? [])
@@ -279,6 +318,9 @@ export function ClientsPageContent({
           typeof (result as { total?: number })?.total === 'number'
             ? (result as { total: number }).total
             : 0;
+        const nextCounts = (result as { counts?: ContactsViewCounts | null })
+          ?.counts;
+        if (nextCounts) setCounts(nextCounts);
         setPageClients(list);
         setCachedClients((current) => mergeClients(current, list));
         setTotal(count);
@@ -288,7 +330,7 @@ export function ClientsPageContent({
         setLoadingPage(false);
       }
     },
-    [accountId, pageSize, members, variant, audience, campaignsEnabled],
+    [accountId, pageSize, members, variant, viewState],
   );
 
   const refreshClients = useCallback(async () => {
@@ -306,7 +348,7 @@ export function ClientsPageContent({
     if (
       isDefaultFirstPage &&
       initialOverview.length > 0 &&
-      audience === initialAudience
+      viewKey === initialViewKey
     ) {
       return;
     }
@@ -318,8 +360,8 @@ export function ClientsPageContent({
     searchDebounced,
     fetchClientsPage,
     initialOverview.length,
-    audience,
-    initialAudience,
+    viewKey,
+    initialViewKey,
   ]);
 
   useEffect(() => {
@@ -345,7 +387,8 @@ export function ClientsPageContent({
             pageSize,
             members,
             variant,
-            audience: campaignsEnabled ? audience : 'all',
+            view: viewState.view,
+            circ: viewState.circ ?? undefined,
           });
           const list = Array.isArray((result as { data?: unknown })?.data)
             ? ((result as { data: ClientOverviewItem[] }).data ?? [])
@@ -383,15 +426,7 @@ export function ClientsPageContent({
     return () => {
       cancelled = true;
     };
-  }, [
-    accountId,
-    searchDebounced,
-    pageSize,
-    members,
-    variant,
-    audience,
-    campaignsEnabled,
-  ]);
+  }, [accountId, searchDebounced, pageSize, members, variant, viewState]);
 
   useEffect(() => {
     const t = setTimeout(() => setSearchDebounced(search), 300);
@@ -472,23 +507,117 @@ export function ClientsPageContent({
     window.localStorage.setItem(viewStorageKey(accountId), mode);
   };
 
-  const setContactAudience = (next: ContactAudience) => {
-    if (!campaignsEnabled && next === 'mailing_list') return;
-    if (next === audience) return;
-    setAudience(next);
+  const changeView = (next: ContactsViewState) => {
+    if (viewStateKey(next) === viewKey) return;
+    setViewState(next);
+    setSelectedIds(new Set());
     setPageClients([]);
     setCachedClients([]);
     setPage(1);
+    setShowArchived(false);
     const nextParams = new URLSearchParams(searchParams.toString());
-    if (next === 'mailing_list' && campaignsEnabled) {
-      nextParams.set('list', 'mailing');
+    nextParams.delete('list');
+    if (next.view === 'all') {
+      nextParams.delete('view');
     } else {
-      nextParams.delete('list');
+      nextParams.set('view', next.view);
+    }
+    if (next.circ) {
+      nextParams.set('circ', next.circ);
+    } else {
+      nextParams.delete('circ');
     }
     const nextPath = nextParams.toString()
       ? `${pathname}?${nextParams.toString()}`
       : pathname;
     router.replace(nextPath, { scroll: false });
+  };
+
+  const viewOptions: Array<{
+    value: ContactsView;
+    label: string;
+    count: number | null;
+  }> = [
+    {
+      value: 'all',
+      label: isCommercial ? 'All contacts' : 'All clients',
+      count: counts?.all ?? null,
+    },
+    ...(isCommercial
+      ? [
+          {
+            value: 'requirements' as const,
+            label: 'With requirements',
+            count: counts?.requirements ?? null,
+          },
+        ]
+      : []),
+    ...(campaignsEnabled
+      ? [
+          {
+            value: 'newsletter' as const,
+            label: 'Newsletter',
+            count: counts?.newsletter ?? null,
+          },
+        ]
+      : []),
+    ...(isCommercial &&
+    ((counts?.attention ?? 0) > 0 || viewState.view === 'attention')
+      ? [
+          {
+            value: 'attention' as const,
+            label: 'Needs attention',
+            count: counts?.attention ?? null,
+          },
+        ]
+      : []),
+  ];
+
+  const selectable = isCommercial && canEditClients && viewMode === 'list';
+  const visibleIds = displayedClients.map((client) => client.id);
+  const selectedVisible = visibleIds.filter((id) => selectedIds.has(id));
+  const headerSelection = selectable
+    ? {
+        state:
+          selectedVisible.length === 0
+            ? false
+            : selectedVisible.length === visibleIds.length
+              ? true
+              : ('indeterminate' as const),
+        onChange: (checked: boolean) =>
+          setSelectedIds(checked ? new Set(visibleIds) : new Set()),
+      }
+    : undefined;
+
+  const toggleSelected = (clientId: string, checked: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(clientId);
+      else next.delete(clientId);
+      return next;
+    });
+  };
+
+  const pauseSelected = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkPending(true);
+    try {
+      await pauseClientsCirculation({
+        accountId,
+        clientIds: [...selectedIds],
+      });
+      toast.success(
+        `Automatic emails paused for ${selectedIds.size} contact${
+          selectedIds.size === 1 ? '' : 's'
+        }`,
+      );
+      setSelectedIds(new Set());
+      await fetchClientsPage(page);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not pause emails');
+    } finally {
+      setBulkPending(false);
+    }
   };
 
   if (!canViewClients) {
@@ -569,40 +698,49 @@ export function ClientsPageContent({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 px-4 pb-3 md:px-5">
-        {campaignsEnabled ? (
+        {viewOptions.length > 1 ? (
           <div
-            className={cn('inline-flex rounded-lg p-1', panelToolbarClass)}
+            className={cn(
+              'inline-flex flex-wrap rounded-lg p-1',
+              panelToolbarClass,
+            )}
             role="tablist"
-            aria-label={isCommercial ? 'Contact list' : 'Client list'}
+            aria-label={isCommercial ? 'Contact views' : 'Client views'}
           >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={audience === 'all'}
-              onClick={() => setContactAudience('all')}
-              className={cn(
-                'rounded-md px-3 py-1.5 text-sm font-medium transition',
-                audience === 'all'
-                  ? 'bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]'
-                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
-              )}
-            >
-              {isCommercial ? 'All contacts' : 'All clients'}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={audience === 'mailing_list'}
-              onClick={() => setContactAudience('mailing_list')}
-              className={cn(
-                'rounded-md px-3 py-1.5 text-sm font-medium transition',
-                audience === 'mailing_list'
-                  ? 'bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]'
-                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
-              )}
-            >
-              Mailing list
-            </button>
+            {viewOptions.map((option) => {
+              const active = viewState.view === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  data-test={`contacts-view-${option.value}`}
+                  onClick={() => changeView({ view: option.value, circ: null })}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition',
+                    active
+                      ? 'bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]'
+                      : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+                    option.value === 'attention' &&
+                      !active &&
+                      'text-amber-700 dark:text-amber-300',
+                  )}
+                >
+                  {option.label}
+                  {option.count !== null ? (
+                    <span
+                      className={cn(
+                        'text-xs tabular-nums',
+                        active ? 'opacity-70' : 'opacity-60',
+                      )}
+                    >
+                      {option.count}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
         ) : null}
 
@@ -621,15 +759,6 @@ export function ClientsPageContent({
             className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-9 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:ring-[var(--ozer-accent)]"
           />
         </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)]"
-        >
-          <Filter className="mr-1 h-4 w-4" />
-          Filter
-        </Button>
 
         <Button
           variant="outline"
@@ -703,6 +832,91 @@ export function ClientsPageContent({
         </div>
       </div>
 
+      {viewState.view === 'requirements' && !showArchived ? (
+        <div
+          className="flex flex-wrap items-center gap-1.5 px-4 pb-3 md:px-5"
+          role="group"
+          aria-label="Circulation status"
+        >
+          <span className="mr-1 text-xs text-[var(--workspace-shell-text-muted)]">
+            Circulation:
+          </span>
+          {[
+            {
+              value: null,
+              label: 'Any',
+              count: counts?.requirements ?? null,
+            },
+            ...CIRCULATION_FILTER_OPTIONS.map((option) => ({
+              ...option,
+              count: counts?.circulation[option.value] ?? null,
+            })),
+          ].map((option) => {
+            const active = viewState.circ === option.value;
+            return (
+              <button
+                key={option.value ?? 'any'}
+                type="button"
+                aria-pressed={active}
+                data-test={`contacts-circ-${option.value ?? 'any'}`}
+                onClick={() =>
+                  changeView({ view: 'requirements', circ: option.value })
+                }
+                className={cn(
+                  'inline-flex h-7 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition',
+                  active
+                    ? 'border-transparent bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]'
+                    : 'border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+                )}
+              >
+                {option.label}
+                {option.count !== null ? (
+                  <span className="tabular-nums opacity-70">
+                    {option.count}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {selectable && selectedIds.size > 0 && !showArchived ? (
+        <div
+          className="mx-4 mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2 text-sm md:mx-5"
+          role="region"
+          aria-label="Bulk actions"
+        >
+          <span className="font-medium text-[var(--workspace-shell-text)]">
+            {selectedIds.size} selected
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={bulkPending}
+            onClick={() => void pauseSelected()}
+            data-test="contacts-bulk-pause"
+            className="h-7 text-xs"
+          >
+            {bulkPending ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : null}
+            Pause automatic emails
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setSelectedIds(new Set())}
+            className="h-7 text-xs text-[var(--workspace-shell-text-muted)]"
+          >
+            Clear
+          </Button>
+          <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+            To subscribe someone, open their contact and choose a lawful basis.
+          </span>
+        </div>
+      ) : null}
+
       <div className="flex-1 overflow-y-auto px-4 pb-4 md:px-5 md:pb-5">
         {showArchived ? (
           <ArchivedClientsList
@@ -722,8 +936,8 @@ export function ClientsPageContent({
               ? isCommercial
                 ? 'No contacts match your search.'
                 : 'No clients match your search.'
-              : audience === 'mailing_list'
-                ? 'No mailing-list subscribers yet. People who join from a mailing-list form appear here and stay on All contacts.'
+              : viewState.view !== 'all'
+                ? EMPTY_VIEW_COPY[viewState.view]
                 : isCommercial
                   ? 'No contacts yet. Add your first contact to get started.'
                   : 'No clients yet. Add your first client to get started.'}
@@ -736,6 +950,7 @@ export function ClientsPageContent({
                 client={client}
                 accountSlug={accountSlug}
                 variant={variant}
+                showNewsletter={campaignsEnabled}
                 isFavorite={favorites.has(client.id)}
                 onToggleFavorite={() => toggleFavorite(client.id)}
               />
@@ -744,8 +959,14 @@ export function ClientsPageContent({
         ) : (
           <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40">
             <table className="w-full table-fixed border-collapse text-sm">
-              <ClientListTableColGroup variant={variant} />
-              <ClientListTableHeader variant={variant} />
+              <ClientListTableColGroup
+                variant={variant}
+                selectable={selectable}
+              />
+              <ClientListTableHeader
+                variant={variant}
+                selection={headerSelection}
+              />
               <tbody>
                 {displayedClients.map((client) => (
                   <ClientCard
@@ -772,7 +993,15 @@ export function ClientsPageContent({
                     leaseCount={client.leaseCount}
                     clientType={client.clientType}
                     variant={variant}
-                    selected={false}
+                    comms={client.comms}
+                    showNewsletter={campaignsEnabled}
+                    checked={selectedIds.has(client.id)}
+                    onCheckedChange={
+                      selectable
+                        ? (checked) => toggleSelected(client.id, checked)
+                        : undefined
+                    }
+                    selected={selectedIds.has(client.id)}
                     onSelect={() => openClient(client.id)}
                     detailHref={`${clientsBasePath}/${client.id}`}
                     onNotes={() => openClient(client.id)}

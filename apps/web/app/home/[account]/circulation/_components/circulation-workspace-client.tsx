@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useSyncExternalStore, useTransition } from 'react';
 
+import Link from 'next/link';
+
 import { Copy, Mail } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -10,6 +12,7 @@ import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 
+import pathsConfig from '~/config/paths.config';
 import { copyTextToClipboard } from '~/lib/clipboard';
 import type { CirculationUsageSnapshot } from '~/lib/commercial/circulation/circulation-usage-types';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
@@ -25,6 +28,7 @@ import {
 
 export type CirculationWorkspaceContact = {
   email: string;
+  clientId: string | null;
   contactName: string | null;
   companyName: string | null;
   consentStatus: 'subscribed' | 'unsubscribed' | 'suppressed' | 'unknown';
@@ -76,6 +80,7 @@ export type CirculationWorkspaceSend = {
 
 type Props = {
   accountId: string;
+  accountSlug: string;
   agencyName: string;
   fromEmail: string | null;
   fromName: string;
@@ -126,6 +131,7 @@ function statusLabel(contact: CirculationWorkspaceContact) {
 
 export function CirculationWorkspaceClient({
   accountId,
+  accountSlug,
   agencyName,
   fromEmail,
   fromName,
@@ -138,6 +144,10 @@ export function CirculationWorkspaceClient({
   suspectedUnsubscribes,
   usage,
 }: Props) {
+  const contactsBasePath = pathsConfig.app.accountClients.replace(
+    '[account]',
+    accountSlug,
+  );
   const [autoSend, setAutoSend] = useState(initialAutoSendEnabled);
   const [minGapDays, setMinGapDays] = useState(initialMinGapDays);
   const [minGapDraft, setMinGapDraft] = useState(String(initialMinGapDays));
@@ -556,7 +566,17 @@ export function CirculationWorkspaceClient({
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
-                        {contact.contactName || contact.email}
+                        {contact.clientId ? (
+                          <Link
+                            href={`${contactsBasePath}/${contact.clientId}?tab=emails`}
+                            prefetch={false}
+                            className="underline-offset-2 hover:underline"
+                          >
+                            {contact.contactName || contact.email}
+                          </Link>
+                        ) : (
+                          contact.contactName || contact.email
+                        )}
                       </p>
                       <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
                         {contact.email}

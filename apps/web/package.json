@@ -28,6 +28,7 @@
     "import:bracketts-wip": "tsx scripts/import-bracketts-wip.mts",
     "import:bracketts-requirements": "tsx scripts/import-bracketts-requirements.mts",
     "seed:marketing-demo": "tsx scripts/seed-marketing-demo-agency.mts",
+    "backfill:requirement-contacts": "tsx scripts/backfill-requirement-contacts.mts",
     "typecheck": "tsc --noEmit",
     "supabase": "supabase",
     "supabase:start": "supabase status || supabase start --exclude realtime",

@@ -15,6 +15,15 @@ import {
 } from '~/lib/clients/contact-roles';
 import { resolveStoredClientDisplayName } from '~/lib/clients/resolve-client-list-display';
 import { recordCommercialAccountEvent } from '~/lib/commercial/account-events';
+import { carryContactConsentToEmail } from '~/lib/commercial/circulation/consent-carry';
+import type { ContactCommsSummary } from '~/lib/commercial/circulation/contact-comms';
+import {
+  type ContactAudienceIndex,
+  contactMatchesAudience,
+  countContactAudiences,
+  loadContactAudienceIndex,
+  loadContactCommsSummaries,
+} from '~/lib/commercial/circulation/contact-comms-summary';
 import { Database } from '~/lib/database.types';
 import {
   DELIVERY_PROJECT_FILTER,
@@ -225,78 +234,70 @@ class ClientsService {
 
   async listClients(params: ListClientsInput) {
     const readDb = await this.dbForClientReads(params.accountId);
-    return this.listClientsWithDb(readDb, params);
+    const index =
+      params.view && params.view !== 'all' && !params.archived
+        ? await loadContactAudienceIndex(readDb, params.accountId, {
+            commercial: true,
+          })
+        : null;
+    return this.listClientsWithDb(readDb, params, index);
   }
 
   /**
-   * Clients subscribed via the public mailing-list form.
-   * Primary source is workspace_mailing_preferences (all workspaces).
-   * Commercial signup also writes commercial_marketing_preferences.
+   * Filtered views select ids from the audience index, then page the
+   * matching rows in memory so no id list has to fit in one request URL.
    */
-  private async listMailingListClientIds(
+  private async listFilteredClients(
     readDb: any,
-    accountId: string,
-  ): Promise<string[]> {
-    const ids = new Set<string>();
+    params: ListClientsInput,
+    ids: string[],
+  ) {
+    const { page = 1, pageSize = 20, search } = params;
+    const rows: Array<{ created_at: string }> = [];
 
-    const mailing = await readDb
-      .from('workspace_mailing_preferences')
-      .select('client_id')
-      .eq('account_id', accountId)
-      .eq('purpose', 'workspace_mailing_list')
-      .eq('marketing_status', 'subscribed')
-      .not('client_id', 'is', null)
-      .limit(200);
+    for (let i = 0; i < ids.length; i += 150) {
+      let query = readDb
+        .from('clients')
+        .select(
+          'id, display_name, company_name, email, phone, city, picture_url, created_at, updated_at, first_name, last_name, client_type, commercial_role',
+        )
+        .eq('account_id', params.accountId)
+        .is('archived_at', null)
+        .in('id', ids.slice(i, i + 150));
 
-    if (mailing.error) {
-      if (isMissingRelationError(mailing.error)) {
-        return [];
+      if (search?.trim()) {
+        const term = `%${search.trim()}%`;
+        query = query.or(
+          `display_name.ilike.${term},first_name.ilike.${term},last_name.ilike.${term},company_name.ilike.${term},email.ilike.${term}`,
+        );
       }
-      throw mailing.error;
+
+      const { data, error } = await query;
+      if (error) throw error;
+      rows.push(...(data ?? []));
     }
 
-    for (const row of mailing.data ?? []) {
-      const clientId = (row as { client_id?: string | null }).client_id;
-      if (clientId) ids.add(clientId);
-    }
-
-    const commercial = await readDb
-      .from('commercial_marketing_preferences')
-      .select('client_id')
-      .eq('account_id', accountId)
-      .eq('purpose', 'matching_disposals')
-      .eq('marketing_status', 'subscribed')
-      .not('client_id', 'is', null)
-      .limit(200);
-
-    if (commercial.error) {
-      if (!isMissingRelationError(commercial.error)) {
-        throw commercial.error;
-      }
-    } else {
-      for (const row of commercial.data ?? []) {
-        const clientId = (row as { client_id?: string | null }).client_id;
-        if (clientId) ids.add(clientId);
-      }
-    }
-
-    return [...ids].slice(0, 200);
+    rows.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    const from = (page - 1) * pageSize;
+    return { data: rows.slice(from, from + pageSize), total: rows.length };
   }
 
-  private async listClientsWithDb(readDb: any, params: ListClientsInput) {
+  private async listClientsWithDb(
+    readDb: any,
+    params: ListClientsInput,
+    index: ContactAudienceIndex | null = null,
+  ) {
     const { page = 1, pageSize = 20, search } = params;
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    let mailingClientIds: string[] | null = null;
-    if (params.audience === 'mailing_list') {
-      mailingClientIds = await this.listMailingListClientIds(
-        readDb,
-        params.accountId,
-      );
-      if (mailingClientIds.length === 0) {
-        return { data: [], total: 0 };
-      }
+    if (index && params.view && params.view !== 'all' && !params.archived) {
+      const view = params.view;
+      const ids = [...index.entries.values()]
+        .filter((entry) => contactMatchesAudience(entry, view, params.circ))
+        .map((entry) => entry.clientId);
+      if (ids.length === 0) return { data: [], total: 0 };
+      return this.listFilteredClients(readDb, params, ids);
     }
 
     let query = readDb
@@ -313,10 +314,6 @@ class ClientsService {
       query = query.not('archived_at', 'is', null);
     } else {
       query = query.is('archived_at', null);
-    }
-
-    if (mailingClientIds) {
-      query = query.in('id', mailingClientIds);
     }
 
     if (search?.trim()) {
@@ -342,10 +339,6 @@ class ClientsService {
           .eq('account_id', params.accountId)
           .order('created_at', { ascending: false })
           .range(from, to);
-
-        if (mailingClientIds) {
-          legacyQuery = legacyQuery.in('id', mailingClientIds);
-        }
 
         if (search?.trim()) {
           const term = `%${search.trim()}%`;
@@ -417,8 +410,20 @@ class ClientsService {
       }
     })();
 
+    const commercial = variant === 'commercial';
+    const filtered = Boolean(listParams.view && listParams.view !== 'all');
+    let index: ContactAudienceIndex | null = null;
+    try {
+      index = await loadContactAudienceIndex(readDb, params.accountId, {
+        commercial,
+      });
+    } catch (error) {
+      if (filtered) throw error;
+      console.error('[clients] contact audience index failed', error);
+    }
+
     const [{ data, total }, members] = await Promise.all([
-      this.listClientsWithDb(readDb, listParams),
+      this.listClientsWithDb(readDb, listParams, index),
       membersPromise,
     ]);
 
@@ -444,7 +449,29 @@ class ClientsService {
       members,
     });
 
-    return { data: overview, total };
+    let comms = new Map<string, ContactCommsSummary>();
+    if (index) {
+      try {
+        comms = await loadContactCommsSummaries(
+          readDb,
+          params.accountId,
+          overview.map((item) => ({ id: item.id, email: item.email })),
+          index,
+          { commercial },
+        );
+      } catch (error) {
+        console.error('[clients] contact comms summary failed', error);
+      }
+    }
+
+    return {
+      data: overview.map((item) => ({
+        ...item,
+        comms: comms.get(item.id) ?? null,
+      })),
+      total,
+      counts: index ? countContactAudiences(index) : null,
+    };
   }
 
   async getClient(params: GetClientInput) {
@@ -512,9 +539,8 @@ class ClientsService {
       .eq('account_id', input.accountId)
       .is('archived_at', null);
 
-    const { assertActiveClientCreateAllowed } = await import(
-      '~/lib/billing/entitlements'
-    );
+    const { assertActiveClientCreateAllowed } =
+      await import('~/lib/billing/entitlements');
     const clientCap = await assertActiveClientCreateAllowed(
       this.adminDb,
       input.accountId,
@@ -827,6 +853,15 @@ class ClientsService {
 
     if (error) throw mapClientWriteError(error);
 
+    if (input.email !== undefined) {
+      await this.carryConsentAfterEmailChange({
+        accountId: input.accountId,
+        clientId: input.clientId,
+        oldEmail: current.email ?? null,
+        newEmail: (data.email as string | null) ?? null,
+      });
+    }
+
     if (clientType === 'individual') {
       await this.syncIndividualPrimaryContact({
         accountId: input.accountId,
@@ -854,6 +889,32 @@ class ClientsService {
     });
 
     return data;
+  }
+
+  private async readContactEmail(contactId: string): Promise<string | null> {
+    const { data } = await this.adminDb
+      .from('contacts')
+      .select('email')
+      .eq('id', contactId)
+      .maybeSingle();
+    return (data?.email as string | null | undefined) ?? null;
+  }
+
+  /** Consent follows the person to their new address; a save never fails on it. */
+  private async carryConsentAfterEmailChange(input: {
+    accountId: string;
+    clientId: string;
+    oldEmail: string | null;
+    newEmail: string | null;
+  }) {
+    try {
+      await carryContactConsentToEmail(this.adminDb, input);
+    } catch (err) {
+      console.error(
+        '[clients] consent carry on email change failed',
+        err instanceof Error ? err.message : err,
+      );
+    }
   }
 
   /** Keep the auto-created individual contact in sync with the client person fields. */
@@ -1827,6 +1888,10 @@ class ClientsService {
       input.emails !== undefined || input.email !== undefined
         ? this.normalizeContactEmailAddresses(input)
         : undefined;
+    const previousEmail =
+      emailAddresses !== undefined
+        ? await this.readContactEmail(input.contactId)
+        : null;
     if (input.phone !== undefined) contactPayload.phone = input.phone;
     if (input.amlCompleted !== undefined) {
       contactPayload.aml_completed = input.amlCompleted;
@@ -1877,6 +1942,12 @@ class ClientsService {
         accountId: input.accountId,
         contactId: input.contactId,
         addresses: emailAddresses,
+      });
+      await this.carryConsentAfterEmailChange({
+        accountId: input.accountId,
+        clientId: input.clientId,
+        oldEmail: previousEmail,
+        newEmail: await this.readContactEmail(input.contactId),
       });
     }
 

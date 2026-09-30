@@ -5,10 +5,18 @@ import Link from 'next/link';
 import { ClipboardList, Mail, Phone } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import { cn } from '@kit/ui/utils';
 
+import type { ContactCommsSummary } from '~/lib/commercial/circulation/contact-comms';
+
 import type { ClientsWorkspaceVariant } from '../_lib/clients-overview.types';
+import {
+  ContactCommsPills,
+  LastEmailedLabel,
+  NotEmailedHint,
+} from './contact-comms-pills';
 
 type ClientCardProps = {
   id: string;
@@ -27,6 +35,12 @@ type ClientCardProps = {
   leaseCount?: number;
   clientType?: 'business' | 'individual' | null;
   variant?: ClientsWorkspaceVariant;
+  comms?: ContactCommsSummary | null;
+  /** Email Campaigns add-on on: always show the newsletter pill. */
+  showNewsletter?: boolean;
+  /** Bulk selection checkbox; shown when onCheckedChange is set. */
+  checked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
   selected: boolean;
   onSelect: () => void;
   detailHref?: string;
@@ -50,13 +64,17 @@ function formatLastActivity(updatedAt: string): string {
 
 export function ClientListTableColGroup({
   variant = 'work',
+  selectable = false,
 }: {
   variant?: ClientsWorkspaceVariant;
+  selectable?: boolean;
 }) {
   if (variant === 'commercial') {
     return (
       <colgroup>
+        {selectable ? <col className="w-10" /> : null}
         <col />
+        <col className="hidden w-52 md:table-column" />
         <col className="w-28" />
         <col className="w-20" />
         <col className="w-24" />
@@ -79,16 +97,33 @@ export function ClientListTableColGroup({
 
 export function ClientListTableHeader({
   variant = 'work',
+  selection,
 }: {
   variant?: ClientsWorkspaceVariant;
+  selection?: {
+    state: boolean | 'indeterminate';
+    onChange: (checked: boolean) => void;
+  };
 }) {
   if (variant === 'commercial') {
     return (
       <thead>
         <tr className="border-b border-[color:var(--workspace-shell-border)] text-left text-[11px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+          {selection ? (
+            <th className="w-10 py-2 pl-3 md:pl-4">
+              <Checkbox
+                checked={selection.state}
+                onCheckedChange={(value) => selection.onChange(value === true)}
+                aria-label="Select all contacts on this page"
+              />
+            </th>
+          ) : null}
           <th className="px-3 py-2 font-medium md:px-4">Contact</th>
+          <th className="hidden w-52 px-2 py-2 font-medium md:table-cell">
+            Permissions
+          </th>
           <th className="hidden w-28 px-2 py-2 font-medium sm:table-cell">
-            Last activity
+            Last emailed
           </th>
           <th className="w-20 px-2 py-2 text-right font-medium">Disposals</th>
           <th className="w-24 px-2 py-2 text-right font-medium">
@@ -129,6 +164,10 @@ export function ClientCard({
   requirementCount,
   viewingCount,
   variant = 'work',
+  comms = null,
+  showNewsletter = false,
+  checked = false,
+  onCheckedChange,
   selected,
   onSelect,
   detailHref,
@@ -154,9 +193,27 @@ export function ClientCard({
         fallbackClassName="bg-[var(--workspace-shell-panel-hover)] text-xs text-[var(--workspace-shell-text)]"
       />
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)] group-hover:text-[#579bfc]">
-          {display_name ?? 'Unnamed client'}
-        </p>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate text-sm font-medium text-[var(--workspace-shell-text)] group-hover:text-[#579bfc]">
+            {display_name ?? 'Unnamed client'}
+          </span>
+          {isCommercial ? (
+            <NotEmailedHint
+              comms={comms}
+              className="shrink-0"
+              focusable={false}
+            />
+          ) : (
+            <ContactCommsPills
+              comms={comms}
+              requirementCount={0}
+              showCirculation={false}
+              showNewsletter={false}
+              className="shrink-0"
+              focusable={false}
+            />
+          )}
+        </div>
         {subtitle ? (
           <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
             {subtitle}
@@ -221,6 +278,15 @@ export function ClientCard({
 
   return (
     <tr className={rowClassName}>
+      {onCheckedChange ? (
+        <td className="w-10 py-1.5 pl-3 md:pl-4">
+          <Checkbox
+            checked={checked}
+            onCheckedChange={(value) => onCheckedChange(value === true)}
+            aria-label={`Select ${display_name ?? 'contact'}`}
+          />
+        </td>
+      ) : null}
       <td className="px-3 py-1.5 md:px-4">
         {detailHref ? (
           <Link href={detailHref} className="block min-w-0">
@@ -236,9 +302,26 @@ export function ClientCard({
           </button>
         )}
       </td>
-      <td className="hidden px-2 py-1.5 text-sm text-[var(--workspace-shell-text-muted)] sm:table-cell">
-        {formatLastActivity(updated_at)}
-      </td>
+      {isCommercial ? (
+        <>
+          <td className="hidden px-2 py-1.5 md:table-cell">
+            <ContactCommsPills
+              comms={comms}
+              requirementCount={requirementCount ?? 0}
+              showCirculation
+              showNewsletter={showNewsletter}
+              hideRequirementCount
+            />
+          </td>
+          <td className="hidden px-2 py-1.5 text-sm text-[var(--workspace-shell-text-muted)] sm:table-cell">
+            <LastEmailedLabel comms={comms} />
+          </td>
+        </>
+      ) : (
+        <td className="hidden px-2 py-1.5 text-sm text-[var(--workspace-shell-text-muted)] sm:table-cell">
+          {formatLastActivity(updated_at)}
+        </td>
+      )}
       {isCommercial ? (
         <>
           <td className="px-2 py-1.5 text-right text-sm text-[var(--workspace-shell-text-muted)] tabular-nums">
