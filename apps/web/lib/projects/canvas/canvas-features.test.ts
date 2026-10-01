@@ -18,7 +18,13 @@ import {
   groupCanvasComments,
   mentionQueryAt,
 } from './canvas-comments';
+import {
+  effectiveLinkDisplay,
+  linkDisplaySize,
+  resolveEmbed,
+} from './canvas-embed';
 import { outlineCanvasSection, placeSectionNotes } from './canvas-fill';
+import { parseGoogleDoc } from './canvas-google';
 import { buildLinkedCanvasItem } from './canvas-layout';
 import {
   canvasUrlFromText,
@@ -878,5 +884,118 @@ describe('totalizer pace', () => {
     expect(
       buildTotalizer({ value: 'TBC' }, { phases: [], tasks: [] }, now),
     ).toBeNull();
+  });
+});
+
+describe('google doc embeds', () => {
+  const id = '1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcdefg';
+
+  it('recognises docs, sheets and slides', () => {
+    const doc = parseGoogleDoc(
+      `https://docs.google.com/document/d/${id}/edit?usp=sharing`,
+    )!;
+    expect(doc.kind).toBe('doc');
+    expect(doc.previewUrl).toBe(
+      `https://docs.google.com/document/d/${id}/preview`,
+    );
+    expect(doc.editUrl).toBe(
+      `https://docs.google.com/document/d/${id}/edit?rm=minimal`,
+    );
+
+    const sheet = parseGoogleDoc(
+      `https://docs.google.com/spreadsheets/u/0/d/${id}/edit#gid=42`,
+    )!;
+    expect(sheet.kind).toBe('sheet');
+    expect(sheet.editUrl).toBe(
+      `https://docs.google.com/spreadsheets/d/${id}/edit?rm=minimal#gid=42`,
+    );
+    expect(sheet.previewUrl).toBe(
+      `https://docs.google.com/spreadsheets/d/${id}/preview?gid=42`,
+    );
+
+    expect(
+      parseGoogleDoc(`https://docs.google.com/presentation/d/${id}/edit`)!.kind,
+    ).toBe('slides');
+  });
+
+  it('recognises forms', () => {
+    const form = parseGoogleDoc(
+      `https://docs.google.com/forms/d/e/${id}/viewform`,
+    )!;
+    expect(form.kind).toBe('form');
+    expect(form.previewUrl).toBe(
+      `https://docs.google.com/forms/d/e/${id}/viewform?embedded=true`,
+    );
+    expect(
+      parseGoogleDoc(`https://docs.google.com/forms/d/${id}/edit`)!.editUrl,
+    ).toBe(`https://docs.google.com/forms/d/${id}/edit`);
+  });
+
+  it('ignores everything else', () => {
+    expect(parseGoogleDoc('https://example.com/document/d/' + id)).toBeNull();
+    expect(
+      parseGoogleDoc(`http://docs.google.com/document/d/${id}`),
+    ).toBeNull();
+    expect(
+      parseGoogleDoc(`https://docs.google.com.evil.io/document/d/${id}`),
+    ).toBeNull();
+    expect(parseGoogleDoc('https://docs.google.com/document/u/0/')).toBeNull();
+    expect(parseGoogleDoc('not a url')).toBeNull();
+    expect(parseGoogleDoc(undefined)).toBeNull();
+  });
+});
+
+describe('link embeds', () => {
+  it('recognises video and design links', () => {
+    expect(
+      resolveEmbed('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=1m30s'),
+    ).toMatchObject({
+      provider: 'youtube',
+      previewUrl:
+        'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&start=90',
+      aspect: 16 / 9,
+    });
+    expect(resolveEmbed('https://youtu.be/dQw4w9WgXcQ')!.previewUrl).toBe(
+      'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0',
+    );
+    expect(
+      resolveEmbed('https://www.youtube.com/shorts/dQw4w9WgXcQ')!.provider,
+    ).toBe('youtube');
+    expect(resolveEmbed('https://vimeo.com/76979871')!.previewUrl).toBe(
+      'https://player.vimeo.com/video/76979871',
+    );
+    expect(
+      resolveEmbed(
+        'https://www.loom.com/share/0123456789abcdef0123456789abcdef',
+      )!.previewUrl,
+    ).toBe('https://www.loom.com/embed/0123456789abcdef0123456789abcdef');
+    expect(
+      resolveEmbed('https://www.figma.com/design/abc123/Name?node-id=1')!
+        .provider,
+    ).toBe('figma');
+  });
+
+  it('keeps Google files editable and everything else unembeddable', () => {
+    const id = '1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcdefg';
+    expect(
+      resolveEmbed(`https://docs.google.com/spreadsheets/d/${id}/edit`)!
+        .editUrl,
+    ).toContain('rm=minimal');
+    expect(resolveEmbed('https://example.com/watch?v=dQw4w9WgXcQ')).toBeNull();
+    expect(
+      resolveEmbed('https://youtube.com.evil.io/watch?v=dQw4w9WgXcQ'),
+    ).toBeNull();
+    expect(resolveEmbed('http://youtu.be/dQw4w9WgXcQ')).toBeNull();
+    expect(resolveEmbed('https://www.youtube.com/watch?v=short')).toBeNull();
+  });
+
+  it('sizes each display and falls back when a site cannot embed', () => {
+    const video = resolveEmbed('https://youtu.be/dQw4w9WgXcQ');
+    expect(linkDisplaySize('embed', video)).toEqual({ w: 560, h: 351 });
+    expect(linkDisplaySize('embed', null)).toEqual({ w: 560, h: 420 });
+    expect(linkDisplaySize('link', video).h).toBeLessThan(60);
+    expect(effectiveLinkDisplay('embed', null)).toBe('card');
+    expect(effectiveLinkDisplay(undefined, video)).toBe('card');
+    expect(effectiveLinkDisplay('link', video)).toBe('link');
   });
 });

@@ -47,6 +47,21 @@ const IMG_SRC_ORIGINS = [
 ] as never[];
 
 /**
+ * @name FRAME_SRC_ORIGINS
+ * @description Google files, videos and designs embedded on the project canvas.
+ */
+const FRAME_SRC_ORIGINS = [
+  "'self'",
+  'https://docs.google.com',
+  'https://drive.google.com',
+  'https://www.youtube-nocookie.com',
+  'https://www.youtube.com',
+  'https://player.vimeo.com',
+  'https://www.loom.com',
+  'https://www.figma.com',
+] as never[];
+
+/**
  * @name WORKER_SRC_ORIGINS
  * @description Mapbox GL loads a web worker for rendering.
  */
@@ -88,6 +103,10 @@ export async function createCspResponse() {
           ...IMG_SRC_ORIGINS,
           // Site Studio / YBB blocks often reference HTTPS CDNs and client sites.
           'https:',
+        ],
+        frameSrc: [
+          ...(noseconeConfig.contentSecurityPolicy.directives.frameSrc ?? []),
+          ...FRAME_SRC_ORIGINS,
         ],
         mediaSrc: [
           ...(noseconeConfig.contentSecurityPolicy.directives.mediaSrc ?? [

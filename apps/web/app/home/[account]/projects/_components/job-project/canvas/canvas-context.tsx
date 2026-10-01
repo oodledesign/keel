@@ -3,6 +3,7 @@
 import { createContext, useContext } from 'react';
 
 import type { CanvasBoardView } from '~/lib/projects/canvas/canvas-board-layout';
+import type { LinkDisplay } from '~/lib/projects/canvas/canvas-embed';
 import type {
   CanvasItem,
   CanvasItemData,
@@ -79,6 +80,10 @@ export type CanvasActions = {
   editNote: (noteId: string) => void;
   editPerson: (person: CanvasPersonRef) => void;
   openDoc: (docId: string) => void;
+  /** Open an embedded link large (Google file in its editor, video, design). */
+  openEmbed: (itemId: string) => void;
+  /** Switch a link card between preview card, text link and embed. */
+  setLinkDisplay: (itemId: string, display: LinkDisplay) => void;
   /** Save a link card to the project's links in Notes. */
   saveLink: (id: string) => void;
   linkBusy: ReadonlyMap<string, 'fetching' | 'saving'>;

@@ -85,6 +85,8 @@ export type CanvasItemData = {
   sourceHandle?: string | null;
   targetHandle?: string | null;
   label?: string;
+  /** Link card: preview card (default), plain text link, or big embed. */
+  display?: 'card' | 'link' | 'embed';
   /** Metric card: the current figure and the goal, as typed (e.g. "£12.4k"). */
   value?: string;
   goal?: string;

@@ -102,6 +102,11 @@ import {
 } from '~/lib/projects/canvas/canvas-clipboard';
 import { groupCanvasComments } from '~/lib/projects/canvas/canvas-comments';
 import {
+  type LinkDisplay,
+  linkDisplaySize,
+  resolveEmbed,
+} from '~/lib/projects/canvas/canvas-embed';
+import {
   type CanvasSectionOutline,
   outlineCanvasSection,
   placeSectionNotes,
@@ -239,6 +244,7 @@ import {
   type CanvasPersonRef,
   taskAssigneeId,
 } from './canvas/canvas-context';
+import { CanvasEmbedDialog } from './canvas/canvas-embed-dialog';
 import {
   CANVAS_IMAGE_ACCEPT,
   CANVAS_IMAGE_BUCKET,
@@ -420,7 +426,22 @@ const DATA_KEYS = [
   'label',
   'value',
   'goal',
+  'display',
+  'unit',
+  'start',
+  'startDate',
+  'dueDate',
+  'metricSource',
+  'milestones',
+  'history',
 ] as const satisfies ReadonlyArray<keyof CanvasItemData>;
+
+// Anything missing from DATA_KEYS is silently dropped on save. Adding a field
+// to CanvasItemData without listing it above is now a type error.
+type UnsavedDataKey = Exclude<keyof CanvasItemData, (typeof DATA_KEYS)[number]>;
+const ALL_DATA_KEYS_SAVED: [UnsavedDataKey] extends [never] ? true : never =
+  true;
+void ALL_DATA_KEYS_SAVED;
 
 function chunk<T>(list: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -661,6 +682,7 @@ function ProjectCanvasInner({
   /** Bumped to snap board cards back to their columns after a drag. */
   const [boardTick, setBoardTick] = useState(0);
   const [addTaskOpen, setAddTaskOpen] = useState(false);
+  const [embedItemId, setEmbedItemId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
@@ -1964,7 +1986,9 @@ function ProjectCanvasInner({
         openDoc(item.refId);
       } else if (item.kind === 'link') {
         const url = item.data.url;
-        if (url && /^https?:\/\//i.test(url)) {
+        if (item.data.display === 'embed' && resolveEmbed(url)) {
+          setEmbedItemId(item.id);
+        } else if (url && /^https?:\/\//i.test(url)) {
           window.open(url, '_blank', 'noopener,noreferrer');
         }
       } else if (editable && item.kind === 'note' && item.refId) {
@@ -2133,12 +2157,27 @@ function ProjectCanvasInner({
   const addLinkCard = useCallback(
     async (url: string, at?: { x: number; y: number }) => {
       if (!editable) return;
-      const card = newFreeformItem(
+      // Videos play right on the canvas; the switcher offers a smaller
+      // preview or a plain text link instead.
+      const embed = resolveEmbed(url);
+      const asVideo = embed?.aspect != null;
+      const center = at ?? viewportCenter();
+      const placed = newFreeformItem(
         'link',
-        at ?? viewportCenter(),
-        { url },
+        center,
+        asVideo ? { url, display: 'embed' } : { url },
         nextZIndex(itemsRef.current, false),
       );
+      const videoSize = linkDisplaySize('embed', embed);
+      const card = asVideo
+        ? {
+            ...placed,
+            x: center.x - videoSize.w / 2,
+            y: center.y - videoSize.h / 2,
+            w: videoSize.w,
+            h: videoSize.h,
+          }
+        : placed;
       commit([{ before: null, after: card }]);
       setLinkState(card.id, 'fetching');
       try {
@@ -3661,6 +3700,27 @@ function ProjectCanvasInner({
     };
   }, [accountId, editable, jobId, removeItems, selectedItems]);
 
+  const setLinkDisplay = useCallback(
+    (id: string, display: LinkDisplay) => {
+      const item = itemById(id);
+      if (!item || item.kind !== 'link') return;
+      const size = linkDisplaySize(display, resolveEmbed(item.data.url));
+      // A preview with a picture needs the room.
+      if (display === 'card' && item.data.imageUrl) size.h = LINK_WITH_IMAGE_H;
+      patchItems([
+        {
+          id,
+          patch: {
+            w: size.w,
+            h: size.h,
+            data: { ...item.data, display },
+          },
+        },
+      ]);
+    },
+    [itemById, patchItems],
+  );
+
   const actions = useMemo<CanvasActions>(
     () => ({
       updateItemData: (id, patch) => {
@@ -3678,6 +3738,8 @@ function ProjectCanvasInner({
       editNote: isGuest && !editable ? readNote : setEditingNoteId,
       editPerson,
       openDoc,
+      openEmbed: setEmbedItemId,
+      setLinkDisplay,
       saveLink: (id) => void saveLinks([id]),
       linkBusy,
       editingId,
@@ -3696,6 +3758,7 @@ function ProjectCanvasInner({
       patchItems,
       readNote,
       saveLinks,
+      setLinkDisplay,
     ],
   );
 
@@ -4436,6 +4499,18 @@ function ProjectCanvasInner({
           canPickPhase={!isGuest}
           onOpenChange={setAddTaskOpen}
           onCreate={addTask}
+        />
+
+        <CanvasEmbedDialog
+          embed={
+            embedItemId
+              ? resolveEmbed(
+                  items.find((item) => item.id === embedItemId)?.data.url,
+                )
+              : null
+          }
+          title={items.find((item) => item.id === embedItemId)?.data.title}
+          onClose={() => setEmbedItemId(null)}
         />
 
         <CanvasMetricDialog

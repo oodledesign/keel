@@ -63,6 +63,7 @@ export const CanvasItemDataSchema = z
     label: z.string().max(500).optional(),
     value: z.string().max(60).optional(),
     goal: z.string().max(60).optional(),
+    display: z.enum(['card', 'link', 'embed']).optional(),
     unit: z.string().max(40).optional(),
     start: z.string().max(60).optional(),
     startDate: isoDate.optional(),

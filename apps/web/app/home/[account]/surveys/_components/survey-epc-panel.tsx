@@ -260,7 +260,7 @@ export function SurveyEpcPanel({
     <Card className={workspacePanelCard} data-test="survey-epc-prep">
       <CardContent className="p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0 flex-1">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--workspace-shell-text)]">
               <Leaf className={`h-4 w-4 ${workspaceTextMuted}`} />
               Energy Performance Certificate
@@ -277,6 +277,7 @@ export function SurveyEpcPanel({
                 type="button"
                 size="sm"
                 variant="outline"
+                className="shrink-0 whitespace-nowrap"
                 disabled={refreshing}
                 onClick={() => void handleRefresh()}
                 data-test="survey-epc-refresh"
@@ -291,7 +292,7 @@ export function SurveyEpcPanel({
             ) : (
               <button
                 type="button"
-                className={workspaceBtnPrimaryMd}
+                className={`${workspaceBtnPrimaryMd} shrink-0 whitespace-nowrap`}
                 disabled={searching || attaching != null || !hasAddress}
                 title={
                   hasAddress ? undefined : 'Add the property address first'

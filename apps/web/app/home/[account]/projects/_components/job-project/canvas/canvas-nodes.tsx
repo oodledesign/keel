@@ -21,6 +21,7 @@ import {
   type Node,
   type NodeProps,
   NodeResizer,
+  NodeToolbar,
   Position,
   getBezierPath,
 } from '@xyflow/react';
@@ -41,9 +42,11 @@ import {
   Link2,
   ListChecks,
   Lock,
+  Maximize2,
   NotebookPen,
   PencilLine,
   Pin,
+  Presentation,
   StickyNote,
 } from 'lucide-react';
 
@@ -55,6 +58,12 @@ import {
   type NoteMarkdownRun,
   parseNoteMarkdown,
 } from '~/lib/notes/note-markdown';
+import {
+  type EmbedSource,
+  type LinkDisplay,
+  effectiveLinkDisplay,
+  resolveEmbed,
+} from '~/lib/projects/canvas/canvas-embed';
 import {
   type MetricPaceStatus,
   type TotalizerView,
@@ -90,6 +99,10 @@ import {
   useCanvasActions,
   useCanvasLookups,
 } from './canvas-context';
+import {
+  EMBED_IFRAME_ALLOW,
+  EMBED_IFRAME_SANDBOX,
+} from './canvas-embed-dialog';
 import { useCanvasImageUrl } from './canvas-images';
 
 type CanvasNode = Node<CanvasNodeData>;
@@ -1184,9 +1197,262 @@ function RemoteImage({
   );
 }
 
+const EMBED_ICON = {
+  doc: FileText,
+  sheet: FileSpreadsheet,
+  slides: Presentation,
+  form: ListChecks,
+} as const;
+
+const LINK_DISPLAY_OPTIONS: Array<{ key: LinkDisplay; label: string }> = [
+  { key: 'card', label: 'Preview' },
+  { key: 'link', label: 'Link' },
+  { key: 'embed', label: 'Embed' },
+];
+
+/** Notion-style switch for how a link is shown, above the selected card. */
+function LinkDisplayToolbar({
+  id,
+  display,
+  embeddable,
+}: {
+  id: string;
+  display: LinkDisplay;
+  embeddable: boolean;
+}) {
+  const { setLinkDisplay } = useCanvasActions();
+  return (
+    <NodeToolbar position={Position.Top} offset={8}>
+      <div
+        className="nodrag flex items-center gap-0.5 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] p-0.5 shadow-md"
+        data-test="canvas-link-display"
+      >
+        {LINK_DISPLAY_OPTIONS.map((option) => {
+          const unavailable = option.key === 'embed' && !embeddable;
+          return (
+            <button
+              key={option.key}
+              type="button"
+              disabled={unavailable}
+              aria-pressed={display === option.key}
+              title={unavailable ? "This site can't be embedded" : undefined}
+              onClick={() => setLinkDisplay(id, option.key)}
+              className={cn(
+                'rounded-md px-2 py-1 text-xs font-medium transition-colors',
+                display === option.key
+                  ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
+                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+                unavailable && 'cursor-not-allowed opacity-40',
+              )}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </NodeToolbar>
+  );
+}
+
+/** A link shown as plain text: icon, title and an open button. */
+function TextLinkCard({
+  id,
+  selected,
+  url,
+  title,
+  faviconUrl,
+}: {
+  id: string;
+  selected: boolean;
+  url?: string;
+  title?: string;
+  faviconUrl?: string;
+}) {
+  const host = safeHostname(url);
+  const safeUrl = url && /^https?:\/\//i.test(url) ? url : undefined;
+  const globe = (
+    <Globe className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+  );
+  return (
+    <div
+      className={cn(
+        cardClass,
+        'flex items-center gap-2 overflow-hidden px-3',
+        selected && 'ring-2 ring-[var(--ozer-accent)]',
+      )}
+    >
+      <Resizer id={id} selected={selected} minWidth={140} minHeight={32} />
+      <ConnectHandles />
+      {faviconUrl ? (
+        <RemoteImage
+          key={faviconUrl}
+          src={faviconUrl}
+          className="h-3.5 w-3.5 shrink-0 rounded-sm"
+          fallback={globe}
+        />
+      ) : (
+        globe
+      )}
+      {safeUrl ? (
+        <a
+          href={safeUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="nodrag min-w-0 flex-1 truncate text-sm font-medium text-[var(--workspace-shell-accent-text)] underline-offset-2 hover:underline"
+        >
+          {title || host || safeUrl}
+        </a>
+      ) : (
+        <span className="min-w-0 flex-1 truncate text-sm">
+          {title || host || 'Link'}
+        </span>
+      )}
+      {safeUrl ? (
+        <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-60" />
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * A link shown as a live embed. Google files start as a read-only preview that
+ * never steals the mouse, with "Edit here" for the editor; videos and designs
+ * become playable once the card is selected. "Expand" opens it large.
+ */
+function EmbedCard({
+  id,
+  embed,
+  title,
+  selected,
+}: {
+  id: string;
+  embed: EmbedSource;
+  title?: string;
+  selected: boolean;
+}) {
+  const { openEmbed } = useCanvasActions();
+  const [live, setLive] = useState(false);
+  const Icon =
+    embed.googleKind !== undefined ? EMBED_ICON[embed.googleKind] : Globe;
+  const name = title?.trim() || embed.label;
+  const editable = embed.editUrl !== null;
+  // Google: interactive only in "Edit here". Others: once the card is selected.
+  const interactive = editable ? live : selected;
+
+  return (
+    <div
+      className={cn(
+        cardClass,
+        'flex flex-col overflow-hidden',
+        selected && 'ring-2 ring-[var(--ozer-accent)]',
+      )}
+    >
+      <Resizer id={id} selected={selected} minWidth={280} minHeight={200} />
+      <ConnectHandles />
+      <div className="flex items-center gap-1.5 border-b border-[color:var(--workspace-shell-border)] px-2.5 py-1.5">
+        <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--ozer-info)]" />
+        <p className="min-w-0 flex-1 truncate text-xs font-semibold">{name}</p>
+        {editable ? (
+          <button
+            type="button"
+            data-test="canvas-embed-live"
+            aria-pressed={live}
+            onClick={() => setLive((value) => !value)}
+            className={cn(
+              'nodrag rounded-md px-1.5 py-0.5 text-xs font-medium hover:bg-[var(--workspace-shell-sidebar-accent)]',
+              live
+                ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
+                : 'text-[var(--workspace-shell-accent-text)]',
+            )}
+          >
+            {live ? 'Done' : 'Edit here'}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className={cn(iconLinkClass, 'nodrag')}
+          title="Open large"
+          onClick={() => openEmbed(id)}
+        >
+          <Maximize2 className="h-3.5 w-3.5" />
+        </button>
+        <a
+          href={embed.openUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(iconLinkClass, 'nodrag')}
+          title="Open original"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+        </a>
+      </div>
+      <div
+        className={cn(
+          'relative min-h-0 flex-1 bg-white',
+          interactive && 'nodrag nopan nowheel',
+        )}
+      >
+        <iframe
+          key={live ? 'edit' : 'preview'}
+          title={name}
+          src={live && embed.editUrl ? embed.editUrl : embed.previewUrl}
+          loading="lazy"
+          allow={EMBED_IFRAME_ALLOW}
+          sandbox={EMBED_IFRAME_SANDBOX}
+          referrerPolicy="strict-origin-when-cross-origin"
+          className="h-full w-full border-0"
+          // A preview must not swallow drags, pans or zoom on the canvas.
+          style={{ pointerEvents: interactive ? 'auto' : 'none' }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function LinkNode({ id, data, selected }: CanvasNodeProps) {
   const { canEdit, accountSlug, guest } = useCanvasLookups();
   const { saveLink, linkBusy } = useCanvasActions();
+  const embed = useMemo(
+    () => resolveEmbed(data.item.data.url),
+    [data.item.data.url],
+  );
+  const display = effectiveLinkDisplay(data.item.data.display, embed);
+  const toolbar =
+    canEdit && selected ? (
+      <LinkDisplayToolbar
+        id={id}
+        display={display}
+        embeddable={embed !== null}
+      />
+    ) : null;
+
+  if (display === 'embed' && embed) {
+    return (
+      <>
+        {toolbar}
+        <EmbedCard
+          id={id}
+          embed={embed}
+          title={data.item.data.title}
+          selected={selected}
+        />
+      </>
+    );
+  }
+  if (display === 'link') {
+    return (
+      <>
+        {toolbar}
+        <TextLinkCard
+          id={id}
+          selected={selected}
+          url={data.item.data.url}
+          title={data.item.data.title}
+          faviconUrl={data.item.data.faviconUrl}
+        />
+      </>
+    );
+  }
   const { url, title, description, faviconUrl, imageUrl, linkId } =
     data.item.data;
   const host = safeHostname(url);
@@ -1198,91 +1464,94 @@ function LinkNode({ id, data, selected }: CanvasNodeProps) {
   );
 
   return (
-    <div
-      className={cn(
-        cardClass,
-        'flex flex-col overflow-hidden',
-        selected && 'ring-2 ring-[var(--ozer-accent)]',
-      )}
-    >
-      <Resizer id={id} selected={selected} minWidth={200} minHeight={110} />
-      <ConnectHandles />
-      {imageUrl ? (
-        <RemoteImage
-          key={imageUrl}
-          src={imageUrl}
-          alt={title || host || 'Link preview'}
-          className="h-[45%] min-h-0 w-full shrink-0 border-b border-[color:var(--workspace-shell-border)] object-cover"
-        />
-      ) : null}
-      <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden px-3 py-2.5">
-        <div className="flex items-center gap-1.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
-          {faviconUrl ? (
-            <RemoteImage
-              key={faviconUrl}
-              src={faviconUrl}
-              className="h-3.5 w-3.5 shrink-0 rounded-sm"
-              fallback={globe}
-            />
-          ) : (
-            globe
-          )}
-          <span className="truncate">{host || 'Link'}</span>
+    <>
+      {toolbar}
+      <div
+        className={cn(
+          cardClass,
+          'flex flex-col overflow-hidden',
+          selected && 'ring-2 ring-[var(--ozer-accent)]',
+        )}
+      >
+        <Resizer id={id} selected={selected} minWidth={200} minHeight={110} />
+        <ConnectHandles />
+        {imageUrl ? (
+          <RemoteImage
+            key={imageUrl}
+            src={imageUrl}
+            alt={title || host || 'Link preview'}
+            className="h-[45%] min-h-0 w-full shrink-0 border-b border-[color:var(--workspace-shell-border)] object-cover"
+          />
+        ) : null}
+        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden px-3 py-2.5">
+          <div className="flex items-center gap-1.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
+            {faviconUrl ? (
+              <RemoteImage
+                key={faviconUrl}
+                src={faviconUrl}
+                className="h-3.5 w-3.5 shrink-0 rounded-sm"
+                fallback={globe}
+              />
+            ) : (
+              globe
+            )}
+            <span className="truncate">{host || 'Link'}</span>
+          </div>
+          <p className="line-clamp-2 text-sm leading-snug font-semibold">
+            {title || host || 'Link'}
+          </p>
+          {description ? (
+            <p className="line-clamp-2 text-xs text-[var(--workspace-shell-text-muted)]">
+              {description}
+            </p>
+          ) : busy === 'fetching' ? (
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              Fetching preview…
+            </p>
+          ) : null}
         </div>
-        <p className="line-clamp-2 text-sm leading-snug font-semibold">
-          {title || host || 'Link'}
-        </p>
-        {description ? (
-          <p className="line-clamp-2 text-xs text-[var(--workspace-shell-text-muted)]">
-            {description}
-          </p>
-        ) : busy === 'fetching' ? (
-          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-            Fetching preview…
-          </p>
-        ) : null}
+        <div className="flex items-center gap-2 border-t border-[color:var(--workspace-shell-border)] px-3 py-1.5 text-xs">
+          {linkId && guest ? (
+            <span className="inline-flex items-center gap-1 font-medium text-[var(--workspace-shell-text-muted)]">
+              <Check className="h-3.5 w-3.5" />
+              In notes
+            </span>
+          ) : linkId ? (
+            <Link
+              href={notesHref}
+              className="nodrag inline-flex items-center gap-1 font-medium text-[var(--workspace-shell-accent-text)] hover:underline"
+              title="Saved to the project's links in Notes"
+            >
+              <Check className="h-3.5 w-3.5" />
+              In notes
+            </Link>
+          ) : canEdit && !guest && safeUrl ? (
+            <button
+              type="button"
+              data-test="canvas-link-save"
+              disabled={busy === 'saving'}
+              onClick={() => saveLink(id)}
+              className="nodrag inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-[var(--workspace-shell-accent-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] disabled:opacity-50"
+            >
+              <BookmarkPlus className="h-3.5 w-3.5" />
+              {busy === 'saving' ? 'Saving…' : 'Save to notes'}
+            </button>
+          ) : null}
+          <span className="flex-1" />
+          {safeUrl ? (
+            <a
+              href={safeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={iconLinkClass}
+              title="Open link"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          ) : null}
+        </div>
       </div>
-      <div className="flex items-center gap-2 border-t border-[color:var(--workspace-shell-border)] px-3 py-1.5 text-xs">
-        {linkId && guest ? (
-          <span className="inline-flex items-center gap-1 font-medium text-[var(--workspace-shell-text-muted)]">
-            <Check className="h-3.5 w-3.5" />
-            In notes
-          </span>
-        ) : linkId ? (
-          <Link
-            href={notesHref}
-            className="nodrag inline-flex items-center gap-1 font-medium text-[var(--workspace-shell-accent-text)] hover:underline"
-            title="Saved to the project's links in Notes"
-          >
-            <Check className="h-3.5 w-3.5" />
-            In notes
-          </Link>
-        ) : canEdit && !guest && safeUrl ? (
-          <button
-            type="button"
-            data-test="canvas-link-save"
-            disabled={busy === 'saving'}
-            onClick={() => saveLink(id)}
-            className="nodrag inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium text-[var(--workspace-shell-accent-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] disabled:opacity-50"
-          >
-            <BookmarkPlus className="h-3.5 w-3.5" />
-            {busy === 'saving' ? 'Saving…' : 'Save to notes'}
-          </button>
-        ) : null}
-        <span className="flex-1" />
-        {safeUrl ? (
-          <a
-            href={safeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={iconLinkClass}
-            title="Open link"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
-        ) : null}
-      </div>
-    </div>
+    </>
   );
 }
 
