@@ -8,6 +8,7 @@ import {
   rgb,
 } from 'pdf-lib';
 
+import type { CoverFocus } from '~/lib/building-surveyor/survey-cover';
 import {
   isSafeHttpUrl,
   parseSurveyReportDocument,
@@ -42,6 +43,8 @@ type ProposalForPdf = {
   draft?: boolean;
   survey_fonts?: SurveyPdfFonts | null;
   rics_logo?: SurveyPdfImage | null;
+  survey_cover_image?: SurveyPdfImage | null;
+  survey_cover_focus?: CoverFocus | null;
   survey_assets?: Record<string, SurveyPdfImage | null>;
   imageBytesById?: Record<string, Uint8Array>;
   client?: {
@@ -266,6 +269,8 @@ export async function buildProposalPdf(
       reportLabel: proposal.survey_report_label,
       fonts: proposal.survey_fonts,
       ricsLogo: proposal.rics_logo,
+      coverImage: proposal.survey_cover_image,
+      coverFocus: proposal.survey_cover_focus,
       assets: proposal.survey_assets,
       draft: proposal.draft ?? proposal.status === 'draft',
     });

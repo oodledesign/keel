@@ -10,6 +10,7 @@ import {
   Flag,
   Frame,
   GanttChart,
+  Gauge,
   ImageIcon,
   Link2,
   type LucideIcon,
@@ -50,6 +51,7 @@ const KIND_ICONS: Record<CanvasItem['kind'], LucideIcon> = {
   draw: PenLine,
   connector: ArrowRight,
   timeline: GanttChart,
+  metric: Gauge,
 };
 
 type CanvasSearchDialogProps = {

@@ -47,6 +47,16 @@ export function NoteBodyEditor({
         codeBlock: false,
         blockquote: false,
         horizontalRule: false,
+        // Links: auto-link typed/pasted URLs; clicking edits, Cmd/Ctrl-click opens.
+        link: {
+          openOnClick: false,
+          autolink: true,
+          linkOnPaste: true,
+          HTMLAttributes: {
+            target: '_blank',
+            rel: 'noopener noreferrer nofollow',
+          },
+        },
       }),
       Underline,
       Placeholder.configure({ placeholder }),
@@ -58,6 +68,14 @@ export function NoteBodyEditor({
     // leaves `**`, `##`, and `- ` visible as literal text.
     content: noteMarkdownToHtml(initialMarkdown),
     editorProps: {
+      handleClick: (_view, _pos, event) => {
+        if (!event.metaKey && !event.ctrlKey) return false;
+        const anchor = (event.target as HTMLElement | null)?.closest('a');
+        const href = anchor?.getAttribute('href');
+        if (!href) return false;
+        window.open(href, '_blank', 'noopener,noreferrer');
+        return true;
+      },
       attributes: {
         class: cn(
           'note-body-editor min-h-[50vh] w-full border-0 px-4 pt-1 text-base leading-relaxed text-[var(--workspace-shell-text)] shadow-none ring-0 outline-none',
@@ -75,6 +93,7 @@ export function NoteBodyEditor({
           '[&_strong]:font-semibold',
           '[&_em]:italic',
           '[&_u]:underline',
+          '[&_a]:cursor-text [&_a]:break-words [&_a]:text-[var(--ozer-accent)] [&_a]:underline [&_a]:underline-offset-2',
           '[&_p.is-editor-empty:first-child::before]:pointer-events-none [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:text-[var(--workspace-shell-text-muted)] [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]',
         ),
         'aria-label': 'Note content',

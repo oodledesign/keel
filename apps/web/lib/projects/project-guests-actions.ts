@@ -13,12 +13,15 @@ import {
   listAcceptedGuestsForUser,
   listProjectGuests,
   revokeProjectGuest,
+  updateProjectGuestPermissions,
 } from '~/lib/projects/project-guests.service';
+import type { ProjectGuestPermissions } from '~/lib/projects/project-guests.types';
 
 const PermissionsSchema = z.object({
   comment: z.boolean(),
   create_task: z.boolean(),
   edit_own_task: z.boolean(),
+  edit_canvas: z.boolean(),
 });
 
 function revalidateProject(accountSlug: string, projectId: string) {
@@ -47,11 +50,7 @@ export const createProjectGuestInviteAction = enhanceAction(
     accountSlug: string;
     projectId: string;
     email: string;
-    permissions?: {
-      comment: boolean;
-      create_task: boolean;
-      edit_own_task: boolean;
-    };
+    permissions?: ProjectGuestPermissions;
   }) => {
     const result = await createProjectGuestInvite(input);
     revalidateProject(input.accountSlug, input.projectId);
@@ -85,6 +84,29 @@ export const revokeProjectGuestAction = enhanceAction(
       accountSlug: z.string().min(1),
       projectId: z.string().uuid(),
       guestId: z.string().uuid(),
+    }),
+  },
+);
+
+export const updateProjectGuestPermissionsAction = enhanceAction(
+  async (input: {
+    accountId: string;
+    accountSlug: string;
+    projectId: string;
+    guestId: string;
+    permissions: ProjectGuestPermissions;
+  }) => {
+    const permissions = await updateProjectGuestPermissions(input);
+    revalidateProject(input.accountSlug, input.projectId);
+    return { permissions };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      accountSlug: z.string().min(1),
+      projectId: z.string().uuid(),
+      guestId: z.string().uuid(),
+      permissions: PermissionsSchema,
     }),
   },
 );

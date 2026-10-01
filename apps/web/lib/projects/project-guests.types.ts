@@ -2,6 +2,8 @@ export type ProjectGuestPermissions = {
   comment: boolean;
   create_task: boolean;
   edit_own_task: boolean;
+  /** Add to and edit the project's canvas: notes, drawings, files, layout. */
+  edit_canvas: boolean;
 };
 
 export type ProjectGuest = {

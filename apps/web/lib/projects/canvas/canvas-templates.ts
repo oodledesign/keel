@@ -27,9 +27,17 @@ export type CanvasCalendarTemplate = TemplateBase & {
   channels: TemplateArea[];
 };
 
+/** A row of big figure cards over a grid of titled areas. */
+export type CanvasFiguresTemplate = TemplateBase & {
+  layout: 'figures';
+  figures: Array<{ title: string; color: CanvasColorKey }>;
+  areas: TemplateArea[];
+};
+
 export type CanvasSectionTemplate =
   | CanvasAreasTemplate
-  | CanvasCalendarTemplate;
+  | CanvasCalendarTemplate
+  | CanvasFiguresTemplate;
 
 export const MARKETING_TEMPLATE: CanvasAreasTemplate = {
   layout: 'areas',
@@ -164,8 +172,44 @@ export const CONTENT_CALENDAR_TEMPLATE: CanvasCalendarTemplate = {
   ],
 };
 
+export const GOALS_TARGETS_TEMPLATE: CanvasFiguresTemplate = {
+  layout: 'figures',
+  preset: 'targets',
+  title: 'Goals & targets',
+  description: 'Big current figures with targets, plus goals and what to watch',
+  figures: [
+    { title: 'Headline figure', color: 'green' },
+    { title: 'Second figure', color: 'blue' },
+    { title: 'Third figure', color: 'purple' },
+    { title: 'Fourth figure', color: 'orange' },
+  ],
+  areas: [
+    {
+      title: 'Goals',
+      color: 'green',
+      prompt: 'What are we here to achieve? Add as many as you need.',
+    },
+    {
+      title: 'Targets & deadlines',
+      color: 'blue',
+      prompt: 'The numbers and dates we are working towards.',
+    },
+    {
+      title: 'What is working',
+      color: 'yellow',
+      prompt: 'Wins, momentum and things to do more of.',
+    },
+    {
+      title: 'Needs attention',
+      color: 'coral',
+      prompt: 'Behind target, blocked, or at risk.',
+    },
+  ],
+};
+
 export const CANVAS_SECTION_TEMPLATES: CanvasSectionTemplate[] = [
   PROJECT_BRIEF_TEMPLATE,
+  GOALS_TARGETS_TEMPLATE,
   MARKETING_TEMPLATE,
   CONTENT_CALENDAR_TEMPLATE,
 ];
@@ -177,6 +221,7 @@ const PAD = 32;
 const HEADER = 56;
 const AREA_HEADER = 48;
 const STICKY_INSET = 20;
+const FIGURE_H = 190;
 
 const CAL = {
   colW: 220,
@@ -194,6 +239,12 @@ function calendarRowWidth(weeks: number) {
 }
 
 export function sectionTemplateSize(template: CanvasSectionTemplate) {
+  if (template.layout === 'figures') {
+    return {
+      w: PAD * 2 + COLUMNS * AREA.w + (COLUMNS - 1) * GAP,
+      h: HEADER + FIGURE_H + GAP + AREA.h + PAD,
+    };
+  }
   if (template.layout === 'calendar') {
     const rows = template.channels.length;
     return {
@@ -309,9 +360,29 @@ export function buildSectionTemplate(
     return out;
   }
 
+  if (template.layout === 'figures') {
+    template.figures.forEach((figure, index) => {
+      out.push(
+        item(
+          'metric',
+          {
+            x: origin.x + PAD + index * (AREA.w + GAP),
+            y: origin.y + HEADER,
+            w: AREA.w,
+            h: FIGURE_H,
+          },
+          { title: figure.title, color: figure.color },
+          zIndex.item + index,
+        ),
+      );
+    });
+  }
+  const areaTop =
+    origin.y + HEADER + (template.layout === 'figures' ? FIGURE_H + GAP : 0);
+
   template.areas.forEach((area, index) => {
     const x = origin.x + PAD + (index % COLUMNS) * (AREA.w + GAP);
-    const y = origin.y + HEADER + Math.floor(index / COLUMNS) * (AREA.h + GAP);
+    const y = areaTop + Math.floor(index / COLUMNS) * (AREA.h + GAP);
     out.push(
       item(
         'frame',
@@ -328,7 +399,7 @@ export function buildSectionTemplate(
           h: 120,
         },
         { text: area.prompt, color: area.color },
-        zIndex.item + index,
+        zIndex.item + COLUMNS + index,
       ),
     );
   });

@@ -17,6 +17,7 @@ export const FREEFORM_CANVAS_KINDS = [
   'link',
   'draw',
   'timeline',
+  'metric',
 ] as const;
 
 export const CANVAS_ITEM_KINDS = [
@@ -44,6 +45,7 @@ export const CANVAS_SECTION_PRESETS = [
   'marketing',
   'brief',
   'content_calendar',
+  'targets',
 ] as const;
 export type CanvasSectionPreset = (typeof CANVAS_SECTION_PRESETS)[number];
 
@@ -83,6 +85,30 @@ export type CanvasItemData = {
   sourceHandle?: string | null;
   targetHandle?: string | null;
   label?: string;
+  /** Metric card: the current figure and the goal, as typed (e.g. "£12.4k"). */
+  value?: string;
+  goal?: string;
+  /** Totalizer: what is counted ("paying users"), shown after the numbers. */
+  unit?: string;
+  /** Totalizer: where the figure started, and when (ISO `YYYY-MM-DD`). */
+  start?: string;
+  startDate?: string;
+  /** Totalizer: when the target is due (ISO date). */
+  dueDate?: string;
+  /** Typed by hand, or counted live from the project's tasks / phases. */
+  metricSource?: CanvasMetricSource;
+  /** Checkpoints on the way to the target, each with its own date. */
+  milestones?: CanvasMilestone[];
+  /** Readings logged each time the figure is updated, oldest first. */
+  history?: Array<{ date: string; value: number }>;
+};
+
+export type CanvasMetricSource = 'manual' | 'tasks' | 'phases';
+
+export type CanvasMilestone = {
+  label: string;
+  goal: string;
+  dueDate?: string;
 };
 
 export type CanvasItem = {
@@ -230,6 +256,7 @@ export const CANVAS_DEFAULT_SIZES: Record<
   link: { w: 320, h: 150 },
   draw: { w: 1, h: 1 },
   timeline: { w: 1200, h: 280 },
+  metric: { w: 260, h: 180 },
 };
 
 export function canvasItemSize(item: Pick<CanvasItem, 'kind' | 'w' | 'h'>) {

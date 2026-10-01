@@ -437,14 +437,22 @@ class ProjectCanvasService {
     return toCanvasNote(await this.requireProjectNote(input), null);
   }
 
-  private async requireCanEdit(accountId: string) {
+  /** Team editors, or a guest invited with the `edit_canvas` permission. */
+  private async requireCanEdit(accountId: string, jobId: string) {
     const userId = await this.requireUserId();
-    const { data: canEdit, error } = await looseClient(this.client).rpc(
+    const client = looseClient(this.client);
+    const { data: canEdit, error } = await client.rpc(
       'can_edit_project_canvas',
       { p_account_id: accountId },
     );
     if (error) throw new Error(error.message);
-    if (canEdit !== true) throw new Error('Permission denied');
+    if (canEdit === true) return userId;
+
+    const { data: guestCanEdit } = await client.rpc(
+      'can_guest_edit_project_canvas',
+      { p_account_id: accountId, p_project_id: jobId },
+    );
+    if (guestCanEdit !== true) throw new Error('Permission denied');
     return userId;
   }
 
@@ -452,7 +460,7 @@ class ProjectCanvasService {
   async createNote(
     input: CreateProjectCanvasNoteInput,
   ): Promise<ProjectCanvasNote> {
-    const userId = await this.requireCanEdit(input.accountId);
+    const userId = await this.requireCanEdit(input.accountId, input.jobId);
     await this.verifyProject(input.accountId, input.jobId);
 
     const { data, error } = await this.client
@@ -477,7 +485,7 @@ class ProjectCanvasService {
   async updateNote(
     input: UpdateProjectCanvasNoteInput,
   ): Promise<ProjectCanvasNote> {
-    await this.requireCanEdit(input.accountId);
+    await this.requireCanEdit(input.accountId, input.jobId);
     await this.verifyProject(input.accountId, input.jobId);
     const note = await this.requireProjectNote(input);
 

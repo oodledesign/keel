@@ -6,8 +6,9 @@ import { Cross2Icon } from '@radix-ui/react-icons';
 import { type VariantProps, cva } from 'class-variance-authority';
 import { Dialog as SheetPrimitive } from 'radix-ui';
 
-import { cn } from '../lib/utils';
 import { sheetScrollClass } from '../lib/overlay-layout';
+import { useLockPageZoom } from '../lib/use-lock-page-zoom';
+import { cn } from '../lib/utils';
 
 const Sheet = SheetPrimitive.Root;
 
@@ -31,7 +32,7 @@ const SheetOverlay: React.FC<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
-  'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 gap-4 p-6 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
+  'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 touch-pan-x touch-pan-y gap-4 p-6 pt-[max(1.5rem,calc(env(safe-area-inset-top)_+_1rem))] shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
   {
     variants: {
       side: {
@@ -59,21 +60,27 @@ const SheetContent: React.FC<SheetContentProps> = ({
   className,
   children,
   ...props
-}) => (
-  <SheetPortal>
-    <SheetOverlay />
-    <SheetPrimitive.Content
-      className={cn(sheetVariants({ side }), sheetScrollClass, className)}
-      {...props}
-    >
-      <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
-        <Cross2Icon className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </SheetPrimitive.Close>
-      {children}
-    </SheetPrimitive.Content>
-  </SheetPortal>
-);
+}) => {
+  // A zoomed page pushes the close button out of reach, so a drawer never zooms.
+  useLockPageZoom();
+
+  return (
+    <SheetPortal>
+      <SheetOverlay />
+      <SheetPrimitive.Content
+        className={cn(sheetVariants({ side }), sheetScrollClass, className)}
+        {...props}
+      >
+        {/* Sits below the status bar / notch in a standalone PWA. */}
+        <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-[max(0.75rem,calc(env(safe-area-inset-top)_+_0.5rem))] right-[max(0.75rem,calc(env(safe-area-inset-right)_+_0.5rem))] z-10 inline-flex h-9 w-9 items-center justify-center rounded-md opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
+          <Cross2Icon className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </SheetPrimitive.Close>
+        {children}
+      </SheetPrimitive.Content>
+    </SheetPortal>
+  );
+};
 SheetContent.displayName = SheetPrimitive.Content.displayName;
 
 const SheetHeader = ({

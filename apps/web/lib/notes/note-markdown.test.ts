@@ -98,3 +98,63 @@ describe('noteMarkdownToPlainText', () => {
     );
   });
 });
+
+describe('links', () => {
+  it('parses markdown links and keeps marks inside them', () => {
+    const [block] = parseNoteMarkdown(
+      'See [**the docs**](https://a.dev/x?y=1_2) now',
+    );
+    expect(block!.runs).toEqual([
+      { text: 'See ', bold: false, italic: false, underline: false },
+      {
+        text: 'the docs',
+        bold: true,
+        italic: false,
+        underline: false,
+        href: 'https://a.dev/x?y=1_2',
+      },
+      { text: ' now', bold: false, italic: false, underline: false },
+    ]);
+  });
+
+  it('links bare URLs without swallowing trailing punctuation', () => {
+    const html = noteMarkdownToHtml(
+      'Visit https://example.com/a_b_c. Or (www.example.org/x)!',
+    );
+    expect(html).toContain(
+      '<a href="https://example.com/a_b_c" target="_blank" rel="noopener noreferrer nofollow">https://example.com/a_b_c</a>.',
+    );
+    expect(html).toContain('href="https://www.example.org/x"');
+    expect(html).toContain('www.example.org/x</a>)!');
+  });
+
+  it('does not double-link a markdown link whose text is a URL', () => {
+    const html = noteMarkdownToHtml('[https://x.io](https://x.io)');
+    expect(html.match(/<a /g)).toHaveLength(1);
+  });
+
+  it('rejects unsafe schemes', () => {
+    const html = noteMarkdownToHtml('[click](javascript:alert(1))');
+    expect(html).not.toContain('<a ');
+    expect(html).not.toContain('href');
+  });
+
+  it('keeps link text in plain text previews', () => {
+    expect(noteMarkdownToPlainText('go [here](https://x.io)')).toBe('go here');
+  });
+});
+
+describe('numbered lists', () => {
+  it('renders consecutive numbered lines as an ordered list', () => {
+    const html = noteMarkdownToHtml(
+      'Steps\n1. First **one**\n2. Second\n- bullet',
+    );
+    expect(html).toBe(
+      '<p>Steps</p><ol><li>First <strong>one</strong></li><li>Second</li></ol><ul><li>bullet</li></ul>',
+    );
+  });
+
+  it('keeps plain text previews free of numbering markers', () => {
+    expect(noteMarkdownToPlainText('1. a\n2) b')).toBe('a\nb');
+  });
+});

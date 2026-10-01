@@ -18,6 +18,27 @@ export const CONDITION_RATING_COLORS: Record<ConditionRating, string> = {
   NI: '#6B7280',
 };
 
+/** Most serious first; used to pick one rating for a section. */
+const RATING_SEVERITY: readonly ConditionRating[] = ['3', '2', '1', 'NI', 'NA'];
+
+/**
+ * The single rating a section shows (report heading, summary page, PDF).
+ * Notes can carry their own rating; the most serious one wins so a defect is
+ * never hidden behind a milder note. Notes with no rating are ignored.
+ */
+export function sectionConditionRating(
+  ratings: ReadonlyArray<ConditionRating | null | undefined>,
+): ConditionRating | null {
+  return RATING_SEVERITY.find((rating) => ratings.includes(rating)) ?? null;
+}
+
+/** True when a section's notes carry more than one distinct rating. */
+export function hasMixedConditionRatings(
+  ratings: ReadonlyArray<ConditionRating | null | undefined>,
+): boolean {
+  return new Set(ratings.filter(Boolean)).size > 1;
+}
+
 export function isConditionRating(
   value: string | null | undefined,
 ): value is ConditionRating {

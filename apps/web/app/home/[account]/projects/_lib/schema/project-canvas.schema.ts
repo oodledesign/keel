@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { parseIsoDate } from '~/lib/projects/canvas/canvas-metric';
 import {
   CANVAS_COLOR_KEYS,
   CANVAS_ITEM_KINDS,
@@ -23,6 +24,11 @@ const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const CANVAS_IMAGE_PATH = new RegExp(
   `^${UUID}/${UUID}/${UUID}\\.(png|jpg|webp|gif)$`,
 );
+
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((value) => parseIsoDate(value) !== null, 'Not a real date');
 
 export const CanvasItemDataSchema = z
   .object({
@@ -55,6 +61,27 @@ export const CanvasItemDataSchema = z
     sourceHandle: z.string().max(40).nullable().optional(),
     targetHandle: z.string().max(40).nullable().optional(),
     label: z.string().max(500).optional(),
+    value: z.string().max(60).optional(),
+    goal: z.string().max(60).optional(),
+    unit: z.string().max(40).optional(),
+    start: z.string().max(60).optional(),
+    startDate: isoDate.optional(),
+    dueDate: isoDate.optional(),
+    metricSource: z.enum(['manual', 'tasks', 'phases']).optional(),
+    milestones: z
+      .array(
+        z.object({
+          label: z.string().max(60),
+          goal: z.string().max(60),
+          dueDate: isoDate.optional(),
+        }),
+      )
+      .max(6)
+      .optional(),
+    history: z
+      .array(z.object({ date: isoDate, value: z.number().finite() }))
+      .max(200)
+      .optional(),
   })
   .strict();
 

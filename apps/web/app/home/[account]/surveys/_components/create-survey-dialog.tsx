@@ -31,6 +31,7 @@ import {
   documentDetailPath,
   titleForRecipient,
 } from '~/lib/building-surveyor/document-kind';
+import { penceFromInput } from '~/lib/building-surveyor/survey-drone';
 import {
   HOME_SURVEY_LEVEL_OPTIONS,
   type SurveyLevel,
@@ -41,6 +42,12 @@ import {
   workspaceLinkAccent,
   workspaceTextMuted,
 } from '~/lib/workspace-ui';
+
+import {
+  type DroneFormValue,
+  DroneOptionFields,
+  EMPTY_DRONE_FORM,
+} from './drone-option-fields';
 
 export type CreateSurveyDealOption = {
   id: string;
@@ -94,6 +101,7 @@ export function CreateSurveyDialog({
   );
   const [clientsLoading, setClientsLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [drone, setDrone] = useState<DroneFormValue>(EMPTY_DRONE_FORM);
   const clientsRequested = useRef(false);
 
   const clients = preloadedClients ?? fetchedClients ?? [];
@@ -107,6 +115,7 @@ export function CreateSurveyDialog({
     setManualEntry(false);
     setClientId('');
     setDealId('');
+    setDrone(EMPTY_DRONE_FORM);
   }, [open]);
 
   useEffect(() => {
@@ -127,6 +136,16 @@ export function CreateSurveyDialog({
   const handleCreate = async () => {
     if (!canSubmit) {
       toast.error('Add a property address or link a client');
+      return;
+    }
+    const droneFee = drone.fee.trim() ? penceFromInput(drone.fee) : null;
+    if (
+      drone.used &&
+      drone.billing === 'separate' &&
+      drone.fee.trim() &&
+      droneFee === null
+    ) {
+      toast.error('Enter the drone fee as an amount, for example 150');
       return;
     }
     const deal = deals.find((item) => item.id === dealId);
@@ -150,6 +169,10 @@ export function CreateSurveyDialog({
         survey_property_address: address.trim() || null,
         survey_property_postcode: postcode.trim() || null,
         survey_uprn: uprn.trim() || null,
+        survey_drone_used: drone.used,
+        survey_drone_billing: drone.billing,
+        survey_drone_fee_pence:
+          drone.used && drone.billing === 'separate' ? droneFee : null,
       });
       if (proposal?.id) {
         onOpenChange(false);
@@ -345,6 +368,14 @@ export function CreateSurveyDialog({
               </select>
             </div>
           ) : null}
+
+          <DroneOptionFields
+            accountId={accountId}
+            idPrefix="survey-create-drone"
+            value={drone}
+            onChange={setDrone}
+            disabled={creating}
+          />
 
           <div className="flex justify-end gap-2 pt-1">
             <Button

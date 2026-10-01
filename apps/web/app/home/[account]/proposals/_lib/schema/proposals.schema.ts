@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+import {
+  DroneBillingSchema,
+  DroneFeePenceSchema,
+} from '~/lib/building-surveyor/survey-drone';
 import { SurveyReportDocumentSchema } from '~/lib/building-surveyor/survey-report-document';
 
 const optionalString = z.string().optional();
@@ -80,6 +84,9 @@ export const CreateProposalSchema = clientOrDealRefine(
     survey_property_address: z.string().max(500).nullable().optional(),
     survey_property_postcode: z.string().max(16).nullable().optional(),
     survey_uprn: z.string().max(20).nullable().optional(),
+    survey_drone_used: z.boolean().optional(),
+    survey_drone_billing: DroneBillingSchema.optional(),
+    survey_drone_fee_pence: DroneFeePenceSchema.nullable().optional(),
   }),
 );
 

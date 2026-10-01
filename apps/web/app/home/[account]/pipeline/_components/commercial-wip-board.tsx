@@ -195,7 +195,6 @@ type Props = {
   latestUpdateByDealId?: Record<string, WipLatestUpdate>;
   onDealWon?: (deal: PipelineDeal) => void;
   onRequestCreateDisposal?: (deal: PipelineDeal) => void;
-  onInstructionCreated?: (deal: PipelineDeal) => void;
   hideBoardTitle?: boolean;
 };
 
@@ -264,7 +263,6 @@ export function CommercialWipBoard({
   latestUpdateByDealId = {},
   onDealWon,
   onRequestCreateDisposal,
-  onInstructionCreated,
   hideBoardTitle = false,
 }: Props) {
   const router = useRouter();
@@ -1484,12 +1482,7 @@ export function CommercialWipBoard({
 
       <AddDealDialog
         businesses={initialData.businesses}
-        onDealCreated={(deal) => {
-          setDeals((prev) => [deal, ...prev]);
-          if (!deal.commercialListingId) {
-            onInstructionCreated?.(deal);
-          }
-        }}
+        onDealCreated={(deal) => setDeals((prev) => [deal, ...prev])}
         accountSlug={accountSlug}
         accountId={accountId}
         initialClients={initialClients}
@@ -1654,7 +1647,6 @@ export function CommercialWipBoard({
             setDealToEdit(deal);
             setEditDealOpen(true);
           }}
-          onCreateDisposal={onRequestCreateDisposal}
           onDealWon={onDealWon}
           onActivityChanged={() => router.refresh()}
           expandedIds={ladderExpandedIds}

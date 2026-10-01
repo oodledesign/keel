@@ -55,6 +55,7 @@ import {
   ListPhaseTemplatesSchema,
   ListPhasesForJobSchema,
   MoveTaskSchema,
+  ReorderPhaseTasksSchema,
   ReorderPhasesSchema,
   SavePhasePageDocSchema,
   SaveProjectAsPhaseTemplateSchema,
@@ -371,6 +372,16 @@ export const moveTask = enhanceAction(
     return task;
   },
   { schema: MoveTaskSchema },
+);
+
+export const reorderPhaseTasks = enhanceAction(
+  async (input) => {
+    const service = getProjectPhasesService();
+    await service.reorderPhaseTasks(input);
+    revalidatePath(jobDetailPath(input.accountSlug, input.jobId));
+    return { ok: true as const };
+  },
+  { schema: ReorderPhaseTasksSchema },
 );
 
 export const listJobBoard = enhanceAction(

@@ -19,6 +19,7 @@ export const CANVAS_KIND_LABELS: Record<CanvasItem['kind'], string> = {
   draw: 'Drawing',
   connector: 'Arrow',
   timeline: 'Timeline',
+  metric: 'Figure',
 };
 
 function firstLine(value: string | undefined) {
@@ -117,6 +118,13 @@ export function canvasItemText(
       return {
         label: item.data.title || hostname(item.data.url) || 'Link',
         detail: [item.data.description, item.data.url]
+          .filter(Boolean)
+          .join(' '),
+      };
+    case 'metric':
+      return {
+        label: item.data.title?.trim() || 'Figure',
+        detail: [item.data.value, item.data.goal, item.data.text]
           .filter(Boolean)
           .join(' '),
       };

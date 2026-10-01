@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import {
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -20,11 +21,20 @@ import {
   ImagePlus,
   Loader2,
   MinusCircle,
+  MoreHorizontal,
   Trash2,
 } from 'lucide-react';
 
 import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 import { Button } from '@kit/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 import { Skeleton } from '@kit/ui/skeleton';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
@@ -38,7 +48,13 @@ import {
 } from '~/home/[account]/_lib/workspace-content/docs-actions';
 import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
-import { CONDITION_RATINGS } from '~/lib/building-surveyor/condition-rating';
+import {
+  CONDITION_RATINGS,
+  CONDITION_RATING_COLORS,
+  CONDITION_RATING_LABELS,
+  hasMixedConditionRatings,
+  sectionConditionRating,
+} from '~/lib/building-surveyor/condition-rating';
 import {
   SURVEY_PHRASE_DRAG_MIME,
   parsePhraseDrag,
@@ -60,9 +76,11 @@ import {
   createSurveyObservationAction,
   deleteSurveyObservationAction,
   reorderSurveyPhotosAction,
+  setSurveySectionRatingAction,
   updateSurveyObservationAction,
   updateSurveyPhotoCurationAction,
 } from '../_lib/server/survey-capture-actions';
+import { updateSurveyCoverAction } from '../_lib/server/survey-report-details-actions';
 import { surveyPath } from '../_lib/survey-display';
 import { SurveyPhrasePanel } from './survey-phrase-panel';
 import { SurveySectionHeadingIcon } from './survey-section-heading-icon';
@@ -104,6 +122,7 @@ export function SurveyDeskReviewClient({
   currentKey: initialKey,
   observations: initialObservations,
   phraseBankCount,
+  coverPhotoDocId: initialCoverPhotoDocId,
 }: {
   accountSlug: string;
   accountId: string;
@@ -114,6 +133,7 @@ export function SurveyDeskReviewClient({
   currentKey: string;
   observations: SurveyObservation[];
   phraseBankCount: number;
+  coverPhotoDocId: string | null;
 }) {
   const pathname = usePathname();
   const supabase = useSupabase();
@@ -122,6 +142,9 @@ export function SurveyDeskReviewClient({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const captionedKey = useRef<string | null>(null);
   const [observations, setObservations] = useState(initialObservations);
+  const [coverPhotoDocId, setCoverPhotoDocId] = useState(
+    initialCoverPhotoDocId,
+  );
   const [photos, setPhotos] = useState<DeskReviewPhoto[]>([]);
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const [loadingPhotos, setLoadingPhotos] = useState(true);
@@ -168,6 +191,12 @@ export function SurveyDeskReviewClient({
     () => observations.filter((item) => item.sectionKey === currentKey),
     [observations, currentKey],
   );
+  const noteRatings = useMemo(
+    () => sectionObservations.map((item) => item.conditionRating),
+    [sectionObservations],
+  );
+  const sectionRating = sectionConditionRating(noteRatings);
+  const ratingsDiffer = hasMixedConditionRatings(noteRatings);
   const notedKeys = useMemo(
     () => new Set(observations.map((item) => item.sectionKey)),
     [observations],
@@ -299,6 +328,44 @@ export function SurveyDeskReviewClient({
       } catch (error) {
         setObservations((prev) =>
           prev.map((row) => (row.id === observation.id ? observation : row)),
+        );
+        toast.error(getErrorMessage(error));
+      }
+    });
+  };
+
+  /** One rating for the whole section; replaces any per-note ratings. */
+  const updateSectionRating = (
+    conditionRating: SurveyObservation['conditionRating'],
+  ) => {
+    if (!current) return;
+    const sectionKey = current.key;
+    const priorRatings = new Map(
+      observations
+        .filter((row) => row.sectionKey === sectionKey)
+        .map((row) => [row.id, row.conditionRating] as const),
+    );
+    setObservations((prev) =>
+      prev.map((row) =>
+        row.sectionKey === sectionKey ? { ...row, conditionRating } : row,
+      ),
+    );
+    startTransition(async () => {
+      try {
+        await setSurveySectionRatingAction({
+          accountId,
+          accountSlug,
+          proposalId,
+          sectionKey,
+          conditionRating,
+        });
+      } catch (error) {
+        setObservations((prev) =>
+          prev.map((row) =>
+            priorRatings.has(row.id)
+              ? { ...row, conditionRating: priorRatings.get(row.id) ?? null }
+              : row,
+          ),
         );
         toast.error(getErrorMessage(error));
       }
@@ -467,6 +534,23 @@ export function SurveyDeskReviewClient({
     }
   };
 
+  const setAsCover = (docId: string) => {
+    startTransition(async () => {
+      try {
+        await updateSurveyCoverAction({
+          accountId,
+          accountSlug,
+          proposalId,
+          photoDocId: docId,
+        });
+        setCoverPhotoDocId(docId);
+        toast.success('Cover photo set');
+      } catch (error) {
+        toast.error(getErrorMessage(error));
+      }
+    });
+  };
+
   const saveCaption = async (docId: string, caption: string) => {
     try {
       await updateSurveyPhotoCurationAction({
@@ -606,17 +690,85 @@ export function SurveyDeskReviewClient({
         className="animate-in fade-in slide-in-from-bottom-1 min-w-0 flex-1 scroll-mt-4 space-y-5 duration-200"
       >
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2
-            ref={headingRef}
-            tabIndex={-1}
-            className={`flex items-center gap-2 text-xl font-semibold ${workspaceText}`}
-          >
-            <SurveySectionHeadingIcon
-              sectionKey={current.key}
-              className="h-5 w-5 shrink-0"
-            />
-            {current.label}
-          </h2>
+          <div className="min-w-0 space-y-1.5">
+            <h2
+              ref={headingRef}
+              tabIndex={-1}
+              className={`flex items-center gap-2 text-xl font-semibold ${workspaceText}`}
+            >
+              <SurveySectionHeadingIcon
+                sectionKey={current.key}
+                className="h-5 w-5 shrink-0"
+              />
+              {current.label}
+            </h2>
+            {canEdit || sectionRating ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {sectionRating ? (
+                  <span
+                    className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full px-1.5 text-xs font-semibold text-white"
+                    style={{
+                      backgroundColor: CONDITION_RATING_COLORS[sectionRating],
+                    }}
+                    title={CONDITION_RATING_LABELS[sectionRating]}
+                    data-test="survey-section-rating-badge"
+                  >
+                    {sectionRating}
+                  </span>
+                ) : null}
+                {canEdit ? (
+                  <select
+                    aria-label="Section condition rating"
+                    value={sectionRating ?? ''}
+                    disabled={sectionObservations.length === 0 || pending}
+                    title={
+                      sectionObservations.length === 0
+                        ? 'Add a note to rate this section'
+                        : undefined
+                    }
+                    onChange={(event) =>
+                      updateSectionRating(
+                        (event.target.value ||
+                          null) as SurveyObservation['conditionRating'],
+                      )
+                    }
+                    className="h-8 rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-2 text-xs disabled:opacity-60"
+                    data-test="survey-section-rating-select"
+                  >
+                    <option value="">No rating</option>
+                    {CONDITION_RATINGS.map((rating) => (
+                      <option key={rating} value={rating}>
+                        {CONDITION_RATING_LABELS[rating]}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+                {ratingsDiffer ? (
+                  <span
+                    className="text-xs text-amber-600 dark:text-amber-400"
+                    data-test="survey-section-rating-mixed"
+                  >
+                    Some notes have their own rating. The report shows the
+                    highest.
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+            {canEdit &&
+            sectionRating === 'NI' &&
+            !sectionObservations.some((item) =>
+              NI_REASON_RE.test(drafts[item.id] ?? item.body),
+            ) ? (
+              <p
+                className="text-xs text-amber-600 dark:text-amber-400"
+                data-test="survey-ni-reason-prompt"
+              >
+                Not inspected: add why (for example no safe access, locked, or
+                covered by stored items). RICS reports should explain every
+                element that was not inspected.
+              </p>
+            ) : null}
+          </div>
           <div className="flex gap-2">
             <Button
               type="button"
@@ -704,25 +856,6 @@ export function SurveyDeskReviewClient({
                     {canEdit ? (
                       <div className="flex flex-wrap items-center gap-2">
                         <select
-                          aria-label="Condition rating"
-                          value={item.conditionRating ?? ''}
-                          onChange={(event) =>
-                            updateRating(
-                              item,
-                              (event.target.value ||
-                                null) as SurveyObservation['conditionRating'],
-                            )
-                          }
-                          className="h-8 rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-2 text-xs"
-                        >
-                          <option value="">No rating</option>
-                          {CONDITION_RATINGS.map((rating) => (
-                            <option key={rating} value={rating}>
-                              Rating {rating}
-                            </option>
-                          ))}
-                        </select>
-                        <select
                           aria-label="Move to section"
                           value={item.sectionKey}
                           onChange={(event) =>
@@ -738,7 +871,67 @@ export function SurveyDeskReviewClient({
                             </option>
                           ))}
                         </select>
-                        <div className="ml-auto flex gap-2">
+                        {item.conditionRating &&
+                        item.conditionRating !== sectionRating ? (
+                          <span
+                            className={`text-xs ${workspaceTextMuted}`}
+                            data-test="survey-note-rating-override"
+                          >
+                            Note rated {item.conditionRating}
+                          </span>
+                        ) : null}
+                        <div className="ml-auto flex items-center gap-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                                aria-label="Note options"
+                                disabled={pending}
+                                data-test="survey-note-menu"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                              <DropdownMenuLabel className="font-normal">
+                                <span className="block text-xs font-semibold">
+                                  Rating for this note
+                                </span>
+                                <span
+                                  className={`block text-xs ${workspaceTextMuted}`}
+                                >
+                                  Internal detail. The report shows one rating
+                                  per section.
+                                </span>
+                              </DropdownMenuLabel>
+                              <DropdownMenuRadioGroup
+                                value={item.conditionRating ?? 'none'}
+                                onValueChange={(value) =>
+                                  updateRating(
+                                    item,
+                                    (value === 'none'
+                                      ? null
+                                      : value) as SurveyObservation['conditionRating'],
+                                  )
+                                }
+                              >
+                                <DropdownMenuRadioItem value="none">
+                                  No rating of its own
+                                </DropdownMenuRadioItem>
+                                {CONDITION_RATINGS.map((rating) => (
+                                  <DropdownMenuRadioItem
+                                    key={rating}
+                                    value={rating}
+                                  >
+                                    {CONDITION_RATING_LABELS[rating]}
+                                  </DropdownMenuRadioItem>
+                                ))}
+                              </DropdownMenuRadioGroup>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                           <Button
                             type="button"
                             size="sm"
@@ -762,22 +955,6 @@ export function SurveyDeskReviewClient({
                           </Button>
                         </div>
                       </div>
-                    ) : item.conditionRating ? (
-                      <p className={`text-xs ${workspaceTextMuted}`}>
-                        Rating {item.conditionRating}
-                      </p>
-                    ) : null}
-                    {canEdit &&
-                    item.conditionRating === 'NI' &&
-                    !NI_REASON_RE.test(draft) ? (
-                      <p
-                        className="text-xs text-amber-600 dark:text-amber-400"
-                        data-test="survey-ni-reason-prompt"
-                      >
-                        Not inspected: add why (for example no safe access,
-                        locked, or covered by stored items). RICS reports should
-                        explain every element that was not inspected.
-                      </p>
                     ) : null}
                   </li>
                 );
@@ -939,6 +1116,23 @@ export function SurveyDeskReviewClient({
                         >
                           <MinusCircle className="mr-1 h-4 w-4" />
                           Remove from section
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={pending || coverPhotoDocId === photo.id}
+                          onClick={() => setAsCover(photo.id)}
+                          data-test="survey-photo-use-as-cover"
+                        >
+                          {coverPhotoDocId === photo.id ? (
+                            <>
+                              <Check className="mr-1 h-4 w-4" />
+                              Cover photo
+                            </>
+                          ) : (
+                            'Use as cover photo'
+                          )}
                         </Button>
                       </div>
                     ) : null}

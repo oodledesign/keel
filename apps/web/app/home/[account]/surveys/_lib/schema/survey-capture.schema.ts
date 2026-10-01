@@ -79,6 +79,11 @@ export const CreateSurveyObservationSchema = SurveyAccountSchema.extend({
   conditionRating: ConditionRatingSchema.nullable().optional(),
 });
 
+export const SetSurveySectionRatingSchema = SurveyAccountSchema.extend({
+  sectionKey: SurveySectionKeySchema,
+  conditionRating: ConditionRatingSchema.nullable(),
+});
+
 export const DeleteSurveyObservationSchema = SurveyAccountSchema.extend({
   observationId: z.string().uuid(),
 });
@@ -167,6 +172,9 @@ export type UpdateSurveyObservationInput = z.infer<
 >;
 export type CreateSurveyObservationInput = z.infer<
   typeof CreateSurveyObservationSchema
+>;
+export type SetSurveySectionRatingInput = z.infer<
+  typeof SetSurveySectionRatingSchema
 >;
 export type DeleteSurveyObservationInput = z.infer<
   typeof DeleteSurveyObservationSchema

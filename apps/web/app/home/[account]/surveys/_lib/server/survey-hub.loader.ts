@@ -21,6 +21,7 @@ export async function loadSurveyHubExtras(input: {
   const client = getSupabaseServerClient();
   const service = createSurveyCaptureService(client);
   const epcService = createSurveyEpcService(client);
+  const detailsService = createSurveyReportDetailsService(client);
   await service.assertBuildingSurveyorAccount(input.accountId);
 
   const [
@@ -33,6 +34,7 @@ export async function loadSurveyHubExtras(input: {
     attachedEpc,
     propertyLookup,
     reportDetails,
+    coverDefaultUrl,
   ] = await Promise.all([
     service.listObservations(input.accountId, input.proposalId),
     service.listLinkedTranscripts(
@@ -47,11 +49,14 @@ export async function loadSurveyHubExtras(input: {
     createSurveyPhrasesService(client).listBanks(input.accountId),
     epcService.getAttached(input.accountId, input.proposalId),
     epcService.getLookup(input.accountId, input.proposalId),
-    createSurveyReportDetailsService(client).getDetails(
-      input.accountId,
-      input.proposalId,
-    ),
+    detailsService.getDetails(input.accountId, input.proposalId),
+    detailsService.getCoverDefaultUrl(input.accountId),
   ]);
+
+  const coverPhotoUrl = await detailsService.getCoverPhotoUrl(
+    input.accountId,
+    reportDetails.coverPhotoDocId,
+  );
 
   const survey = await service.getSurvey(input.accountId, input.proposalId);
   const row = survey as {
@@ -74,6 +79,8 @@ export async function loadSurveyHubExtras(input: {
     epcConfigured: isGovUkEpcConfigured(),
     flood: mapSurveyFloodRow(survey),
     reportDetails,
+    coverDefaultUrl,
+    coverPhotoUrl,
     isDraft: survey.status === 'draft',
     surveyLevel:
       row.survey_level === 2 || row.survey_level === 3

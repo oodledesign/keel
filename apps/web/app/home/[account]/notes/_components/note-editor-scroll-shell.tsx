@@ -5,11 +5,14 @@ import { useEffect } from 'react';
 const VIEWPORT_SELECTOR = '[data-team-workspace-viewport]';
 const SHELL_SELECTOR = '[data-team-workspace-shell]';
 const PAGE_SELECTOR = '[data-team-workspace-page]';
+const DESKTOP_QUERY = '(min-width: 1024px)';
 
 /**
  * On note editor routes the workspace shell uses a fixed viewport with inner
  * scroll containers. This unlocks document-level scrolling so pull-to-refresh
- * and nested scroll traps do not fight the textarea.
+ * and nested scroll traps do not fight the textarea. Desktop keeps the shell's
+ * bounded height: there the chrome's note wrapper is the scroll container, and
+ * unlocking would leave nothing to scroll.
  */
 export function NoteEditorScrollShell({
   children,
@@ -17,6 +20,8 @@ export function NoteEditorScrollShell({
   children: React.ReactNode;
 }) {
   useEffect(() => {
+    if (window.matchMedia(DESKTOP_QUERY).matches) return;
+
     const viewport = document.querySelector(
       VIEWPORT_SELECTOR,
     ) as HTMLElement | null;

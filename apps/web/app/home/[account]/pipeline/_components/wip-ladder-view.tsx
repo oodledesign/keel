@@ -23,7 +23,6 @@ import {
   ChevronDown,
   ChevronRight,
   ExternalLink,
-  FilePlus2,
   GripVertical,
   Search,
 } from 'lucide-react';
@@ -97,8 +96,6 @@ type Props = {
     next: PipelineDeal[] | ((prev: PipelineDeal[]) => PipelineDeal[]),
   ) => void;
   onEditInstruction: (deal: PipelineDeal) => void;
-  /** Builds a populated disposal from the instruction and opens it. */
-  onCreateDisposal?: (deal: PipelineDeal) => void;
   onDealWon?: (deal: PipelineDeal) => void;
   onActivityChanged?: () => void;
   expandedIds: Set<string>;
@@ -163,7 +160,6 @@ export function WipLadderView({
   listings = [],
   onDealsChange,
   onEditInstruction,
-  onCreateDisposal,
   onDealWon,
   onActivityChanged,
   expandedIds,
@@ -637,11 +633,6 @@ export function WipLadderView({
                               });
                             }}
                             onEdit={() => onEditInstruction(deal)}
-                            onCreateDisposal={
-                              onCreateDisposal
-                                ? () => onCreateDisposal(deal)
-                                : undefined
-                            }
                             onActivityChanged={onActivityChanged}
                           />
                         );
@@ -684,7 +675,6 @@ function LadderSortableRow({
   onChangeStage,
   onToggleAml,
   onEdit,
-  onCreateDisposal,
   onActivityChanged,
 }: {
   deal: PipelineDeal;
@@ -700,7 +690,6 @@ function LadderSortableRow({
   onChangeStage: (next: string) => void;
   onToggleAml: (next: boolean) => void;
   onEdit: () => void;
-  onCreateDisposal?: () => void;
   onActivityChanged?: () => void;
 }) {
   const {
@@ -845,20 +834,6 @@ function LadderSortableRow({
         </div>
 
         <div className="flex items-center gap-1 pl-6 sm:pl-0">
-          {onCreateDisposal && !deal.commercialListingId ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1 border-[color:var(--workspace-shell-border)] text-xs"
-              onClick={onCreateDisposal}
-              title="Create a disposal pre-filled from this instruction"
-              data-test="wip-ladder-create-disposal"
-            >
-              <FilePlus2 className="h-3.5 w-3.5" />
-              Disposal
-            </Button>
-          ) : null}
           <Button
             type="button"
             variant="ghost"

@@ -29,4 +29,24 @@ describe('buildSurveyorQuoteHtml', () => {
     expect(html).toContain('Form of appointment');
     expect(html).toContain('Terms of Business');
   });
+
+  it('leaves out additional services when there are no extra lines', () => {
+    const html = buildSurveyorQuoteHtml({
+      address: '12 High Street, York',
+      clientName: 'Alex Client',
+      firmName: 'North Surveyors',
+    });
+    expect(html).not.toContain('Additional services');
+  });
+
+  it('shows the drone as a line item with its fee', () => {
+    const html = buildSurveyorQuoteHtml({
+      address: '12 High Street, York',
+      clientName: 'Alex Client',
+      firmName: 'North Surveyors',
+      extraLines: [{ label: 'Drone', amount: '£150' }],
+    });
+    expect(html).toContain('Additional services');
+    expect(html).toContain('<td>Drone</td><td>£150</td>');
+  });
 });

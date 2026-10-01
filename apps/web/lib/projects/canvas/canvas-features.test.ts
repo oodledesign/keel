@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { buildCanvasAiPrompt, parseCanvasAiResponse } from './canvas-ai';
 import {
+  layoutCanvasBoard,
+  moveInOrder,
+  planBoardDrop,
+  reorderBoardTasks,
+} from './canvas-board-layout';
+import {
   canvasPasteOffset,
   copyCanvasItems,
   parseCanvasClipboard,
@@ -13,14 +19,28 @@ import {
   mentionQueryAt,
 } from './canvas-comments';
 import { outlineCanvasSection, placeSectionNotes } from './canvas-fill';
+import { buildLinkedCanvasItem } from './canvas-layout';
 import {
   canvasUrlFromText,
   isCanvasImageUrl,
   linkCardPreview,
 } from './canvas-links';
+import {
+  buildTotalizer,
+  computeMetricPace,
+  formatMetricNumber,
+  logMetricPoint,
+  metricProgress,
+  metricWeeklyChange,
+  parseIsoDate,
+  parseMetricNumber,
+  projectMetricCount,
+  toIsoDate,
+} from './canvas-metric';
 import { searchCanvasEntries } from './canvas-search';
 import {
   CONTENT_CALENDAR_TEMPLATE,
+  GOALS_TARGETS_TEMPLATE,
   PROJECT_BRIEF_TEMPLATE,
   buildSectionTemplate,
   nextMonday,
@@ -550,5 +570,313 @@ describe('canvas clipboard', () => {
       parseCanvasClipboard(JSON.stringify({ ...clip, items: [task] })),
     ).toBeNull();
     expect(parseCanvasClipboard(JSON.stringify({ ...clip, v: 2 }))).toBeNull();
+  });
+});
+
+describe('figures', () => {
+  it('reads the number out of a typed figure', () => {
+    expect(parseMetricNumber('£12,400')).toBe(12400);
+    expect(parseMetricNumber('3.2m')).toBe(3_200_000);
+    expect(parseMetricNumber('45%')).toBe(45);
+    expect(parseMetricNumber('12 months')).toBe(12);
+    expect(parseMetricNumber('TBC')).toBeNull();
+    expect(parseMetricNumber('')).toBeNull();
+  });
+
+  it('works out progress towards a target', () => {
+    expect(metricProgress('£8,000', '£10,000')).toBeCloseTo(0.8);
+    expect(metricProgress('12k', '10k')).toBeCloseTo(1.2);
+    expect(metricProgress('5', '0')).toBeNull();
+    expect(metricProgress('', '10')).toBeNull();
+  });
+});
+
+describe('goals & targets template', () => {
+  it('lays figure cards over the goal areas inside one section', () => {
+    const created = buildSectionTemplate(
+      GOALS_TARGETS_TEMPLATE,
+      { x: 100, y: 200 },
+      { container: 1, item: 1 },
+      ids('g'),
+    );
+    const size = sectionTemplateSize(GOALS_TARGETS_TEMPLATE);
+    const metrics = created.filter((item) => item.kind === 'metric');
+    expect(metrics).toHaveLength(GOALS_TARGETS_TEMPLATE.figures.length);
+    const root = created[0]!;
+    expect(root.data.preset).toBe('targets');
+    for (const item of created.slice(1)) {
+      expect(item.x).toBeGreaterThanOrEqual(root.x);
+      expect(item.y).toBeGreaterThanOrEqual(root.y);
+      expect(item.x + (item.w ?? 0)).toBeLessThanOrEqual(root.x + size.w);
+      expect(item.y + (item.h ?? 0)).toBeLessThanOrEqual(root.y + size.h);
+    }
+    const areaTops = created
+      .filter((item) => item.kind === 'frame')
+      .slice(1)
+      .map((item) => item.y);
+    const metricBottom = Math.max(...metrics.map((m) => m.y + (m.h ?? 0)));
+    expect(Math.min(...areaTops)).toBeGreaterThan(metricBottom);
+  });
+});
+
+describe('board layout', () => {
+  const phases = [
+    { id: 'p1', name: 'Plan' },
+    { id: 'p2', name: 'Build' },
+  ];
+  const tasks = [
+    { id: 't1', phaseId: 'p1', status: 'todo' },
+    { id: 't2', phaseId: 'p1', status: 'done' },
+    { id: 't3', phaseId: 'p2', status: 'in_progress' },
+    { id: 't4', phaseId: null, status: 'todo' },
+  ];
+  const input = (mode: 'phase' | 'status') => ({
+    mode,
+    projectId: 'proj',
+    phases,
+    tasks,
+    notes: [],
+    items: [
+      buildLinkedCanvasItem(
+        'proj',
+        { kind: 'phase', refId: 'p1' },
+        { x: 900, y: 40 },
+      ),
+      // Saved far away: the board ignores it.
+      buildLinkedCanvasItem(
+        'proj',
+        { kind: 'task', refId: 't1' },
+        { x: 5000, y: 5000 },
+      ),
+    ],
+  });
+
+  it('stacks tasks in board order inside phase columns', () => {
+    const layout = layoutCanvasBoard(input('phase'));
+    const keys = layout.columns.map((column) => column.key);
+    expect(keys).toEqual(['p1', 'p2', '__none__']);
+    const first = layout.columns[0]!;
+    expect(first.tasks.map((task) => task.taskId)).toEqual(['t1', 't2']);
+    const placed = new Map(layout.items.map((item) => [item.id, item]));
+    const [a, b] = first.tasks.map((task) => placed.get(task.itemId)!);
+    expect(a!.x).toBe(b!.x);
+    expect(b!.y).toBeGreaterThan(a!.y);
+    expect(a!.x).toBeGreaterThanOrEqual(first.x);
+    expect(layout.columns[1]!.x).toBeGreaterThan(first.x);
+  });
+
+  it('does not change the saved positions', () => {
+    const source = input('phase');
+    const before = JSON.stringify(source.items);
+    layoutCanvasBoard(source);
+    expect(JSON.stringify(source.items)).toBe(before);
+  });
+
+  it('groups tasks by status in status view', () => {
+    const layout = layoutCanvasBoard(input('status'));
+    const byStatus = Object.fromEntries(
+      layout.columns.map((column) => [
+        column.status,
+        column.tasks.map((task) => task.taskId),
+      ]),
+    );
+    expect(byStatus.todo).toEqual(['t1', 't4']);
+    expect(byStatus.in_progress).toEqual(['t3']);
+    expect(byStatus.done).toEqual(['t2']);
+    expect(layout.items.some((item) => item.kind === 'phase')).toBe(false);
+  });
+
+  it('finds the column and slot a card was dropped on', () => {
+    const layout = layoutCanvasBoard(input('phase'));
+    const placed = new Map(layout.items.map((item) => [item.id, item]));
+    const [first, second] = layout.columns;
+    const firstTask = placed.get(first!.tasks[0]!.itemId)!;
+    const dropX = first!.x + first!.w / 2;
+    // Below the last card in the first column: goes to the end.
+    const end = planBoardDrop(layout.columns, placed, 'other', {
+      x: dropX,
+      y: first!.y + first!.h - 5,
+    });
+    expect(end?.column.key).toBe(first!.key);
+    expect(end?.index).toBe(2);
+    // Above the first card: goes to the top.
+    const top = planBoardDrop(layout.columns, placed, 'other', {
+      x: dropX,
+      y: firstTask.y - 1,
+    });
+    expect(top?.index).toBe(0);
+    // Over the second column.
+    const other = planBoardDrop(layout.columns, placed, 'other', {
+      x: second!.x + 10,
+      y: second!.y + 80,
+    });
+    expect(other?.column.key).toBe(second!.key);
+    // Nowhere near a column.
+    expect(
+      planBoardDrop(layout.columns, placed, 'other', { x: -9999, y: 0 }),
+    ).toBeNull();
+  });
+
+  it('reorders ids around the moved one', () => {
+    expect(moveInOrder(['a', 'b', 'c'], 'a', 2)).toEqual(['b', 'c', 'a']);
+    expect(moveInOrder(['a', 'b', 'c'], 'c', 0)).toEqual(['c', 'a', 'b']);
+    expect(moveInOrder(['a', 'b'], 'x', 1)).toEqual(['a', 'x', 'b']);
+    expect(moveInOrder(['a', 'b'], 'a', 99)).toEqual(['b', 'a']);
+  });
+
+  it('moves a task between phases with its subtasks', () => {
+    const task = (
+      id: string,
+      phase: string | null,
+      parent: string | null = null,
+    ) => ({ id, phase_id: phase, parent_task_id: parent, sort_order: 0 });
+    const next = reorderBoardTasks(
+      {
+        p1: [task('a', 'p1'), task('a1', 'p1', 'a'), task('b', 'p1')],
+        p2: [task('c', 'p2')],
+      },
+      'p2',
+      'p2',
+      ['a', 'c'],
+    );
+    expect(next.p1!.map((t) => t.id)).toEqual(['b']);
+    expect(next.p2!.map((t) => t.id)).toEqual(['a', 'c', 'a1']);
+    expect(next.p2!.find((t) => t.id === 'a1')?.phase_id).toBe('p2');
+    expect(next.p2!.map((t) => t.sort_order).slice(0, 2)).toEqual([0, 1]);
+  });
+});
+
+describe('totalizer pace', () => {
+  const startDate = new Date(2026, 9, 1); // 1 Oct
+  const dueDate = new Date(2026, 11, 18); // 18 Dec
+  const now = new Date(2026, 9, 1 + 30);
+
+  it('reads and writes ISO dates', () => {
+    expect(toIsoDate(parseIsoDate('2026-12-18')!)).toBe('2026-12-18');
+    expect(parseIsoDate('2026-02-31')).toBeNull();
+    expect(parseIsoDate('soon')).toBeNull();
+  });
+
+  it('compares progress with the straight-line plan', () => {
+    const pace = computeMetricPace({
+      value: 2,
+      start: 1,
+      target: 105,
+      startDate,
+      dueDate,
+      now,
+    })!;
+    expect(pace.status).toBe('behind');
+    expect(pace.daysLeft).toBe(48);
+    expect(pace.planValue).toBeGreaterThan(2);
+    expect(pace.behindBy).toBeGreaterThan(0);
+    expect(pace.perWeekActual).toBeCloseTo(1 / (30 / 7));
+    expect(pace.perWeekNeeded).toBeCloseTo(103 / (48 / 7));
+    expect(pace.projected).toBeGreaterThan(2);
+  });
+
+  it('flags ahead, reached and overdue', () => {
+    const base = { start: 0, target: 100, startDate, dueDate };
+    expect(computeMetricPace({ ...base, value: 90, now })!.status).toBe(
+      'ahead',
+    );
+    expect(computeMetricPace({ ...base, value: 100, now })!.status).toBe(
+      'reached',
+    );
+    expect(
+      computeMetricPace({ ...base, value: 10, now: new Date(2027, 0, 5) })!
+        .status,
+    ).toBe('overdue');
+    expect(
+      computeMetricPace({ ...base, value: 0, now: new Date(2026, 8, 1) })!
+        .status,
+    ).toBe('upcoming');
+  });
+
+  it('works for targets that go down', () => {
+    const pace = computeMetricPace({
+      value: 90,
+      start: 100,
+      target: 50,
+      startDate,
+      dueDate,
+      now,
+    })!;
+    expect(pace.progress).toBeCloseTo(0.2);
+    expect(pace.status).toBe('behind');
+    expect(pace.behindBy).toBeGreaterThan(0);
+  });
+
+  it('formats numbers like the typed figure', () => {
+    expect(formatMetricNumber(12_400, '£10,000')).toBe('£12.4k');
+    expect(formatMetricNumber(42.5, '60%')).toBe('42.5%');
+    expect(formatMetricNumber(9.1)).toBe('9.1');
+    expect(formatMetricNumber(1_250_000, '$1m')).toBe('$1.3m');
+  });
+
+  it('works out weekly change from logged readings', () => {
+    const history = [
+      { date: '2026-10-10', value: 3 },
+      { date: '2026-10-20', value: 5 },
+      { date: '2026-10-28', value: 9 },
+    ];
+    expect(
+      metricWeeklyChange({
+        history,
+        value: 9,
+        start: 1,
+        now: new Date(2026, 9, 30),
+      }),
+    ).toEqual({ thisWeek: 4, lastWeek: 2 });
+    expect(
+      metricWeeklyChange({ history: [], value: 1, start: 0, now }),
+    ).toBeNull();
+  });
+
+  it('logs one reading per day', () => {
+    const first = logMetricPoint(undefined, 3, new Date(2026, 9, 5));
+    const again = logMetricPoint(first, 4, new Date(2026, 9, 5));
+    expect(again).toEqual([{ date: '2026-10-05', value: 4 }]);
+  });
+
+  it('counts live phases and tasks', () => {
+    const project = {
+      phases: [{ status: 'complete' }, { status: 'in_progress' }],
+      tasks: [
+        { status: 'done', parent_task_id: null },
+        { status: 'todo', parent_task_id: null },
+        { status: 'done', parent_task_id: 'x' },
+        { status: 'cancelled', parent_task_id: null },
+      ],
+    };
+    expect(projectMetricCount('phases', project)).toEqual({
+      value: 1,
+      total: 2,
+    });
+    expect(projectMetricCount('tasks', project)).toEqual({
+      value: 1,
+      total: 2,
+    });
+  });
+
+  it('builds a view with milestones sorted by date', () => {
+    const view = buildTotalizer(
+      {
+        value: '2',
+        goal: '105',
+        start: '1',
+        startDate: '2026-10-01',
+        dueDate: '2026-12-18',
+        milestones: [{ label: 'Beta', goal: '20', dueDate: '2026-11-15' }],
+      },
+      { phases: [], tasks: [] },
+      now,
+    )!;
+    expect(view.bars.map((bar) => bar.label)).toEqual(['Beta', 'Final target']);
+    expect(view.status).toBe('behind');
+    expect(view.final?.goal).toBe(105);
+    expect(
+      buildTotalizer({ value: 'TBC' }, { phases: [], tasks: [] }, now),
+    ).toBeNull();
   });
 });

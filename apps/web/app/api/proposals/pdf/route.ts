@@ -8,6 +8,10 @@ import { buildProposalPdf } from '~/home/[account]/proposals/_lib/server/proposa
 import { createSurveyTemplatesService } from '~/home/[account]/surveys/_lib/server/survey-templates.service';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import {
+  isCoverImagePath,
+  parseCoverFocus,
+} from '~/lib/building-surveyor/survey-cover';
+import {
   loadSurveyPdfArt,
   loadSurveyPdfFonts,
   normalizeSurveyPhoto,
@@ -65,6 +69,61 @@ function surveyReportMeta(proposal: Record<string, unknown>) {
   };
 }
 
+/**
+ * The front-cover photo: the survey's chosen building photo, else the
+ * workspace default image. Null leaves the PDF to fall back to the first
+ * report photo.
+ */
+async function loadCoverImage(
+  proposal: Record<string, unknown>,
+  accountId: string,
+) {
+  const admin = getSupabaseServerAdminClient();
+  // Cover columns may lag generated Database types.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = admin as any;
+
+  const photoDocId =
+    (proposal.survey_cover_photo_doc_id as string | null) ?? null;
+  if (photoDocId) {
+    const { data: row } = await db
+      .from('docs')
+      .select('id, file_path, storage_path, storage_bucket')
+      .eq('id', photoDocId)
+      .eq('account_id', accountId)
+      .maybeSingle();
+    if (row) {
+      const signed = await signSurveyPhotoUrls(admin, [
+        {
+          id: row.id as string,
+          filePath: (row.file_path as string | null) ?? null,
+          storagePath: (row.storage_path as string | null) ?? null,
+          storageBucket: (row.storage_bucket as string | null) ?? null,
+        },
+      ]);
+      const url = signed[row.id as string];
+      const image = url ? await fetchPhoto(url) : null;
+      if (image) return image;
+    }
+  }
+
+  const { data: settings } = await db
+    .from('survey_account_settings')
+    .select('cover_image_path')
+    .eq('account_id', accountId)
+    .maybeSingle();
+  const defaultPath =
+    (settings as { cover_image_path?: string | null } | null)
+      ?.cover_image_path ?? null;
+  if (!defaultPath || !isCoverImagePath(accountId, defaultPath)) return null;
+
+  const signed = await signSurveyPhotoUrls(admin, [
+    { id: 'default-cover', filePath: defaultPath },
+  ]);
+  const url = signed['default-cover'];
+  return url ? fetchPhoto(url) : null;
+}
+
 async function surveyReportExtras(
   proposal: Record<string, unknown>,
   accountId: string,
@@ -74,7 +133,7 @@ async function surveyReportExtras(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = admin as any;
   const createdBy = (proposal.created_by as string | null) ?? null;
-  const [template, profileResult, fonts, art] = await Promise.all([
+  const [template, profileResult, fonts, art, coverImage] = await Promise.all([
     createSurveyTemplatesService(admin)
       .resolveForSurvey({
         accountId,
@@ -94,6 +153,7 @@ async function surveyReportExtras(
       : Promise.resolve({ data: null }),
     loadSurveyPdfFonts(),
     loadSurveyPdfArt(),
+    loadCoverImage(proposal, accountId).catch(() => null),
   ]);
   const profile = profileResult.data
     ? mapSurveyorProfileRow(profileResult.data)
@@ -105,6 +165,8 @@ async function surveyReportExtras(
     surveyor_rics_number: profile?.ricsNumber || null,
     survey_fonts: fonts,
     rics_logo: showRicsLogo ? art.ricsLogo : null,
+    survey_cover_image: coverImage,
+    survey_cover_focus: parseCoverFocus(proposal.survey_cover_focus),
     survey_assets: { 'typical-house': art.typicalHouse },
   };
 }
@@ -239,7 +301,8 @@ async function fetchPhoto(url: string) {
     if (normalized) return normalized;
     const isPng = raw[0] === 0x89 && raw[1] === 0x50;
     const isJpg = raw[0] === 0xff && raw[1] === 0xd8;
-    return isPng || isJpg ? { bytes: raw } : null;
+    if (!isPng && !isJpg) return null;
+    return { bytes: raw, kind: isPng ? ('png' as const) : ('jpg' as const) };
   } catch {
     return null;
   }

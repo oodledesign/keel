@@ -2,6 +2,7 @@
 
 import { createContext, useContext } from 'react';
 
+import type { CanvasBoardView } from '~/lib/projects/canvas/canvas-board-layout';
 import type {
   CanvasItem,
   CanvasItemData,
@@ -40,6 +41,8 @@ export type CanvasLookups = {
   canEdit: boolean;
   /** A project guest is viewing: people and the client are locked, and there are no workspace links. */
   guest: boolean;
+  /** How phases and tasks are laid out: board columns or free. */
+  boardView: CanvasBoardView;
   phasesById: Map<string, PhaseListItem>;
   tasksById: Map<string, JobBoardTask>;
   subtaskCounts: Map<string, { total: number; done: number }>;
@@ -83,7 +86,19 @@ export type CanvasActions = {
   setEditingId: (id: string | null) => void;
 };
 
-export type CanvasNodeData = { item: CanvasItem };
+/** A column header or drop marker the board layout draws itself. */
+export type CanvasBoardNodeData = {
+  label: string;
+  count: number;
+  tone: string;
+  active: boolean;
+};
+
+export type CanvasNodeData = {
+  item: CanvasItem;
+  /** Set on the board layout's own nodes (not saved canvas items). */
+  board?: CanvasBoardNodeData;
+};
 
 const CanvasLookupsContext = createContext<CanvasLookups | null>(null);
 const CanvasActionsContext = createContext<CanvasActions | null>(null);

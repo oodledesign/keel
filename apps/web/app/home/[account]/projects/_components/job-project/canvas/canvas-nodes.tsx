@@ -55,6 +55,15 @@ import {
   type NoteMarkdownRun,
   parseNoteMarkdown,
 } from '~/lib/notes/note-markdown';
+import {
+  type MetricPaceStatus,
+  type TotalizerView,
+  buildTotalizer,
+  formatMetricDate,
+  formatMetricNumber,
+  metricProgress,
+  projectMetricCount,
+} from '~/lib/projects/canvas/canvas-metric';
 import { canvasPathToSvg } from '~/lib/projects/canvas/canvas-path';
 import { buildCanvasTimeline } from '~/lib/projects/canvas/canvas-timeline';
 import {
@@ -351,7 +360,8 @@ function PhaseNode({ id, data, selected }: CanvasNodeProps) {
 }
 
 function TaskNode({ data, selected }: CanvasNodeProps) {
-  const { tasksById, peopleById, subtaskCounts } = useCanvasLookups();
+  const { tasksById, peopleById, subtaskCounts, phasesById, boardView } =
+    useCanvasLookups();
   const task = tasksById.get(data.item.refId ?? '');
   if (!task) return null;
 
@@ -359,6 +369,10 @@ function TaskNode({ data, selected }: CanvasNodeProps) {
   const assigneeId = taskAssigneeId(task);
   const assignee = assigneeId ? peopleById.get(assigneeId) : undefined;
   const subtasks = subtaskCounts.get(task.id);
+  const phase =
+    boardView === 'status' && task.phase_id
+      ? phasesById.get(task.phase_id)
+      : undefined;
 
   return (
     <div
@@ -386,6 +400,14 @@ function TaskNode({ data, selected }: CanvasNodeProps) {
           {task.title}
         </p>
       </div>
+      {phase ? (
+        <p
+          className="truncate pl-4 text-[10px] font-medium"
+          style={{ color: phase.colour || 'var(--ozer-accent)' }}
+        >
+          {phase.name}
+        </p>
+      ) : null}
       <div className="flex items-center gap-2 text-[11px] text-[var(--workspace-shell-text-muted)]">
         <span
           className={cn(
@@ -408,11 +430,19 @@ function TaskNode({ data, selected }: CanvasNodeProps) {
           </span>
         ) : null}
         {assignee ? (
-          <ProfileAvatar
-            displayName={assignee.name ?? assignee.email}
-            pictureUrl={assignee.pictureUrl}
-            className="ml-auto h-5 w-5 text-[9px]"
-          />
+          <span
+            className="ml-auto inline-flex items-center gap-1"
+            title={`Assigned to ${assignee.name ?? assignee.email ?? 'someone'}`}
+          >
+            <span className="max-w-[6.5rem] truncate">
+              {firstName(assignee.name ?? assignee.email)}
+            </span>
+            <ProfileAvatar
+              displayName={assignee.name ?? assignee.email}
+              pictureUrl={assignee.pictureUrl}
+              className="h-5 w-5 text-[9px]"
+            />
+          </span>
         ) : null}
       </div>
     </div>
@@ -688,22 +718,53 @@ function ClientNode({ selected }: CanvasNodeProps) {
 }
 
 function MarkdownRuns({ runs }: { runs: NoteMarkdownRun[] }) {
-  return runs.map((run, index) => (
-    <span
-      key={index}
-      className={cn(
-        run.bold && 'font-semibold text-[var(--workspace-shell-text)]',
-        run.italic && 'italic',
-        run.underline && 'underline',
-      )}
-    >
-      {run.text}
-    </span>
-  ));
+  return runs.map((run, index) => {
+    const className = cn(
+      run.bold && 'font-semibold text-[var(--workspace-shell-text)]',
+      run.italic && 'italic',
+      run.underline && 'underline',
+    );
+    if (run.href) {
+      return (
+        <a
+          key={index}
+          href={run.href}
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+          // Keep React Flow from starting a drag/pan or opening the editor.
+          className={cn(
+            className,
+            'nodrag nopan cursor-pointer break-words text-[var(--ozer-accent)] underline underline-offset-2 hover:opacity-80',
+          )}
+          onClick={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+        >
+          {run.text}
+        </a>
+      );
+    }
+    return (
+      <span key={index} className={className}>
+        {run.text}
+      </span>
+    );
+  });
+}
+
+/** Position of each block within its consecutive run of numbered lines. */
+function numberedPositions(blocks: { kind: string }[]): number[] {
+  const positions: number[] = [];
+  for (const [index, block] of blocks.entries()) {
+    positions.push(
+      block.kind === 'numbered' ? (positions[index - 1] ?? 0) + 1 : 0,
+    );
+  }
+  return positions;
 }
 
 export function NoteBody({ markdown }: { markdown: string }) {
   const blocks = useMemo(() => parseNoteMarkdown(markdown), [markdown]);
+  const numbers = useMemo(() => numberedPositions(blocks), [blocks]);
   return blocks.map((block, index) => {
     if (block.kind === 'heading1' || block.kind === 'heading2') {
       return (
@@ -724,6 +785,16 @@ export function NoteBody({ markdown }: { markdown: string }) {
           key={index}
           className="relative mt-0.5 pl-3 before:absolute before:left-0 before:content-['•']"
         >
+          <MarkdownRuns runs={block.runs} />
+        </p>
+      );
+    }
+    if (block.kind === 'numbered') {
+      return (
+        <p key={index} className="relative mt-0.5 pl-4">
+          <span className="absolute left-0 tabular-nums">
+            {numbers[index]}.
+          </span>
           <MarkdownRuns runs={block.runs} />
         </p>
       );
@@ -781,14 +852,16 @@ function NoteNode({ id, data, selected }: CanvasNodeProps) {
           </button>
         ) : null}
         {guest ? (
-          <button
-            type="button"
-            className={iconLinkClass}
-            title="Read note"
-            onClick={() => editNote(note.id)}
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-          </button>
+          canEdit ? null : (
+            <button
+              type="button"
+              className={iconLinkClass}
+              title="Read note"
+              onClick={() => editNote(note.id)}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </button>
+          )
         ) : (
           <a
             href={href}
@@ -1184,7 +1257,7 @@ function LinkNode({ id, data, selected }: CanvasNodeProps) {
             <Check className="h-3.5 w-3.5" />
             In notes
           </Link>
-        ) : canEdit && safeUrl ? (
+        ) : canEdit && !guest && safeUrl ? (
           <button
             type="button"
             data-test="canvas-link-save"
@@ -1469,6 +1542,424 @@ function TimelineNode({ id, data, selected }: CanvasNodeProps) {
   );
 }
 
+function firstName(value: string | null | undefined) {
+  return (value ?? '').trim().split(/\s+/)[0] ?? '';
+}
+
+/** Header for a board column that has no phase card (status view, "No phase"). */
+function BoardColumnNode({ data }: CanvasNodeProps) {
+  if (!data.board) return null;
+  const { label, count, tone, active } = data.board;
+  return (
+    <div
+      className={cn(
+        'pointer-events-none h-full w-full rounded-2xl border-2 border-dashed transition-colors',
+        active && 'border-[var(--ozer-accent)] bg-[var(--ozer-accent-subtle)]',
+      )}
+      style={
+        active
+          ? undefined
+          : {
+              borderColor: `color-mix(in srgb, ${tone} 45%, transparent)`,
+              background: `color-mix(in srgb, ${tone} 6%, transparent)`,
+            }
+      }
+    >
+      <div className="flex items-center gap-2 px-4 pt-3">
+        <span
+          className="h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ background: tone }}
+        />
+        <p className="font-heading min-w-0 flex-1 truncate text-base font-bold text-[var(--workspace-shell-text)]">
+          {label}
+        </p>
+        <span className="shrink-0 rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text-muted)]">
+          {count}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Where a dragged card will land in a board column. */
+function BoardDropNode() {
+  return (
+    <div className="pointer-events-none h-full w-full rounded-full bg-[var(--ozer-accent)]" />
+  );
+}
+
+const METRIC_EMPTY = '—';
+
+const PACE_BADGE: Record<
+  MetricPaceStatus,
+  { label: string; className: string }
+> = {
+  reached: {
+    label: 'Target reached',
+    className: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+  },
+  ahead: {
+    label: 'Ahead of pace',
+    className: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+  },
+  'on-track': {
+    label: 'On pace',
+    className: 'bg-sky-500/15 text-sky-600 dark:text-sky-400',
+  },
+  behind: {
+    label: 'Behind pace',
+    className: 'bg-red-500/15 text-red-600 dark:text-red-400',
+  },
+  overdue: {
+    label: 'Overdue',
+    className: 'bg-red-500/15 text-red-600 dark:text-red-400',
+  },
+  upcoming: {
+    label: 'Not started',
+    className:
+      'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
+  },
+};
+
+function Strong({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="font-semibold text-[var(--workspace-shell-text)]">
+      {children}
+    </span>
+  );
+}
+
+function plural(count: number, word: string) {
+  return `${count} ${word}${count === 1 ? '' : 's'}`;
+}
+
+/** Goal tracker: progress bars with a plan marker, time left and pace. */
+function TotalizerBody({
+  view,
+  unit,
+  color,
+}: {
+  view: TotalizerView;
+  unit?: string;
+  color: string;
+}) {
+  const fmt = (n: number) => formatMetricNumber(n, view.sample);
+  const { final } = view;
+  const pace = final?.pace ?? null;
+  const badge = view.status ? PACE_BADGE[view.status] : null;
+  const label = unit?.trim() ?? '';
+  const remaining = final ? Math.abs(final.goal - view.value) : null;
+
+  return (
+    <>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p
+            className="font-heading truncate text-4xl leading-tight font-bold"
+            title={label || undefined}
+          >
+            {fmt(view.value)}
+          </p>
+          {view.weekly ? (
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              {view.weekly.thisWeek >= 0 ? '+' : ''}
+              {fmt(view.weekly.thisWeek)} this week (last week{' '}
+              {view.weekly.lastWeek >= 0 ? '+' : ''}
+              {fmt(view.weekly.lastWeek)})
+            </p>
+          ) : null}
+        </div>
+        {badge ? (
+          <span
+            className={cn(
+              'shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
+              badge.className,
+            )}
+          >
+            {badge.label}
+          </span>
+        ) : null}
+      </div>
+
+      {final && remaining !== null ? (
+        <p className="mt-2 text-xs leading-snug text-[var(--workspace-shell-text-muted)]">
+          {pace?.status === 'reached' || view.value === final.goal ? (
+            <Strong>Target of {final.goalText} reached</Strong>
+          ) : (
+            <>
+              <Strong>{fmt(remaining)}</Strong> to go to reach {final.goalText}
+              {label ? ` ${label}` : ''}
+              {final.dueDate ? (
+                <> by {formatMetricDate(final.dueDate)}</>
+              ) : null}
+              {pace && pace.daysLeft >= 0 ? (
+                <>
+                  {' '}
+                  · {plural(pace.daysLeft, 'day')} (
+                  {Number(pace.weeksLeft.toFixed(1))} weeks) left
+                </>
+              ) : null}
+              {pace && pace.daysLeft < 0 ? (
+                <> · {plural(Math.abs(pace.daysLeft), 'day')} overdue</>
+              ) : null}
+            </>
+          )}
+        </p>
+      ) : null}
+
+      <div className="mt-3 space-y-3">
+        {view.bars.map((bar, index) => {
+          const pct =
+            bar.goal === 0 ? 0 : Math.round((view.value / bar.goal) * 100);
+          const tick = bar.planFraction;
+          return (
+            <div key={`${bar.label}-${index}`}>
+              <p className="truncate text-xs text-[var(--workspace-shell-text)]">
+                <span className="font-semibold">{bar.label}</span> ·{' '}
+                {fmt(view.value)} of {bar.goalText}
+                {label ? ` ${label}` : ''} ({pct}%)
+              </p>
+              <div className="relative mt-1 h-2 rounded-full bg-[var(--workspace-shell-sidebar-accent)]">
+                <div
+                  className="h-full rounded-full transition-[width]"
+                  style={{ width: `${bar.fill * 100}%`, background: color }}
+                />
+                {tick !== null ? (
+                  <span
+                    className="absolute -top-0.5 h-3 w-0.5 -translate-x-1/2 rounded bg-[var(--workspace-shell-text)]"
+                    style={{ left: `${tick * 100}%` }}
+                  />
+                ) : null}
+              </div>
+              <div className="relative mt-0.5 flex justify-between text-[10px] text-[var(--workspace-shell-text-muted)]">
+                <span>{fmt(view.start)} start</span>
+                <span>
+                  {bar.goalText}
+                  {bar.dueDate ? ` by ${formatMetricDate(bar.dueDate)}` : ''}
+                </span>
+              </div>
+              {tick !== null && bar.planValue !== null ? (
+                <div className="relative h-3 text-[10px] text-[var(--workspace-shell-text-muted)]">
+                  <span
+                    className="absolute -translate-x-1/2 whitespace-nowrap"
+                    style={{
+                      left: `${Math.min(80, Math.max(20, tick * 100))}%`,
+                    }}
+                  >
+                    ▲ plan says {fmt(bar.planValue)} by today
+                  </span>
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+
+      {final && pace && pace.status !== 'reached' ? (
+        <p className="mt-3 text-xs leading-snug text-[var(--workspace-shell-text-muted)]">
+          {pace.status === 'overdue' ? (
+            <>
+              The due date has passed with{' '}
+              <Strong>{fmt(remaining ?? 0)}</Strong> still to go.
+            </>
+          ) : (
+            <>
+              {pace.perWeekActual !== null && pace.projected !== null ? (
+                <>
+                  At the current pace of{' '}
+                  <Strong>{fmt(pace.perWeekActual)}</Strong>
+                  {label ? ` ${label}` : ''} a week, we reach about{' '}
+                  <Strong>{fmt(pace.projected)}</Strong>
+                  {final.dueDate
+                    ? ` by ${formatMetricDate(final.dueDate)}`
+                    : ''}
+                  .{' '}
+                </>
+              ) : null}
+              {pace.perWeekNeeded !== null ? (
+                <>
+                  {final.goal < view.start ? 'To get there, cut' : 'We need'}{' '}
+                  <Strong>{fmt(Math.abs(pace.perWeekNeeded))}</Strong> a
+                  week.{' '}
+                </>
+              ) : null}
+              {pace.status === 'on-track' ? (
+                <>We are on the straight-line plan.</>
+              ) : pace.status === 'upcoming' ? null : (
+                <>
+                  We are{' '}
+                  <span
+                    className={cn(
+                      'font-semibold',
+                      pace.behindBy > 0
+                        ? 'text-red-600 dark:text-red-400'
+                        : 'text-emerald-600 dark:text-emerald-400',
+                    )}
+                  >
+                    {fmt(Math.abs(pace.behindBy))}{' '}
+                    {pace.behindBy > 0 ? 'behind' : 'ahead of'}
+                  </span>{' '}
+                  the straight-line plan.
+                </>
+              )}
+            </>
+          )}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+function MetricNode({ id, data, selected }: CanvasNodeProps) {
+  const { canEdit, tasksById, phasesById } = useCanvasLookups();
+  const { editingId, setEditingId } = useCanvasActions();
+  const { title, text, unit, milestones } = data.item.data;
+  const color = canvasColor(data.item.data.color, 'green');
+  const [now] = useState(() => new Date());
+
+  const source = data.item.data.metricSource ?? 'manual';
+  const live = useMemo(
+    () =>
+      source === 'manual'
+        ? null
+        : projectMetricCount(source, {
+            tasks: [...tasksById.values()],
+            phases: [...phasesById.values()],
+          }),
+    [source, tasksById, phasesById],
+  );
+  const value = live ? String(live.value) : data.item.data.value;
+  const goal = data.item.data.goal?.trim() || (live ? String(live.total) : '');
+
+  const tracking =
+    Boolean(data.item.data.dueDate) || (milestones?.length ?? 0) > 0;
+  const view = useMemo(
+    () =>
+      tracking
+        ? buildTotalizer(
+            data.item.data,
+            {
+              tasks: [...tasksById.values()],
+              phases: [...phasesById.values()],
+            },
+            now,
+          )
+        : null,
+    [tracking, data.item.data, tasksById, phasesById, now],
+  );
+
+  const progress = metricProgress(value, goal);
+  const pct =
+    progress === null ? null : Math.min(100, Math.round(progress * 100));
+  const reached = progress !== null && progress >= 1;
+
+  return (
+    <div
+      className={cn(
+        cardClass,
+        'flex flex-col overflow-hidden px-4 py-3',
+        selected && 'ring-2 ring-[var(--ozer-accent)]',
+        editingId === id && 'ring-2 ring-[var(--ozer-accent)]',
+      )}
+      style={{ borderTop: `4px solid ${color.stroke}` }}
+      title={canEdit ? 'Double-click to edit' : undefined}
+    >
+      <Resizer
+        id={id}
+        selected={selected}
+        minWidth={200}
+        minHeight={view ? 240 : 140}
+      />
+      <ConnectHandles />
+      <p className="truncate text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+        {title?.trim() || 'Figure'}
+      </p>
+      {view ? (
+        <div
+          className={cn(
+            'min-h-0 flex-1',
+            selected ? 'nowheel overflow-y-auto' : 'overflow-hidden',
+          )}
+        >
+          <TotalizerBody view={view} unit={unit} color={color.stroke} />
+          {text?.trim() ? (
+            <p className="mt-2 text-xs leading-snug whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
+              {text}
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <>
+          <p
+            className={cn(
+              'font-heading mt-1 truncate text-4xl leading-tight font-bold',
+              value ? 'text-[var(--workspace-shell-text)]' : 'opacity-30',
+            )}
+          >
+            {value?.trim() || METRIC_EMPTY}
+          </p>
+          <p className="mt-0.5 truncate text-sm text-[var(--workspace-shell-text-muted)]">
+            {goal ? (
+              <>
+                Target{' '}
+                <span className="font-semibold text-[var(--workspace-shell-text)]">
+                  {goal}
+                </span>
+                {unit?.trim() ? ` ${unit.trim()}` : ''}
+              </>
+            ) : (
+              'No target set'
+            )}
+          </p>
+          {pct !== null ? (
+            <div className="mt-2 flex items-center gap-2">
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--workspace-shell-sidebar-accent)]">
+                <div
+                  className="h-full rounded-full transition-[width]"
+                  style={{ width: `${pct}%`, background: color.stroke }}
+                />
+              </div>
+              <span
+                className={cn(
+                  'text-[11px] font-semibold tabular-nums',
+                  reached
+                    ? 'text-[var(--workspace-shell-text)]'
+                    : 'text-[var(--workspace-shell-text-muted)]',
+                )}
+              >
+                {Math.round((progress ?? 0) * 100)}%
+              </span>
+            </div>
+          ) : null}
+          {text?.trim() ? (
+            <p className="mt-2 line-clamp-3 text-xs leading-snug whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
+              {text}
+            </p>
+          ) : null}
+        </>
+      )}
+      {canEdit && view ? (
+        <button
+          type="button"
+          onClick={() => setEditingId(id)}
+          className="nodrag mt-2 self-start text-xs font-medium text-[var(--workspace-shell-accent-text)] hover:underline"
+        >
+          Update
+        </button>
+      ) : null}
+      {canEdit && !view && !value && !goal && !text ? (
+        <button
+          type="button"
+          onClick={() => setEditingId(id)}
+          className="nodrag mt-auto self-start text-xs font-medium text-[var(--workspace-shell-accent-text)] hover:underline"
+        >
+          Set figure
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export const canvasNodeTypes = {
   phase: memo(PhaseNode),
   task: memo(TaskNode),
@@ -1485,6 +1976,9 @@ export const canvasNodeTypes = {
   link: memo(LinkNode),
   draw: memo(DrawNode),
   timeline: memo(TimelineNode),
+  metric: memo(MetricNode),
+  boardColumn: memo(BoardColumnNode),
+  boardDrop: memo(BoardDropNode),
 };
 
 export type CanvasEdgeData = { item: CanvasItem };

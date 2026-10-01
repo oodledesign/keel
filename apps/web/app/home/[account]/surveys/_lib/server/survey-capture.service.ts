@@ -63,6 +63,7 @@ import type {
   RebuildSurveyReportInput,
   ReorderSurveyPhotosInput,
   SetSurveyPhotoShareInput,
+  SetSurveySectionRatingInput,
   SurveyLibraryPhoto,
   SurveyObservation,
   SurveyPhotoShare,
@@ -662,6 +663,30 @@ class SurveyCaptureService {
     return mapObservation(data as Record<string, unknown>);
   }
 
+  /** Sets one rating for the whole section, replacing any per-note ratings. */
+  async setSectionRating(input: SetSurveySectionRatingInput) {
+    await this.assertBuildingSurveyorAccount(input.accountId);
+    await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    await this.getSurvey(input.accountId, input.proposalId);
+    if (!isKnownSectionKey(input.sectionKey)) {
+      throw new Error('Unknown survey section');
+    }
+
+    const { data, error } = await this.db
+      .from('survey_observations')
+      .update({ condition_rating: input.conditionRating })
+      .eq('account_id', input.accountId)
+      .eq('proposal_id', input.proposalId)
+      .eq('section_key', input.sectionKey)
+      .select(OBSERVATION_SELECT);
+    if (error) this.throwErr(error, 'Could not set the section rating');
+    return {
+      observations: ((data ?? []) as Array<Record<string, unknown>>).map(
+        mapObservation,
+      ),
+    };
+  }
+
   async deleteObservation(input: DeleteSurveyObservationInput) {
     await this.assertBuildingSurveyorAccount(input.accountId);
     await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
@@ -911,6 +936,7 @@ class SurveyCaptureService {
         propertyAddress: address || input.survey.title,
         clientName: input.survey.recipient_name,
         inspectionDate: formatReportDate(details.inspectionDate),
+        droneUsed: details.drone.used,
         producedDate: formatReportDate(new Date().toISOString()),
         reportReference: details.reportReference,
         termsReceivedDate: formatReportDate(details.termsReceivedDate),

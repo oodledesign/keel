@@ -6,7 +6,10 @@ import {
   stripHtmlToText,
 } from '~/lib/campaigns/campaign-document';
 
-import type { ConditionRating } from './condition-rating';
+import {
+  type ConditionRating,
+  sectionConditionRating,
+} from './condition-rating';
 import {
   BUILDING_SURVEY_SECTIONS,
   type SurveyObservationInput,
@@ -197,9 +200,11 @@ export function documentFromObservations(
     const sectionPhotos = photos.filter(
       (photo) => photo.sectionKey === section.key,
     );
-    const rating = observations.find(
-      (item) => item.sectionKey === section.key && item.conditionRating,
-    )?.conditionRating;
+    const rating = sectionConditionRating(
+      observations
+        .filter((item) => item.sectionKey === section.key)
+        .map((item) => item.conditionRating),
+    );
 
     for (const photo of sectionPhotos) {
       const caption = photo.caption?.trim() || photo.title;

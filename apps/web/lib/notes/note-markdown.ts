@@ -1,6 +1,9 @@
 /**
  * Shared notes markdown subset with the iOS NoteMarkdown parser and TipTap toolbar:
- * bold (`**` / `__`), italic (`*` / `_`), underline (`<u>`), H1, H2, bullets.
+ * bold (`**` / `__`), italic (`*` / `_`), underline (`<u>`), H1, H2, bullets,
+ * numbered lists (`1. item`),
+ * and links (`[text](https://…)`, plus bare `https://…` / `www.…` URLs which
+ * are linked automatically).
  * Speaker labels stay as `## Me` / `## Speaker 1` headings.
  */
 
@@ -12,13 +15,18 @@ export type NoteMarkdownMarks = {
 
 export type NoteMarkdownRun = NoteMarkdownMarks & {
   text: string;
+  /** Safe http(s)/mailto target when this run is a link. */
+  href?: string;
 };
+
+type InlineState = NoteMarkdownMarks & { href?: string };
 
 export type NoteMarkdownBlockKind =
   | 'paragraph'
   | 'heading1'
   | 'heading2'
-  | 'bullet';
+  | 'bullet'
+  | 'numbered';
 
 export type NoteMarkdownBlock = {
   kind: NoteMarkdownBlockKind;
@@ -49,8 +57,11 @@ export function parseNoteMarkdown(markdown: string): NoteMarkdownBlock[] {
       });
     } else {
       const item = bulletItem(line);
+      const numbered = item === null ? numberedItem(line) : null;
       if (item !== null) {
         blocks.push({ kind: 'bullet', runs: parseInlines(item) });
+      } else if (numbered !== null) {
+        blocks.push({ kind: 'numbered', runs: parseInlines(numbered) });
       } else {
         blocks.push({ kind: 'paragraph', runs: parseInlines(line) });
       }
@@ -78,6 +89,16 @@ export function noteMarkdownToHtml(markdown: string): string {
         index += 1;
       }
       parts.push(`<ul>${items.join('')}</ul>`);
+      continue;
+    }
+
+    if (block.kind === 'numbered') {
+      const items: string[] = [];
+      while (index < blocks.length && blocks[index]!.kind === 'numbered') {
+        items.push(`<li>${renderRuns(blocks[index]!.runs)}</li>`);
+        index += 1;
+      }
+      parts.push(`<ol>${items.join('')}</ol>`);
       continue;
     }
 
@@ -113,6 +134,11 @@ function bulletItem(line: string): string | null {
   return null;
 }
 
+function numberedItem(line: string): string | null {
+  const match = /^ *\d{1,4}[.)] +(.*)$/.exec(line);
+  return match ? match[1]! : null;
+}
+
 function parseInlines(input: string): NoteMarkdownRun[] {
   return mergeRuns(
     parseInlinesRange(input, 0, input.length, {
@@ -127,7 +153,7 @@ function parseInlinesRange(
   input: string,
   start: number,
   end: number,
-  marks: NoteMarkdownMarks,
+  marks: InlineState,
 ): { runs: NoteMarkdownRun[]; index: number } {
   const runs: NoteMarkdownRun[] = [];
   let buffer = '';
@@ -143,6 +169,14 @@ function parseInlinesRange(
     if (input[index] === '\\' && index + 1 < end) {
       buffer += input[index + 1];
       index += 2;
+      continue;
+    }
+
+    const link = parseLinkAt(input, index, end, marks);
+    if (link) {
+      flush();
+      runs.push(...link.runs);
+      index = link.index;
       continue;
     }
 
@@ -185,12 +219,71 @@ function parseInlinesRange(
   return { runs, index };
 }
 
+/** Allow only web and mail links; `www.` gets an https scheme. */
+export function normalizeNoteHref(raw: string): string | null {
+  const value = raw.trim();
+  if (!value || /\s/.test(value)) return null;
+  if (/^www\.[^.]+\./i.test(value)) return `https://${value}`;
+  if (/^(https?:\/\/|mailto:)[^/\s]/i.test(value)) return value;
+  return null;
+}
+
+function trimBareUrl(url: string): string {
+  let result = url.replace(/[.,;:!?'"*_\]]+$/, '');
+  while (
+    result.endsWith(')') &&
+    (result.match(/\)/g)?.length ?? 0) > (result.match(/\(/g)?.length ?? 0)
+  ) {
+    result = result.slice(0, -1).replace(/[.,;:!?'"*_\]]+$/, '');
+  }
+  return result;
+}
+
+function parseLinkAt(
+  input: string,
+  index: number,
+  end: number,
+  marks: InlineState,
+): { runs: NoteMarkdownRun[]; index: number } | null {
+  if (marks.href) return null;
+
+  if (input[index] === '[') {
+    const textEnd = findToken(input, ']', index + 1, end);
+    if (textEnd > index + 1 && input[textEnd + 1] === '(') {
+      const urlEnd = input.indexOf(')', textEnd + 2);
+      if (urlEnd !== -1 && urlEnd < end) {
+        const href = normalizeNoteHref(input.slice(textEnd + 2, urlEnd));
+        if (href) {
+          const nested = parseInlinesRange(input, index + 1, textEnd, {
+            ...marks,
+            href,
+          });
+          return { runs: nested.runs, index: urlEnd + 1 };
+        }
+      }
+    }
+    return null;
+  }
+
+  const previous = index > 0 ? input[index - 1]! : '';
+  if (/[A-Za-z0-9/]/.test(previous)) return null;
+  const match = /^(?:https?:\/\/|www\.)[^\s<>]+/i.exec(input.slice(index, end));
+  if (!match) return null;
+  const url = trimBareUrl(match[0]);
+  const href = normalizeNoteHref(url);
+  if (!href) return null;
+  return {
+    runs: [{ text: url, ...marks, href }],
+    index: index + url.length,
+  };
+}
+
 function wrap(
   input: string,
   index: number,
   end: number,
   delimiter: string,
-  marks: NoteMarkdownMarks,
+  marks: InlineState,
   apply: Partial<NoteMarkdownMarks>,
 ): { runs: NoteMarkdownRun[]; index: number } | null {
   if (!input.startsWith(delimiter, index)) {
@@ -249,7 +342,8 @@ function mergeRuns(runs: NoteMarkdownRun[]): NoteMarkdownRun[] {
       last &&
       last.bold === run.bold &&
       last.italic === run.italic &&
-      last.underline === run.underline
+      last.underline === run.underline &&
+      last.href === run.href
     ) {
       last.text += run.text;
     } else {
@@ -266,6 +360,9 @@ function renderRuns(runs: NoteMarkdownRun[]): string {
       if (run.bold) html = `<strong>${html}</strong>`;
       if (run.italic) html = `<em>${html}</em>`;
       if (run.underline) html = `<u>${html}</u>`;
+      if (run.href) {
+        html = `<a href="${escapeHtml(run.href)}" target="_blank" rel="noopener noreferrer nofollow">${html}</a>`;
+      }
       return html;
     })
     .join('');

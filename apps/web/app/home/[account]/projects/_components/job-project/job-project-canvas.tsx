@@ -39,9 +39,12 @@ import {
   CalendarRange,
   ChevronDown,
   ClipboardList,
+  Columns3,
   GanttChart,
   Keyboard,
   LayoutGrid,
+  ListTodo,
+  LockOpen,
   type LucideIcon,
   Maximize2,
   Megaphone,
@@ -51,6 +54,7 @@ import {
   PanelLeftOpen,
   Search,
   Sparkles,
+  Target,
   Upload,
   Users,
 } from 'lucide-react';
@@ -79,6 +83,15 @@ import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import type { CanvasAiItem } from '~/lib/projects/canvas/canvas-ai';
+import {
+  CANVAS_BOARD_VIEWS,
+  type CanvasBoardView,
+  boardStatusColumn,
+  layoutCanvasBoard,
+  moveInOrder,
+  planBoardDrop,
+  reorderBoardTasks,
+} from '~/lib/projects/canvas/canvas-board-layout';
 import {
   CANVAS_CLIPBOARD_MIME,
   type CanvasClipboard,
@@ -113,6 +126,8 @@ import {
   type CanvasLinkedEntities,
   type CanvasLinkedRef,
   PENDING_CANVAS_TIMESTAMP,
+  PHASE_HEADER,
+  TASK_GAP,
   arrangeCanvasByPhase,
   arrangeTeamSection,
   buildLinkedCanvasItem,
@@ -187,7 +202,16 @@ import {
   loadProjectCanvasNote,
   upsertProjectCanvasItems,
 } from '../../_lib/server/project-canvas.actions';
-import { createJobTask, moveTask } from '../../_lib/server/server-actions';
+import {
+  createJobTask,
+  moveTask,
+  reorderPhaseTasks,
+  updateJobTask,
+} from '../../_lib/server/server-actions';
+import {
+  CanvasAddTaskDialog,
+  type NewCanvasTask,
+} from './canvas/canvas-add-task-dialog';
 import { type CanvasAiApply, CanvasAiDialog } from './canvas/canvas-ai-dialog';
 import {
   CANVAS_TOOL_SHORTCUTS,
@@ -223,6 +247,7 @@ import {
   placedImageSize,
 } from './canvas/canvas-images';
 import { CANVAS_KIND_LABELS, canvasItemText } from './canvas/canvas-item-text';
+import { CanvasMetricDialog } from './canvas/canvas-metric-dialog';
 import {
   type CanvasEdgeData,
   canvasEdgeTypes,
@@ -246,6 +271,7 @@ import {
   useProjectCanvasRealtime,
 } from './canvas/use-project-canvas-realtime';
 import { JobProjectTaskSheet } from './job-project-task-sheet';
+import { UNPHASED_KEY } from './job-project.constants';
 
 type FlowNode = Node<CanvasNodeData>;
 type FlowEdge = Edge<CanvasEdgeData>;
@@ -254,11 +280,18 @@ export type CanvasGuestDoc =
   | { kind: 'written'; title: string; content: string }
   | { kind: 'uploaded'; url: string };
 
-/** A project guest is viewing: read only, commenting per their invite. */
+/**
+ * A project guest is viewing. The canvas is read only unless their invite
+ * lets them edit it (`canEdit`); comments follow their invite either way.
+ */
 export type CanvasGuestMode = {
   canComment: boolean;
   onOpenTask: (taskId: string) => void;
   loadDoc: (docId: string) => Promise<CanvasGuestDoc>;
+  /** Upload a file to the project (guests with canvas editing). */
+  uploadFile: (file: File) => Promise<{ docId: string }>;
+  /** Present when the invite lets the guest add tasks. */
+  createTask?: (input: { title: string }) => Promise<{ id: string }>;
 };
 
 type JobProjectCanvasProps = {
@@ -285,6 +318,44 @@ const ARROW_NUDGE: Record<string, { x: number; y: number }> = {
   ArrowRight: { x: 1, y: 0 },
 };
 const ZOOM_DURATION_MS = 200;
+const STATUS_TONES: Record<string, string> = {
+  todo: 'var(--ozer-gold-500)',
+  in_progress: 'var(--ozer-accent)',
+  client_review: 'var(--ozer-info)',
+  done: 'var(--ozer-sage-500)',
+};
+const BOARD_VIEW_KEY = 'ozer.canvas.board-view.';
+const BOARD_VIEW_OPTIONS: Record<
+  CanvasBoardView,
+  { label: string; icon: LucideIcon }
+> = {
+  phase: {
+    label: 'Phase columns — tasks stack in board order',
+    icon: Columns3,
+  },
+  status: {
+    label: 'Status columns — to do, in progress, review, done',
+    icon: ListTodo,
+  },
+  free: { label: 'Unlocked — put cards anywhere', icon: LockOpen },
+};
+
+/** Stand-in item for the board layout's own column headers and drop marker. */
+function boardNodeItem(id: string): CanvasItem {
+  return {
+    id,
+    kind: 'text',
+    refId: null,
+    x: 0,
+    y: 0,
+    w: null,
+    h: null,
+    zIndex: 0,
+    data: {},
+    updatedAt: PENDING_CANVAS_TIMESTAMP,
+    updatedBy: null,
+  };
+}
 
 /**
  * Last canvas copy in this tab. Some browsers drop custom clipboard types,
@@ -298,6 +369,7 @@ const PLACE_TOOLS: Partial<Record<CanvasTool, FreeformCanvasKind>> = {
   text: 'text',
   shape: 'shape',
   frame: 'frame',
+  metric: 'metric',
 };
 const DRAW_TOOLS = new Set<CanvasTool>(['shape', 'frame']);
 const SECTION_PAD = 32;
@@ -312,11 +384,13 @@ const TEMPLATE_ICONS: Record<string, LucideIcon> = {
   brief: ClipboardList,
   marketing: Megaphone,
   content_calendar: CalendarRange,
+  targets: Target,
 };
 const COLOR_MODE: Partial<Record<CanvasItem['kind'], 'fill' | 'stroke'>> = {
   sticky: 'fill',
   shape: 'fill',
   frame: 'fill',
+  metric: 'stroke',
   text: 'stroke',
   draw: 'stroke',
   connector: 'stroke',
@@ -344,6 +418,8 @@ const DATA_KEYS = [
   'sourceHandle',
   'targetHandle',
   'label',
+  'value',
+  'goal',
 ] as const satisfies ReadonlyArray<keyof CanvasItemData>;
 
 function chunk<T>(list: T[], size: number): T[][] {
@@ -484,12 +560,15 @@ function isLinkedPresent(item: CanvasItem, lookups: CanvasLookups) {
 }
 
 function minimapColor(node: Node) {
-  const item = (node.data as CanvasNodeData | undefined)?.item;
-  if (!item) return 'var(--workspace-shell-border)';
+  const nodeData = node.data as CanvasNodeData | undefined;
+  const item = nodeData?.item;
+  if (!item || nodeData?.board) return 'transparent';
   if (item.kind === 'sticky' || item.kind === 'shape') {
     return canvasColor(item.data.color, 'yellow').fill;
   }
   if (item.kind === 'phase' || item.kind === 'frame') return 'transparent';
+  if (item.kind === 'metric')
+    return canvasColor(item.data.color, 'green').stroke;
   if (item.kind === 'draw') return canvasColor(item.data.color, 'plum').stroke;
   return 'var(--ozer-accent)';
 }
@@ -564,6 +643,24 @@ function ProjectCanvasInner({
   const [comments, setComments] = useState<ProjectCanvasComment[]>([]);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [commentItemId, setCommentItemId] = useState<string | null>(null);
+  const [boardView, setBoardView] = useState<CanvasBoardView>(() => {
+    try {
+      const stored = window.localStorage.getItem(`${BOARD_VIEW_KEY}${jobId}`);
+      return CANVAS_BOARD_VIEWS.find((view) => view === stored) ?? 'phase';
+    } catch {
+      return 'phase';
+    }
+  });
+  /** Where the dragged board card would land (a marker line + column). */
+  const [boardDrop, setBoardDrop] = useState<{
+    columnKey: string;
+    x: number;
+    y: number;
+    w: number;
+  } | null>(null);
+  /** Bumped to snap board cards back to their columns after a drag. */
+  const [boardTick, setBoardTick] = useState(0);
+  const [addTaskOpen, setAddTaskOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
@@ -599,7 +696,7 @@ function ProjectCanvasInner({
   const initialisedRef = useRef(false);
   const fittedRef = useRef(false);
 
-  const editable = canEdit && available && !guest;
+  const editable = canEdit && available;
   const isGuest = Boolean(guest);
 
   const updateItems = useCallback(
@@ -736,6 +833,7 @@ function ProjectCanvasInner({
       jobId,
       canEdit: editable,
       guest: isGuest,
+      boardView,
       phasesById: new Map(board.phases.map((phase) => [phase.id, phase])),
       tasksById,
       subtaskCounts,
@@ -755,6 +853,7 @@ function ProjectCanvasInner({
     board.contactAssignees,
     board.members,
     board.phases,
+    boardView,
     contacts,
     docs,
     editable,
@@ -926,7 +1025,8 @@ function ProjectCanvasInner({
   useEffect(() => {
     if (status !== 'ready' || initialisedRef.current) return;
     initialisedRef.current = true;
-    if (!editable) return;
+    // Guests only see part of the project, so they never tidy or lay it out.
+    if (!editable || isGuest) return;
 
     const current = itemsRef.current;
     const orphans = orphanedLinkedItems(entities, current);
@@ -974,7 +1074,7 @@ function ProjectCanvasInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once after the first load
   }, [status]);
 
-  const displayItems = useMemo(() => {
+  const baseDisplayItems = useMemo(() => {
     if (!available) {
       return layoutUnplacedLinkedItems(jobId, entities, []).creates;
     }
@@ -984,12 +1084,98 @@ function ProjectCanvasInner({
     );
   }, [available, entities, items, jobId, lookups]);
 
+  // Board views place phases and tasks in columns without touching their saved
+  // positions, so switching to the free layout brings the old arrangement back.
+  const boardLayout = useMemo(() => {
+    if (boardView === 'free' || !available) return null;
+    return layoutCanvasBoard({
+      mode: boardView,
+      projectId: jobId,
+      phases: board.phases.map((phase) => ({
+        id: phase.id,
+        name: phase.name,
+      })),
+      tasks: allTasks
+        .filter((task) => !task.parent_task_id)
+        .map((task) => ({
+          id: task.id,
+          phaseId: task.phase_id,
+          status: task.status,
+        })),
+      notes: notes.map((note) => ({ id: note.id, phaseId: note.phaseId })),
+      items: baseDisplayItems,
+    });
+  }, [
+    allTasks,
+    available,
+    baseDisplayItems,
+    board.phases,
+    boardView,
+    jobId,
+    notes,
+  ]);
+
+  const displayItems = boardLayout?.items ?? baseDisplayItems;
+  const boardItemsById = useMemo(
+    () => new Map(displayItems.map((item) => [item.id, item])),
+    [displayItems],
+  );
   useEffect(() => {
     const remoteDrags = realtime.remoteDrags;
     const pendingSelection = pendingSelectionRef.current;
     setNodes((prev) => {
       const prevById = new Map(prev.map((node) => [node.id, node]));
-      return displayItems
+      const boardNodes: FlowNode[] = [];
+      if (boardLayout) {
+        for (const column of boardLayout.columns) {
+          if (!column.header) continue;
+          const id = `board-column:${column.key}`;
+          boardNodes.push({
+            id,
+            type: 'boardColumn',
+            position: { x: column.x, y: column.y },
+            width: column.w,
+            height: column.h,
+            zIndex: 0,
+            draggable: false,
+            selectable: false,
+            focusable: false,
+            connectable: false,
+            deletable: false,
+            data: {
+              item: boardNodeItem(id),
+              board: {
+                label: column.label,
+                count: column.tasks.length,
+                tone: column.status
+                  ? (STATUS_TONES[column.status] ?? 'var(--ozer-accent)')
+                  : 'var(--workspace-shell-text-muted)',
+                active: boardDrop?.columnKey === column.key,
+              },
+            },
+          });
+        }
+        if (boardDrop) {
+          boardNodes.push({
+            id: 'board-drop',
+            type: 'boardDrop',
+            position: { x: boardDrop.x, y: boardDrop.y },
+            width: boardDrop.w,
+            height: 4,
+            zIndex: 5000,
+            draggable: false,
+            selectable: false,
+            focusable: false,
+            connectable: false,
+            deletable: false,
+            data: {
+              item: boardNodeItem('board-drop'),
+              board: { label: '', count: 0, tone: '', active: true },
+            },
+          });
+        }
+      }
+      const itemNodes = displayItems
         .filter((item) => item.kind !== 'connector')
         .map((item) => {
           const old = prevById.get(item.id);
@@ -1009,6 +1195,11 @@ function ProjectCanvasInner({
               : (old?.selected ?? false),
             measured: old?.measured,
             style: item.kind === 'draw' ? { pointerEvents: 'none' } : undefined,
+            // Board cards sit in their columns: only tasks move, and only for
+            // people who can reorder them.
+            draggable: boardLayout?.positioned.has(item.id)
+              ? item.kind === 'task' && editable && !isGuest
+              : undefined,
             className:
               connectFrom === item.id
                 ? 'rounded-xl ring-2 ring-[var(--ozer-accent)] ring-offset-2'
@@ -1028,8 +1219,19 @@ function ProjectCanvasInner({
           }
           return node;
         });
+      return [...boardNodes, ...itemNodes];
     });
-  }, [connectFrom, displayItems, dropTargetId, realtime.remoteDrags]);
+  }, [
+    boardDrop,
+    boardLayout,
+    boardTick,
+    connectFrom,
+    displayItems,
+    dropTargetId,
+    editable,
+    isGuest,
+    realtime.remoteDrags,
+  ]);
 
   useEffect(() => {
     const nodeIds = new Set(
@@ -1102,6 +1304,153 @@ function ProjectCanvasInner({
     );
   }, []);
 
+  /** Where a dragged board card would land, or null when it is over nothing. */
+  const planBoardCardDrop = useCallback(
+    (node: FlowNode) => {
+      if (!boardLayout) return null;
+      const item = boardItemsById.get(node.id);
+      if (!item || item.kind !== 'task') return null;
+      const size = canvasItemSize(item);
+      return planBoardDrop(boardLayout.columns, boardItemsById, item.id, {
+        x: node.position.x + size.w / 2,
+        y: node.position.y + size.h / 2,
+      });
+    },
+    [boardItemsById, boardLayout],
+  );
+
+  const showBoardDrop = useCallback(
+    (node: FlowNode) => {
+      const plan = planBoardCardDrop(node);
+      if (!plan || !boardLayout) {
+        setBoardDrop(null);
+        setDropTargetId(null);
+        return;
+      }
+      const { column } = plan;
+      const rest = column.tasks.filter((task) => task.itemId !== node.id);
+      const at = rest[Math.min(plan.index, rest.length)];
+      const previous = rest[plan.index - 1];
+      let y = column.y + (column.header ? 52 : PHASE_HEADER);
+      if (at) {
+        y = (boardItemsById.get(at.itemId)?.y ?? y) - TASK_GAP / 2;
+      } else if (previous) {
+        const last = boardItemsById.get(previous.itemId);
+        if (last) y = last.y + canvasItemSize(last).h + TASK_GAP / 2;
+      }
+      setBoardDrop({
+        columnKey: column.key,
+        x: column.x + 16,
+        y: y - 2,
+        w: column.w - 32,
+      });
+      setDropTargetId(
+        column.header
+          ? null
+          : (boardLayout.items.find(
+              (item) => item.kind === 'phase' && item.refId === column.phaseId,
+            )?.id ?? null),
+      );
+    },
+    [boardItemsById, boardLayout, planBoardCardDrop],
+  );
+
+  const reorderTasks = useCallback(
+    async (phaseId: string | null, order: string[]) => {
+      onBoardChange({
+        ...board,
+        tasksByPhase: reorderBoardTasks(
+          board.tasksByPhase,
+          phaseId ?? UNPHASED_KEY,
+          phaseId,
+          order,
+        ),
+      });
+      try {
+        await reorderPhaseTasks({
+          accountId,
+          accountSlug,
+          jobId,
+          phaseId,
+          taskIds: order,
+        });
+        broadcastLinkedChanged();
+      } catch (error) {
+        toast.error(getErrorMessage(error));
+        void onRefreshBoard();
+      }
+    },
+    [
+      accountId,
+      accountSlug,
+      board,
+      broadcastLinkedChanged,
+      jobId,
+      onBoardChange,
+      onRefreshBoard,
+    ],
+  );
+
+  const changeTaskStatus = useCallback(
+    async (task: JobBoardTask, status: string) => {
+      onBoardChange(replaceBoardTask(board, { ...task, status }));
+      try {
+        await updateJobTask({
+          accountId,
+          accountSlug,
+          jobId,
+          taskId: task.id,
+          status: status as 'todo',
+        });
+        broadcastLinkedChanged();
+      } catch (error) {
+        toast.error(getErrorMessage(error));
+        void onRefreshBoard();
+      }
+    },
+    [
+      accountId,
+      accountSlug,
+      board,
+      broadcastLinkedChanged,
+      jobId,
+      onBoardChange,
+      onRefreshBoard,
+    ],
+  );
+
+  /** Drop a board card: reorder/move it between phases, or change its status. */
+  const applyBoardDrop = useCallback(
+    (node: FlowNode) => {
+      const plan = planBoardCardDrop(node);
+      const refId = boardItemsById.get(node.id)?.refId;
+      const task = refId ? lookups.tasksById.get(refId) : undefined;
+      if (!plan || !task) return;
+      if (boardView === 'phase') {
+        const current = plan.column.tasks.map((entry) => entry.taskId);
+        const order = moveInOrder(current, task.id, plan.index);
+        const samePhase = (task.phase_id ?? null) === plan.column.phaseId;
+        if (samePhase && order.every((id, index) => id === current[index])) {
+          return;
+        }
+        void reorderTasks(plan.column.phaseId, order);
+        return;
+      }
+      const status = plan.column.status;
+      if (status && boardStatusColumn(task.status) !== status) {
+        void changeTaskStatus(task, status);
+      }
+    },
+    [
+      boardItemsById,
+      boardView,
+      changeTaskStatus,
+      lookups.tasksById,
+      planBoardCardDrop,
+      reorderTasks,
+    ],
+  );
+
   const onNodeDragStart: OnNodeDrag<FlowNode> = useCallback(
     (_event, node, dragged) => {
       const draggedIds = new Set(dragged.map((n) => n.id));
@@ -1146,6 +1495,10 @@ function ProjectCanvasInner({
     (_event, node, dragged) => {
       const drag = dragRef.current;
       if (!drag) return;
+      if (boardLayout?.positioned.has(node.id)) {
+        showBoardDrop(node);
+        return;
+      }
       const start = itemById(node.id);
       const target = containerUnder(node.id, node.position, drag.exclude);
       const origin = start && containerUnder(node.id, start, drag.exclude)?.id;
@@ -1171,7 +1524,7 @@ function ProjectCanvasInner({
         })),
       ]);
     },
-    [broadcastDrag, containerUnder, itemById],
+    [boardLayout, broadcastDrag, containerUnder, itemById, showBoardDrop],
   );
 
   const reassignTaskPhases = useCallback(
@@ -1211,10 +1564,26 @@ function ProjectCanvasInner({
       const drag = dragRef.current;
       dragRef.current = null;
       setDropTargetId(null);
-      const positions = new Map(dragged.map((n) => [n.id, n.position]));
+      setBoardDrop(null);
+      // Board cards sit in their columns; a drop reorders them instead of
+      // saving a position, and everything snaps back to the layout.
+      const managed = new Set(
+        boardLayout
+          ? dragged
+              .filter((n) => boardLayout.positioned.has(n.id))
+              .map((n) => n.id)
+          : [],
+      );
+      if (managed.size > 0) {
+        if (editable && !isGuest && managed.has(node.id)) applyBoardDrop(node);
+        for (const id of managed) interactingIds.current.delete(id);
+        setBoardTick((tick) => tick + 1);
+      }
+      const free = dragged.filter((n) => !managed.has(n.id));
+      const positions = new Map(free.map((n) => [n.id, n.position]));
       const phaseMoves: Array<{ taskId: string; phaseId: string }> = [];
-      if (drag && editable) {
-        for (const draggedNode of dragged) {
+      if (drag && editable && !isGuest) {
+        for (const draggedNode of free) {
           const item = itemById(draggedNode.id);
           if (item?.kind !== 'task' || !item.refId) continue;
           const phase = containerUnder(
@@ -1230,7 +1599,7 @@ function ProjectCanvasInner({
         }
       }
       if (phaseMoves.length > 0) void reassignTaskPhases(phaseMoves);
-      if (drag) {
+      if (drag && !managed.has(node.id)) {
         const dx = node.position.x - drag.start.x;
         const dy = node.position.y - drag.start.y;
         for (const [id, start] of drag.children) {
@@ -1254,10 +1623,13 @@ function ProjectCanvasInner({
       broadcastDragEnd(ids);
     },
     [
+      applyBoardDrop,
+      boardLayout,
       broadcastDragEnd,
       commit,
       containerUnder,
       editable,
+      isGuest,
       itemById,
       lookups.tasksById,
       reassignTaskPhases,
@@ -1326,6 +1698,27 @@ function ProjectCanvasInner({
     });
   }, [screenToFlowPosition]);
 
+  const changeBoardView = useCallback(
+    (next: CanvasBoardView) => {
+      setBoardView(next);
+      try {
+        window.localStorage.setItem(`${BOARD_VIEW_KEY}${jobId}`, next);
+      } catch {
+        // The choice just won't be remembered.
+      }
+      window.setTimeout(
+        () =>
+          fitView({
+            padding: 0.15,
+            maxZoom: 1,
+            duration: ZOOM_DURATION_MS,
+          }),
+        80,
+      );
+    },
+    [fitView, jobId],
+  );
+
   const placeFreeform = useCallback(
     (
       kind: FreeformCanvasKind,
@@ -1337,6 +1730,7 @@ function ProjectCanvasInner({
         text: { text: '' },
         shape: { text: '', shape: shapeType, color: 'blue' },
         frame: { title: 'Section', color: 'slate' },
+        metric: { title: 'Figure', color: 'green' },
       };
       const placed = newFreeformItem(kind, center, defaults[kind] ?? {}, 0);
       const item: CanvasItem = rect
@@ -1352,7 +1746,7 @@ function ProjectCanvasInner({
           })
         : nextZIndex(current, false);
       commit([{ before: null, after: item }]);
-      if (TEXT_EDIT_KINDS.has(kind)) setEditingId(item.id);
+      if (TEXT_EDIT_KINDS.has(kind) || kind === 'metric') setEditingId(item.id);
       return item;
     },
     [commit, shapeType],
@@ -1579,11 +1973,15 @@ function ProjectCanvasInner({
         readNote(item.refId);
       } else if (
         editable &&
+        !isGuest &&
         (item.kind === 'member' || item.kind === 'contact') &&
         item.refId
       ) {
         editPerson({ kind: item.kind, id: item.refId });
-      } else if (editable && TEXT_EDIT_KINDS.has(item.kind)) {
+      } else if (
+        editable &&
+        (TEXT_EDIT_KINDS.has(item.kind) || item.kind === 'metric')
+      ) {
         setEditingId(item.id);
       }
     },
@@ -1867,22 +2265,27 @@ function ProjectCanvasInner({
             toast.error(`${file.name} is over 50MB`);
             continue;
           }
-          const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-          const filePath = `${accountId}/projects/${jobId}/${Date.now()}_${safeName}`;
-          const { error: uploadError } = await supabase.storage
-            .from(ACCOUNT_DOCS_BUCKET)
-            .upload(filePath, file, { upsert: false });
-          if (uploadError) throw uploadError;
           const title = file.name.slice(0, 500);
-          const { docId } = await registerUploadedWorkspaceDocAction({
-            accountId,
-            accountSlug,
-            title,
-            link: { type: 'project', id: jobId },
-            filePath,
-            mimeType: file.type || null,
-            fileSizeBytes: file.size,
-          });
+          let docId: string;
+          if (guest) {
+            ({ docId } = await guest.uploadFile(file));
+          } else {
+            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const filePath = `${accountId}/projects/${jobId}/${Date.now()}_${safeName}`;
+            const { error: uploadError } = await supabase.storage
+              .from(ACCOUNT_DOCS_BUCKET)
+              .upload(filePath, file, { upsert: false });
+            if (uploadError) throw uploadError;
+            ({ docId } = await registerUploadedWorkspaceDocAction({
+              accountId,
+              accountSlug,
+              title,
+              link: { type: 'project', id: jobId },
+              filePath,
+              mimeType: file.type || null,
+              fileSizeBytes: file.size,
+            }));
+          }
           setDocs((prev) => [
             {
               id: docId,
@@ -1929,6 +2332,7 @@ function ProjectCanvasInner({
       broadcastLinkedChanged,
       commit,
       editable,
+      guest,
       jobId,
       supabase,
       viewportCenter,
@@ -2227,6 +2631,67 @@ function ProjectCanvasInner({
       );
     },
     [fitView],
+  );
+
+  const canAddTask = editable && (!isGuest || Boolean(guest?.createTask));
+
+  const addTask = useCallback(
+    async (input: NewCanvasTask) => {
+      try {
+        let taskId: string;
+        if (guest?.createTask) {
+          taskId = (await guest.createTask({ title: input.title })).id;
+        } else {
+          const row = await createJobTask({
+            accountId,
+            accountSlug,
+            jobId,
+            phaseId: input.phaseId,
+            title: input.title,
+            dueDate: input.dueDate
+              ? new Date(`${input.dueDate}T12:00:00`)
+              : null,
+          });
+          taskId = row.id;
+        }
+        await onRefreshBoard();
+        broadcastLinkedChanged();
+        const size = CANVAS_DEFAULT_SIZES.task;
+        const center = viewportCenter();
+        const card = buildLinkedCanvasItem(
+          jobId,
+          { kind: 'task', refId: taskId },
+          { x: center.x - size.w / 2, y: center.y - size.h / 2 },
+        );
+        // Board views place the new task in its column on their own; on the
+        // free canvas it lands where you're looking.
+        if (!boardLayout) {
+          commit([
+            {
+              before: null,
+              after: { ...card, zIndex: nextZIndex(itemsRef.current, false) },
+            },
+          ]);
+        }
+        setAddTaskOpen(false);
+        toast.success('Task added');
+        window.setTimeout(() => focusItem(card.id), 250);
+      } catch (error) {
+        toast.error(getErrorMessage(error));
+      }
+    },
+    [
+      accountId,
+      accountSlug,
+      boardLayout,
+      broadcastLinkedChanged,
+      commit,
+      focusItem,
+      guest,
+      jobId,
+      onRefreshBoard,
+      viewportCenter,
+    ],
   );
 
   const searchEntries = useMemo<CanvasSearchEntry[]>(
@@ -3002,6 +3467,11 @@ function ProjectCanvasInner({
         startNewNote();
         return;
       }
+      if (key === 'k' && !event.shiftKey && canAddTask) {
+        event.preventDefault();
+        setAddTaskOpen(true);
+        return;
+      }
       if (event.key === 'Escape') {
         if (fullscreen && tool === 'select' && !connectFrom && !commentsOpen) {
           setFullscreen(false);
@@ -3045,6 +3515,7 @@ function ProjectCanvasInner({
     shortcutsOpen,
     singleSelected,
     startNewNote,
+    canAddTask,
     styledItems.length,
     teamOpen,
     toggleTextStyle,
@@ -3204,7 +3675,7 @@ function ProjectCanvasInner({
           { id, patch: { x: box.x, y: box.y, w: box.width, h: box.height } },
         ]),
       openTask,
-      editNote: isGuest ? readNote : setEditingNoteId,
+      editNote: isGuest && !editable ? readNote : setEditingNoteId,
       editPerson,
       openDoc,
       saveLink: (id) => void saveLinks([id]),
@@ -3215,6 +3686,7 @@ function ProjectCanvasInner({
     [
       commit,
       editPerson,
+      editable,
       editingId,
       isGuest,
       itemById,
@@ -3339,8 +3811,8 @@ function ProjectCanvasInner({
             ? () => openComments(single.id)
             : undefined
         }
-        onAi={() => setAiOpen(true)}
-        saveLinksCount={unsavedLinkIds.length}
+        onAi={isGuest ? undefined : () => setAiOpen(true)}
+        saveLinksCount={isGuest ? 0 : unsavedLinkIds.length}
         onSaveLinks={() => void saveLinks(unsavedLinkIds)}
         onSaveAsNote={
           single &&
@@ -3416,7 +3888,7 @@ function ProjectCanvasInner({
               data-test="project-canvas"
               data-fullscreen={fullscreen || undefined}
             >
-              {trayOpen && editable ? (
+              {trayOpen && editable && !isGuest ? (
                 <CanvasTray
                   entries={trayEntries}
                   onClose={() => setTrayOpen(false)}
@@ -3528,22 +4000,28 @@ function ProjectCanvasInner({
 
                 {editable ? (
                   <div className="pointer-events-none absolute top-3 left-3 z-10 flex items-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="pointer-events-auto h-8 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] shadow-sm"
-                      onClick={() => setTrayOpen((open) => !open)}
-                    >
-                      {trayOpen ? (
-                        <PanelLeftClose className="mr-1.5 h-3.5 w-3.5" />
-                      ) : (
-                        <PanelLeftOpen className="mr-1.5 h-3.5 w-3.5" />
-                      )}
-                      Add from project
-                      {trayEntries.length > 0 ? ` (${trayEntries.length})` : ''}
-                    </Button>
-                    {board.phases.length > 0 ? (
+                    {isGuest ? null : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="pointer-events-auto h-8 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] shadow-sm"
+                        onClick={() => setTrayOpen((open) => !open)}
+                      >
+                        {trayOpen ? (
+                          <PanelLeftClose className="mr-1.5 h-3.5 w-3.5" />
+                        ) : (
+                          <PanelLeftOpen className="mr-1.5 h-3.5 w-3.5" />
+                        )}
+                        Add from project
+                        {trayEntries.length > 0
+                          ? ` (${trayEntries.length})`
+                          : ''}
+                      </Button>
+                    )}
+                    {board.phases.length > 0 &&
+                    boardView === 'free' &&
+                    !isGuest ? (
                       <Button
                         type="button"
                         size="sm"
@@ -3556,20 +4034,22 @@ function ProjectCanvasInner({
                         Arrange by phase
                       </Button>
                     ) : null}
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="pointer-events-auto h-8 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] shadow-sm"
-                      title="Client contacts and team members, with their roles"
-                      onClick={() => {
-                        setTeamFocus(null);
-                        setTeamOpen(true);
-                      }}
-                    >
-                      <Users className="mr-1.5 h-3.5 w-3.5" />
-                      Team
-                    </Button>
+                    {isGuest ? null : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="pointer-events-auto h-8 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] shadow-sm"
+                        title="Client contacts and team members, with their roles"
+                        onClick={() => {
+                          setTeamFocus(null);
+                          setTeamOpen(true);
+                        }}
+                      >
+                        <Users className="mr-1.5 h-3.5 w-3.5" />
+                        Team
+                      </Button>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -3592,15 +4072,17 @@ function ProjectCanvasInner({
                             </div>
                           </div>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={arrangeTeam}>
-                          <Users className="mr-2 h-4 w-4" />
-                          <div className="min-w-0">
-                            <div className="text-sm">Team</div>
-                            <div className="text-xs text-[var(--workspace-shell-text-muted)]">
-                              Client, contacts and team with roles
+                        {isGuest ? null : (
+                          <DropdownMenuItem onSelect={arrangeTeam}>
+                            <Users className="mr-2 h-4 w-4" />
+                            <div className="min-w-0">
+                              <div className="text-sm">Team</div>
+                              <div className="text-xs text-[var(--workspace-shell-text-muted)]">
+                                Client, contacts and team with roles
+                              </div>
                             </div>
-                          </div>
-                        </DropdownMenuItem>
+                          </DropdownMenuItem>
+                        )}
                         {CANVAS_SECTION_TEMPLATES.map((template) => {
                           const Icon =
                             TEMPLATE_ICONS[template.preset] ?? LayoutGrid;
@@ -3638,6 +4120,28 @@ function ProjectCanvasInner({
                   connected={realtime.connected}
                   actions={
                     <>
+                      {available ? (
+                        <>
+                          {CANVAS_BOARD_VIEWS.map((view) => {
+                            const option = BOARD_VIEW_OPTIONS[view];
+                            const Icon = option.icon;
+                            return (
+                              <ToolButton
+                                key={view}
+                                label={option.label}
+                                active={boardView === view}
+                                onClick={() => changeBoardView(view)}
+                              >
+                                <Icon className="h-4 w-4" />
+                              </ToolButton>
+                            );
+                          })}
+                          <span
+                            aria-hidden
+                            className="mx-0.5 h-5 w-px shrink-0 bg-[var(--workspace-shell-border)]"
+                          />
+                        </>
+                      ) : null}
                       <ToolButton
                         label="Search the canvas (⌘F)"
                         onClick={() => setSearchOpen(true)}
@@ -3689,7 +4193,7 @@ function ProjectCanvasInner({
                           ) : null}
                         </span>
                       ) : null}
-                      {editable ? (
+                      {editable && !isGuest ? (
                         <ToolButton
                           label="Canvas AI"
                           onClick={() => setAiOpen(true)}
@@ -3716,6 +4220,9 @@ function ProjectCanvasInner({
                   onAddLink={() => setLinkOpen(true)}
                   onAddFile={() => docInputRef.current?.click()}
                   onAddNote={available ? () => startNewNote() : undefined}
+                  onAddTask={
+                    canAddTask ? () => setAddTaskOpen(true) : undefined
+                  }
                   penColor={penColor}
                   onPenColorChange={setPenColor}
                   penWidth={penWidth}
@@ -3758,7 +4265,7 @@ function ProjectCanvasInner({
                   people={lookups.peopleById}
                   mentionable={guest ? [] : workspaceMembers}
                   currentUserId={user?.id ?? null}
-                  canModerate={editable}
+                  canModerate={editable && !isGuest}
                   canComment={guest ? guest.canComment : true}
                   onUpsert={upsertComment}
                   onRemove={removeComment}
@@ -3777,7 +4284,7 @@ function ProjectCanvasInner({
           onPick={focusItem}
         />
 
-        {editable ? (
+        {editable && !isGuest ? (
           <CanvasAiDialog
             open={aiOpen}
             onOpenChange={setAiOpen}
@@ -3919,24 +4426,61 @@ function ProjectCanvasInner({
 
         <CanvasReadingDialog reading={reading} onClose={closeReading} />
 
-        <CanvasTeamDialog
-          open={teamOpen}
-          onOpenChange={setTeamOpen}
-          accountId={accountId}
-          accountSlug={accountSlug}
-          jobId={jobId}
-          canEdit={editable}
-          focus={teamFocus}
-          team={teamList}
-          workspaceMembers={workspaceMembers}
-          client={lookups.client}
-          contacts={contacts}
-          onChanged={onTeamChanged}
-          onLayoutSection={() => {
-            setTeamOpen(false);
-            arrangeTeam();
-          }}
+        <CanvasAddTaskDialog
+          open={addTaskOpen}
+          phases={board.phases.map((phase) => ({
+            id: phase.id,
+            name: phase.name,
+          }))}
+          defaultPhaseId={board.phases[0]?.id ?? null}
+          canPickPhase={!isGuest}
+          onOpenChange={setAddTaskOpen}
+          onCreate={addTask}
         />
+
+        <CanvasMetricDialog
+          item={
+            editingId
+              ? (items.find(
+                  (item) => item.id === editingId && item.kind === 'metric',
+                ) ?? null)
+              : null
+          }
+          onSave={(id, patch, size) => {
+            actions.updateItemData(id, patch);
+            const target = items.find((item) => item.id === id);
+            if (size && target) {
+              actions.resizeItem(id, {
+                x: target.x,
+                y: target.y,
+                width: size.w,
+                height: size.h,
+              });
+            }
+          }}
+          onClose={() => setEditingId(null)}
+        />
+
+        {isGuest ? null : (
+          <CanvasTeamDialog
+            open={teamOpen}
+            onOpenChange={setTeamOpen}
+            accountId={accountId}
+            accountSlug={accountSlug}
+            jobId={jobId}
+            canEdit={editable}
+            focus={teamFocus}
+            team={teamList}
+            workspaceMembers={workspaceMembers}
+            client={lookups.client}
+            contacts={contacts}
+            onChanged={onTeamChanged}
+            onLayoutSection={() => {
+              setTeamOpen(false);
+              arrangeTeam();
+            }}
+          />
+        )}
 
         <JobProjectTaskSheet
           open={Boolean(selectedTask)}

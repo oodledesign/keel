@@ -19,6 +19,8 @@ const GROUPS: Array<{ title: string; shortcuts: Shortcut[] }> = [
       { keys: ['T'], label: 'Text' },
       { keys: ['R'], label: 'Shape' },
       { keys: ['F'], label: 'Section' },
+      { keys: ['M'], label: 'Figure (big number with a target)' },
+      { keys: ['K'], label: 'Add a task' },
       { keys: ['C'], label: 'Arrow' },
       { keys: ['P'], label: 'Pen' },
       { keys: ['E'], label: 'Eraser' },

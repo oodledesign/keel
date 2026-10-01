@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Loader2 } from 'lucide-react';
+import { FilePlus2, Loader2 } from 'lucide-react';
 
 import { Checkbox } from '@kit/ui/checkbox';
 import {
@@ -47,6 +47,12 @@ import {
   type ClientOption,
 } from '~/home/[account]/projects/_components/client-combobox';
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
+import {
+  type DroneFormValue,
+  DroneOptionFields,
+  EMPTY_DRONE_FORM,
+} from '~/home/[account]/surveys/_components/drone-option-fields';
+import { penceFromInput } from '~/lib/building-surveyor/survey-drone';
 import { unwrapListClientsResult } from '~/lib/clients/unwrap-list-clients-result';
 import {
   type InstructionPropertyDraft,
@@ -145,6 +151,8 @@ export function EditDealDialog({
   );
   const [quoteAddress, setQuoteAddress] = useState('');
   const [quotePending, setQuotePending] = useState(false);
+  const [quoteDrone, setQuoteDrone] =
+    useState<DroneFormValue>(EMPTY_DRONE_FORM);
 
   const showAssignField = !workspaceScoped && businesses.length > 1;
 
@@ -177,6 +185,7 @@ export function EditDealDialog({
       setAmlDone(Boolean(deal.amlDone));
       setProperty(draftFromInstruction(deal));
       setQuoteAddress(deal.projectName || deal.companyName || '');
+      setQuoteDrone(EMPTY_DRONE_FORM);
       setError(null);
     }
   }, [deal, open, businesses, workspaceScoped, commercial]);
@@ -232,7 +241,7 @@ export function EditDealDialog({
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    // "Save & create disposal" sets this; read and clear it on every submit so
+    // "Create disposal" in the actions menu sets this; read and clear it on every submit so
     // a validation error never leaves it armed for the next plain save.
     const createDisposalAfterSave = createDisposalAfterSaveRef.current;
     createDisposalAfterSaveRef.current = false;
@@ -431,22 +440,6 @@ export function EditDealDialog({
   const footer = (
     <DialogFooter className="gap-2 sm:justify-between">
       <div className="flex flex-wrap items-center gap-2">
-        {commercial && onRequestCreateDisposal && deal ? (
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={() => {
-              createDisposalAfterSaveRef.current = true;
-              formRef.current?.requestSubmit();
-            }}
-            className="h-9 rounded-xl border border-[color:var(--workspace-shell-border)] px-4 text-sm font-medium text-[var(--workspace-shell-text)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] disabled:opacity-50"
-            data-test="edit-instruction-create-disposal"
-          >
-            {deal.commercialListingId
-              ? 'Save & create another disposal'
-              : 'Save & create disposal'}
-          </button>
-        ) : null}
         {commercial && accountId && deal ? (
           <WipArchiveControls
             kind="instruction"
@@ -455,6 +448,25 @@ export function EditDealDialog({
             recordId={deal.id}
             recordName={deal.projectName || deal.companyName}
             canDelete={canDeleteWip}
+            disabled={isPending}
+            actions={
+              onRequestCreateDisposal
+                ? [
+                    {
+                      label: deal.commercialListingId
+                        ? 'Create another disposal'
+                        : 'Create disposal',
+                      icon: <FilePlus2 aria-hidden className="h-4 w-4" />,
+                      testId: 'edit-instruction-create-disposal',
+                      // Saves the form first so nothing typed here is lost.
+                      onSelect: () => {
+                        createDisposalAfterSaveRef.current = true;
+                        formRef.current?.requestSubmit();
+                      },
+                    },
+                  ]
+                : []
+            }
             onRemoved={() => {
               onDealRemoved?.(deal.id);
               onOpenChange(false);
@@ -793,9 +805,9 @@ export function EditDealDialog({
                     Standardised quote
                   </p>
                   <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
-                    Address, Level 2 and Level 3 together, form of appointment,
-                    and Terms of Business. Accepting the quote or signing ToB
-                    moves the card to Accepted.
+                    Address, Level 2 and Level 3 together, optional drone line,
+                    form of appointment, and Terms of Business. Accepting the
+                    quote or signing ToB moves the card to Accepted.
                   </p>
                   <Input
                     value={quoteAddress}
@@ -803,11 +815,32 @@ export function EditDealDialog({
                     placeholder="Property address"
                     className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
                   />
+                  <DroneOptionFields
+                    accountId={accountId}
+                    idPrefix="quote-drone"
+                    value={quoteDrone}
+                    onChange={setQuoteDrone}
+                    disabled={quotePending}
+                  />
                   <button
                     type="button"
                     className={`${workspaceBtnPrimaryMd} h-8 px-3 text-xs`}
                     disabled={quotePending || !quoteAddress.trim()}
                     onClick={() => {
+                      const droneFee = quoteDrone.fee.trim()
+                        ? penceFromInput(quoteDrone.fee)
+                        : null;
+                      if (
+                        quoteDrone.used &&
+                        quoteDrone.billing === 'separate' &&
+                        quoteDrone.fee.trim() &&
+                        droneFee === null
+                      ) {
+                        setError(
+                          'Enter the drone fee as an amount, for example 150',
+                        );
+                        return;
+                      }
                       setQuotePending(true);
                       void createSurveyorQuoteAction({
                         accountId,
@@ -816,6 +849,9 @@ export function EditDealDialog({
                         address: quoteAddress.trim(),
                         clientName:
                           deal.clientName || deal.contactName || undefined,
+                        droneUsed: quoteDrone.used,
+                        droneBilling: quoteDrone.billing,
+                        droneFeePence: droneFee ?? undefined,
                       })
                         .then((result) => {
                           router.push(

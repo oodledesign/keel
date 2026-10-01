@@ -269,6 +269,7 @@ function frontMatter(level: TemplateLevel): SurveyTemplateBlock[] {
         { type: 'content', path: 'element:A.weather' },
         { type: 'content', path: 'element:A.occupancy' },
         { type: 'merge', path: 'inspection.date' },
+        { type: 'merge', path: 'inspection.drone' },
         { type: 'merge', path: 'report.reference' },
       ],
     }),

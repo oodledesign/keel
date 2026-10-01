@@ -8,13 +8,17 @@ import {
   Heading1,
   Heading2,
   Italic,
+  Link2,
   List,
+  ListOrdered,
   Redo2,
   Underline,
   Undo2,
 } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
+
+import { normalizeNoteHref } from '~/lib/notes/note-markdown';
 
 type NoteMarkdownToolbarProps = {
   editor: Editor | null;
@@ -56,6 +60,41 @@ function useMobileKeyboardOffset() {
   }, []);
 
   return offset;
+}
+
+function toggleLink(editor: Editor | null) {
+  if (!editor) return;
+  if (editor.isActive('link')) {
+    editor.chain().focus().extendMarkRange('link').unsetLink().run();
+    return;
+  }
+  const current =
+    (editor.getAttributes('link').href as string | undefined) ?? '';
+  const raw = window.prompt('Link address', current || 'https://');
+  if (raw === null) return;
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === 'https://') return;
+  const href =
+    normalizeNoteHref(trimmed) ??
+    (/^[^\s:/]+\.[^\s/]+/.test(trimmed)
+      ? normalizeNoteHref(`https://${trimmed}`)
+      : null);
+  if (!href) {
+    window.alert('Enter a web address, e.g. https://example.com');
+    return;
+  }
+  const chain = editor.chain().focus().extendMarkRange('link');
+  if (editor.state.selection.empty && !editor.isActive('link')) {
+    chain
+      .insertContent({
+        type: 'text',
+        text: trimmed,
+        marks: [{ type: 'link', attrs: { href } }],
+      })
+      .run();
+  } else {
+    chain.setLink({ href }).run();
+  }
 }
 
 export function NoteMarkdownToolbar({
@@ -139,10 +178,22 @@ export function NoteMarkdownToolbar({
         <Underline className="h-4 w-4" />,
       )}
       {btn(
+        'Link',
+        editor?.isActive('link') ?? false,
+        () => toggleLink(editor),
+        <Link2 className="h-4 w-4" />,
+      )}
+      {btn(
         'Bullet list',
         editor?.isActive('bulletList') ?? false,
         () => editor?.chain().focus().toggleBulletList().run(),
         <List className="h-4 w-4" />,
+      )}
+      {btn(
+        'Numbered list',
+        editor?.isActive('orderedList') ?? false,
+        () => editor?.chain().focus().toggleOrderedList().run(),
+        <ListOrdered className="h-4 w-4" />,
       )}
       {btn(
         'Title',

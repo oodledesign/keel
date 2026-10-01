@@ -32,13 +32,13 @@ export type DisposalsScheduleInput = {
   clientNames: Map<string, string>;
 };
 
-function str(value: unknown): string | null {
+export function str(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
 }
 
-function num(value: unknown): number | null {
+export function num(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
@@ -123,7 +123,7 @@ function partyLine(row: Row, withRole: boolean): string | null {
   return `${role}: ${who}`;
 }
 
-function groupBy(rows: Row[], key: string): Map<string, Row[]> {
+export function groupBy(rows: Row[], key: string): Map<string, Row[]> {
   const out = new Map<string, Row[]>();
   for (const row of rows) {
     const id = str(row[key]);
@@ -152,17 +152,19 @@ function compareListings(a: Row, b: Row): number {
   });
 }
 
-type ColumnDef<T> = XlsxColumn & { value: (row: T) => XlsxCell };
+export type ColumnDef<T> = XlsxColumn & { value: (row: T) => XlsxCell };
 
-type ListingContext = {
+export type ListingContext = {
   row: Row;
   agents: Row[];
   parties: Row[];
   coAgents: Row[];
   unitCount: number;
+  /** Units on this disposal, for size fallbacks in the export. */
+  units?: Row[];
 };
 
-function buildDisposalColumns(
+export function buildDisposalColumns(
   input: DisposalsScheduleInput,
 ): ColumnDef<ListingContext>[] {
   const member = (id: unknown) => {
@@ -617,6 +619,7 @@ export function buildDisposalsScheduleSheets(
       parties: partiesByListing.get(id) ?? [],
       coAgents: coAgentsByListing.get(id) ?? [],
       unitCount: unitsByListing.get(id)?.length ?? 0,
+      units: unitsByListing.get(id) ?? [],
     };
   });
 

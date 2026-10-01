@@ -13,6 +13,7 @@ const noteMarkdownClasses = cn(
   '[&_strong]:font-semibold',
   '[&_em]:italic',
   '[&_u]:underline',
+  '[&_a]:break-words [&_a]:text-[var(--ozer-accent)] [&_a]:underline [&_a]:underline-offset-2',
 );
 
 type NoteMarkdownBodyProps = {

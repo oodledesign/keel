@@ -28,6 +28,12 @@ import {
   CONDITION_RATING_COLORS,
   type ConditionRating,
 } from './condition-rating';
+import {
+  COVER_FRAME,
+  type CoverFocus,
+  DEFAULT_COVER_FOCUS,
+  coverPlacement,
+} from './survey-cover';
 import type {
   SurveyReportBlock,
   SurveyReportDocument,
@@ -64,6 +70,13 @@ export type SurveyReportPdfInput = {
   fonts?: SurveyPdfFonts | null;
   /** Shown top right on the cover and every divider when provided. */
   ricsLogo?: SurveyPdfImage | null;
+  /**
+   * Photo for the front cover (the survey's chosen building photo, else the
+   * workspace default image). When absent the first report photo is used.
+   */
+  coverImage?: SurveyPdfImage | null;
+  /** Crop and position of the cover image within its frame. */
+  coverFocus?: CoverFocus | null;
   /** Static artwork referenced by `<figure data-asset="…">` in report HTML. */
   assets?: Record<string, SurveyPdfImage | null | undefined>;
   draft?: boolean;
@@ -1799,14 +1812,13 @@ function drawCover(
     'right',
   );
 
-  const heroBox = { x: 0, y: PAGE_H - 720, width: 397, height: 587 };
+  const heroBox = { x: 0, y: PAGE_H - 720, ...COVER_FRAME };
   if (hero) {
-    const scale = Math.max(
-      heroBox.width / hero.width,
-      heroBox.height / hero.height,
+    const placement = coverPlacement(
+      hero,
+      input.coverFocus ?? DEFAULT_COVER_FOCUS,
+      heroBox,
     );
-    const width = hero.width * scale;
-    const height = hero.height * scale;
     page.pushOperators(
       pushGraphicsState(),
       moveTo(heroBox.x, heroBox.y),
@@ -1818,10 +1830,11 @@ function drawCover(
       endPath(),
     );
     page.drawImage(hero, {
-      x: heroBox.x + (heroBox.width - width) / 2,
-      y: heroBox.y + (heroBox.height - height) / 2,
-      width,
-      height,
+      x: heroBox.x + placement.offsetX,
+      // offsetY is measured down from the frame's top edge; PDF y goes up.
+      y: heroBox.y + heroBox.height - placement.offsetY - placement.height,
+      width: placement.width,
+      height: placement.height,
     });
     page.pushOperators(popGraphicsState());
   } else {
@@ -2277,11 +2290,16 @@ export async function buildSurveyReportPdf(
   }
 
   const images = await resolveImages(doc, blocks, input);
+  const coverImage = input.coverImage
+    ? await embedImage(doc, input.coverImage)
+    : null;
   const hero =
+    coverImage ??
     blocks
       .filter((block): block is ImageBlock => block.type === 'image')
       .map((block) => images.get(block.id) ?? null)
-      .find((image) => image !== null) ?? null;
+      .find((image) => image !== null) ??
+    null;
 
   drawCover(ctx, input, hero);
 

@@ -296,6 +296,15 @@ class ProposalsService {
             : null,
         survey_uprn:
           documentKind === 'survey_report' ? (input.survey_uprn ?? null) : null,
+        ...(input.survey_drone_used !== undefined
+          ? { survey_drone_used: input.survey_drone_used }
+          : {}),
+        ...(input.survey_drone_billing !== undefined
+          ? { survey_drone_billing: input.survey_drone_billing }
+          : {}),
+        ...(input.survey_drone_fee_pence !== undefined
+          ? { survey_drone_fee_pence: input.survey_drone_fee_pence }
+          : {}),
         title:
           input.title ??
           input.survey_property_address ??

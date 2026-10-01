@@ -1,5 +1,17 @@
 import { z } from 'zod';
 
+import {
+  type CoverFocus,
+  SURVEY_COVER_SELECT,
+  mapSurveyCoverPhotoDocId,
+  parseCoverFocus,
+} from './survey-cover';
+import {
+  SURVEY_DRONE_SELECT,
+  type SurveyDrone,
+  mapSurveyDrone,
+} from './survey-drone';
+
 export const ACCOMMODATION_FLOORS = [
   { key: 'lower_ground', label: 'Lower ground' },
   { key: 'ground', label: 'Ground' },
@@ -160,10 +172,12 @@ export type SurveyReportDetails = {
   reportReference: string | null;
   accommodation: SurveyAccommodation;
   services: SurveyServices | null;
+  drone: SurveyDrone;
+  coverPhotoDocId: string | null;
+  coverFocus: CoverFocus;
 };
 
-export const SURVEY_REPORT_DETAILS_SELECT =
-  'survey_inspection_date, survey_terms_received_date, survey_report_reference, survey_accommodation, survey_services';
+export const SURVEY_REPORT_DETAILS_SELECT = `survey_inspection_date, survey_terms_received_date, survey_report_reference, survey_accommodation, survey_services, ${SURVEY_DRONE_SELECT}, ${SURVEY_COVER_SELECT}`;
 
 export const SURVEYOR_PROFILE_SELECT =
   'display_name, rics_number, phone, email, website, address, qualifications';
@@ -181,5 +195,8 @@ export function mapSurveyReportDetails(
     reportReference: text('survey_report_reference'),
     accommodation: parseSurveyAccommodation(row.survey_accommodation),
     services: parseSurveyServices(row.survey_services),
+    drone: mapSurveyDrone(row),
+    coverPhotoDocId: mapSurveyCoverPhotoDocId(row),
+    coverFocus: parseCoverFocus(row.survey_cover_focus),
   };
 }

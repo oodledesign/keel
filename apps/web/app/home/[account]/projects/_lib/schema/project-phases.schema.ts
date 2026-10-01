@@ -81,6 +81,13 @@ export const MoveTaskSchema = z.object({
   sortOrder: z.number().int().min(0).optional(),
 });
 
+/** A phase's tasks in their new order (also moves any that came from elsewhere). */
+export const ReorderPhaseTasksSchema = z.object({
+  ...accountJobSlugFields,
+  phaseId: z.string().uuid().nullable(),
+  taskIds: z.array(z.string().uuid()).min(1).max(500),
+});
+
 export const ListJobBoardSchema = z.object({
   ...accountJobFields,
   accountSlug: z.string().min(1),
@@ -235,6 +242,7 @@ export type DeletePhaseInput = z.infer<typeof DeletePhaseSchema>;
 export type ReorderPhasesInput = z.infer<typeof ReorderPhasesSchema>;
 export type ListPhasesForJobInput = z.infer<typeof ListPhasesForJobSchema>;
 export type MoveTaskInput = z.infer<typeof MoveTaskSchema>;
+export type ReorderPhaseTasksInput = z.infer<typeof ReorderPhaseTasksSchema>;
 export type ListJobBoardInput = z.infer<typeof ListJobBoardSchema>;
 export type EnsurePhasePageInput = z.infer<typeof EnsurePhasePageSchema>;
 export type GetPhaseDetailInput = z.infer<typeof GetPhaseDetailSchema>;

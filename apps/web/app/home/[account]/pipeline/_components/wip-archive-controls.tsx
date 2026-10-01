@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { type ReactNode, useState, useTransition } from 'react';
 
-import { Archive, Loader2, Trash2 } from 'lucide-react';
+import { Archive, Loader2, MoreHorizontal, Trash2 } from 'lucide-react';
 
 import {
   AlertDialog,
@@ -15,9 +15,20 @@ import {
   AlertDialogTitle,
 } from '@kit/ui/alert-dialog';
 import { Button } from '@kit/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 import { toast } from '@kit/ui/sonner';
 
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
+import {
+  workspaceSelectContentClass,
+  workspaceSelectItemClass,
+} from '~/lib/workspace-ui';
 
 import {
   archiveInstruction,
@@ -50,10 +61,19 @@ const COPY: Record<
   },
 };
 
+export type WipRecordMenuAction = {
+  label: string;
+  icon: ReactNode;
+  onSelect: () => void;
+  disabled?: boolean;
+  testId?: string;
+};
+
 /**
- * Archive and delete for a WIP instruction or requirement. Archive is
- * reversible (Undo toast, and the Archived list). Delete is permanent, so it
- * sits behind a confirmation and only shows for owners and admins.
+ * The "…" menu for a WIP instruction or requirement: any extra actions, then
+ * Archive and Delete. Archive is reversible (Undo toast, and the Archived
+ * list). Delete is permanent, so it sits behind a confirmation and only shows
+ * for owners and admins.
  */
 export function WipArchiveControls({
   kind,
@@ -64,6 +84,8 @@ export function WipArchiveControls({
   canDelete,
   onRemoved,
   onRestored,
+  actions = [],
+  disabled = false,
 }: {
   kind: WipArchiveKind;
   accountId: string;
@@ -75,6 +97,9 @@ export function WipArchiveControls({
   onRemoved: () => void;
   /** Undo restored an archived record, so the host should reload. */
   onRestored: () => void;
+  /** Shown above Archive and Delete. */
+  actions?: WipRecordMenuAction[];
+  disabled?: boolean;
 }) {
   const copy = COPY[kind];
   const [isPending, startTransition] = useTransition();
@@ -135,40 +160,69 @@ export function WipArchiveControls({
   }
 
   return (
-    <div className="flex items-center gap-2" data-test="wip-archive-controls">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={isPending}
-        title={copy.archiveHint}
-        data-test="wip-archive-button"
-        onClick={handleArchive}
-      >
-        {isPending && !confirmOpen ? (
-          <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
-        ) : (
-          <Archive aria-hidden className="h-4 w-4" />
-        )}
-        Archive
-      </Button>
-
-      {canDelete ? (
-        <>
+    <div className="flex items-center" data-test="wip-archive-controls">
+      {/* Non-modal so the delete confirmation can take focus as the menu closes. */}
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
           <Button
             type="button"
             variant="ghost"
-            size="sm"
-            disabled={isPending}
-            aria-haspopup="dialog"
-            data-test="wip-delete-button"
-            className="text-rose-600 hover:bg-rose-500/10 hover:text-rose-700"
-            onClick={() => setConfirmOpen(true)}
+            size="icon"
+            className="h-9 w-9 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+            disabled={isPending || disabled}
+            aria-label={`More actions for this ${copy.noun}`}
+            data-test="wip-record-menu"
           >
-            <Trash2 aria-hidden className="h-4 w-4" />
-            Delete
+            {isPending ? (
+              <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
+            ) : (
+              <MoreHorizontal aria-hidden className="h-4 w-4" />
+            )}
           </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="start"
+          side="top"
+          className={`w-52 ${workspaceSelectContentClass}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {actions.map((action) => (
+            <DropdownMenuItem
+              key={action.label}
+              className={`${workspaceSelectItemClass} cursor-pointer gap-2`}
+              disabled={action.disabled}
+              data-test={action.testId}
+              onSelect={action.onSelect}
+            >
+              {action.icon}
+              {action.label}
+            </DropdownMenuItem>
+          ))}
+          {actions.length > 0 ? <DropdownMenuSeparator /> : null}
+          <DropdownMenuItem
+            className={`${workspaceSelectItemClass} cursor-pointer gap-2`}
+            title={copy.archiveHint}
+            data-test="wip-archive-button"
+            onSelect={handleArchive}
+          >
+            <Archive aria-hidden className="h-4 w-4" />
+            Archive
+          </DropdownMenuItem>
+          {canDelete ? (
+            <DropdownMenuItem
+              className={`${workspaceSelectItemClass} cursor-pointer gap-2 text-rose-600 focus:text-rose-700`}
+              data-test="wip-delete-button"
+              onSelect={() => setConfirmOpen(true)}
+            >
+              <Trash2 aria-hidden className="h-4 w-4" />
+              Delete…
+            </DropdownMenuItem>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
+      {canDelete ? (
+        <>
           <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
             {/* React events bubble through portals; keep them off the form. */}
             <AlertDialogContent

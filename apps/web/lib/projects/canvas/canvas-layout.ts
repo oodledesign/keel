@@ -30,16 +30,16 @@ export type CanvasLinkedRef = { kind: LinkedCanvasKind; refId: string };
 /** Local items not yet confirmed by the server sort before any server copy. */
 export const PENDING_CANVAS_TIMESTAMP = new Date(0).toISOString();
 
-const GAP = 48;
-const PHASE_HEADER = 76;
-const PHASE_PAD = 20;
-const TASK_GAP = 12;
+export const GAP = 48;
+export const PHASE_HEADER = 76;
+export const PHASE_PAD = 20;
+export const TASK_GAP = 12;
 const PEOPLE_ROW_Y = 0;
 const PEOPLE_GAP = 20;
 const GAP_SM = 16;
 /** First open only; the rest wait in the tray. */
 const INITIAL_DOC_LIMIT = 12;
-const PHASES_ROW_Y = 160;
+export const PHASES_ROW_Y = 160;
 
 export function listLinkedRefs(
   entities: CanvasLinkedEntities,
@@ -114,7 +114,7 @@ export function buildLinkedCanvasItem(
   };
 }
 
-function contentBounds(items: CanvasItem[]) {
+export function contentBounds(items: CanvasItem[]) {
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -336,7 +336,7 @@ export function layoutUnplacedLinkedItems(
   return { creates, updates: [...updatedPhases.values()] };
 }
 
-const NOTE_GAP = 16;
+export const NOTE_GAP = 16;
 
 /**
  * Lays phases out as a row of columns with their task and note cards stacked
@@ -500,7 +500,7 @@ export function arrangeCanvasByPhase(
  * Moves items overlapping `region` (with any container's contents) just past
  * it. Containers wrapping arranged items are left alone.
  */
-function clearRegion(
+export function clearRegion(
   items: CanvasItem[],
   region: { x: number; y: number; w: number; h: number },
   arranged: Set<string>,

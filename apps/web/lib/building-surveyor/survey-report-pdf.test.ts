@@ -21,6 +21,7 @@ import {
 } from './assemble-survey-template';
 import { documentFromObservations } from './survey-report-document';
 import {
+  type SurveyPdfImage,
   buildSurveyReportPdf,
   surveyHtmlToPdfItems,
 } from './survey-report-pdf';
@@ -304,5 +305,38 @@ describe('buildProposalPdf', () => {
     });
 
     expect(withImage.byteLength).toBeGreaterThan(withoutImage.byteLength);
+  });
+  it('uses the chosen cover image instead of the first report photo', async () => {
+    const png = Uint8Array.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+      0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+      0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
+      0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+      0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
+      0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+    ]);
+    const document = documentFromObservations(
+      [{ sectionKey: 'windows', body: 'Sash is stiff.' }],
+      [],
+    );
+    const input = {
+      title: '106 Hadlow Road',
+      document,
+      brandName: 'Test Surveyors',
+    };
+
+    const coverImageCount = async (coverImage?: SurveyPdfImage) => {
+      const bytes = await buildSurveyReportPdf({
+        ...input,
+        coverImage,
+      });
+      const pdf = await PDFDocument.load(bytes);
+      const resources = pdf.getPage(0).node.Resources();
+      const xObjects = resources?.lookupMaybe(PDFName.of('XObject'), PDFDict);
+      return xObjects?.keys().length ?? 0;
+    };
+
+    expect(await coverImageCount(undefined)).toBe(0);
+    expect(await coverImageCount({ bytes: png, kind: 'png' })).toBe(1);
   });
 });

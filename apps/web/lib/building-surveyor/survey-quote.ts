@@ -2,6 +2,7 @@
  * Standardised building-surveyor quote: address, L2 and L3 together,
  * form of appointment, and Terms of Business.
  */
+import type { DroneQuoteLine } from './survey-drone';
 
 export type SurveyorQuoteLevel = '2' | '3';
 
@@ -12,6 +13,8 @@ export type SurveyorQuoteInput = {
   levels?: SurveyorQuoteLevel[];
   includeFormOfAppointment?: boolean;
   includeTermsOfBusiness?: boolean;
+  /** Extra quote lines such as the drone, shown as "Drone £150". */
+  extraLines?: DroneQuoteLine[];
 };
 
 export function surveyorQuoteLevels(
@@ -42,6 +45,17 @@ function escapeHtml(value: string): string {
     .replaceAll('"', '&quot;');
 }
 
+function extraLinesHtml(lines: DroneQuoteLine[] | undefined): string {
+  if (!lines || lines.length === 0) return '';
+  const rows = lines
+    .map(
+      (line) =>
+        `<tr><td>${escapeHtml(line.label)}</td><td>${escapeHtml(line.amount)}</td></tr>`,
+    )
+    .join('');
+  return `<h2>Additional services</h2><table><thead><tr><th>Item</th><th>Fee</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
 export function buildSurveyorQuoteHtml(input: SurveyorQuoteInput): string {
   const address = escapeHtml(
     input.address.trim() || 'Property address to confirm',
@@ -59,6 +73,7 @@ export function buildSurveyorQuoteHtml(input: SurveyorQuoteInput): string {
     `<p>${address}</p>`,
     `<h2>Survey type</h2>`,
     `<p>${escapeHtml(levels)}. Level 2 and Level 3 are quoted together so the instruction can be confirmed at either level.</p>`,
+    extraLinesHtml(input.extraLines),
     includeAppointment
       ? `<h2>Form of appointment</h2><p>This quotation is the form of appointment for the inspection. Instruction is confirmed when you accept this quote and sign the Terms of Business.</p>`
       : '',

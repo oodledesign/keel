@@ -31,6 +31,7 @@ import {
   RebuildSurveyReportSchema,
   ReorderSurveyPhotosSchema,
   SetSurveyPhotoShareSchema,
+  SetSurveySectionRatingSchema,
   UpdateSurveyObservationSchema,
   UpdateSurveyPhotoCurationSchema,
   UpdateSurveyStyleExampleSchema,
@@ -160,6 +161,15 @@ export const updateSurveyObservationAction = enhanceAction(
     return result;
   },
   { schema: UpdateSurveyObservationSchema },
+);
+
+export const setSurveySectionRatingAction = enhanceAction(
+  async (data) => {
+    const result = await getService().setSectionRating(data);
+    revalidateSurveyHub(data.accountSlug, data.proposalId);
+    return result;
+  },
+  { schema: SetSurveySectionRatingSchema },
 );
 
 export const deleteSurveyObservationAction = enhanceAction(

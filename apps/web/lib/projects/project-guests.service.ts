@@ -23,6 +23,7 @@ const DEFAULT_PERMISSIONS: ProjectGuestPermissions = {
   comment: true,
   create_task: true,
   edit_own_task: true,
+  edit_canvas: false,
 };
 
 // New tables / live project columns may lag generated Database types.
@@ -42,7 +43,15 @@ function mapPermissions(raw: unknown): ProjectGuestPermissions {
     comment: obj.comment !== false,
     create_task: obj.create_task !== false,
     edit_own_task: obj.edit_own_task !== false,
+    // Opt-in: guests invited before this existed don't gain edit access.
+    edit_canvas: obj.edit_canvas === true,
   };
+}
+
+function assertHasAnyPermission(permissions: ProjectGuestPermissions) {
+  if (!Object.values(permissions).some(Boolean)) {
+    throw new Error('Select at least one permission');
+  }
 }
 
 function mapGuest(
@@ -259,13 +268,7 @@ export async function createProjectGuestInvite(input: {
     ...input.permissions,
   };
 
-  if (
-    !permissions.comment &&
-    !permissions.create_task &&
-    !permissions.edit_own_task
-  ) {
-    throw new Error('Select at least one permission');
-  }
+  assertHasAnyPermission(permissions);
 
   const admin = getSupabaseServerAdminClient();
   const inviteToken = createSupportPublicToken(24);
@@ -358,7 +361,7 @@ export async function createProjectGuestInvite(input: {
 
   const html = wrapNotificationEmail(
     `<p style="margin:0 0 12px;">You have been invited to collaborate on <strong>${escapeNotificationHtml(projectLabel)}</strong> in ${escapeNotificationHtml(productName)}.</p>
-      <p style="margin:0 0 12px;font-size:13px;color:#5A4450;">You will only see that project's task board — not clients, invoices, or other workspace settings.</p>
+      <p style="margin:0 0 12px;font-size:13px;color:#5A4450;">You will only see that project's task board and canvas — not clients, invoices, or other workspace settings.</p>
       <p style="margin:0;font-size:13px;color:#5A4450;">Or open this link:<br /><a href="${escapeNotificationHtml(acceptUrl)}" style="color:#FF5C34;word-break:break-all;">${escapeNotificationHtml(acceptUrl)}</a></p>`,
     {
       productName,
@@ -461,6 +464,30 @@ export async function revokeProjectGuest(input: {
     .eq('account_id', input.accountId);
 
   if (error) throw new Error(error.message);
+}
+
+export async function updateProjectGuestPermissions(input: {
+  accountId: string;
+  projectId: string;
+  guestId: string;
+  permissions: ProjectGuestPermissions;
+}): Promise<ProjectGuestPermissions> {
+  await assertCanManageProject(input.accountId, input.projectId);
+  assertHasAnyPermission(input.permissions);
+
+  const admin = getSupabaseServerAdminClient();
+  const { data, error } = await guestsTable(admin)
+    .update({ permissions: input.permissions })
+    .eq('id', input.guestId)
+    .eq('project_id', input.projectId)
+    .eq('account_id', input.accountId)
+    .neq('status', 'revoked')
+    .select('permissions')
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error('Guest not found');
+  return mapPermissions((data as { permissions: unknown }).permissions);
 }
 
 /** Link any pending invites matching the signed-in user's email (post-signup). */

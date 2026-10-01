@@ -18,6 +18,7 @@ import {
   ArrowUpDown,
   Bell,
   Building2,
+  CalendarClock,
   CircleDot,
   Download,
   Edit2,
@@ -106,7 +107,9 @@ import {
   listListings,
 } from '../_lib/server/server-actions';
 import { DisposalsAiDialog } from './disposals-ai-dialog';
+import { DisposalsExportDialog } from './disposals-export-dialog';
 import { DisposalsListSkeleton } from './disposals-list-skeleton';
+import { DisposalsReportsDialog } from './disposals-reports-dialog';
 import {
   ListingAgentAvatarStack,
   ListingMemberAvatar,
@@ -141,6 +144,7 @@ interface ListingsListProps {
   unassignedCount: number;
   canEditDisposals: boolean;
   canUseDisposalsAi?: boolean;
+  canManageReports?: boolean;
 }
 
 type ViewMode = 'cards' | 'table' | 'map';
@@ -285,6 +289,7 @@ export function ListingsList({
   unassignedCount,
   canEditDisposals,
   canUseDisposalsAi = false,
+  canManageReports = false,
 }: ListingsListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -311,6 +316,8 @@ export function ListingsList({
   const needsLocationOnly = searchParams.has('needsLocation')
     ? searchParams.get('needsLocation') === '1'
     : initialNeedsLocation;
+  const [exportOpen, setExportOpen] = useState(false);
+  const [reportsOpen, setReportsOpen] = useState(false);
   const [pageListings, setPageListings] = useState(initialListings);
   const [cachedListings, setCachedListings] = useState(initialListings);
   const [total, setTotal] = useState(initialTotal);
@@ -1017,6 +1024,24 @@ export function ListingsList({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="gap-2"
+                onSelect={() => setExportOpen(true)}
+                data-test="disposals-export-open"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export or print…
+              </DropdownMenuItem>
+              {canManageReports ? (
+                <DropdownMenuItem
+                  className="gap-2"
+                  onSelect={() => setReportsOpen(true)}
+                  data-test="disposals-reports-open"
+                >
+                  <CalendarClock className="h-3.5 w-3.5" />
+                  Scheduled reports…
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem asChild className="gap-2">
                 <a
                   href={`/api/disposals/schedule?accountId=${encodeURIComponent(accountId)}`}
@@ -1029,6 +1054,20 @@ export function ListingsList({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <DisposalsExportDialog
+            accountId={accountId}
+            offices={offices}
+            open={exportOpen}
+            onOpenChange={setExportOpen}
+          />
+          {canManageReports ? (
+            <DisposalsReportsDialog
+              accountId={accountId}
+              offices={offices}
+              open={reportsOpen}
+              onOpenChange={setReportsOpen}
+            />
+          ) : null}
         </div>
       </div>
 

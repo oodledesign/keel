@@ -35,7 +35,6 @@ export function CompleteInstructionRegisterDialog({
   accountSlug,
   onClose,
   onRecorded,
-  onCreateDisposal,
 }: {
   open: boolean;
   deal: PipelineDeal | null;
@@ -43,7 +42,6 @@ export function CompleteInstructionRegisterDialog({
   accountSlug: string;
   onClose: () => void;
   onRecorded: () => void;
-  onCreateDisposal: (deal: PipelineDeal) => void;
 }) {
   const [outcome, setOutcome] = useState<Outcome>('sale');
   const [propertyLabel, setPropertyLabel] = useState('');
@@ -209,16 +207,7 @@ export function CompleteInstructionRegisterDialog({
 
             {error ? <p className="text-sm text-rose-600">{error}</p> : null}
 
-            <DialogFooter className="gap-2 sm:justify-between">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  if (deal) onCreateDisposal(deal);
-                }}
-              >
-                Create disposal
-              </Button>
+            <DialogFooter className="gap-2 sm:justify-end">
               <div className="flex gap-2">
                 <Button type="button" variant="outline" onClick={resetAndClose}>
                   Not now

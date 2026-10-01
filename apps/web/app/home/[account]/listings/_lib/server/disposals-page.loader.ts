@@ -48,6 +48,8 @@ export type DisposalsPageData = {
   unassignedCount: number;
   canEditDisposals: boolean;
   canUseDisposalsAi: boolean;
+  /** Owners and admins manage scheduled reports (they can email outside the team). */
+  canManageReports: boolean;
 };
 
 async function loadDisposalsPageDataImpl(
@@ -146,6 +148,9 @@ async function loadDisposalsPageDataImpl(
     unassignedCount,
     canEditDisposals,
     canUseDisposalsAi,
+    canManageReports: ['owner', 'admin'].includes(
+      (workspace.account as { role?: string | null }).role ?? '',
+    ),
   };
 }
 

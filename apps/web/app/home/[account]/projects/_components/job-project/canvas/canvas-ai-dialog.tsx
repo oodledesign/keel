@@ -277,12 +277,10 @@ function AiBody({
             sectionTitle,
             instructions,
             rows: section.rows.slice(0, 10).map(toArea),
-            weeks: section.weeks
-              .slice(0, 8)
-              .map((week) => ({
-                key: week.id,
-                label: week.label.slice(0, 60),
-              })),
+            weeks: section.weeks.slice(0, 8).map((week) => ({
+              key: week.id,
+              label: week.label.slice(0, 60),
+            })),
           };
         }
         return {

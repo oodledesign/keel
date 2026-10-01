@@ -12,10 +12,12 @@ import {
   Eraser,
   FilePlus2,
   Frame,
+  Gauge,
   Hand,
   ImagePlus,
   Italic,
   Link2,
+  ListPlus,
   MessageSquare,
   MousePointer2,
   NotebookPen,
@@ -61,6 +63,7 @@ export type CanvasTool =
   | 'text'
   | 'shape'
   | 'frame'
+  | 'metric'
   | 'connect'
   | 'pen'
   | 'eraser';
@@ -72,6 +75,7 @@ export const CANVAS_TOOL_SHORTCUTS: Record<string, CanvasTool> = {
   t: 'text',
   r: 'shape',
   f: 'frame',
+  m: 'metric',
   c: 'connect',
   p: 'pen',
   e: 'eraser',
@@ -102,7 +106,7 @@ export function ToolButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:opacity-40',
+        'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors disabled:opacity-40',
         active
           ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
           : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
@@ -115,7 +119,7 @@ export function ToolButton({
 
 function Divider() {
   return (
-    <span className="mx-0.5 h-5 w-px bg-[var(--workspace-shell-border)]" />
+    <span className="mx-0.5 h-5 w-px shrink-0 bg-[var(--workspace-shell-border)]" />
   );
 }
 
@@ -336,6 +340,7 @@ export function CanvasToolbar({
   onAddLink,
   onAddFile,
   onAddNote,
+  onAddTask,
   penColor,
   onPenColorChange,
   penWidth,
@@ -356,6 +361,8 @@ export function CanvasToolbar({
   onAddFile: () => void;
   /** Absent when notes can't be saved yet (canvas migration missing). */
   onAddNote?: () => void;
+  /** Absent when the viewer can't add tasks. */
+  onAddTask?: () => void;
   penColor: CanvasColorKey;
   onPenColorChange: (color: CanvasColorKey) => void;
   penWidth: number;
@@ -381,6 +388,7 @@ export function CanvasToolbar({
       edit: true,
     },
     { key: 'frame', label: 'Section (F)', icon: Frame, edit: true },
+    { key: 'metric', label: 'Figure (M)', icon: Gauge, edit: true },
     { key: 'connect', label: 'Arrow (C)', icon: Spline, edit: true },
     { key: 'pen', label: 'Pen (P)', icon: Pencil, edit: true },
     { key: 'eraser', label: 'Eraser (E)', icon: Eraser, edit: true },
@@ -393,14 +401,14 @@ export function CanvasToolbar({
         : 'Click an item to start an arrow'
       : tool === 'shape' || tool === 'frame'
         ? 'Drag to draw, or click to place'
-        : tool === 'sticky' || tool === 'text'
+        : tool === 'sticky' || tool === 'text' || tool === 'metric'
           ? 'Click on the canvas to place'
           : tool === 'eraser'
             ? 'Click or drag over pen strokes to erase'
             : null;
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex flex-col items-center gap-2">
+    <div className="pointer-events-none absolute inset-x-0 bottom-[max(1rem,calc(env(safe-area-inset-bottom)_+_0.5rem))] z-10 flex flex-col items-center gap-2 px-3">
       {hint ? (
         <p className="rounded-full bg-[var(--ozer-plum-900)]/85 px-3 py-1 text-[11px] text-[var(--ozer-text-on-dark)]">
           {hint}
@@ -435,7 +443,13 @@ export function CanvasToolbar({
           )}
         </div>
       ) : null}
-      <div className={cn(panelClass, 'flex items-center gap-0.5 p-1')}>
+      {/* Scrolls sideways when the tools don't fit (phones). */}
+      <div
+        className={cn(
+          panelClass,
+          'flex max-w-full items-center gap-0.5 overflow-x-auto overscroll-x-contain p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+        )}
+      >
         {tools
           .filter((item) => canEdit || !item.edit)
           .map(({ key, label, icon: Icon }) => (
@@ -450,6 +464,14 @@ export function CanvasToolbar({
           ))}
         {canEdit ? (
           <>
+            {onAddTask ? (
+              <ToolButton
+                label="Add task (K) — added to the project board"
+                onClick={onAddTask}
+              >
+                <ListPlus className="h-4 w-4" />
+              </ToolButton>
+            ) : null}
             {onAddNote ? (
               <ToolButton
                 label="New project note (N) — saved to the project's notes"
@@ -545,8 +567,13 @@ export function CanvasSelectionBar({
   const [labelDraft, setLabelDraft] = useState(label ?? '');
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center">
-      <div className={cn(panelClass, 'flex items-center gap-2 px-2 py-1.5')}>
+    <div className="pointer-events-none absolute inset-x-0 top-[max(0.75rem,env(safe-area-inset-top))] z-10 flex justify-center px-3">
+      <div
+        className={cn(
+          panelClass,
+          'flex max-w-full items-center gap-2 overflow-x-auto overscroll-x-contain px-2 py-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:shrink-0',
+        )}
+      >
         <span className="px-1 text-[11px] text-[var(--workspace-shell-text-muted)]">
           {count} selected
         </span>
@@ -680,7 +707,7 @@ export function CanvasPresence({
   const extra = everyone.length - shown.length;
 
   return (
-    <div className="pointer-events-none absolute top-3 right-3 z-10 flex items-center gap-2">
+    <div className="pointer-events-none absolute top-[max(0.75rem,env(safe-area-inset-top))] right-[max(0.75rem,env(safe-area-inset-right))] z-10 flex items-center gap-2">
       {actions ? (
         <div
           className={cn(

@@ -68,6 +68,8 @@ import type { SurveyReportDetails } from '../_lib/server/survey-report-details.s
 import { surveyClientName, surveyPath } from '../_lib/survey-display';
 import { SurveyAccommodationCard } from './survey-accommodation-card';
 import { SurveyClientLinkCard } from './survey-client-link-card';
+import { SurveyCoverCard } from './survey-cover-card';
+import { SurveyDroneCard } from './survey-drone-card';
 import { SurveyLevelSetting } from './survey-level-setting';
 import { SurveyPropertyPanel } from './survey-property-panel';
 import { SurveyReportDetailsCard } from './survey-report-details-card';
@@ -116,6 +118,8 @@ export function SurveyHubContent({
   flood,
   surveyLevel: initialSurveyLevel,
   reportDetails,
+  coverDefaultUrl,
+  coverPhotoUrl,
   canEditDetails,
   deals,
   canEditClient,
@@ -144,6 +148,8 @@ export function SurveyHubContent({
   flood: SurveyFloodRecord;
   surveyLevel: SurveyLevel;
   reportDetails: SurveyReportDetails;
+  coverDefaultUrl: string | null;
+  coverPhotoUrl: string | null;
   canEditDetails: boolean;
   deals: SurveyDealOption[];
   canEditClient: boolean;
@@ -495,6 +501,26 @@ export function SurveyHubContent({
               proposalId={proposal.id}
               canEdit={canEditDetails}
               details={reportDetails}
+            />
+
+            <SurveyCoverCard
+              key={`${reportDetails.coverPhotoDocId ?? 'none'}:${reportDetails.coverFocus.x}:${reportDetails.coverFocus.y}:${reportDetails.coverFocus.zoom}`}
+              accountId={accountId}
+              accountSlug={accountSlug}
+              proposalId={proposal.id}
+              canEdit={canEditDetails}
+              photoDocId={reportDetails.coverPhotoDocId}
+              photoUrl={coverPhotoUrl}
+              focus={reportDetails.coverFocus}
+              defaultUrl={coverDefaultUrl}
+            />
+
+            <SurveyDroneCard
+              accountId={accountId}
+              accountSlug={accountSlug}
+              proposalId={proposal.id}
+              canEdit={canEditDetails}
+              drone={reportDetails.drone}
             />
 
             <SurveyClientLinkCard

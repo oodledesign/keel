@@ -1,10 +1,14 @@
 import type { ConditionRating } from './condition-rating';
-import { CONDITION_RATING_COLORS } from './condition-rating';
+import {
+  CONDITION_RATING_COLORS,
+  sectionConditionRating,
+} from './condition-rating';
 import {
   buildingSurveySectionByKey,
   buildingSurveySectionByRicsCode,
   surveySectionDisplayLabel,
 } from './rics-catalogue';
+import { droneReportText } from './survey-drone';
 import {
   ACCOMMODATION_FLOORS,
   ACCOMMODATION_ROOMS,
@@ -73,6 +77,7 @@ export const SURVEY_FIELD_LABELS: Record<string, string> = {
   'client.name': "Client's name",
   'property.address': 'Full address and postcode of the property',
   'inspection.date': 'Date of the inspection',
+  'inspection.drone': 'Drone used during the inspection',
   'report.producedDate': 'Date this report was produced',
   'report.reference': 'Report reference',
   weather: 'Weather conditions when the inspection took place',
@@ -256,10 +261,10 @@ function ratingFor(
   ricsCode?: string,
   sectionKey?: string,
 ): ConditionRating | null {
-  return (
-    observationsFor(input, ricsCode, sectionKey).find(
+  return sectionConditionRating(
+    observationsFor(input, ricsCode, sectionKey).map(
       (item) => item.conditionRating,
-    )?.conditionRating ?? null
+    ),
   );
 }
 
@@ -825,6 +830,7 @@ export function mergeValuesFromSurvey(input: {
   propertyType?: string | null;
   clientName?: string | null;
   inspectionDate?: string | null;
+  droneUsed?: boolean | null;
   producedDate?: string | null;
   reportReference?: string | null;
   termsReceivedDate?: string | null;
@@ -843,6 +849,8 @@ export function mergeValuesFromSurvey(input: {
     'property.type': input.propertyType,
     'client.name': input.clientName,
     'inspection.date': input.inspectionDate,
+    'inspection.drone':
+      input.droneUsed == null ? undefined : droneReportText(input.droneUsed),
     'report.producedDate': input.producedDate,
     'report.reference': input.reportReference,
     'terms.receivedDate': input.termsReceivedDate,

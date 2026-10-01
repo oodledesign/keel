@@ -107,7 +107,15 @@ export function PersonalHomeMobileChrome({
         </WorkspaceMobileHeaderBar>
 
         {fullHeightPageScroll ? (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:pb-0">
+          <div
+            className={
+              // Email routes scroll inside their own panels. Note editors have
+              // no inner scroller, so on desktop this wrapper is the one.
+              noteEditorScroll
+                ? 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:overflow-y-auto lg:pb-0'
+                : 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:pb-0'
+            }
+          >
             {children}
           </div>
         ) : (

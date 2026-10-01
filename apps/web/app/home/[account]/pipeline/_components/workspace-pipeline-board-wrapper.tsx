@@ -5,16 +5,6 @@ import { useCallback, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@kit/ui/alert-dialog';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
@@ -86,8 +76,6 @@ export function WorkspacePipelineBoardWrapper({
   const router = useRouter();
   const [promptDeal, setPromptDeal] = useState<PipelineDeal | null>(null);
   const [wonDeal, setWonDeal] = useState<PipelineDeal | null>(null);
-  const [newInstructionDeal, setNewInstructionDeal] =
-    useState<PipelineDeal | null>(null);
 
   // One disposal at a time: a second click while one is being built would
   // create a duplicate draft.
@@ -100,8 +88,6 @@ export function WorkspacePipelineBoardWrapper({
         return;
       }
       creatingDisposalRef.current = true;
-      setPromptDeal(null);
-      setNewInstructionDeal(null);
       const toastId = toast.loading(
         `Creating a disposal from “${instructionTitle(deal)}”…`,
       );
@@ -162,7 +148,6 @@ export function WorkspacePipelineBoardWrapper({
           latestUpdateByDealId={latestUpdateByDealId}
           onDealWon={handleDealWon}
           onRequestCreateDisposal={openDisposalForm}
-          onInstructionCreated={(deal) => setNewInstructionDeal(deal)}
           hideBoardTitle={hideBoardTitle}
         />
       ) : (
@@ -195,39 +180,7 @@ export function WorkspacePipelineBoardWrapper({
         accountSlug={accountSlug}
         onClose={() => setPromptDeal(null)}
         onRecorded={() => router.refresh()}
-        onCreateDisposal={(deal) => {
-          setPromptDeal(null);
-          openDisposalForm(deal);
-        }}
       />
-
-      <AlertDialog
-        open={Boolean(newInstructionDeal)}
-        onOpenChange={(open) => {
-          if (!open) setNewInstructionDeal(null);
-        }}
-      >
-        <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Create a disposal?</AlertDialogTitle>
-            <AlertDialogDescription className="text-[var(--workspace-shell-text-muted)]">
-              {newInstructionDeal
-                ? `Build a disposal from “${instructionTitle(newInstructionDeal)}” now. It is filled in from the instruction (address, type, size, asking terms and client) and stays linked, so marketing, viewings and the register stay connected.`
-                : null}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Not now</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (newInstructionDeal) openDisposalForm(newInstructionDeal);
-              }}
-            >
-              Create disposal
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

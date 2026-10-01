@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, useTransition } from 'react';
 
-import { UserPlus } from 'lucide-react';
+import { ShieldCheck, UserPlus } from 'lucide-react';
 
 import {
   AlertDialog,
@@ -31,6 +31,7 @@ import {
   createProjectGuestInviteAction,
   listProjectGuestsAction,
   revokeProjectGuestAction,
+  updateProjectGuestPermissionsAction,
 } from '~/lib/projects/project-guests-actions';
 import type {
   ProjectGuest,
@@ -41,7 +42,87 @@ const DEFAULT_PERMISSIONS: ProjectGuestPermissions = {
   comment: true,
   create_task: true,
   edit_own_task: true,
+  edit_canvas: false,
 };
+
+const PERMISSION_OPTIONS: Array<{
+  key: keyof ProjectGuestPermissions;
+  label: string;
+  summary: string;
+  hint: string;
+}> = [
+  {
+    key: 'comment',
+    label: 'Comment',
+    summary: 'comment',
+    hint: 'On tasks and canvas cards',
+  },
+  {
+    key: 'create_task',
+    label: 'Create tasks',
+    summary: 'create tasks',
+    hint: 'Add tasks to the project',
+  },
+  {
+    key: 'edit_own_task',
+    label: 'Edit own tasks',
+    summary: 'edit own tasks',
+    hint: 'Only tasks they created',
+  },
+  {
+    key: 'edit_canvas',
+    label: 'Edit the canvas',
+    summary: 'edit the canvas',
+    hint: 'Add and change notes, text, drawings, images and files',
+  },
+];
+
+function summarisePermissions(permissions: ProjectGuestPermissions) {
+  const granted = PERMISSION_OPTIONS.filter(
+    (option) => permissions[option.key],
+  ).map((option) => option.summary);
+  return granted.length > 0 ? `Can ${granted.join(', ')}` : 'View only';
+}
+
+function PermissionChecklist({
+  value,
+  onChange,
+}: {
+  value: ProjectGuestPermissions;
+  onChange: (next: ProjectGuestPermissions) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
+        Permissions
+      </p>
+      {PERMISSION_OPTIONS.map(({ key, label, hint }) => (
+        <label
+          key={key}
+          className="flex items-start gap-2 text-sm text-[var(--workspace-shell-text)]"
+        >
+          <Checkbox
+            className="mt-0.5"
+            checked={value[key]}
+            onCheckedChange={(checked) =>
+              onChange({ ...value, [key]: checked === true })
+            }
+          />
+          <span>
+            {label}
+            <span className="block text-xs text-[var(--workspace-shell-text-muted)]">
+              {hint}
+            </span>
+          </span>
+        </label>
+      ))}
+      <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+        Guests can always view the board and canvas. They never see clients,
+        contacts or finances.
+      </p>
+    </div>
+  );
+}
 
 function statusPillClass(status: ProjectGuest['status']) {
   switch (status) {
@@ -67,6 +148,9 @@ export function ProjectGuestsPanel(props: {
   const [permissions, setPermissions] =
     useState<ProjectGuestPermissions>(DEFAULT_PERMISSIONS);
   const [revokeTarget, setRevokeTarget] = useState<ProjectGuest | null>(null);
+  const [editTarget, setEditTarget] = useState<ProjectGuest | null>(null);
+  const [editPermissions, setEditPermissions] =
+    useState<ProjectGuestPermissions>(DEFAULT_PERMISSIONS);
   const [pending, startTransition] = useTransition();
 
   const refresh = useCallback(async () => {
@@ -126,7 +210,8 @@ export function ProjectGuestsPanel(props: {
         </p>
       ) : visible.length === 0 ? (
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          No guests yet. Invite someone to comment and add tasks on this board.
+          No guests yet. Invite someone to view, comment on and (if you allow
+          it) edit this project.
         </p>
       ) : (
         <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
@@ -144,16 +229,32 @@ export function ProjectGuestsPanel(props: {
                 >
                   {guest.status}
                 </span>
+                <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                  {summarisePermissions(guest.permissions)}
+                </p>
               </div>
               {props.canManage && guest.status !== 'revoked' ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-red-600 hover:text-red-700"
-                  onClick={() => setRevokeTarget(guest)}
-                >
-                  Revoke
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setEditPermissions(guest.permissions);
+                      setEditTarget(guest);
+                    }}
+                  >
+                    <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
+                    Permissions
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => setRevokeTarget(guest)}
+                  >
+                    Revoke
+                  </Button>
+                </div>
               ) : null}
             </li>
           ))}
@@ -177,34 +278,10 @@ export function ProjectGuestsPanel(props: {
                 className="mt-1 border-[color:var(--workspace-shell-border)]"
               />
             </div>
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
-                Permissions
-              </p>
-              {(
-                [
-                  ['comment', 'Comment on tasks'],
-                  ['create_task', 'Create tasks'],
-                  ['edit_own_task', 'Edit own tasks'],
-                ] as const
-              ).map(([key, label]) => (
-                <label
-                  key={key}
-                  className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]"
-                >
-                  <Checkbox
-                    checked={permissions[key]}
-                    onCheckedChange={(checked) =>
-                      setPermissions((prev) => ({
-                        ...prev,
-                        [key]: checked === true,
-                      }))
-                    }
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
+            <PermissionChecklist
+              value={permissions}
+              onChange={setPermissions}
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setInviteOpen(false)}>
@@ -253,6 +330,67 @@ export function ProjectGuestsPanel(props: {
               }}
             >
               {pending ? 'Sending…' : 'Send invite'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(editTarget)}
+        onOpenChange={(open) => {
+          if (!open) setEditTarget(null);
+        }}
+      >
+        <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Guest permissions</DialogTitle>
+            <p className="truncate text-sm text-[var(--workspace-shell-text-muted)]">
+              {editTarget?.invitedEmail}
+            </p>
+          </DialogHeader>
+          <PermissionChecklist
+            value={editPermissions}
+            onChange={setEditPermissions}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={
+                pending || !Object.values(editPermissions).some(Boolean)
+              }
+              onClick={() => {
+                if (!editTarget) return;
+                startTransition(async () => {
+                  try {
+                    const result = await updateProjectGuestPermissionsAction({
+                      accountId: props.accountId,
+                      accountSlug: props.accountSlug,
+                      projectId: props.projectId,
+                      guestId: editTarget.id,
+                      permissions: editPermissions,
+                    });
+                    setGuests((prev) =>
+                      prev.map((guest) =>
+                        guest.id === editTarget.id
+                          ? { ...guest, permissions: result.permissions }
+                          : guest,
+                      ),
+                    );
+                    toast.success('Permissions updated');
+                    setEditTarget(null);
+                  } catch (e) {
+                    toast.error(
+                      e instanceof Error
+                        ? e.message
+                        : 'Failed to update permissions',
+                    );
+                  }
+                });
+              }}
+            >
+              {pending ? 'Saving…' : 'Save permissions'}
             </Button>
           </DialogFooter>
         </DialogContent>

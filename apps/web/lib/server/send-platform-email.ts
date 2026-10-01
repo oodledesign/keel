@@ -30,6 +30,7 @@ export const PLATFORM_EMAIL_TYPES = [
   'commercial_match_digest',
   'commercial_circulation',
   'commercial_board_notify',
+  'commercial_availability_report',
   'user_signup',
   'invite_accepted',
   'meeting_notes',

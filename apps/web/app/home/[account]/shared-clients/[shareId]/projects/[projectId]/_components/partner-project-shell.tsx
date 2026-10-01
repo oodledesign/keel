@@ -14,6 +14,7 @@ const PARTNER_PERMISSIONS: ProjectGuestPermissions = {
   create_task: true,
   edit_own_task: true,
   comment: true,
+  edit_canvas: false,
 };
 
 export function PartnerProjectShell({

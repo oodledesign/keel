@@ -158,6 +158,7 @@ async function ContentReviewSectionPage({
           currentKey={sectionKey}
           observations={extras.observations}
           phraseBankCount={extras.phraseBankCount}
+          coverPhotoDocId={extras.reportDetails.coverPhotoDocId}
         />
       </div>
     </PageBody>

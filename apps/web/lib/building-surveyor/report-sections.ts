@@ -1,4 +1,7 @@
-import type { ConditionRating } from './condition-rating';
+import {
+  type ConditionRating,
+  sectionConditionRating,
+} from './condition-rating';
 import {
   BUILDING_SURVEY_SECTIONS,
   buildingSurveySectionByKey,
@@ -194,9 +197,11 @@ export function htmlFromObservations(
       .filter(Boolean)
       .join('\n');
 
-    const rating = observations.find(
-      (item) => item.sectionKey === section.key && item.conditionRating,
-    )?.conditionRating;
+    const rating = sectionConditionRating(
+      observations
+        .filter((item) => item.sectionKey === section.key)
+        .map((item) => item.conditionRating),
+    );
     const ratingAttr = rating ? ` data-rating="${escapeHtml(rating)}"` : '';
 
     return `<h2 data-section="${section.key}" data-rics="${escapeHtml(section.ricsCode)}"${ratingAttr}>${escapeHtml(surveySectionDisplayLabel(section))}</h2>\n${

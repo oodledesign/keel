@@ -141,6 +141,8 @@ async function SurveyHubPage({ params }: SurveyHubPageProps) {
           flood={extras.flood}
           surveyLevel={extras.surveyLevel}
           reportDetails={extras.reportDetails}
+          coverDefaultUrl={extras.coverDefaultUrl}
+          coverPhotoUrl={extras.coverPhotoUrl}
           canEditDetails={canEditProposals && extras.isDraft}
           deals={deals}
           canEditClient={canEditProposals && proposal.status === 'draft'}

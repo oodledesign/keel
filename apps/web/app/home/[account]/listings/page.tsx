@@ -81,6 +81,7 @@ async function DisposalsListBody({
         unassignedCount={data.unassignedCount}
         canEditDisposals={data.canEditDisposals}
         canUseDisposalsAi={data.canUseDisposalsAi}
+        canManageReports={data.canManageReports}
       />
     </DisposalAccessProvider>
   );

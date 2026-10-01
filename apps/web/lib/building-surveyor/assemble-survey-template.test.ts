@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { assembleSurveyReportFromTemplate } from './assemble-survey-template';
+import {
+  assembleSurveyReportFromTemplate,
+  mergeValuesFromSurvey,
+} from './assemble-survey-template';
 import { BUILDING_SURVEY_SECTIONS } from './rics-catalogue';
 import { systemSurveyTemplate } from './survey-template';
 
@@ -142,5 +145,28 @@ describe('assembleSurveyReportFromTemplate', () => {
     );
     expect(l2.blocks.some((block) => block.ricsCode === 'J1')).toBe(false);
     expect(l2.blocks.some((block) => block.ricsCode === 'D2')).toBe(true);
+  });
+});
+
+describe('drone in section A', () => {
+  const textOf = (droneUsed: boolean | null) =>
+    assembleSurveyReportFromTemplate({
+      template: systemSurveyTemplate('rics_hss_l2'),
+      merge: mergeValuesFromSurvey({ droneUsed }),
+      observations: [],
+    })
+      .blocks.map((block) => (block.type === 'text' ? block.html : ''))
+      .join('\n');
+
+  it('records that a drone was used', () => {
+    const html = textOf(true);
+    expect(html).toContain('Drone used during the inspection');
+    expect(html).toContain('Yes. A drone was used');
+  });
+
+  it('records that no drone was used', () => {
+    expect(textOf(false)).toMatch(
+      /Drone used during the inspection<\/h4><p>No\.<\/p>/,
+    );
   });
 });

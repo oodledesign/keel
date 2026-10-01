@@ -6,16 +6,14 @@ import { getLogger } from '@kit/shared/logger';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { buildDisposalsScheduleSheets } from '~/lib/commercial/disposals-schedule';
-import { loadDisposalsScheduleInput } from '~/lib/commercial/load-disposals-schedule.server';
+import {
+  loadDisposalsScheduleInput,
+  resolveScheduleAccess,
+} from '~/lib/commercial/load-disposals-schedule.server';
 import { buildXlsxWorkbook } from '~/lib/spreadsheet/xlsx-workbook';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-const EXCLUDED_ROLES = new Set(['client', 'contractor']);
 
 /**
  * Full disposals schedule (all statuses) as an xlsx workbook with a Disposals
@@ -23,42 +21,17 @@ const EXCLUDED_ROLES = new Set(['client', 'contractor']);
  */
 export async function GET(request: NextRequest) {
   const accountId = request.nextUrl.searchParams.get('accountId');
-
-  if (!accountId || !UUID_PATTERN.test(accountId)) {
-    return new Response('A valid accountId is required', { status: 400 });
-  }
-
   const client = getSupabaseServerClient() as SupabaseClient;
-  const {
-    data: { user },
-  } = await client.auth.getUser();
-
-  if (!user) {
-    return new Response('Sign in required', { status: 401 });
-  }
-
-  const [{ data: membership }, { data: account }] = await Promise.all([
-    client
-      .from('accounts_memberships')
-      .select('account_role')
-      .eq('account_id', accountId)
-      .eq('user_id', user.id)
-      .maybeSingle(),
-    client.from('accounts').select('slug').eq('id', accountId).maybeSingle(),
-  ]);
-
-  const role = membership?.account_role as string | undefined;
-  if (!role || EXCLUDED_ROLES.has(role) || !account?.slug) {
-    return new Response('Forbidden', { status: 403 });
-  }
+  const access = await resolveScheduleAccess(client, accountId);
+  if (!access.ok) return access.response;
 
   try {
     const input = await loadDisposalsScheduleInput({
       client,
-      accountId,
-      accountSlug: account.slug,
-      userId: user.id,
-      canSeeRestricted: role === 'owner' || role === 'admin',
+      accountId: accountId!,
+      accountSlug: access.accountSlug,
+      userId: access.userId,
+      canSeeRestricted: access.canSeeRestricted,
     });
 
     const workbook = buildXlsxWorkbook(buildDisposalsScheduleSheets(input));

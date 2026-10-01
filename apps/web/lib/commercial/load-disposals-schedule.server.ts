@@ -151,3 +151,65 @@ export async function loadDisposalsScheduleInput(params: {
     clientNames,
   };
 }
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const EXCLUDED_ROLES = new Set(['client', 'contractor']);
+
+export type ScheduleAccess =
+  | {
+      ok: true;
+      userId: string;
+      accountSlug: string;
+      canSeeRestricted: boolean;
+    }
+  | { ok: false; response: Response };
+
+/**
+ * Who may download disposals data: signed-in members of the workspace except
+ * clients and contractors. Owners and admins also see restricted disposals.
+ */
+export async function resolveScheduleAccess(
+  client: SupabaseClient,
+  accountId: string | null | undefined,
+): Promise<ScheduleAccess> {
+  if (!accountId || !UUID_PATTERN.test(accountId)) {
+    return {
+      ok: false,
+      response: new Response('A valid accountId is required', { status: 400 }),
+    };
+  }
+
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  if (!user) {
+    return {
+      ok: false,
+      response: new Response('Sign in required', { status: 401 }),
+    };
+  }
+
+  const [{ data: membership }, { data: account }] = await Promise.all([
+    client
+      .from('accounts_memberships')
+      .select('account_role')
+      .eq('account_id', accountId)
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    client.from('accounts').select('slug').eq('id', accountId).maybeSingle(),
+  ]);
+
+  const role = membership?.account_role as string | undefined;
+  if (!role || EXCLUDED_ROLES.has(role) || !account?.slug) {
+    return { ok: false, response: new Response('Forbidden', { status: 403 }) };
+  }
+
+  return {
+    ok: true,
+    userId: user.id,
+    accountSlug: account.slug,
+    canSeeRestricted: role === 'owner' || role === 'admin',
+  };
+}

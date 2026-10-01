@@ -48,6 +48,7 @@ import {
   type PhaseTemplateListItem,
   type PhaseTemplatePhase,
   PhaseTemplatePhaseSchema,
+  type ReorderPhaseTasksInput,
   type ReorderPhasesInput,
   type SavePhasePageDocInput,
   type SaveProjectAsPhaseTemplateInput,
@@ -621,6 +622,49 @@ class ProjectPhasesService {
     return mapJobBoardTask(data as Record<string, unknown>);
   }
 
+  /**
+   * Puts `taskIds` in a phase in that order. Tasks dragged in from another
+   * phase move across (with their subtasks), so one call covers a reorder and
+   * a move.
+   */
+  async reorderPhaseTasks(input: ReorderPhaseTasksInput) {
+    await this.ensureUserAndPermission(input.accountId, 'jobs.edit');
+    await this.verifyJob(input.accountId, input.jobId);
+    if (input.phaseId) {
+      await this.verifyPhase(input.accountId, input.jobId, input.phaseId);
+    }
+
+    const { data: owned, error: ownedErr } = await this.db
+      .from('tasks')
+      .select('id')
+      .eq('project_id', input.jobId)
+      .in('id', input.taskIds);
+    if (ownedErr) this.throwErr(ownedErr);
+    const ownedIds = new Set(
+      ((owned ?? []) as Array<{ id: string }>).map((row) => row.id),
+    );
+    if (input.taskIds.some((id) => !ownedIds.has(id))) {
+      throw new Error('Task does not belong to this job');
+    }
+
+    await Promise.all(
+      input.taskIds.map(async (taskId, index) => {
+        const { error } = await this.db
+          .from('tasks')
+          .update({ phase_id: input.phaseId, sort_order: index })
+          .eq('id', taskId)
+          .eq('project_id', input.jobId);
+        if (error) this.throwErr(error);
+        const { error: cascadeErr } = await this.db
+          .from('tasks')
+          .update({ phase_id: input.phaseId })
+          .eq('parent_task_id', taskId)
+          .eq('project_id', input.jobId);
+        if (cascadeErr) this.throwErr(cascadeErr);
+      }),
+    );
+  }
+
   async listJobBoard(input: ListJobBoardInput): Promise<JobBoardResult> {
     await this.ensureUser();
 
@@ -895,7 +939,10 @@ class ProjectPhasesService {
       job: { id: job.id, title: job.title, name: job.name, status: job.status },
       client: null,
       assignees: [],
-      contactAssignees: [],
+      contactAssignees: await this.loadGuestContactAssignees(
+        input.accountId,
+        rows,
+      ),
       members: [],
       phases: this.buildPhaseListItems(
         (phaseRows ?? []) as Array<Record<string, unknown>>,
@@ -910,6 +957,49 @@ class ProjectPhasesService {
         rows.map((task, index) => toProgressInput(task, `job-${index}`)),
       ).progressPct,
     };
+  }
+
+  /**
+   * Who tasks are handed to, as a guest may see it: the name and picture of
+   * contacts assigned to this project's tasks. Never email, phone or anything
+   * else from the contact, and no other contacts.
+   */
+  private async loadGuestContactAssignees(
+    accountId: string,
+    tasks: ProgressTaskRow[],
+  ) {
+    const ids = [
+      ...new Set(
+        tasks
+          .map(
+            (task) =>
+              (task as { assignee_contact_id?: string | null })
+                .assignee_contact_id,
+          )
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    if (ids.length === 0) return [];
+
+    const { data, error } = await this.adminDb
+      .from('contacts')
+      .select('id, full_name, first_name, last_name, picture_url')
+      .eq('account_id', accountId)
+      .in('id', ids);
+    if (error) this.throwErr(error);
+
+    return ((data ?? []) as Array<Record<string, unknown>>).map((row) => {
+      const composed = [row.first_name, row.last_name]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+      return {
+        id: String(row.id),
+        name: (row.full_name as string | null)?.trim() || composed || null,
+        email: null,
+        picture_url: (row.picture_url as string | null) ?? null,
+      };
+    });
   }
 
   async ensurePhasePage(input: EnsurePhasePageInput) {
