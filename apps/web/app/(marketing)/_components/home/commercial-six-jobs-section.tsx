@@ -11,7 +11,7 @@ import {
 import Link from 'next/link';
 
 import { useReducedMotion } from 'framer-motion';
-import { ArrowLeft, ArrowRight, ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
@@ -125,12 +125,12 @@ export function CommercialSixJobsSection() {
           </h2>
         </div>
 
-        {/* Tab switcher navigation bar */}
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-[color:var(--workspace-shell-border)] pb-4">
+        <div className="grid gap-8 lg:grid-cols-12 lg:gap-12">
           <div
             role="tablist"
             aria-label="Six jobs"
-            className="flex flex-wrap items-center gap-1.5"
+            aria-orientation="vertical"
+            className="flex gap-1 overflow-x-auto lg:sticky lg:top-24 lg:col-span-3 lg:flex-col lg:gap-0 lg:self-start lg:overflow-visible"
           >
             {COMMERCIAL_SIX_JOBS_PANELS.map((panel, idx) => {
               const isSelected = activeIndex === idx;
@@ -145,128 +145,120 @@ export function CommercialSixJobsSection() {
                   tabIndex={isSelected ? 0 : -1}
                   onClick={() => goTo(idx)}
                   onKeyDown={(e) => {
-                    if (e.key === 'ArrowRight') {
+                    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
                       e.preventDefault();
                       next();
-                    } else if (e.key === 'ArrowLeft') {
+                    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
                       e.preventDefault();
                       prev();
                     }
                   }}
                   className={cn(
-                    'rounded-full px-4 py-2 text-xs font-medium transition-colors',
+                    'flex shrink-0 items-baseline gap-3 py-2 text-left transition-colors lg:border-t lg:border-[color:var(--workspace-shell-border)] lg:py-3',
                     isSelected
-                      ? 'bg-[var(--ozer-plum-950)] text-[var(--ozer-cream-50)]'
-                      : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+                      ? 'text-[var(--workspace-shell-text)]'
+                      : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
                   )}
                 >
-                  {panel.label}
+                  <span
+                    className={cn(
+                      'text-[0.75rem] tabular-nums',
+                      isSelected && 'text-[var(--ozer-accent)]',
+                    )}
+                  >
+                    {String(idx + 1).padStart(2, '0')}
+                  </span>
+                  <span
+                    className={cn(
+                      'text-base whitespace-nowrap lg:text-lg',
+                      isSelected ? 'font-semibold' : 'font-normal',
+                    )}
+                  >
+                    {panel.label}
+                  </span>
                 </button>
               );
             })}
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-[var(--workspace-shell-text-muted)] tabular-nums">
-              {String(activeIndex + 1).padStart(2, '0')} /{' '}
-              {String(COMMERCIAL_SIX_JOBS_PANELS.length).padStart(2, '0')}
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={prev}
-                aria-label="Previous job"
-                className="flex size-8 items-center justify-center rounded-full border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
-              >
-                <ArrowLeft className="size-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={next}
-                aria-label="Next job"
-                className="flex size-8 items-center justify-center rounded-full border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
-              >
-                <ArrowRight className="size-3.5" />
-              </button>
+          <div className="lg:col-span-9">
+            {/* Feature Stage: Fixed min-height container preventing layout shifts */}
+            <div
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              className={cn(
+                'relative min-h-[580px] overflow-hidden rounded-3xl border p-6 transition-colors duration-500 sm:p-10 md:min-h-[520px] lg:p-12',
+                activePanel.bgStyle.bg,
+                activePanel.bgStyle.border,
+                activePanel.bgStyle.text,
+              )}
+            >
+              {COMMERCIAL_SIX_JOBS_PANELS.map((panel, idx) => {
+                const isActive = idx === activeIndex;
+
+                return (
+                  <div
+                    key={panel.id}
+                    id={`panel-${panel.id}`}
+                    role="tabpanel"
+                    aria-labelledby={`tab-${panel.id}`}
+                    aria-hidden={!isActive}
+                    className={cn(
+                      'w-full transition-opacity duration-300',
+                      isActive ? 'block opacity-100' : 'hidden opacity-0',
+                    )}
+                  >
+                    <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-12 lg:gap-12">
+                      {/* Left Column: Copy */}
+                      <div className="lg:col-span-5">
+                        <p
+                          className={cn(
+                            'text-xs font-bold tracking-wider tabular-nums',
+                            panel.bgStyle.mutedText,
+                          )}
+                        >
+                          {String(idx + 1).padStart(2, '0')} / {panel.label}
+                        </p>
+                        <h3 className="font-heading mt-2 text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
+                          {panel.h3}
+                        </h3>
+                        <p
+                          className={cn(
+                            'mt-3 text-sm leading-relaxed sm:text-base',
+                            panel.bgStyle.mutedText,
+                          )}
+                        >
+                          {panel.oneLine}
+                        </p>
+
+                        {panel.bullets.length > 0 && (
+                          <ul className="mt-6 space-y-2.5">
+                            {panel.bullets.map((bullet) => (
+                              <li
+                                key={bullet}
+                                className="flex items-start gap-2.5 text-xs font-medium sm:text-sm"
+                              >
+                                <span
+                                  className={cn(
+                                    'mt-1.5 size-1.5 shrink-0 rounded-full',
+                                    panel.bgStyle.bulletDot,
+                                  )}
+                                />
+                                <span>{bullet}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+
+                      {/* Right Column: Exactly one visual */}
+                      <div className="lg:col-span-7">{renderVisual(panel)}</div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        </div>
-
-        {/* Feature Stage: Fixed min-height container preventing layout shifts */}
-        <div
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-          className={cn(
-            'relative min-h-[580px] overflow-hidden rounded-3xl border p-6 transition-colors duration-500 sm:p-10 md:min-h-[520px] lg:p-12',
-            activePanel.bgStyle.bg,
-            activePanel.bgStyle.border,
-            activePanel.bgStyle.text,
-          )}
-        >
-          {COMMERCIAL_SIX_JOBS_PANELS.map((panel, idx) => {
-            const isActive = idx === activeIndex;
-
-            return (
-              <div
-                key={panel.id}
-                id={`panel-${panel.id}`}
-                role="tabpanel"
-                aria-labelledby={`tab-${panel.id}`}
-                aria-hidden={!isActive}
-                className={cn(
-                  'w-full transition-opacity duration-300',
-                  isActive ? 'block opacity-100' : 'hidden opacity-0',
-                )}
-              >
-                <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-12 lg:gap-12">
-                  {/* Left Column: Copy */}
-                  <div className="lg:col-span-5">
-                    <p
-                      className={cn(
-                        'text-xs font-bold tracking-wider uppercase',
-                        panel.bgStyle.mutedText,
-                      )}
-                    >
-                      {panel.label}
-                    </p>
-                    <h3 className="font-heading mt-2 text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
-                      {panel.h3}
-                    </h3>
-                    <p
-                      className={cn(
-                        'mt-3 text-sm leading-relaxed sm:text-base',
-                        panel.bgStyle.mutedText,
-                      )}
-                    >
-                      {panel.oneLine}
-                    </p>
-
-                    {panel.bullets.length > 0 && (
-                      <ul className="mt-6 space-y-2.5">
-                        {panel.bullets.map((bullet) => (
-                          <li
-                            key={bullet}
-                            className="flex items-start gap-2.5 text-xs font-medium sm:text-sm"
-                          >
-                            <span
-                              className={cn(
-                                'mt-1.5 size-1.5 shrink-0 rounded-full',
-                                panel.bgStyle.bulletDot,
-                              )}
-                            />
-                            <span>{bullet}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-
-                  {/* Right Column: Exactly one visual */}
-                  <div className="lg:col-span-7">{renderVisual(panel)}</div>
-                </div>
-              </div>
-            );
-          })}
         </div>
 
         {/* Section Footer */}
