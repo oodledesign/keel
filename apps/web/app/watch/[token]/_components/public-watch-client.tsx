@@ -22,6 +22,8 @@ import {
 
 type Props = {
   video: VideoRow;
+  /** Authorised media endpoint for the timeline player. */
+  mediaUrl: string;
   config: VideoPlayerConfigValues;
   useTimelinePlayer: boolean;
   streamMatchesPublishedEdit: boolean;
@@ -109,7 +111,7 @@ export function PublicWatchClient(props: Props) {
         {playTimeline ? (
           <PublicTimelineWatchPlayer
             ref={timelineRef}
-            token={props.video.public_share_token!}
+            mediaUrl={props.mediaUrl}
             aspectRatio={props.aspectRatio}
             config={props.config}
             onUnsupported={onMasterUnsupported}

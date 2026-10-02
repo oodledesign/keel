@@ -29,7 +29,8 @@ type MediaPayload = {
 };
 
 type Props = {
-  token: string;
+  /** Authorised media endpoint for this video (token- or folder-gated). */
+  mediaUrl: string;
   aspectRatio: string;
   config: VideoPlayerConfigValues;
   onUnsupported?: () => void;
@@ -63,7 +64,7 @@ export const PublicTimelineWatchPlayer = forwardRef<
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetch(`/api/watch/${props.token}/media`, {
+    void fetch(props.mediaUrl, {
       signal: controller.signal,
     })
       .then(async (res) => {
@@ -86,7 +87,7 @@ export const PublicTimelineWatchPlayer = forwardRef<
         setError(err instanceof Error ? err.message : 'Could not load video');
       });
     return () => controller.abort();
-  }, [props.token]);
+  }, [props.mediaUrl]);
 
   if (error) {
     return (

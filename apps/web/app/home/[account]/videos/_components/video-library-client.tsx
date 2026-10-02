@@ -6,7 +6,14 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { Grid3X3, List, Plus, Search, SlidersHorizontal } from 'lucide-react';
+import {
+  Grid3X3,
+  List,
+  Plus,
+  Search,
+  Share2,
+  SlidersHorizontal,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -35,6 +42,7 @@ import { CreateFolderDialog } from './create-folder-dialog';
 import { FolderSidebar } from './folder-sidebar';
 import { MoveToFolderDialog } from './move-to-folder-dialog';
 import { RenameVideoDialog } from './rename-video-dialog';
+import { ShareFolderDialog } from './share-folder-dialog';
 import { VideoCard } from './video-card';
 import { VideoListRow } from './video-list-row';
 import { VideoPreviewDialog } from './video-preview-dialog';
@@ -93,6 +101,7 @@ export function VideoLibraryClient(props: {
     null,
   );
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [shareFolderOpen, setShareFolderOpen] = useState(false);
   const notifiedReady = useRef(new Set<string>());
 
   const encodingVideoIds = useMemo(
@@ -317,6 +326,12 @@ export function VideoLibraryClient(props: {
     }
   };
 
+  const selectedFolder =
+    selectedFolderId == null
+      ? null
+      : (props.folders.find((folder) => folder.id === selectedFolderId) ??
+        null);
+
   const selectedFolderName =
     selectedFolderId == null
       ? null
@@ -349,6 +364,19 @@ export function VideoLibraryClient(props: {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {selectedFolder ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-2"
+              onClick={() => setShareFolderOpen(true)}
+            >
+              <Share2 className="h-4 w-4" />
+              {selectedFolder.public_share_enabled
+                ? 'Folder shared'
+                : 'Share folder'}
+            </Button>
+          ) : null}
           <Button type="button" variant="outline" asChild className="gap-2">
             <Link href={presetsPath}>
               <SlidersHorizontal className="h-4 w-4" />
@@ -517,6 +545,13 @@ export function VideoLibraryClient(props: {
         parentFolderName={selectedFolderName}
         onOpenChange={setCreateFolderOpen}
         onConfirm={createFolder}
+      />
+
+      <ShareFolderDialog
+        open={shareFolderOpen && selectedFolder != null}
+        folder={selectedFolder}
+        onOpenChange={setShareFolderOpen}
+        onChanged={() => router.refresh()}
       />
 
       <MoveToFolderDialog

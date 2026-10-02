@@ -2,6 +2,8 @@ import 'server-only';
 
 import { cache } from 'react';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import type { VideoPlayerConfigValues } from '../player-config-types';
@@ -29,6 +31,89 @@ export type PublicVideoPageData = {
   summary: string | null;
 };
 
+/**
+ * Everything the public watch UI needs for one video row. Callers are
+ * responsible for having already authorised access (own share token, or a
+ * shared folder that contains the video).
+ */
+export async function buildPublicVideoPageData(
+  admin: SupabaseClient,
+  baseVideo: VideoRow,
+): Promise<PublicVideoPageData> {
+  const analytics = await syncVideoAnalyticsIfStale(admin, {
+    id: baseVideo.id,
+    account_id: baseVideo.account_id,
+    bunny_video_id: baseVideo.bunny_video_id,
+    bunny_library_id: baseVideo.bunny_library_id,
+    created_at: baseVideo.created_at,
+    status: baseVideo.status,
+    analytics_synced_at: baseVideo.analytics_synced_at ?? null,
+    view_count: baseVideo.view_count,
+    watch_time_seconds: baseVideo.watch_time_seconds,
+    engagement_score: baseVideo.engagement_score,
+  });
+
+  const video: VideoRow = {
+    ...baseVideo,
+    view_count: analytics.view_count,
+    watch_time_seconds: analytics.watch_time_seconds,
+    engagement_score: analytics.engagement_score,
+    analytics_synced_at: analytics.analytics_synced_at,
+  };
+
+  const resolved = await resolveEffectivePlayerConfig(
+    admin,
+    video.account_id,
+    video.id,
+  );
+
+  const cdnHostname = await resolveBunnyCdnHostname(video.bunny_library_id);
+  const thumbnail_url =
+    resolveVideoThumbnailUrl(video, cdnHostname) ?? video.thumbnail_url;
+  const thumbnail_candidates = resolveVideoThumbnailCandidates(
+    { ...video, thumbnail_url },
+    cdnHostname,
+  );
+
+  const useTimelinePlayer = Boolean(
+    video.has_master &&
+    video.published_timeline &&
+    Number(video.published_revision ?? 0) > 0,
+  );
+  const streamMatchesPublishedEdit =
+    Number(video.published_revision ?? 0) > 0 &&
+    Number(video.baked_revision ?? 0) === Number(video.published_revision ?? 0);
+
+  const { data: transcript } = await admin
+    .from('video_transcripts')
+    .select('plain_text, status')
+    .eq('video_id', video.id)
+    .maybeSingle();
+
+  const transcriptPlainText =
+    transcript?.status === 'ready'
+      ? String(transcript.plain_text ?? '').trim() || null
+      : null;
+
+  return {
+    video: {
+      ...video,
+      thumbnail_url,
+      thumbnail_candidates,
+    },
+    config: resolved.config,
+    useTimelinePlayer,
+    streamMatchesPublishedEdit,
+    chapters: normalizeVideoChapters(video.chapters),
+    publishedAt:
+      (video.published_at as string | null | undefined) ??
+      video.created_at ??
+      null,
+    transcriptPlainText,
+    summary: normalizeVideoSummary(video.summary),
+  };
+}
+
 export const loadPublicVideoByToken = cache(
   async function loadPublicVideoByToken(
     token: string,
@@ -50,79 +135,6 @@ export const loadPublicVideoByToken = cache(
       return null;
     }
 
-    const baseVideo = data as VideoRow;
-    const analytics = await syncVideoAnalyticsIfStale(admin, {
-      id: baseVideo.id,
-      account_id: baseVideo.account_id,
-      bunny_video_id: baseVideo.bunny_video_id,
-      bunny_library_id: baseVideo.bunny_library_id,
-      created_at: baseVideo.created_at,
-      status: baseVideo.status,
-      analytics_synced_at: baseVideo.analytics_synced_at ?? null,
-      view_count: baseVideo.view_count,
-      watch_time_seconds: baseVideo.watch_time_seconds,
-      engagement_score: baseVideo.engagement_score,
-    });
-
-    const video: VideoRow = {
-      ...baseVideo,
-      view_count: analytics.view_count,
-      watch_time_seconds: analytics.watch_time_seconds,
-      engagement_score: analytics.engagement_score,
-      analytics_synced_at: analytics.analytics_synced_at,
-    };
-
-    const resolved = await resolveEffectivePlayerConfig(
-      admin,
-      video.account_id,
-      video.id,
-    );
-
-    const cdnHostname = await resolveBunnyCdnHostname(video.bunny_library_id);
-    const thumbnail_url =
-      resolveVideoThumbnailUrl(video, cdnHostname) ?? video.thumbnail_url;
-    const thumbnail_candidates = resolveVideoThumbnailCandidates(
-      { ...video, thumbnail_url },
-      cdnHostname,
-    );
-
-    const useTimelinePlayer = Boolean(
-      video.has_master &&
-      video.published_timeline &&
-      Number(video.published_revision ?? 0) > 0,
-    );
-    const streamMatchesPublishedEdit =
-      Number(video.published_revision ?? 0) > 0 &&
-      Number(video.baked_revision ?? 0) ===
-        Number(video.published_revision ?? 0);
-
-    const { data: transcript } = await admin
-      .from('video_transcripts')
-      .select('plain_text, status')
-      .eq('video_id', video.id)
-      .maybeSingle();
-
-    const transcriptPlainText =
-      transcript?.status === 'ready'
-        ? String(transcript.plain_text ?? '').trim() || null
-        : null;
-
-    return {
-      video: {
-        ...video,
-        thumbnail_url,
-        thumbnail_candidates,
-      },
-      config: resolved.config,
-      useTimelinePlayer,
-      streamMatchesPublishedEdit,
-      chapters: normalizeVideoChapters(video.chapters),
-      publishedAt:
-        (video.published_at as string | null | undefined) ??
-        video.created_at ??
-        null,
-      transcriptPlainText,
-      summary: normalizeVideoSummary(video.summary),
-    };
+    return buildPublicVideoPageData(admin, data as VideoRow);
   },
 );

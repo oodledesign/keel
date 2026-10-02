@@ -60,3 +60,40 @@ export async function requireVideoById(videoId: string) {
 
   return { error: null, client, user, video };
 }
+
+export async function requireVideoFolderById(folderId: string) {
+  const client = getSupabaseServerClient() as SupabaseClient;
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+
+  if (!user) {
+    return { error: 'UNAUTHORIZED' as const, client, user: null, folder: null };
+  }
+
+  const { data: folder, error } = await client
+    .from('video_folders')
+    .select('*')
+    .eq('id', folderId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!folder) {
+    return { error: 'NOT_FOUND' as const, client, user, folder: null };
+  }
+
+  const isMember = await userIsAccountMember(
+    client,
+    user.id,
+    folder.account_id as string,
+  );
+
+  if (!isMember) {
+    return { error: 'FORBIDDEN' as const, client, user, folder: null };
+  }
+
+  return { error: null, client, user, folder };
+}

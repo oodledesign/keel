@@ -49,6 +49,8 @@ export type VideoFolderRow = {
   account_id: string;
   name: string;
   parent_folder_id: string | null;
+  public_share_enabled?: boolean;
+  public_share_token?: string | null;
   created_at: string;
 };
 
