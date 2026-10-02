@@ -21,6 +21,17 @@ export const AdjustProjectRetainerBalanceSchema = z.object({
   reason: z.string().trim().max(200).optional(),
 });
 
+export const AdjustClientCreditsSchema = z.object({
+  accountId: z.string().uuid(),
+  projectId: z.string().uuid(),
+  delta: z
+    .number()
+    .int()
+    .min(-1_000_000)
+    .max(1_000_000)
+    .refine((value) => value !== 0, 'Amount cannot be zero'),
+});
+
 export const UndoTaskRetainerBurnSchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1),

@@ -29,6 +29,7 @@ import type {
 
 import {
   addCustomProjectRetainerServiceAction,
+  adjustClientCreditsAction,
   adjustProjectRetainerBalanceAction,
   loadProjectRetainerAction,
   replaceProjectRetainerServicesAction,
@@ -73,6 +74,7 @@ export function ProjectRetainerPanel({
   const [clientCredits, setClientCredits] =
     useState<ClientCreditSummary | null>(null);
   const [adjustBy, setAdjustBy] = useState('10');
+  const [clientAdjustBy, setClientAdjustBy] = useState('10');
   const [pending, startTransition] = useTransition();
   const [loading, setLoading] = useState(true);
 
@@ -212,6 +214,14 @@ export function ProjectRetainerPanel({
 
   function adjust(delta: number) {
     if (!canEdit || delta === 0) return;
+    // The server rejects removals that would take the balance below zero, and
+    // production masks that error message — so check here first.
+    if (delta < 0 && retainer && -delta > retainer.creditBalance) {
+      toast.error(
+        `Can't remove ${-delta} credits — this project only has ${retainer.creditBalance}.`,
+      );
+      return;
+    }
     startTransition(async () => {
       try {
         const data = await adjustProjectRetainerBalanceAction({
@@ -224,6 +234,35 @@ export function ProjectRetainerPanel({
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : 'Could not update balance',
+        );
+      }
+    });
+  }
+
+  function adjustClient(delta: number) {
+    if (!canEdit || delta === 0 || !clientCredits) return;
+    if (delta < 0 && -delta > clientCredits.balance) {
+      toast.error(
+        `Can't remove ${-delta} credits — the client only has ${clientCredits.balance}.`,
+      );
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const data = await adjustClientCreditsAction({
+          accountId,
+          projectId,
+          delta,
+        });
+        applyLoaded(data);
+        toast.success(
+          delta > 0 ? 'Client credits added' : 'Client credits removed',
+        );
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not update client credits',
         );
       }
     });
@@ -242,6 +281,7 @@ export function ProjectRetainerPanel({
   if (!retainer || !effective) return null;
 
   const step = Number(adjustBy);
+  const clientStep = Number(clientAdjustBy);
   const resetLabel =
     effective.inheritedFrom === 'client' || !clientId
       ? 'Reset to client / workspace'
@@ -290,7 +330,7 @@ export function ProjectRetainerPanel({
             project credits
           </span>
         </p>
-        {clientCredits && clientCredits.balance > 0 ? (
+        {clientCredits && (clientCredits.balance > 0 || canEdit) ? (
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             <span className="font-medium text-[var(--workspace-shell-text)]">
               {clientCredits.balance}
@@ -310,7 +350,7 @@ export function ProjectRetainerPanel({
       {canEdit ? (
         <div className="flex flex-wrap items-end gap-2">
           <div className="space-y-1">
-            <Label className="text-xs">Adjust by</Label>
+            <Label className="text-xs">Project credits: adjust by</Label>
             <Input
               type="number"
               min={1}
@@ -334,8 +374,63 @@ export function ProjectRetainerPanel({
             type="button"
             size="sm"
             variant="outline"
-            disabled={pending || !Number.isFinite(step) || step < 1}
+            disabled={
+              pending ||
+              !Number.isFinite(step) ||
+              step < 1 ||
+              retainer.creditBalance < 1
+            }
+            title={
+              retainer.creditBalance < 1
+                ? 'No credits to remove'
+                : step > retainer.creditBalance
+                  ? `Only ${retainer.creditBalance} credits available`
+                  : undefined
+            }
             onClick={() => adjust(-Math.round(step))}
+          >
+            Remove
+          </Button>
+        </div>
+      ) : null}
+
+      {canEdit && clientCredits ? (
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="space-y-1">
+            <Label className="text-xs">Client account credits: adjust by</Label>
+            <Input
+              type="number"
+              min={1}
+              className="h-8 w-24"
+              value={clientAdjustBy}
+              onChange={(event) => setClientAdjustBy(event.target.value)}
+            />
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={pending || !Number.isFinite(clientStep) || clientStep < 1}
+            onClick={() => adjustClient(Math.round(clientStep))}
+          >
+            Add
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={
+              pending ||
+              !Number.isFinite(clientStep) ||
+              clientStep < 1 ||
+              clientCredits.balance < 1
+            }
+            title={
+              clientCredits.balance < 1
+                ? 'No client credits to remove'
+                : undefined
+            }
+            onClick={() => adjustClient(-Math.round(clientStep))}
           >
             Remove
           </Button>

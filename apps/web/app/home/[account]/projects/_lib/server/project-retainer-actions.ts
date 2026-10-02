@@ -10,6 +10,7 @@ import { undoRetainerBurn } from '~/lib/retainers/apply-match';
 
 import {
   AddCustomProjectRetainerServiceSchema,
+  AdjustClientCreditsSchema,
   AdjustProjectRetainerBalanceSchema,
   LoadProjectRetainerSchema,
   ReplaceProjectRetainerServicesSchema,
@@ -45,6 +46,15 @@ export const adjustProjectRetainerBalanceAction = enhanceAction(
     return result;
   },
   { auth: true, schema: AdjustProjectRetainerBalanceSchema },
+);
+
+export const adjustClientCreditsAction = enhanceAction(
+  async (input) => {
+    const result = await getService().adjustClientCredits(input);
+    revalidatePath('/home/[account]/projects/[id]', 'page');
+    return result;
+  },
+  { auth: true, schema: AdjustClientCreditsSchema },
 );
 
 export const replaceProjectRetainerServicesAction = enhanceAction(

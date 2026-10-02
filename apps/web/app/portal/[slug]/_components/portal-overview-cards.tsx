@@ -54,7 +54,7 @@ export async function OverviewHeader({
   const credits = await creditsPromise;
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <div className="min-w-0">
         <h2 className="text-2xl font-semibold text-[var(--ozer-text-on-light)]">
           Welcome back, {displayName}

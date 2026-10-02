@@ -28,20 +28,22 @@ export function PortalOverviewCreditsChip({
   const nextSteps = portalCreditsNextSteps(balance, nextRenewalDate);
 
   return (
-    <div className="block shrink-0 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3 sm:min-w-[10.5rem]">
-      <Link href={creditsHref} className="block no-underline">
+    <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-2.5">
+      <Link href={creditsHref} className="block min-w-0 no-underline">
         <p className="text-[11px] font-medium tracking-wide text-[var(--ozer-text-on-light-muted)] uppercase">
           Available credits
         </p>
-        <p className="mt-1 text-2xl font-semibold text-[var(--ozer-text-on-light)] tabular-nums">
-          {balance}
-        </p>
-        <p className="mt-0.5 text-xs text-[var(--ozer-text-on-light-muted)]">
-          {portalCreditsResetCopy(nextRenewalDate)}
+        <p className="flex items-baseline gap-2">
+          <span className="text-2xl leading-tight font-semibold text-[var(--ozer-text-on-light)] tabular-nums">
+            {balance}
+          </span>
+          <span className="text-xs text-[var(--ozer-text-on-light-muted)]">
+            {portalCreditsResetCopy(nextRenewalDate)}
+          </span>
         </p>
       </Link>
       {nextSteps.topUp || nextSteps.billing ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           {nextSteps.topUp ? (
             <Button asChild size="sm" data-test="portal-overview-top-up">
               <Link href={creditsHref}>Top up</Link>

@@ -4,7 +4,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { requireUser } from '@kit/supabase/require-user';
 
-import { RETAINER_WORKSPACE_ROLES } from '~/lib/retainers/constants';
+import {
+  consumeClientCredits,
+  grantClientCredits,
+} from '~/lib/credits/client-credit-ledger';
+import {
+  RETAINER_EDIT_ROLES,
+  RETAINER_WORKSPACE_ROLES,
+} from '~/lib/retainers/constants';
 import {
   adjustProjectRetainerCredits,
   ensureProjectRetainer,
@@ -62,7 +69,7 @@ class ProjectRetainerService {
     if (!role || !RETAINER_WORKSPACE_ROLES.has(role)) {
       throw new Error('Forbidden');
     }
-    return { userId: auth.data.id };
+    return { userId: auth.data.id, role };
   }
 
   private async requireProject(accountId: string, projectId: string) {
@@ -75,6 +82,23 @@ class ProjectRetainerService {
     if (error) throw new Error(error.message);
     if (!project) throw new Error('Project not found or access denied');
     return { clientId: (project.client_id as string | null) ?? null };
+  }
+
+  /** Portal org that owns the client's credit pool, scoped to the workspace. */
+  private async resolveClientOrgId(
+    accountId: string,
+    clientId: string,
+  ): Promise<string | null> {
+    const { data: client } = await db(this.client)
+      .from('clients')
+      .select('client_org_id')
+      .eq('id', clientId)
+      .eq('account_id', accountId)
+      .maybeSingle();
+    return (
+      (client as { client_org_id?: string | null } | null)?.client_org_id ??
+      null
+    );
   }
 
   private async loadClientCredits(
@@ -490,6 +514,61 @@ class ProjectRetainerService {
           : (result.error ?? 'Could not update balance'),
       );
     }
+    return this.load(input.accountId, input.projectId);
+  }
+
+  /**
+   * Add or remove credits on the client's shared pool (the balance clients see
+   * in the portal) — distinct from this project's own credits.
+   * The ledger RPCs use the admin client, so membership is checked here.
+   * Removals consume FIFO (earliest expiry first) and are recorded with the
+   * acting user and no ticket.
+   */
+  async adjustClientCredits(input: {
+    accountId: string;
+    projectId: string;
+    delta: number;
+  }) {
+    const { userId, role } = await this.ensureMember(input.accountId);
+    // Moves real client spend — owners, admins and staff only.
+    if (!RETAINER_EDIT_ROLES.has(role)) throw new Error('Forbidden');
+    const project = await this.requireProject(input.accountId, input.projectId);
+    if (!project.clientId) {
+      throw new Error('This project has no client to adjust credits for');
+    }
+    const clientOrgId = await this.resolveClientOrgId(
+      input.accountId,
+      project.clientId,
+    );
+    if (!clientOrgId) {
+      throw new Error('This client has no portal credit account yet');
+    }
+
+    if (input.delta > 0) {
+      const result = await grantClientCredits({
+        clientOrgId,
+        accountId: input.accountId,
+        amount: input.delta,
+        sourceType: 'manual_adjustment',
+      });
+      if (!result.ok) {
+        throw new Error(result.error ?? 'Could not add client credits');
+      }
+    } else {
+      const result = await consumeClientCredits({
+        clientOrgId,
+        amount: -input.delta,
+        actorId: userId,
+      });
+      if (!result.ok) {
+        throw new Error(
+          result.error === 'insufficient_balance'
+            ? `Client only has ${result.available ?? 0} credits available`
+            : (result.error ?? 'Could not remove client credits'),
+        );
+      }
+    }
+
     return this.load(input.accountId, input.projectId);
   }
 }
