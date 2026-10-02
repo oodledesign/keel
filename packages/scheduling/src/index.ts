@@ -4,6 +4,7 @@ export type { ComputeAvailableSlotsInput } from './slots/compute-available-slots
 export type { CalendarProvider, CalendarProviderId } from './calendar-provider';
 
 export {
+  addCalendarDaysInTimeZone,
   formatYmdInTimeZone,
   parseTimeParts,
   parseYmd,

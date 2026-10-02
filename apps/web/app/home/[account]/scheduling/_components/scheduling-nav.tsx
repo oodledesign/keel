@@ -3,7 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { Bell, CalendarClock, CalendarRange, Link2, Plug } from 'lucide-react';
+import {
+  Bell,
+  CalendarClock,
+  CalendarRange,
+  Link2,
+  Plug,
+  Users,
+} from 'lucide-react';
 
 import { Tabs, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
@@ -28,6 +35,12 @@ const items = [
     icon: CalendarClock,
     href: pathsConfig.app.accountSchedulingBookings,
     match: '/scheduling/bookings',
+  },
+  {
+    label: 'Polls',
+    icon: Users,
+    href: pathsConfig.app.accountSchedulingPolls,
+    match: '/scheduling/polls',
   },
   {
     label: 'Notifications',

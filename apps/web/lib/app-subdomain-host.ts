@@ -22,6 +22,7 @@ const APP_ROUTE_PREFIXES = [
   '/watch',
   '/share',
   '/book',
+  '/poll',
   '/preview',
   '/unsubscribe',
   '/api',
@@ -60,7 +61,7 @@ export function isAppHostOAuthPublicPath(pathname: string): boolean {
 
 /**
  * Public app-host flows (no Ozer login) — IT admin consent, booking,
- * and signature preview/install share links.
+ * meeting polls, and signature preview/install share links.
  */
 export function isAppHostPublicConnectPath(pathname: string): boolean {
   return (
@@ -68,6 +69,8 @@ export function isAppHostPublicConnectPath(pathname: string): boolean {
     pathname.startsWith('/connect/') ||
     pathname === '/book' ||
     pathname.startsWith('/book/') ||
+    pathname === '/poll' ||
+    pathname.startsWith('/poll/') ||
     pathname === '/preview' ||
     pathname.startsWith('/preview/') ||
     pathname === '/share' ||

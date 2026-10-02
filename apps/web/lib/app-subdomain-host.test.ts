@@ -211,6 +211,19 @@ describe('resolveAppSubdomainRedirect', () => {
     ).toBeNull();
   });
 
+  it('serves public meeting poll links on the app host without redirecting to /app', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.ozer.so');
+    vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'https://www.ozer.so');
+    const token = 'a'.repeat(64);
+
+    expect(
+      resolveAppSubdomainRedirect(new URL(`https://app.ozer.so/poll/${token}`)),
+    ).toBeNull();
+    expect(
+      resolveAppSubdomainRedirect(new URL(`https://www.ozer.so/poll/${token}`)),
+    ).toBe(`https://app.ozer.so/poll/${token}`);
+  });
+
   it('serves public unsubscribe pages on the app host without redirecting to /app', () => {
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.ozer.so');
     vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'https://www.ozer.so');
