@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { enhanceAction } from '@kit/next/actions';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import {
@@ -21,6 +22,7 @@ const PermissionsSchema = z.object({
   comment: z.boolean(),
   create_task: z.boolean(),
   edit_own_task: z.boolean(),
+  edit_all_tasks: z.boolean(),
   edit_canvas: z.boolean(),
 });
 
@@ -124,8 +126,6 @@ export const acceptProjectGuestInviteAction = enhanceAction(
 
 export const listMyProjectGuestAccessAction = enhanceAction(
   async () => {
-    const { getSupabaseServerClient } =
-      await import('@kit/supabase/server-client');
     const client = getSupabaseServerClient();
     const {
       data: { user },

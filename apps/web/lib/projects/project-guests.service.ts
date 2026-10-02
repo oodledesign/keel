@@ -23,6 +23,7 @@ const DEFAULT_PERMISSIONS: ProjectGuestPermissions = {
   comment: true,
   create_task: true,
   edit_own_task: true,
+  edit_all_tasks: false,
   edit_canvas: false,
 };
 
@@ -39,10 +40,12 @@ function projectsTable(admin: { from: (table: string) => any }) {
 
 function mapPermissions(raw: unknown): ProjectGuestPermissions {
   const obj = (raw ?? {}) as Record<string, unknown>;
+  const editAll = obj.edit_all_tasks === true;
   return {
     comment: obj.comment !== false,
     create_task: obj.create_task !== false,
-    edit_own_task: obj.edit_own_task !== false,
+    edit_own_task: editAll || obj.edit_own_task !== false,
+    edit_all_tasks: editAll,
     // Opt-in: guests invited before this existed don't gain edit access.
     edit_canvas: obj.edit_canvas === true,
   };
@@ -396,7 +399,6 @@ export async function createProjectGuestInvite(input: {
     console.error('[project-guests] email failed', emailError, error);
   }
 
-  void input.accountSlug;
   return { guest, acceptUrl, emailSent, emailError };
 }
 

@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { sanitizeCommunityHtml } from '~/lib/sanitize-community-html';
+
 import { PortalSharedItemView } from './portal-shared-item-view';
 
 interface PortalSharedPageProps {
@@ -10,6 +12,7 @@ interface PortalSharedPageProps {
 }
 
 async function loadSharedItem(token: string) {
+  // Admin client required: public unauthenticated route; access guarded by is_public=true and public_token match.
   const client = getSupabaseServerAdminClient();
 
   const { data: note } = await client
@@ -60,7 +63,7 @@ async function loadSharedItem(token: string) {
   return {
     type: 'file' as const,
     title: (doc.title as string) || 'File',
-    content: (doc.content as string | null) ?? null,
+    content: doc.content ? sanitizeCommunityHtml(doc.content as string) : null,
     category: doc.category as string,
     updatedAt: doc.updated_at as string,
     mimeType: (doc.mime_type as string | null) ?? null,
@@ -86,8 +89,8 @@ export default async function PortalSharedPage({
     <div
       className={
         isEmbed
-          ? 'min-h-0 bg-[var(--ozer-plum-950)] p-4 text-[var(--workspace-shell-text)]'
-          : 'mx-auto min-h-screen max-w-3xl bg-[var(--ozer-plum-950)] px-4 py-8 text-[var(--workspace-shell-text)] sm:px-6 lg:px-8'
+          ? 'min-h-0 p-4 text-[var(--workspace-shell-text)]'
+          : 'mx-auto min-h-screen max-w-3xl px-4 py-8 text-[var(--workspace-shell-text)] sm:px-6 lg:px-8'
       }
     >
       <PortalSharedItemView item={item} embed={isEmbed} token={token} />

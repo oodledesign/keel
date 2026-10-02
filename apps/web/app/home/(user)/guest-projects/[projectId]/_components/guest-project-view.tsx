@@ -242,9 +242,10 @@ export function GuestProjectView({
         task={openTask}
         assigneeName={assigneeName}
         canEdit={
-          permissions.edit_own_task &&
-          Boolean(user?.id) &&
-          openTask?.user_id === user?.id
+          permissions.edit_all_tasks ||
+          (permissions.edit_own_task &&
+            Boolean(user?.id) &&
+            openTask?.user_id === user?.id)
         }
         onClose={() => setOpenTaskId(null)}
         onSaved={saveTask}

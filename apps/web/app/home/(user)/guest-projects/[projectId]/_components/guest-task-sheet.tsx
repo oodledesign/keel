@@ -91,11 +91,10 @@ export function GuestTaskSheet({
           .from('tasks')
           .update(patch)
           .eq('id', task.id)
-          .eq('user_id', user.id)
           .select('id');
         if (error) throw new Error(error.message);
         if (!data || data.length === 0) {
-          throw new Error('You can only edit your own tasks');
+          throw new Error('Permission denied to update this task');
         }
         onSaved({ ...task, ...patch });
         toast.success('Task saved');

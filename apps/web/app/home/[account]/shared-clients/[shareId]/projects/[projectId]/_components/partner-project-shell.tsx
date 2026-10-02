@@ -13,6 +13,7 @@ import { PartnerProjectCostsPanel } from './partner-project-costs-panel';
 const PARTNER_PERMISSIONS: ProjectGuestPermissions = {
   create_task: true,
   edit_own_task: true,
+  edit_all_tasks: false,
   comment: true,
   edit_canvas: false,
 };

@@ -83,7 +83,7 @@ export function PortalSharedItemView({
       ) : item.kind === 'uploaded' ? (
         <div className="space-y-4">
           {isImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
+            // eslint-disable-next-line @next/next/no-img-element -- signed storage URL; domain not configurable in next.config
             <img
               src={item.fileUrl ?? ''}
               alt={item.title}
@@ -113,7 +113,7 @@ export function PortalSharedItemView({
         </div>
       ) : (
         <div
-          className="prose prose-invert max-w-none text-sm"
+          className="prose dark:prose-invert prose-headings:text-[var(--workspace-shell-text)] prose-p:text-[var(--workspace-shell-text)] max-w-none text-sm text-[var(--workspace-shell-text)]"
           dangerouslySetInnerHTML={{ __html: item.content ?? '' }}
         />
       )}

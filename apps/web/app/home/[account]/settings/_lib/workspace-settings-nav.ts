@@ -130,6 +130,14 @@ export function buildWorkspaceSettingsNav(input: {
     ),
   });
 
+  if (access.canViewSettings) {
+    items.push({
+      id: 'audit',
+      label: 'Audit log',
+      href: settingsPath(pathsConfig.app.accountAudit, accountSlug),
+    });
+  }
+
   if (workspaceProfile === 'commercial_property') {
     appendBrandNavItems(items, accountSlug, canConfigureSendingDomain);
     appendBillingNavItem(items, accountSlug, access);

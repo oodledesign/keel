@@ -11,6 +11,7 @@ import {
   ClipboardList,
   FileText,
   Handshake,
+  History,
   ImageIcon,
   LayoutGrid,
   MessageSquare,
@@ -37,6 +38,7 @@ import { toast } from '@kit/ui/sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { cn } from '@kit/ui/utils';
 
+import { ProjectAuditFeed } from '~/components/projects/project-audit-feed';
 import pathsConfig from '~/config/paths.config';
 import type { PartnerCostLine } from '~/lib/projects/partner-cost-lines.service';
 import {
@@ -610,6 +612,15 @@ export function JobDetailContent({
                 <Users className="h-3.5 w-3.5" />
                 Team
               </TabsTrigger>
+              {!isContractorView && (
+                <TabsTrigger
+                  value="activity"
+                  className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+                >
+                  <History className="h-3.5 w-3.5" />
+                  Activity
+                </TabsTrigger>
+              )}
               <TabsTrigger
                 value="messages"
                 className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
@@ -968,6 +979,28 @@ export function JobDetailContent({
             </>
           )}
         </TabsContent>
+
+        {!isContractorView && (
+          <TabsContent
+            value="activity"
+            className="mt-0 flex-1 overflow-auto p-4 md:p-5"
+          >
+            <div className="mb-4">
+              <h3 className="text-base font-semibold text-[var(--workspace-shell-text)]">
+                Project activity
+              </h3>
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Audit log of changes made to tasks, phases, canvas notes, and
+                guest access.
+              </p>
+            </div>
+            <ProjectAuditFeed
+              accountId={accountId}
+              accountSlug={accountSlug}
+              projectId={jobId}
+            />
+          </TabsContent>
+        )}
 
         <TabsContent
           value="messages"

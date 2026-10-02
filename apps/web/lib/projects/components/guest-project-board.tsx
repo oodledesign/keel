@@ -180,7 +180,8 @@ export function GuestProjectBoard(props: {
                     minutes={task.duration_minutes}
                     className="mt-1"
                   />
-                  {props.permissions.edit_own_task ? (
+                  {props.permissions.edit_all_tasks ||
+                  props.permissions.edit_own_task ? (
                     <select
                       className={`mt-2 w-full px-2 py-1 text-xs ${taskStatusSelectClass(task.status)}`}
                       value={
@@ -198,7 +199,12 @@ export function GuestProjectBoard(props: {
                               data: { user },
                             } = await client.auth.getUser();
                             if (!user) throw new Error('Sign in required');
-                            if (task.user_id && task.user_id !== user.id) {
+                            const canEditAll = props.permissions.edit_all_tasks;
+                            if (
+                              !canEditAll &&
+                              task.user_id &&
+                              task.user_id !== user.id
+                            ) {
                               throw new Error(
                                 'You can only edit your own tasks',
                               );
@@ -207,8 +213,7 @@ export function GuestProjectBoard(props: {
                             const { error } = await client
                               .from('tasks')
                               .update({ status: nextStatus })
-                              .eq('id', task.id)
-                              .eq('user_id', user.id);
+                              .eq('id', task.id);
 
                             if (error) throw new Error(error.message);
                             setTasks((prev) =>

@@ -42,6 +42,7 @@ const DEFAULT_PERMISSIONS: ProjectGuestPermissions = {
   comment: true,
   create_task: true,
   edit_own_task: true,
+  edit_all_tasks: false,
   edit_canvas: false,
 };
 
@@ -70,6 +71,12 @@ const PERMISSION_OPTIONS: Array<{
     hint: 'Only tasks they created',
   },
   {
+    key: 'edit_all_tasks',
+    label: 'Edit all tasks',
+    summary: 'edit all tasks',
+    hint: 'Change any task in this project',
+  },
+  {
     key: 'edit_canvas',
     label: 'Edit the canvas',
     summary: 'edit the canvas',
@@ -78,9 +85,12 @@ const PERMISSION_OPTIONS: Array<{
 ];
 
 function summarisePermissions(permissions: ProjectGuestPermissions) {
-  const granted = PERMISSION_OPTIONS.filter(
-    (option) => permissions[option.key],
-  ).map((option) => option.summary);
+  const granted = PERMISSION_OPTIONS.filter((option) => {
+    if (option.key === 'edit_own_task' && permissions.edit_all_tasks) {
+      return false;
+    }
+    return permissions[option.key];
+  }).map((option) => option.summary);
   return granted.length > 0 ? `Can ${granted.join(', ')}` : 'View only';
 }
 
@@ -91,6 +101,19 @@ function PermissionChecklist({
   value: ProjectGuestPermissions;
   onChange: (next: ProjectGuestPermissions) => void;
 }) {
+  const handleChange = (
+    key: keyof ProjectGuestPermissions,
+    checked: boolean,
+  ) => {
+    const next = { ...value, [key]: checked };
+    if (key === 'edit_all_tasks' && checked) {
+      next.edit_own_task = true;
+    } else if (key === 'edit_own_task' && !checked) {
+      next.edit_all_tasks = false;
+    }
+    onChange(next);
+  };
+
   return (
     <div className="space-y-2">
       <p className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
@@ -104,9 +127,7 @@ function PermissionChecklist({
           <Checkbox
             className="mt-0.5"
             checked={value[key]}
-            onCheckedChange={(checked) =>
-              onChange({ ...value, [key]: checked === true })
-            }
+            onCheckedChange={(checked) => handleChange(key, checked === true)}
           />
           <span>
             {label}

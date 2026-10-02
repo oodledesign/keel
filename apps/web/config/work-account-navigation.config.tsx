@@ -11,6 +11,7 @@ import {
   FileText,
   FormInput,
   Globe,
+  History,
   Image,
   Instagram,
   Kanban,
@@ -555,6 +556,11 @@ export function buildWorkSettingsChildren(
       label: 'Workspace settings',
       path: createPath(pathsConfig.app.accountSettings, account),
       Icon: <Settings className={iconClasses} />,
+    });
+    settings.push({
+      label: 'Audit log',
+      path: createPath(pathsConfig.app.accountAudit, account),
+      Icon: <History className={iconClasses} />,
     });
   }
 
