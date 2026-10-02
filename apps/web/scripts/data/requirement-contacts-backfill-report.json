@@ -1,0 +1,46 @@
+{
+  "account": {
+    "id": "c4e7c6b1-e4f0-43ee-a768-6b3782e50d62",
+    "name": "Bracketts",
+    "slug": "bracketts"
+  },
+  "generatedAt": "2026-09-30T11:29:36.641Z",
+  "mode": "dry-run",
+  "requirements": 513,
+  "counts": {
+    "link_existing": 0,
+    "create_contact": 0,
+    "fill_email": 3,
+    "mismatch": 0,
+    "unlinkable": 3
+  },
+  "actions": [
+    {
+      "kind": "unlinkable",
+      "requirementId": "88008b42-0eb7-4ae3-9ff8-9b73b27c02be"
+    },
+    {
+      "kind": "fill_email",
+      "requirementId": "ffc0a2dc-020f-4ed8-a54a-4bf1de1cdbb2",
+      "email": "playngrowchildcare@gmail.com"
+    },
+    {
+      "kind": "fill_email",
+      "requirementId": "dc34cdef-5684-49a5-9c0c-b9d8073fad9a",
+      "email": "pauline.fazackerley@btinternet.com"
+    },
+    {
+      "kind": "fill_email",
+      "requirementId": "4b5a8a56-9dfe-4977-9d44-48a8bf5aa212",
+      "email": "pauline.fazackerley@btinternet.com"
+    },
+    {
+      "kind": "unlinkable",
+      "requirementId": "f5c425c2-f820-4537-acf4-f1e16acf745f"
+    },
+    {
+      "kind": "unlinkable",
+      "requirementId": "dfae7d97-94e9-4953-b37c-54a598e12312"
+    }
+  ]
+}
