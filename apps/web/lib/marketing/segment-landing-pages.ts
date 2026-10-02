@@ -267,7 +267,7 @@ function commercialPricingCards(): SegmentPricingCard[] {
     const features = isSolo
       ? soloFeatures
       : [
-          'Everything in Commercial Solo, plus…',
+          'Everything in Seat 1, plus…',
           support > 0
             ? `${support} free support seats`
             : 'Additional billable capacity',
@@ -558,9 +558,9 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
     'commercial-property': {
       slug: 'commercial-property',
       seo: {
-        title: 'Commercial Property workspace for UK agencies | Ozer',
+        title: 'Commercial property agent CRM & workspace | Ozer',
         description:
-          'CRM for commercial desks: disposals, pipeline, requirements, interest, online brochures, AI drafts and portals (Rightmove, EACH, Property Hive). From £89/mo.',
+          'UK commercial agency CRM: disposals, pipeline, applicant matching, online brochures, AI drafts and portal publishing (Rightmove, EACH, Property Hive). From £89/mo.',
         keywords: [
           'commercial property CRM UK',
           'commercial agency software',
@@ -576,7 +576,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
         title: 'Run the commercial desk',
         titleAccent: 'in one workspace',
         subtitle:
-          'Disposals, instructions, applicant requirements and interest, built for UK commercial agencies. Portals are included from Solo. Graduated pricing is published, with no demo gate.',
+          'Disposals, instructions, applicant requirements and interest, built for UK commercial agencies. Portals are included from seat 1. Graduated pricing is published, with no demo gate.',
       },
       stats: [
         { value: '£89', label: 'Seat 1 / month' },
@@ -612,13 +612,13 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
           icon: FileText,
           title: 'Portal publishing included',
           description:
-            'Publish to Rightmove Commercial, EACH and Property Hive WordPress from Commercial Solo upwards.',
+            'Publish to Rightmove Commercial, EACH and Property Hive WordPress from seat 1 upwards.',
         },
         {
           icon: Wallet,
-          title: 'Brochures & presentations',
+          title: 'Brochures, PDF or online',
           description:
-            'Shareable online brochures and branded decks agents can send in place of static PDF particulars.',
+            'Branded PDF particulars for print and email, and shareable online slideshows, created from the same disposal.',
         },
       ],
       steps: [
@@ -641,7 +641,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
       pricingPlans: commercialPricingCards(),
       pricingNote: (() => {
         const [seat1, seats2to7, seats8plus] = COMMERCIAL_GRADUATED_TIERS;
-        return `One graduated price for every agency: ${formatGbp(seat1!.unitGbp)} for seat 1, then ${formatGbp(seats2to7!.unitGbp)} for seats 2–7, then ${formatGbp(seats8plus!.unitGbp)} for seats 8+. Solo, Team and Scale are names for those bands, not separate products.`;
+        return `One graduated price for every agency: ${formatGbp(seat1!.unitGbp)} for seat 1, then ${formatGbp(seats2to7!.unitGbp)} for seats 2–7, then ${formatGbp(seats8plus!.unitGbp)} for seats 8+. Seat 1, Seats 2–7 and Seats 8+ are the graduated bands, not separate tiers.`;
       })(),
       integrations: [
         {
@@ -661,7 +661,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
         {
           question: 'What is the Commercial Property workspace?',
           answer:
-            'A workspace for UK commercial agency desks, rather than landlords managing a portfolio. Disposals and marketing, a pipeline for instructions and requirements, interest matching, online brochures, AI drafts and portal publishing sit on one desk, with published seat pricing.',
+            'A workspace for UK commercial agency desks, rather than landlords managing a portfolio. Disposals and marketing, a pipeline for instructions and requirements, interest matching, online and PDF brochures, AI drafts and portal publishing sit on one desk, with published seat pricing.',
         },
         {
           question: 'How does graduated pricing work?',
@@ -670,23 +670,23 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
             const fourSeatTotal = formatGbp(
               estimateMonthlyBreakdownGbp(4).totalGbp,
             );
-            return `One price for every agency: ${formatGbp(seat1!.unitGbp)} for seat 1, then ${formatGbp(seats2to7!.unitGbp)} for seats 2–7, then ${formatGbp(seats8plus!.unitGbp)} for seats 8+. Solo, Team and Scale are names for those bands, not separate products. Four billable seats cost ${formatGbp(seat1!.unitGbp)} + 3 × ${formatGbp(seats2to7!.unitGbp)} = ${fourSeatTotal}/mo. Use the calculator on this page. There is no demo gate to hear the number.`;
+            return `One price for every agency: ${formatGbp(seat1!.unitGbp)} for seat 1, then ${formatGbp(seats2to7!.unitGbp)} for seats 2–7, then ${formatGbp(seats8plus!.unitGbp)} for seats 8+. Four billable seats cost ${formatGbp(seat1!.unitGbp)} + 3 × ${formatGbp(seats2to7!.unitGbp)} = ${fourSeatTotal}/mo. Use the calculator on this page. There is no demo gate to hear the number.`;
           })(),
         },
         {
           question: 'Can I add seats later?',
           answer:
-            'Yes. You stay on the same graduated price. Adding a billable seat can only raise the monthly total, and you never switch products. Support-seat allowance also steps up with headcount (none on Solo, 2 from the second billable seat, 4 from the eighth).',
+            'Yes. You stay on the same graduated price. Adding a billable seat can only raise the monthly total. Support-seat allowance steps up with headcount: 2 free support seats from seat 2, 4 from seat 8.',
         },
         {
           question: 'Is there a free trial?',
           answer:
-            'Yes. Commercial Property includes a 14-day trial on your first paid workspace, with no credit card required to start. Cancel from account settings and you keep access until the end of the period you have already paid for.',
+            'Yes. Commercial Property includes a 14-day trial on your first paid workspace, with no credit card required to start. Cancel from account settings anytime.',
         },
         {
           question: 'What are support seats?',
           answer:
-            'Free seats for admin and finance: they can view records, add notes, and log activity, but cannot move pipeline stages, edit disposals, or publish to portals. Solo (1 billable seat) has none; desks with 2–7 billable seats get 2; 8+ billable seats get 4.',
+            'Free seats for admin and finance: they can view records, add notes, and log activity, but cannot move pipeline stages, edit disposals, or publish to portals. Seat 1 has none; desks with 2–7 billable seats get 2; 8+ billable seats get 4.',
         },
         {
           question: 'Which portals are included?',
@@ -699,9 +699,9 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
             'It drafts where the desk loses time: disposal marketing copy, requirement briefs from an enquiry or pasted email, match explanations, add/skip/review triage and a first outreach email. You review every draft, and nothing is saved, published or sent until you confirm.',
         },
         {
-          question: 'How do online brochures work?',
+          question: 'How do brochures work?',
           answer:
-            'Each disposal can share a branded slideshow with photos, key facts, floorplans, location and an enquiry form, in place of emailing another static PDF of particulars. Agency colours and logo come through automatically, and enquiries go back to the acting agents.',
+            'Each disposal can generate branded PDF particulars for print and email, or a shareable online slideshow with photos, floorplans and an enquiry form. Agency colours and logo apply automatically, and enquiries route back to the acting agents.',
         },
         {
           question: 'How does interest matching work?',

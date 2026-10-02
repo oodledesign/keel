@@ -96,9 +96,9 @@ describe('commercial graduated pricing', () => {
   });
 
   it('maps illustrative labels and clamps seats', () => {
-    expect(illustrativeTierForSeats(1).id).toBe('solo');
-    expect(illustrativeTierForSeats(5).id).toBe('team');
-    expect(illustrativeTierForSeats(12).id).toBe('scale');
+    expect(illustrativeTierForSeats(1).label).toBe('Seat 1');
+    expect(illustrativeTierForSeats(5).label).toBe('Seats 2–7');
+    expect(illustrativeTierForSeats(12).label).toBe('Seats 8+');
     expect(clampBillableSeats(0)).toBe(1);
     expect(clampBillableSeats(3.9)).toBe(3);
   });

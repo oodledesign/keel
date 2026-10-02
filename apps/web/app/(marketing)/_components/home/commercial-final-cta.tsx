@@ -3,19 +3,11 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
-import { cn } from '@kit/ui/utils';
 
-import { COMMERCIAL_HOME_FINAL_CTA } from '~/lib/marketing/commercial-home-content';
-import {
-  marketingBtnPrimary,
-  marketingDisplay,
-  marketingLede,
-  marketingSectionDark,
-  marketingSectionDarkMuted,
-} from '~/lib/marketing/marketing-ui';
+import { commercialCta } from '~/config/commercial-cta.config';
+import { COMMERCIAL_FINAL_CTA } from '~/lib/marketing/commercial-home-content';
 import type { MarketingViewerContext } from '~/lib/marketing/marketing-viewer';
 
-import { MarketingSectionIndex } from '../marketing-section-index';
 import { WaitlistEmailForm } from './waitlist-email-form';
 
 export function CommercialFinalCta({
@@ -23,54 +15,77 @@ export function CommercialFinalCta({
 }: {
   viewer: MarketingViewerContext;
 }) {
-  const copy = COMMERCIAL_HOME_FINAL_CTA;
+  const isWaitlist = commercialCta.mode === 'waitlist';
 
   return (
     <section
       id="waitlist"
-      className={cn('scroll-mt-20', marketingSectionDark)}
+      className="w-full bg-[#FF5C34] py-20 text-[#2A1720] md:py-28"
       aria-labelledby="home-final-cta-heading"
     >
-      <div className="mx-auto w-full max-w-[88rem] px-6 py-20 md:py-28">
-        <MarketingSectionIndex index="06" label="Waiting list" tone="dark" />
-
+      <div className="mx-auto w-full max-w-4xl px-6 text-center">
         <h2
           id="home-final-cta-heading"
-          className={cn(
-            marketingDisplay,
-            'mt-12 max-w-[14ch] text-[var(--ozer-text-on-dark)] md:mt-16',
-          )}
+          className="font-heading text-3xl font-semibold tracking-tight text-[#2A1720] sm:text-4xl lg:text-5xl"
         >
-          {viewer.isAuthenticated ? copy.signedInTitle : copy.title}
+          {COMMERCIAL_FINAL_CTA.heading}
         </h2>
 
-        <div className="mt-10 grid gap-8 md:mt-14 lg:grid-cols-12 lg:gap-10">
-          <p
-            className={cn(
-              marketingLede,
-              marketingSectionDarkMuted,
-              'lg:col-span-5',
-            )}
-          >
-            {viewer.isAuthenticated ? copy.signedInSubtitle : copy.subtitle}
-          </p>
+        <p className="mx-auto mt-4 max-w-xl text-base font-semibold text-[#2A1720] sm:text-lg">
+          {COMMERCIAL_FINAL_CTA.body}
+        </p>
 
-          <div className="lg:col-span-6 lg:col-start-7">
-            {viewer.isAuthenticated ? (
-              <Button asChild size="lg" className={marketingBtnPrimary}>
+        <div className="mt-8 flex flex-col items-center justify-center gap-4">
+          {viewer.isAuthenticated ? (
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <Button
+                asChild
+                size="lg"
+                className="rounded-full bg-[#2A1720] px-6 text-[#FBF6EC] hover:bg-[#1E1017] hover:text-white"
+              >
                 <Link href={viewer.dashboardHref}>
                   Open your workspace
-                  <ArrowRight className="size-4" aria-hidden="true" />
+                  <ArrowRight className="ml-2 size-4" aria-hidden="true" />
                 </Link>
               </Button>
-            ) : (
+            </div>
+          ) : isWaitlist ? (
+            <div className="w-full max-w-md">
               <WaitlistEmailForm
                 id="home-final-waitlist-email"
                 source="home-final"
-                tone="dark"
+                tone="orange-topaze"
+                buttonLabel={commercialCta.primaryLabel}
               />
-            )}
-          </div>
+              <div className="mt-4 text-center">
+                <Link
+                  href="/auth/sign-in"
+                  className="text-xs font-semibold text-[#2A1720] underline-offset-4 hover:underline"
+                >
+                  Sign in
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <Button
+                asChild
+                size="lg"
+                className="rounded-full bg-[#2A1720] px-6 text-[#FBF6EC] hover:bg-[#1E1017] hover:text-white"
+              >
+                <Link href={commercialCta.primaryHref}>
+                  {commercialCta.primaryLabel}
+                  <ArrowRight className="ml-2 size-4" aria-hidden="true" />
+                </Link>
+              </Button>
+              <Link
+                href="/auth/sign-in"
+                className="text-sm font-semibold text-[#2A1720] underline-offset-4 hover:underline"
+              >
+                Sign in
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </section>

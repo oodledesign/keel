@@ -1,10 +1,19 @@
-import type { FeatureTourBlock } from '~/lib/marketing/feature-tour-content';
+import { commercialCta } from '~/config/commercial-cta.config';
+import {
+  COMMERCIAL_GRADUATED_TIERS,
+  estimateMonthlyBreakdownGbp,
+} from '~/lib/billing/commercial-graduated-pricing';
 import type { MarketingScreenData } from '~/lib/marketing/marketing-screen';
 
+/** Format integer GBP amounts for marketing displays (e.g. £89). */
+function formatPounds(amount: number): string {
+  return `£${amount}`;
+}
+
 export const COMMERCIAL_HOME_SEO = {
-  title: 'The workspace for commercial property agents | Ozer',
+  title: 'Workspace for commercial property agents | Ozer',
   description:
-    'Disposals, requirements, matching, circulation and WIP for UK commercial agents, with Rightmove Commercial, EACH and Property Hive publishing included from the first seat. Join the waiting list.',
+    'Publish once to Rightmove Commercial, EACH and your website. Requirements and pipeline on one desk, from £89 a month.',
   keywords: [
     'commercial property CRM',
     'commercial property agent software UK',
@@ -14,28 +23,24 @@ export const COMMERCIAL_HOME_SEO = {
     'Rightmove commercial CRM',
     'EACH feed CRM',
     'Property Hive CRM',
-    'commercial agency WIP',
+    'commercial agency pipeline',
   ],
 } as const;
 
 export const COMMERCIAL_HOME_HERO = {
   eyebrow: 'For UK commercial property agents',
-  status: 'Waiting list open',
   title: 'The workspace for commercial property agents.',
-  subtitle:
-    'Disposals, requirements, circulation and WIP on the same desk. Type an instruction in once and it goes to Rightmove Commercial, EACH and Property Hive, included from the first seat.',
+  body: 'Disposals, requirements and your pipeline on one desk. Publish once to Rightmove Commercial, EACH and your website.',
+  microLine: 'From £89/mo · Portals included · Pricing published',
   formLabel: 'Work email',
   formPlaceholder: 'you@youragency.co.uk',
-  submitLabel: 'Join the waiting list',
-  reassurance:
-    'We bring agencies on a few desks at a time and reply personally.',
   signedInLabel: 'Open your workspace',
   portalsLabel: 'Publishes to',
 } as const;
 
 export const COMMERCIAL_HOME_HERO_SCREEN: MarketingScreenData = {
   src: '/brand/marketing/commercial-agency-desk.jpg',
-  alt: 'Ozer agency home showing unactioned enquiries, viewings awaiting feedback, stock on the market and recent disposals in Frant, Tunbridge Wells and Tonbridge',
+  alt: 'Ozer agency home showing active instructions, applicant requirements, live portal feeds and the fee pipeline',
   width: 2400,
   height: 1228,
   annotations: [
@@ -45,7 +50,7 @@ export const COMMERCIAL_HOME_HERO_SCREEN: MarketingScreenData = {
       y: 20,
       label: 'Live stock goes to Rightmove Commercial, EACH and your site',
     },
-    { x: 47, y: 76, label: 'Under offer, let and sold follow to every portal' },
+    { x: 47, y: 76, label: 'Publish and update from one record' },
   ],
 };
 
@@ -58,265 +63,281 @@ export const COMMERCIAL_HOME_PUBLISH_PORTALS = [
   { name: 'Property Hive', logoSrc: '/brand/integrations/property-hive.png' },
 ] as const;
 
-export type CommercialPainFix = {
-  pain: string;
-  fix: string;
+export type CommercialBeforeAfterRow = {
+  before: string;
+  withOzer: string;
 };
 
-export const COMMERCIAL_HOME_PAIN_FIX_HEADING = {
-  label: 'The desk',
-  title: 'Built around disposals, applicants and fees.',
-  intro:
-    'Ozer was designed around commercial agency from day one: instructions, requirements, the interest schedule and the fee pipeline.',
-  beforeLabel: 'Before',
-  afterLabel: 'With Ozer',
+export const COMMERCIAL_BEFORE_AFTER = {
+  eyebrow: 'Sound familiar?',
+  heading: 'Your desk, minus the busywork.',
+  rows: [
+    {
+      before: 'Re-keying every disposal',
+      withOzer: 'Publish once, everywhere',
+    },
+    {
+      before: 'Requirements in inboxes and heads',
+      withOzer: 'Every brief matched to stock',
+    },
+    {
+      before: 'Mail-merging applicants by hand',
+      withOzer: 'Applicants get it in their digest',
+    },
+    {
+      before: 'A pipeline spreadsheet nobody trusts',
+      withOzer: 'One board, fees by stage',
+    },
+  ] as CommercialBeforeAfterRow[],
 } as const;
 
-export const COMMERCIAL_HOME_PAIN_FIX: CommercialPainFix[] = [
-  {
-    pain: 'Re-keying the same disposal into every portal and the agency website.',
-    fix: 'Publish once to Rightmove Commercial, EACH and Property Hive. Under offer, let and sold follow automatically.',
-  },
-  {
-    pain: 'Requirements kept in inboxes, notebooks and one negotiator’s head.',
-    fix: 'Every requirement on the desk, scored against stock by size, location, tenure and sector.',
-  },
-  {
-    pain: 'Mail-merging new instructions to applicants by hand.',
-    fix: 'Put a disposal live and the applicants it fits get it in their next digest.',
-  },
-  {
-    pain: 'A WIP spreadsheet nobody trusts by month end.',
-    fix: 'Instructions, under offers and completions on one board, with fees totalled by stage.',
-  },
-];
-
-export const COMMERCIAL_TOUR_HEADING = {
+export const COMMERCIAL_SIX_JOBS_HEADING = {
   eyebrow: 'On the desk',
   title: 'Six jobs you stop doing by hand.',
-  intro:
-    'Portals, requirements, circulation, WIP, brochures and AI drafting, one at a time.',
 } as const;
 
-export const COMMERCIAL_FEATURE_TOUR_BLOCKS: FeatureTourBlock[] = [
+export type SixJobsPanelId =
+  | 'portals'
+  | 'requirements'
+  | 'circulation'
+  | 'pipeline'
+  | 'brochures'
+  | 'ai';
+
+export interface SixJobsPanel {
+  id: SixJobsPanelId;
+  label: string;
+  h3: string;
+  oneLine: string;
+  bullets: string[];
+  bgStyle: {
+    bg: string;
+    text: string;
+    mutedText: string;
+    border: string;
+    bulletDot: string;
+  };
+}
+
+export const COMMERCIAL_SIX_JOBS_PANELS: SixJobsPanel[] = [
   {
-    id: 'commercial-portal-publishing',
-    accent: 'coral',
-    icon: 'Send',
-    eyebrow: 'Portal publishing',
-    title: 'Publish a disposal everywhere, once.',
-    moment:
-      'A new instruction lands on Monday. By lunch it is live on Rightmove Commercial, EACH and your own website, and you typed it in once.',
-    desc: 'Rightmove Commercial via the Listings API, a dedicated EACH XML feed and a Property Hive import for the agency site. Included from seat 1, not a bolt-on.',
-    highlights: [
-      'Rightmove Commercial, EACH and Property Hive included',
-      'Under offer and let or sold statuses flow through',
-      'Hide rent or price per disposal when it is confidential',
-      'No per-portal re-keying or CSV uploads',
+    id: 'portals',
+    label: 'Portals',
+    h3: 'Type it in once.',
+    oneLine: 'Live on Rightmove Commercial, EACH and your website.',
+    bullets: [
+      'Publish and update from one record',
+      'Hide price or rent when confidential',
+      'No re-keying, no CSV uploads',
     ],
-    mock: 'publish-portals',
-  },
-  {
-    id: 'commercial-requirements-matching',
-    accent: 'cool-blue',
-    icon: 'ListFilter',
-    eyebrow: 'Requirements & matching',
-    title: 'Every applicant’s brief, matched against your stock.',
-    moment:
-      'A retailer emails asking for 2,000 sq ft in the town centre. Before you have finished reading, the desk has three disposals that fit.',
-    desc: 'Requirements sit next to disposals, scored by size, location, tenure and sector. Add a match to the interest schedule straight from the list.',
-    highlights: [
-      'Fit score for every disposal and requirement pair',
-      'Interest schedule with activity and status',
-      'AI can explain a match or triage the shortlist',
-      'Nothing saved until a person confirms',
-    ],
-    mock: 'requirements-match',
-  },
-  {
-    id: 'commercial-circulation',
-    accent: 'sage',
-    icon: 'Mail',
-    eyebrow: 'Circulation',
-    title: 'New stock reaches the right applicants without a mail-merge.',
-    moment:
-      'You put a unit live and walk into a viewing. Applicants whose requirements fit already have it in their inbox.',
-    desc: 'Going live triggers a match digest to the applicants it fits. Unsubscribes and delivery are handled for you.',
-    highlights: [
-      'Matched digests sent when stock goes live',
-      'Only applicants whose brief fits',
-      'Unsubscribe link on every email',
-      'No exporting lists into another tool',
-    ],
-    mock: 'circulation',
-  },
-  {
-    id: 'commercial-pipeline-wip',
-    accent: 'lime',
-    icon: 'Kanban',
-    eyebrow: 'Pipeline & WIP',
-    title: 'Month-end WIP without the spreadsheet.',
-    moment:
-      'The partners ask where the quarter will land. You open the pipeline instead of chasing four negotiators for their numbers.',
-    desc: 'Instructions and requirements on one board, from potential through to completed, with fees rolling up by stage.',
-    highlights: [
-      'Drag deals through potential, under offer and completed',
-      'Fee totals roll up as stages change',
-      'Tasks and notes attached to every deal',
-      'Fallen-through deals stay visible, not deleted',
-    ],
-    mock: 'disposals-pipeline',
-    screen: {
-      src: '/brand/marketing/commercial-pipeline-board.png',
-      alt: 'Ozer WIP board with potential and current instructions, each showing client, address and asking rent or price',
-      width: 1140,
-      height: 1018,
-      annotations: [
-        { x: 37, y: 6, label: 'Instructions grouped by stage' },
-        { x: 28, y: 30, label: 'Asking rent or price on every card' },
-        { x: 91, y: 15, label: 'Edit a deal without leaving the board' },
-      ],
+    bgStyle: {
+      bg: 'bg-[#FF5C34]',
+      text: 'text-[#2A1720]',
+      mutedText: 'text-[#4A2635]',
+      border: 'border-[#2A1720]/20',
+      bulletDot: 'bg-[#2A1720]',
     },
   },
   {
-    id: 'commercial-brochures',
-    accent: 'plum',
-    icon: 'FileText',
-    eyebrow: 'Online brochures',
-    title: 'Send a brochure that looks like your agency, not a PDF dump.',
-    moment:
-      'An applicant asks for particulars. You send a link with photos, key facts, floorplans and an enquire button, in your colours.',
-    desc: 'Every disposal gets a branded online brochure. Enquiries route straight back to the acting agents.',
-    highlights: [
-      'Photos, key facts, floorplans and location',
-      'Agency logo and colours applied automatically',
-      'Enquire form routed to the acting agents',
-      'Always the latest version, never a stale attachment',
+    id: 'requirements',
+    label: 'Requirements',
+    h3: 'Every brief, matched to stock.',
+    oneLine: 'Scored by size, location, tenure and sector.',
+    bullets: [
+      'Interest schedule on every disposal',
+      'Status and activity per party',
+      'AI explains each match',
     ],
-    mock: 'brochure',
+    bgStyle: {
+      bg: 'bg-[#FBF6EC]',
+      text: 'text-[#2A1720]',
+      mutedText: 'text-[#5A4450]',
+      border: 'border-[#2A1720]/15',
+      bulletDot: 'bg-[#FF5C34]',
+    },
   },
   {
-    id: 'commercial-ask-ai',
-    accent: 'coral',
-    icon: 'Sparkles',
-    eyebrow: 'AI on the desk',
-    title: 'Ask your desk a question. Get a LinkedIn post back.',
-    moment:
-      '“Write a LinkedIn post about last month’s lettings.” Thirty seconds later there is a draft built from the units you let.',
-    desc: 'Marketing copy, requirement drafts, match explanations and activity round-ups, grounded in your own disposals. Every draft is yours to edit before anything goes out.',
-    highlights: [
-      'LinkedIn and blog drafts from real desk activity',
-      'Compare this September with last September',
-      'Only uses publicly marketed details',
-      'Nothing is posted or sent without you',
+    id: 'circulation',
+    label: 'Circulation',
+    h3: 'Send it to the right people.',
+    oneLine: 'Applicants whose brief fits get new instructions automatically.',
+    bullets: [
+      'Matched applicants get it in their digest',
+      'Nothing sent without a fit',
     ],
-    mock: 'ask-ai',
+    bgStyle: {
+      bg: 'bg-[#F7F9C8]',
+      text: 'text-[#2A1720]',
+      mutedText: 'text-[#504430]',
+      border: 'border-[#2A1720]/15',
+      bulletDot: 'bg-[#2A1720]',
+    },
+  },
+  {
+    id: 'pipeline',
+    label: 'Pipeline',
+    h3: 'Know where every fee stands.',
+    oneLine: 'Instructions, under offers and completions on one board.',
+    bullets: [
+      'Drag between stages',
+      'Fees totalled by stage',
+      'Period insights for the board',
+    ],
+    bgStyle: {
+      bg: 'bg-[#D7EFFF]',
+      text: 'text-[#0C2438]',
+      mutedText: 'text-[#284860]',
+      border: 'border-[#0C2438]/15',
+      bulletDot: 'bg-[#0C2438]',
+    },
+  },
+  {
+    id: 'brochures',
+    label: 'Brochures',
+    h3: 'Brochures, PDF or online.',
+    oneLine:
+      'Branded particulars and a shareable slideshow, from the same disposal.',
+    bullets: [
+      'PDF brochure for print and email',
+      'Online slideshow with photos, floorplans and location',
+      'Enquiry form wired back to you',
+    ],
+    bgStyle: {
+      bg: 'bg-[#E4E8DC]',
+      text: 'text-[#1F2B1A]',
+      mutedText: 'text-[#3E4F38]',
+      border: 'border-[#1F2B1A]/15',
+      bulletDot: 'bg-[#1F2B1A]',
+    },
+  },
+  {
+    id: 'ai',
+    label: 'AI',
+    h3: 'AI drafts. You decide.',
+    oneLine: 'Nothing is published or emailed until you say so.',
+    bullets: [],
+    bgStyle: {
+      bg: 'bg-[#2A1720]',
+      text: 'text-[#FBF6EC]',
+      mutedText: 'text-[#C5B4BC]',
+      border: 'border-[#FBF6EC]/15',
+      bulletDot: 'bg-[#FF5C34]',
+    },
   },
 ];
 
-export type CommercialTrustItem = {
+export const COMMERCIAL_AI_PILLS = [
+  {
+    bold: 'Marketing copy',
+    line: 'First-pass particulars from the listing',
+    accent: 'wasabi' as const,
+  },
+  {
+    bold: 'Requirement drafts',
+    line: 'A pasted email becomes a brief',
+    accent: 'sage' as const,
+  },
+  {
+    bold: 'Match explanations',
+    line: 'Why it fits, in plain English',
+    accent: 'wasabi' as const,
+  },
+  {
+    bold: 'Interest triage',
+    line: 'Work the shortlist first',
+    accent: 'sage' as const,
+  },
+  {
+    bold: 'Outreach drafts',
+    line: 'A first email, ready to edit',
+    accent: 'wasabi' as const,
+  },
+];
+
+export function getCommercialPricingData() {
+  const [tier1, tier2, tier3] = COMMERCIAL_GRADUATED_TIERS;
+  const fourSeatsTotal = formatPounds(estimateMonthlyBreakdownGbp(4).totalGbp);
+
+  return {
+    eyebrow: 'Pricing',
+    heading: 'One price. Published.',
+    body: `${formatPounds(tier1!.unitGbp)} for seat 1, ${formatPounds(tier2!.unitGbp)} for seats 2–7, ${formatPounds(tier3!.unitGbp)} from seat 8. Portals included.`,
+    bands: [
+      { label: 'Seat 1', price: `${formatPounds(tier1!.unitGbp)}/mo` },
+      { label: 'Seats 2–7', price: `${formatPounds(tier2!.unitGbp)}/mo each` },
+      { label: 'Seats 8+', price: `${formatPounds(tier3!.unitGbp)}/mo each` },
+    ],
+    inclusions:
+      'Portals, pipeline, matching, PDF and online brochures, and AI drafts in every seat.',
+    supportLine:
+      'Free support seats for admin and finance once you have two fee-earners.',
+    exampleNote: `Typical 4-seat desk: ${fourSeatsTotal}/month.`,
+  };
+}
+
+export interface CommercialTrustItem {
   title: string;
-  description: string;
   href?: string;
+}
+
+export const COMMERCIAL_TRUST_STRIP: {
+  items: CommercialTrustItem[];
+  agencySlot: {
+    enabled: boolean;
+    text: string;
+  };
+} = {
+  items: [
+    { title: 'EU-hosted, UK-built', href: '/trust' },
+    { title: 'DPA ready', href: '/dpa' },
+    { title: 'Pricing on the page, not behind a demo', href: '#pricing' },
+  ],
+  agencySlot: {
+    enabled: false,
+    text: 'Built with a working commercial agency in Kent',
+  },
 };
 
-export const COMMERCIAL_HOME_TRUST: CommercialTrustItem[] = [
-  {
-    title: 'EU-hosted, UK-built',
-    description:
-      'Data sits on AWS in EU West, behind row-level security on every table.',
-    href: '/trust',
-  },
-  {
-    title: 'DPA ready',
-    description:
-      'A data processing agreement you can hand straight to compliance.',
-    href: '/dpa',
-  },
-  {
-    title: 'Free support seats',
-    description:
-      'Admin and finance seats are free once the desk has two fee-earners.',
-  },
-  {
-    title: 'Published pricing',
-    description: 'The price is on the page, not behind a demo call.',
-    href: '/pricing',
-  },
-];
+export interface CommercialFaq {
+  question: string;
+  answer: string;
+}
 
-export const COMMERCIAL_HOME_WORKSPACES_HEADING = {
-  label: 'Other workspaces',
-  title: 'Not a commercial agent?',
-  intro:
-    'Ozer runs other kinds of work too, with tasks and the planner shared across every workspace you use.',
+export function getCommercialHomeFaqs(): CommercialFaq[] {
+  const [seat1, seats2to7, seats8plus] = COMMERCIAL_GRADUATED_TIERS;
+  return [
+    {
+      question: 'What is the Commercial Property workspace?',
+      answer:
+        'A workspace built for UK commercial agency desks. Instructions, disposals, applicant requirements, matching, online and PDF brochures, pipeline and portal publishing all sit on one desk, with published seat pricing.',
+    },
+    {
+      question: 'Which portals are included?',
+      answer:
+        'Rightmove Commercial via real-time data feed, EACH via an automated feed, and Property Hive for your WordPress site. All are included from the first billable seat with no bolt-on fees.',
+    },
+    {
+      question: 'How does interest matching work?',
+      answer:
+        'Every requirement is scored against your stock by size, location, tenure and sector. When an instruction matches an applicant’s brief, it appears on the interest schedule and can be circulated automatically in their digest.',
+    },
+    {
+      question: 'What does AI do on the desk?',
+      answer:
+        'AI drafts marketing particulars from listing facts, turns pasted emails into requirements, explains match scores and writes first-pass outreach. Nothing is ever sent or published without your approval.',
+    },
+    {
+      question: 'How does pricing work?',
+      answer: `Pricing is graduated: ${formatPounds(seat1!.unitGbp)}/month for seat 1, ${formatPounds(seats2to7!.unitGbp)}/month for seats 2–7, and ${formatPounds(seats8plus!.unitGbp)}/month from seat 8. Add or remove seats anytime. Support seats for admin and finance are free once you have two fee-earners.`,
+    },
+    {
+      question: commercialCta.faqQuestion,
+      answer: commercialCta.faqAnswer,
+    },
+  ];
+}
+
+export const COMMERCIAL_FINAL_CTA = {
+  heading: 'Put your desk on Ozer.',
+  body: 'From £89 a month. Portals included.',
 } as const;
-
-export type CommercialWorkspaceStripItem = {
-  label: string;
-  description: string;
-  status: 'live' | 'free' | 'soon';
-  href?: string;
-};
-
-export const COMMERCIAL_HOME_WORKSPACES: CommercialWorkspaceStripItem[] = [
-  {
-    label: 'Commercial Property',
-    description: 'Disposals, requirements, pipeline and portals.',
-    status: 'live',
-    href: '/commercial-property',
-  },
-  {
-    label: 'Business',
-    description: 'Clients, projects, invoices and pipeline for studios.',
-    status: 'live',
-    href: '/work',
-  },
-  {
-    label: 'Personal',
-    description: 'Tasks and planner connected across every workspace.',
-    status: 'free',
-    href: '/personal',
-  },
-  {
-    label: 'Surveyors',
-    description: 'Instructions, inspections and reports.',
-    status: 'soon',
-  },
-];
-
-export const COMMERCIAL_HOME_FINAL_CTA = {
-  title: 'Put your desk on the list.',
-  subtitle:
-    'We bring agencies on a few at a time so each desk is set up properly. Leave a work email and we will reply personally.',
-  signedInTitle: 'Your desk is waiting.',
-  signedInSubtitle:
-    'Disposals, requirements and your pipeline are where you left them.',
-} as const;
-
-export type CommercialProof = {
-  quote: string;
-  name: string;
-  role: string;
-  agency: string;
-  logoSrc?: string;
-};
-
-/** Stays `null` until a customer has signed off a real quote. */
-export const COMMERCIAL_HOME_PROOF: CommercialProof | null = null;
-
-export const COMMERCIAL_HOME_WAITLIST_FAQ = {
-  question: 'What happens when I join the waiting list?',
-  answer:
-    'We email you personally to set up your workspace. There is no automated sequence. If you would rather start now, pricing is published and you can sign up today.',
-} as const;
-
-/** Commercial FAQs repeated on the homepage, in display order. */
-export const COMMERCIAL_HOME_FAQ_QUESTIONS = [
-  'What is the Commercial Property workspace?',
-  'Which portals are included?',
-  'How does interest matching work?',
-  'What does AI do on the desk?',
-  'How does graduated pricing work?',
-  'What are support seats?',
-] as const;

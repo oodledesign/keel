@@ -6,6 +6,7 @@ import { ArrowRight, FileText } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
+import { commercialCta } from '~/config/commercial-cta.config';
 import pathsConfig from '~/config/paths.config';
 import {
   buildPricingSignupUrl,
@@ -645,9 +646,9 @@ async function CommercialSpotlightSections({
               <p
                 className={cn(marketingLede, 'mt-4', marketingSectionDarkMuted)}
               >
-                Publish from Commercial Solo upwards. Rightmove, EACH and the
-                Property Hive WordPress plugin are included, and stock goes out
-                from the same disposal record the desk already keeps.
+                Publish from seat 1 upwards. Rightmove, EACH and the Property
+                Hive WordPress plugin are included, and stock goes out from the
+                same disposal record the desk already keeps.
               </p>
             </div>
             <ul className="flex flex-col items-start justify-center gap-8 sm:gap-10 lg:items-end">
@@ -708,7 +709,7 @@ async function CommercialSpotlightSections({
           <MarketingScreen
             screen={{
               src: '/brand/marketing/commercial-pipeline-board.png',
-              alt: 'Commercial WIP board with potential and current instruction columns',
+              alt: 'Commercial pipeline board with potential and current instruction columns',
               width: 1140,
               height: 1018,
             }}
@@ -826,19 +827,19 @@ async function CommercialSpotlightSections({
                 'text-[var(--workspace-shell-text)]',
               )}
             >
-              Online brochures & branded presentations
+              Brochures, PDF or online
             </h2>
             <p className={cn(marketingLede, 'mt-4', marketingBodyText)}>
-              Share a branded slideshow for each disposal, with photos, key
-              facts, floorplans, location and an enquire form, instead of
-              emailing another static PDF. Agency colours and logo come through
+              Generate branded PDF particulars for print and email, or share an
+              interactive online slideshow with photos, key facts, floorplans,
+              location and an enquire form. Agency colours and logo apply
               automatically.
             </p>
             <RuledList
               className="mt-6"
               items={[
-                'Shareable brochure link for landlords and enquirers',
-                'Brand colours and logo on the deck',
+                'PDF brochure ready for print and email attachments',
+                'Shareable online brochure link for landlords and enquirers',
                 'Enquire form wired back to the acting agents',
               ]}
             />
@@ -972,8 +973,16 @@ function SegmentHero({
             ) : null}
             <div className="mt-8 flex flex-wrap items-center gap-6">
               <Button asChild size="lg" className={marketingBtnPrimary}>
-                <Link href={primarySignup}>
-                  Start free
+                <Link
+                  href={
+                    config.slug === 'commercial-property'
+                      ? commercialCta.primaryHref
+                      : primarySignup
+                  }
+                >
+                  {config.slug === 'commercial-property'
+                    ? commercialCta.primaryLabel
+                    : 'Start free'}
                   <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
               </Button>

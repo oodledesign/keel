@@ -18,7 +18,7 @@ export const COMMERCIAL_GRADUATED_TIERS = [
 export const COMMERCIAL_ILLUSTRATIVE_TIERS = [
   {
     id: 'solo',
-    label: 'Commercial Solo',
+    label: 'Seat 1',
     billableSeats: 1,
     description: 'Sole practitioner / micro agency',
     seatRangeLabel: '1 billable seat',
@@ -27,7 +27,7 @@ export const COMMERCIAL_ILLUSTRATIVE_TIERS = [
   },
   {
     id: 'team',
-    label: 'Commercial Team',
+    label: 'Seats 2–7',
     billableSeats: 4,
     description: 'Typical regional commercial desk',
     seatRangeLabel: '2–7 billable seats',
@@ -36,7 +36,7 @@ export const COMMERCIAL_ILLUSTRATIVE_TIERS = [
   },
   {
     id: 'scale',
-    label: 'Commercial Scale',
+    label: 'Seats 8+',
     billableSeats: 10,
     description: 'Multi-negotiator / multi-branch',
     seatRangeLabel: '8+ billable seats',
@@ -57,9 +57,7 @@ export function parseCommercialSeatKind(
 }
 
 /** Seats that count toward plan limits or Stripe quantity. */
-export function seatKindCountsTowardLimits(
-  kind: CommercialSeatKind,
-): boolean {
+export function seatKindCountsTowardLimits(kind: CommercialSeatKind): boolean {
   return kind !== 'platform';
 }
 
@@ -175,10 +173,10 @@ export function illustrativeTierForSeats(billableSeats: number): {
 } {
   const seats = clampBillableSeats(billableSeats);
   if (seats <= 1) {
-    return { id: 'solo', label: 'Commercial Solo' };
+    return { id: 'solo', label: 'Seat 1' };
   }
   if (seats <= 7) {
-    return { id: 'team', label: 'Commercial Team' };
+    return { id: 'team', label: 'Seats 2–7' };
   }
-  return { id: 'scale', label: 'Commercial Scale' };
+  return { id: 'scale', label: 'Seats 8+' };
 }

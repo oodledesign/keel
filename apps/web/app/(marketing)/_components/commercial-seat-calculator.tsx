@@ -11,6 +11,7 @@ import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { cn } from '@kit/ui/utils';
 
+import { commercialCta } from '~/config/commercial-cta.config';
 import {
   COMMERCIAL_GRADUATED_PLAN_ID,
   COMMERCIAL_GRADUATED_PRODUCT_ID,
@@ -166,17 +167,21 @@ export function CommercialSeatCalculator({
             <li>
               {support > 0
                 ? `${support} free support seats included`
-                : 'No free support seats on Solo (1 billable)'}
+                : 'Free support seats included from 2 billable seats'}
             </li>
             <li>Portal publishing included</li>
           </ul>
           <Button
             asChild
             size="lg"
-            className={cn(marketingBtnGradient, 'mt-auto w-full')}
+            className={cn(marketingBtnGradient, 'mt-auto w-full rounded-full')}
           >
-            <Link href={signupUrl}>
-              Start with {billable} seat{billable === 1 ? '' : 's'}
+            <Link
+              href={commercialCta.mode === 'waitlist' ? '#waitlist' : signupUrl}
+            >
+              {commercialCta.mode === 'waitlist'
+                ? commercialCta.primaryLabel
+                : `Start with ${billable} seat${billable === 1 ? '' : 's'}`}
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
           </Button>

@@ -7,6 +7,7 @@ import {
   parseLaunchInterestSource,
 } from '~/lib/marketing/launch-interest';
 import { rateLimitApiRequest } from '~/lib/rate-limit/api-rate-limit';
+import { notifyAdminWaitlistSignup } from '~/lib/server/notify-admin-waitlist';
 
 export const dynamic = 'force-dynamic';
 
@@ -121,10 +122,13 @@ export async function POST(request: Request) {
     );
   }
 
+  const normalisedInterests = normaliseInterests(body?.interests);
+  const parsedSource = parseLaunchInterestSource(body?.source);
+
   const { error } = await client.from('launch_interest').insert({
     email,
-    interests: normaliseInterests(body?.interests),
-    source: parseLaunchInterestSource(body?.source),
+    interests: normalisedInterests,
+    source: parsedSource,
   });
 
   if (error) {
@@ -133,6 +137,13 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+
+  // Fire-and-forget admin notification (fails safely without blocking response)
+  void notifyAdminWaitlistSignup({
+    email,
+    source: parsedSource,
+    interests: normalisedInterests,
+  });
 
   return NextResponse.json({
     message: "You're on the list — we'll email you at launch.",

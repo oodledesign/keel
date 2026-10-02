@@ -22,7 +22,7 @@ const SECTIONS: Array<{ heading: ReactNode; links: FooterLink[] }> = [
       { href: '/commercial-property', label: 'Commercial property' },
       { href: '/work', label: 'Business' },
       { href: '/personal', label: 'Personal & family' },
-      { href: '/work#coming-soon', label: 'Coming soon' },
+      { href: '/work#coming-soon', label: 'Surveyors (Coming soon)' },
     ],
   },
   {
@@ -104,23 +104,23 @@ export function SiteFooter() {
         'site-footer relative mt-auto w-full border-t bg-[var(--ozer-cream-100)] dark:bg-[var(--ozer-plum-950)]',
       )}
     >
-      <div className="mx-auto w-full max-w-[88rem] px-6 pt-20 pb-10 md:pt-28">
-        <p className="font-heading max-w-[22ch] text-[2.25rem] leading-[1.05] font-medium tracking-[-0.02em] text-balance text-[var(--workspace-shell-text)] md:text-[3.5rem]">
-          Workspaces for commercial agents, studios and home life.
+      <div className="mx-auto w-full max-w-[88rem] px-6 pt-12 pb-10 md:pt-16">
+        <p className="max-w-2xl text-sm leading-relaxed text-[var(--workspace-shell-text-muted)] md:text-base">
+          Ozer is a workspace for UK commercial property agents. Published
+          pricing, data hosted in the EU.
         </p>
 
         <div
           className={cn(
             marketingRule,
-            'mt-16 grid gap-12 border-t pt-10 lg:grid-cols-12 lg:gap-10',
+            'mt-10 grid gap-12 border-t pt-10 lg:grid-cols-12 lg:gap-10',
           )}
         >
           <div className="flex flex-col gap-6 lg:col-span-4">
             <AppLogo className="w-[85px] md:w-[95px]" />
             <p className="max-w-sm text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
-              Ozer is a workspace for UK commercial property agents, studios and
-              small agencies, with your personal planner alongside. Published
-              pricing, data hosted in the EU.
+              Disposals, applicant matching, pipeline and portal feeds on one
+              desk.
             </p>
             <MarketingFooterNewsletter className="max-w-sm" />
           </div>

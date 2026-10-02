@@ -25,7 +25,7 @@ import { marketingBtnPress } from '~/lib/marketing/marketing-ui';
 type WaitlistEmailFormProps = {
   id: string;
   source: LaunchInterestSource;
-  tone?: 'light' | 'dark';
+  tone?: 'light' | 'dark' | 'orange-topaze';
   label?: string;
   placeholder?: string;
   buttonLabel?: string;
@@ -51,6 +51,14 @@ const TONE_CLASSES = {
     successTitle: 'text-[var(--ozer-text-on-dark)]',
     successBody: 'text-[var(--ozer-text-on-dark-muted)]',
     error: 'text-[var(--ozer-coral-400)]',
+  },
+  'orange-topaze': {
+    line: 'border-[#2A1720]/30 focus-within:border-[#2A1720]',
+    input: 'text-[#2A1720] placeholder:text-[#2A1720]/60',
+    button: 'focus-visible:ring-offset-[#FF5C34]',
+    successTitle: 'text-[#2A1720]',
+    successBody: 'text-[#2A1720]/80',
+    error: 'text-[#2A1720] font-semibold',
   },
 } as const;
 
@@ -191,8 +199,10 @@ export function WaitlistEmailForm({
                   disabled={pending}
                   data-test="waitlist-submit-button"
                   className={cn(
-                    'inline-flex h-11 items-center gap-2 rounded-[var(--ozer-radius-control)] bg-[var(--ozer-accent)] px-5 text-[0.9375rem] font-medium whitespace-nowrap text-[var(--ozer-plum-950)]',
-                    'hover:bg-[var(--ozer-coral-600)] hover:text-[var(--ozer-cream-50)]',
+                    'inline-flex h-11 items-center gap-2 px-5 text-[0.9375rem] font-medium whitespace-nowrap',
+                    tone === 'orange-topaze'
+                      ? 'rounded-full bg-[#2A1720] text-[#FBF6EC] hover:bg-[#1E1017] hover:text-white'
+                      : 'rounded-[var(--ozer-radius-control)] bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-coral-600)] hover:text-[var(--ozer-cream-50)]',
                     'focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:ring-offset-2 focus-visible:outline-none',
                     'disabled:cursor-not-allowed disabled:opacity-70',
                     styles.button,

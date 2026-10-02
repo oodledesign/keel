@@ -1,71 +1,61 @@
-import { cn } from '@kit/ui/utils';
+import { ArrowRight } from 'lucide-react';
 
 import {
-  COMMERCIAL_HOME_PAIN_FIX,
-  COMMERCIAL_HOME_PAIN_FIX_HEADING,
+  COMMERCIAL_BEFORE_AFTER,
+  type CommercialBeforeAfterRow,
 } from '~/lib/marketing/commercial-home-content';
-import { marketingRule } from '~/lib/marketing/marketing-ui';
-
-import { MarketingSectionHeader } from '../marketing-section-index';
-
-const LEDGER_GRID =
-  'grid gap-x-10 gap-y-2 md:grid-cols-[3rem_minmax(0,5fr)_minmax(0,6fr)]';
 
 export function PainFixSection() {
-  const heading = COMMERCIAL_HOME_PAIN_FIX_HEADING;
+  const { eyebrow, heading, rows } = COMMERCIAL_BEFORE_AFTER;
 
   return (
     <section
-      className="mx-auto w-full max-w-[88rem] px-6 pt-20 pb-8 md:pt-28"
-      aria-labelledby="pain-fix-heading"
+      className="w-full bg-[var(--ozer-cream-50)] py-20 md:py-28"
+      aria-labelledby="before-after-heading"
     >
-      <MarketingSectionHeader
-        index="01"
-        label={heading.label}
-        title={heading.title}
-        intro={heading.intro}
-        headingId="pain-fix-heading"
-      />
-
-      <div className="mt-14 md:mt-20">
-        <div
-          className={cn(
-            LEDGER_GRID,
-            'hidden pb-3 text-[0.8125rem] font-medium text-[var(--workspace-shell-text-muted)] md:grid',
-          )}
-          aria-hidden="true"
-        >
-          <span />
-          <span>{heading.beforeLabel}</span>
-          <span>{heading.afterLabel}</span>
+      <div className="mx-auto w-full max-w-5xl px-6">
+        <div className="mb-12 text-center md:mb-16">
+          <p className="text-xs font-semibold tracking-wider text-[var(--workspace-shell-text-muted)] uppercase">
+            {eyebrow}
+          </p>
+          <h2
+            id="before-after-heading"
+            className="font-heading mt-2 text-3xl font-semibold tracking-tight text-[var(--workspace-shell-text)] sm:text-4xl lg:text-5xl"
+          >
+            {heading}
+          </h2>
         </div>
 
-        <ol className={cn(marketingRule, 'border-b')}>
-          {COMMERCIAL_HOME_PAIN_FIX.map((item, index) => (
-            <li
-              key={item.pain}
-              className={cn(
-                LEDGER_GRID,
-                marketingRule,
-                'border-t py-6 md:items-baseline md:py-8',
-              )}
+        <div className="space-y-4">
+          {rows.map((row: CommercialBeforeAfterRow) => (
+            <div
+              key={row.before}
+              className="grid grid-cols-1 items-center gap-2 rounded-2xl border border-[color:var(--workspace-shell-border)]/40 p-2 sm:grid-cols-[1fr_auto_1fr] sm:gap-4 sm:border-0 sm:p-0 md:gap-6"
             >
-              <span className="text-[0.8125rem] font-medium text-[var(--workspace-shell-text-muted)] tabular-nums">
-                {String(index + 1).padStart(2, '0')}
-              </span>
-              <p className="text-[0.9375rem] leading-relaxed text-[var(--workspace-shell-text-muted)] md:text-base">
-                <span className="font-medium md:sr-only">
-                  {heading.beforeLabel}:{' '}
+              {/* Left: Before (muted grey text, no card fill) */}
+              <div className="flex items-center px-4 py-2 sm:justify-end sm:px-6 sm:py-3">
+                <span className="text-sm font-medium text-[var(--workspace-shell-text-muted)] sm:text-right sm:text-base">
+                  {row.before}
                 </span>
-                {item.pain}
-              </p>
-              <p className="font-heading mt-2 text-[1.25rem] leading-[1.3] font-medium tracking-[-0.01em] text-[var(--workspace-shell-text)] md:mt-0 md:text-[1.5rem]">
-                <span className="sr-only">{heading.afterLabel}: </span>
-                {item.fix}
-              </p>
-            </li>
+              </div>
+
+              {/* Middle: Arrow */}
+              <div
+                className="hidden justify-center text-[var(--workspace-shell-text-muted)]/50 sm:flex"
+                aria-hidden="true"
+              >
+                <ArrowRight className="size-4" />
+              </div>
+
+              {/* Right: With Ozer (Wasabi-tinted pill card) */}
+              <div className="flex items-center rounded-full border border-[#E9F056] bg-[#F7F9C8] px-5 py-3 text-[#2A1720] shadow-sm">
+                <span className="text-sm font-semibold sm:text-base">
+                  {row.withOzer}
+                </span>
+              </div>
+            </div>
           ))}
-        </ol>
+        </div>
       </div>
     </section>
   );

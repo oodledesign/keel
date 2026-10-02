@@ -18,6 +18,7 @@ import {
   PiggyBank,
   Rss,
   ScrollText,
+  UserCheck,
   Users,
 } from 'lucide-react';
 
@@ -67,6 +68,16 @@ export function AdminSidebar() {
                 <Link className={'flex gap-2.5'} href={'/admin/users'}>
                   <Users className={'h-4'} />
                   <span>Users</span>
+                </Link>
+              </SidebarMenuButton>
+
+              <SidebarMenuButton
+                isActive={path.includes('/admin/waiting-list')}
+                asChild
+              >
+                <Link className={'flex gap-2.5'} href={'/admin/waiting-list'}>
+                  <UserCheck className={'h-4'} />
+                  <span>Waiting list</span>
                 </Link>
               </SidebarMenuButton>
 

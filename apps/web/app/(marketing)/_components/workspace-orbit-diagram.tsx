@@ -81,8 +81,8 @@ function useHubBorderPulse(begins: readonly string[], durationS: number) {
 
   useEffect(() => {
     const durMs = durationS * 1000;
-    const timeouts: ReturnType<typeof setTimeout>[] = [];
-    const intervals: ReturnType<typeof setInterval>[] = [];
+    const timeouts: number[] = [];
+    const intervals: number[] = [];
 
     const flash = () => {
       setFlashing(true);

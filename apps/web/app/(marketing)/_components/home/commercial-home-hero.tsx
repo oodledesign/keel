@@ -6,6 +6,7 @@ import { ArrowRight } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
+import { commercialCta } from '~/config/commercial-cta.config';
 import {
   COMMERCIAL_HOME_HERO,
   COMMERCIAL_HOME_HERO_SCREEN,
@@ -31,6 +32,7 @@ export function CommercialHomeHero({
   viewer: MarketingViewerContext;
 }) {
   const hero = COMMERCIAL_HOME_HERO;
+  const isWaitlist = commercialCta.mode === 'waitlist';
 
   return (
     <section
@@ -41,7 +43,7 @@ export function CommercialHomeHero({
         <MarketingSectionIndex
           tone="dark"
           label={hero.eyebrow}
-          aside={hero.status}
+          aside={commercialCta.heroBadge}
         />
 
         <h1
@@ -62,7 +64,7 @@ export function CommercialHomeHero({
               'lg:col-span-5',
             )}
           >
-            {hero.subtitle}
+            {hero.body}
           </p>
 
           <div className="lg:col-span-6 lg:col-start-7">
@@ -74,84 +76,101 @@ export function CommercialHomeHero({
                     <ArrowRight className="size-4" aria-hidden="true" />
                   </Link>
                 </Button>
-                <Link
-                  href="/commercial-property#pricing"
-                  className={marketingTextLinkOnDark}
-                >
+                <Link href="#pricing" className={marketingTextLinkOnDark}>
                   See pricing
                 </Link>
               </div>
-            ) : (
-              <>
+            ) : isWaitlist ? (
+              <div>
                 <WaitlistEmailForm
                   id="home-hero-waitlist-email"
                   source="home-hero"
                   tone="dark"
                   label={hero.formLabel}
                   placeholder={hero.formPlaceholder}
-                  buttonLabel={hero.submitLabel}
+                  buttonLabel={commercialCta.primaryLabel}
                 />
-                <p className={cn('mt-4 text-sm', marketingSectionDarkMuted)}>
-                  {hero.reassurance}{' '}
+                <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+                  <span className="text-xs font-medium text-[var(--ozer-cream-50)]/70">
+                    {hero.microLine}
+                  </span>
                   <Link
-                    href="/commercial-property#pricing"
-                    className={cn(marketingTextLinkOnDark, 'text-sm')}
+                    href="#pricing"
+                    className={cn(marketingTextLinkOnDark, 'text-xs')}
                   >
                     See pricing
                   </Link>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="flex flex-wrap items-center gap-4">
+                  <Button asChild size="lg" className={marketingBtnPrimary}>
+                    <Link href={commercialCta.primaryHref}>
+                      {commercialCta.primaryLabel}
+                      <ArrowRight className="size-4" aria-hidden="true" />
+                    </Link>
+                  </Button>
+                  <Link href="#pricing" className={marketingTextLinkOnDark}>
+                    See pricing
+                  </Link>
+                </div>
+                <p className="mt-3 text-xs font-medium text-[var(--ozer-cream-50)]/70">
+                  {hero.microLine}
                 </p>
-              </>
+              </div>
             )}
           </div>
         </div>
 
+        {/* Publishes to logo strip directly under hero on dark background */}
         <div
           className={cn(
-            'mt-14 flex flex-col gap-5 border-t pt-5 sm:flex-row sm:items-center sm:gap-10 md:mt-20',
+            'mt-14 flex flex-col gap-4 border-t pt-5 sm:flex-row sm:items-center sm:gap-8 md:mt-16',
             marketingRuleOnDark,
           )}
         >
           <p
             className={cn(
-              'shrink-0 text-[0.8125rem] font-medium',
+              'shrink-0 text-xs font-semibold tracking-wider uppercase',
               marketingSectionDarkMuted,
             )}
           >
             {hero.portalsLabel}
           </p>
+
           <ul
-            className="flex flex-wrap items-center gap-x-10 gap-y-4"
-            aria-label="Portals"
+            className="flex flex-wrap items-center gap-x-8 gap-y-3"
+            aria-label="Supported property portals"
           >
             {COMMERCIAL_HOME_PUBLISH_PORTALS.map((portal) => (
-              <li key={portal.name}>
+              <li key={portal.name} className="flex items-center gap-2.5">
                 <Image
                   src={portal.logoSrc}
-                  alt={portal.name}
-                  width={160}
-                  height={40}
-                  unoptimized
-                  className="h-7 w-auto max-w-[9rem] object-contain opacity-90 md:h-8"
+                  alt=""
+                  width={22}
+                  height={22}
+                  className="rounded object-contain brightness-95"
+                  aria-hidden="true"
                 />
+                <span className="text-xs font-medium text-[var(--ozer-text-on-dark)]">
+                  {portal.name}
+                </span>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="mt-12 grid gap-8 md:mt-16 lg:grid-cols-12 lg:gap-10">
+        {/* Agency-home dashboard visual */}
+        <div className="mt-12 md:mt-16">
+          <MarketingScreen
+            screen={COMMERCIAL_HOME_HERO_SCREEN}
+            priority
+            tone="dark"
+          />
           <MarketingScreenCaptions
             screen={COMMERCIAL_HOME_HERO_SCREEN}
             tone="dark"
-            className="gap-y-4 self-start sm:grid-cols-3 lg:col-span-3 lg:grid-cols-1 lg:pt-2"
-          />
-          <MarketingScreen
-            screen={COMMERCIAL_HOME_HERO_SCREEN}
-            tone="dark"
-            priority
-            hideCaptions
-            sizes="(min-width: 1024px) 75vw, 100vw"
-            className="lg:col-span-9 lg:mr-[calc(-1*(max(0px,(100vw_-_88rem)/2)_+_1.5rem))]"
-            frameClassName="rounded-b-none border-b-0 lg:rounded-r-none lg:border-r-0"
           />
         </div>
       </div>
