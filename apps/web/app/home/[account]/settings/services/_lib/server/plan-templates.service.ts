@@ -7,6 +7,10 @@ import Stripe from 'stripe';
 import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import {
+  isStripeResourceMissing,
+  resolveStoredCheckout,
+} from '~/lib/billing/pending-checkout';
 import type {
   ClientSubscriptionBillingCollection,
   ClientSubscriptionRecord,
@@ -965,10 +969,18 @@ class PlanTemplatesService {
   }
 
   /**
-   * Start or resume Stripe Checkout for a pending retainer.
+   * Where "Pay now" should send the client for a pending retainer.
    * Trusted callers only (public checkout route) — no membership check.
+   *
+   * A saved checkout link is only reused while Stripe says the session is
+   * still open: sessions expire after 24h and a dead link shows Stripe's
+   * "You're all done here" page. Expired or unknown sessions are replaced.
+   * A session the client already completed is never replaced (that would
+   * risk a second charge); it is confirmed instead.
    */
-  async resumePendingCheckoutUrl(subscriptionId: string): Promise<string> {
+  async resolvePendingCheckout(
+    subscriptionId: string,
+  ): Promise<{ kind: 'checkout'; url: string } | { kind: 'paid' }> {
     const { data: row } = await this.db
       .from('client_subscriptions')
       .select('*')
@@ -985,21 +997,59 @@ class PlanTemplatesService {
     if (sub.status === 'cancelled') {
       throw new Error('This subscription has been cancelled');
     }
+    // Already paid (e.g. the webhook activated it before this click).
+    if (sub.status === 'active') return { kind: 'paid' };
     if (sub.status !== 'pending' && sub.status !== 'incomplete') {
       throw new Error('This subscription is not awaiting payment');
-    }
-
-    if (sub.stripePaymentLink) {
-      return sub.stripePaymentLink;
     }
 
     if (!sub.accountId) {
       const { createClientSubscriptionCheckout } =
         await import('~/lib/billing/subscription-checkout');
-      return createClientSubscriptionCheckout(subscriptionId);
+      return {
+        kind: 'checkout',
+        url: await createClientSubscriptionCheckout(subscriptionId),
+      };
     }
 
-    return (await this.createPendingCheckoutSession(sub)).url;
+    const accountId = sub.accountId;
+    const resolution = await resolveStoredCheckout(sub, async (sessionId) => {
+      const connect = await this.resolveConnectAccount(accountId);
+      try {
+        return await stripe().checkout.sessions.retrieve(
+          sessionId,
+          {},
+          { stripeAccount: connect.stripeAccountId },
+        );
+      } catch (error) {
+        if (isStripeResourceMissing(error)) return null;
+        throw error;
+      }
+    });
+
+    switch (resolution.kind) {
+      case 'reuse':
+        return { kind: 'checkout', url: resolution.url };
+      case 'paid': {
+        const result = await this.reconcileCheckoutSession(
+          sub.id,
+          resolution.sessionId,
+        );
+        if (result.activated) return { kind: 'paid' };
+        throw new Error(
+          'Your payment was received but could not be confirmed yet. Please contact your provider.',
+        );
+      }
+      case 'processing':
+        throw new Error(
+          'Your payment is still being processed. Please check back shortly.',
+        );
+      case 'create':
+        return {
+          kind: 'checkout',
+          url: (await this.createPendingCheckoutSession(sub)).url,
+        };
+    }
   }
 
   /**

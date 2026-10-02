@@ -92,10 +92,15 @@ export async function GET(request: Request) {
 
   try {
     const admin = getSupabaseServerAdminClient();
-    const url = await createPlanTemplatesService(
+    const checkout = await createPlanTemplatesService(
       admin as never,
-    ).resumePendingCheckoutUrl(subscriptionId);
-    return NextResponse.redirect(url, { status: 303 });
+    ).resolvePendingCheckout(subscriptionId);
+
+    if (checkout.kind === 'paid') {
+      return redirectToPortal(subscriptionId, 'paid');
+    }
+
+    return NextResponse.redirect(checkout.url, { status: 303 });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Could not start checkout';
