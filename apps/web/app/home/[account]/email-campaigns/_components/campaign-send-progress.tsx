@@ -7,6 +7,7 @@ import { Spinner } from '@kit/ui/spinner';
 import {
   type CampaignSendProgressSnapshot,
   campaignSendProgressPercent,
+  formatCampaignSendTimeRemaining,
   isCampaignSendInFlight,
   isCampaignSendTerminal,
 } from '~/lib/campaigns/campaign-send-progress';
@@ -129,6 +130,10 @@ export function CampaignSendProgress({
     : 'Preparing the recipient list';
 
   const failedHint = failed && progress?.lastError ? progress.lastError : null;
+  const paceHint = inFlight && progress?.lastError ? progress.lastError : null;
+  const eta = inFlight
+    ? formatCampaignSendTimeRemaining(progress?.estimatedSecondsRemaining)
+    : null;
   const extra =
     determinate && (progress?.failedCount ?? 0) > 0 && !failed
       ? ` · ${progress!.failedCount.toLocaleString()} failed`
@@ -151,6 +156,7 @@ export function CampaignSendProgress({
           <span className="font-medium">{label}</span>
           <span className={workspaceTextMuted}>
             {detail}
+            {eta ? ` · ${eta}` : ''}
             {extra}
           </span>
         </p>
@@ -180,6 +186,8 @@ export function CampaignSendProgress({
       </div>
       {failedHint ? (
         <p className={`text-xs ${workspaceTextMuted}`}>{failedHint}</p>
+      ) : paceHint ? (
+        <p className={`text-xs ${workspaceTextMuted}`}>{paceHint}</p>
       ) : null}
     </div>
   );

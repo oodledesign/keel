@@ -49,9 +49,11 @@ function engagementLabel(row: EmailCampaignRecipient) {
 export function CampaignRecipientLog({
   campaign,
   recipients,
+  recipientTotal,
 }: {
   campaign: EmailCampaign;
   recipients: EmailCampaignRecipient[];
+  recipientTotal?: number;
 }) {
   return (
     <div className={`${workspacePanelCard} p-4`}>
@@ -61,6 +63,9 @@ export function CampaignRecipientLog({
           {campaign.sentCount} sent · {campaign.deliveredCount} delivered ·{' '}
           {campaign.failedCount} failed · {campaign.skippedCount} skipped ·{' '}
           {campaign.unsubscribedCount} unsubscribed
+          {recipientTotal != null && recipientTotal > recipients.length
+            ? ` · showing ${recipients.length.toLocaleString()} of ${recipientTotal.toLocaleString()}`
+            : ''}
         </p>
       </div>
       <div className="overflow-x-auto">

@@ -81,6 +81,7 @@ export function CampaignSendPanel({
   accountSlug,
   campaign,
   recipients,
+  recipientTotal,
   audienceCount,
   usage,
   analytics,
@@ -92,6 +93,7 @@ export function CampaignSendPanel({
   accountSlug: string;
   campaign: EmailCampaign;
   recipients: EmailCampaignRecipient[];
+  recipientTotal?: number;
   audienceCount: number;
   usage: CampaignUsageSnapshot;
   analytics: CampaignAnalyticsBundle;
@@ -458,7 +460,11 @@ export function CampaignSendPanel({
       ) : null}
 
       {recipients.length > 0 ? (
-        <CampaignRecipientLog campaign={campaign} recipients={recipients} />
+        <CampaignRecipientLog
+          campaign={campaign}
+          recipients={recipients}
+          recipientTotal={recipientTotal}
+        />
       ) : null}
     </div>
   );

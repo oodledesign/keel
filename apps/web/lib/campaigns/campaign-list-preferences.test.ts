@@ -31,6 +31,8 @@ function createClient(options: {
         in: vi.fn(() => query),
         ilike: vi.fn(() => query),
         order: vi.fn(() => query),
+        range: vi.fn(() => query),
+        limit: vi.fn(() => query),
         maybeSingle: vi.fn(async () => ({
           data:
             table === 'campaign_audience_lists' ? (options.list ?? null) : null,

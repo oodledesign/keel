@@ -1,3 +1,5 @@
+import 'server-only';
+
 import {
   type AccountBrandResolved,
   wrapEmailHtmlWithBrand,
@@ -34,25 +36,33 @@ function escapeHtml(value: string): string {
     .replaceAll('"', '&quot;');
 }
 
-export function renderCampaignHtml(input: {
+/**
+ * Compile the campaign document once per worker run. Merge fields and
+ * `{{unsubscribe_url}}` stay in the shell for cheap per-recipient substitution.
+ */
+export function compileCampaignHtmlShell(input: {
   brand: AccountBrandResolved;
   htmlBody: string;
   document?: CampaignDocument | null;
-  merge: CampaignMergeValues;
-  unsubscribeToken: string;
 }): string {
-  const resolvedHtml = resolveCampaignSendHtml(
-    input.document,
-    input.brand,
-    input.htmlBody,
-  );
-  const merged = applyCampaignMergeFields(resolvedHtml, input.merge);
+  return resolveCampaignSendHtml(input.document, input.brand, input.htmlBody);
+}
+
+export function personalizeCampaignHtml(
+  shell: string,
+  input: {
+    brand: AccountBrandResolved;
+    merge: CampaignMergeValues;
+    unsubscribeToken: string;
+  },
+): string {
+  const merged = applyCampaignMergeFields(shell, input.merge);
   const unsubscribeUrl = buildWorkspaceMailingListUnsubscribeUrl(
     input.unsubscribeToken,
   );
   const withUnsubscribe = applyUnsubscribeUrl(merged, unsubscribeUrl);
 
-  if (isCampaignDocumentHtml(resolvedHtml)) {
+  if (isCampaignDocumentHtml(shell)) {
     return withUnsubscribe;
   }
 
@@ -60,4 +70,14 @@ export function renderCampaignHtml(input: {
     brand: input.brand,
     innerHtml: withUnsubscribe,
   });
+}
+
+export function renderCampaignHtml(input: {
+  brand: AccountBrandResolved;
+  htmlBody: string;
+  document?: CampaignDocument | null;
+  merge: CampaignMergeValues;
+  unsubscribeToken: string;
+}): string {
+  return personalizeCampaignHtml(compileCampaignHtmlShell(input), input);
 }

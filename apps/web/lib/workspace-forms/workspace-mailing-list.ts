@@ -7,6 +7,7 @@ import { randomBytes } from 'crypto';
 import { fireNewSubscriberAutomations } from '~/lib/campaigns/campaign-automations.service';
 import { composeCampaignContactName } from '~/lib/campaigns/campaign-contact-csv';
 import { isUsableMailingListUnsubscribeToken } from '~/lib/campaigns/campaign-test-send';
+import { fetchAllPagedRows } from '~/lib/campaigns/page-query';
 import { resolveStoredClientDisplayName } from '~/lib/clients/resolve-client-list-display';
 import { normalizeCirculationEmail } from '~/lib/commercial/circulation/circulation-eligibility';
 import { createCommercialCirculationService } from '~/lib/commercial/circulation/circulation.service';
@@ -387,21 +388,21 @@ export async function listWorkspaceMailingListSubscribers(
   admin: SupabaseClient,
   accountId: string,
 ): Promise<WorkspaceMailingSubscriber[]> {
-  const { data, error } = await fromTable(
-    admin,
-    'workspace_mailing_preferences',
-  )
-    .select(
-      'id, client_id, email, consented_at, clients(display_name, company_name)',
-    )
-    .eq('account_id', accountId)
-    .eq('purpose', PURPOSE)
-    .eq('marketing_status', 'subscribed')
-    .order('consented_at', { ascending: false });
+  const data = await fetchAllPagedRows<Record<string, unknown>>(
+    async (from, to) =>
+      fromTable(admin, 'workspace_mailing_preferences')
+        .select(
+          'id, client_id, email, consented_at, clients(display_name, company_name)',
+        )
+        .eq('account_id', accountId)
+        .eq('purpose', PURPOSE)
+        .eq('marketing_status', 'subscribed')
+        .order('consented_at', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, to),
+  );
 
-  if (error) throw new Error(error.message);
-
-  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => {
+  return data.map((row) => {
     const linked = Array.isArray(row.clients) ? row.clients[0] : row.clients;
     const client = linked as {
       display_name?: string | null;

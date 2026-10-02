@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildCampaignSendProgress,
   campaignSendProgressPercent,
+  formatCampaignSendTimeRemaining,
   isCampaignSendInFlight,
   isCampaignSendTerminal,
 } from './campaign-send-progress';
@@ -78,6 +79,48 @@ describe('campaign send progress', () => {
     });
 
     expect(campaignSendProgressPercent(progress)).toBeNull();
+  });
+
+  it('estimates time remaining from the configured send rate while sending', () => {
+    const progress = buildCampaignSendProgress({
+      status: 'sending',
+      audienceCount: 30_000,
+      sentCount: 0,
+      failedCount: 0,
+      skippedCount: 0,
+      lastError: null,
+      ratePerSecond: 10,
+      recipientCounts: {
+        sent: 6_000,
+        failed: 0,
+        skipped: 0,
+        pending: 24_000,
+      },
+    });
+
+    expect(progress.estimatedSecondsRemaining).toBe(2_400);
+    expect(
+      formatCampaignSendTimeRemaining(progress.estimatedSecondsRemaining),
+    ).toBe('about 40 min left');
+    expect(formatCampaignSendTimeRemaining(45)).toBe('under a minute left');
+    expect(formatCampaignSendTimeRemaining(60)).toBe('about 1 min left');
+  });
+
+  it('omits the estimate once the send is no longer in flight', () => {
+    const progress = buildCampaignSendProgress({
+      status: 'sent',
+      audienceCount: 10,
+      sentCount: 10,
+      failedCount: 0,
+      skippedCount: 0,
+      lastError: null,
+      ratePerSecond: 10,
+    });
+
+    expect(progress.estimatedSecondsRemaining).toBeNull();
+    expect(
+      formatCampaignSendTimeRemaining(progress.estimatedSecondsRemaining),
+    ).toBe(null);
   });
 
   it('classifies in-flight vs terminal statuses', () => {

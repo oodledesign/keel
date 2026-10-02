@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { normalizeCirculationEmail } from '~/lib/commercial/circulation/circulation-eligibility';
 
 import { composeCampaignContactName } from './campaign-contact-csv';
+import { fetchAllPagedRows } from './page-query';
 
 function fromTable(client: SupabaseClient, table: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -28,21 +29,16 @@ export async function loadListOptOutEmails(
   accountId: string,
   listId: string,
 ): Promise<Set<string>> {
-  const { data, error } = await fromTable(
-    client,
-    'campaign_audience_list_opt_outs',
-  )
-    .select('email')
-    .eq('account_id', accountId)
-    .eq('list_id', listId);
-
-  if (error) throw new Error(error.message);
-
-  return new Set(
-    ((data ?? []) as Array<{ email: string }>).map((row) =>
-      normalizeCirculationEmail(row.email),
-    ),
+  const data = await fetchAllPagedRows<{ email: string }>(async (from, to) =>
+    fromTable(client, 'campaign_audience_list_opt_outs')
+      .select('email')
+      .eq('account_id', accountId)
+      .eq('list_id', listId)
+      .order('id', { ascending: true })
+      .range(from, to),
   );
+
+  return new Set(data.map((row) => normalizeCirculationEmail(row.email)));
 }
 
 export async function listPublicAudienceLists(
