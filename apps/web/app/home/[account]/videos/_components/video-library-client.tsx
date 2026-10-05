@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -30,6 +30,7 @@ import pathsConfig from '~/config/paths.config';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import { copyTextToClipboard } from '~/lib/clipboard';
 import { buildPublicVideoWatchUrl } from '~/lib/videos/public-share';
+import { isStalledUpload } from '~/lib/videos/stalled-upload';
 import type {
   VideoFolderRow,
   VideoRow,
@@ -43,6 +44,8 @@ import { FolderSidebar } from './folder-sidebar';
 import { MoveToFolderDialog } from './move-to-folder-dialog';
 import { RenameVideoDialog } from './rename-video-dialog';
 import { ShareFolderDialog } from './share-folder-dialog';
+import { SortableVideoGrid } from './sortable-video-grid';
+import { useEncodeProgress } from './use-encode-progress';
 import { VideoCard } from './video-card';
 import { VideoListRow } from './video-list-row';
 import { VideoPreviewDialog } from './video-preview-dialog';
@@ -51,14 +54,6 @@ const UploadModal = dynamic(
   () => import('./upload-modal').then((mod) => mod.UploadModal),
   { ssr: false },
 );
-
-const ENCODING_POLL_MS = 8000;
-
-type StatusApiOk = {
-  ok: true;
-  data: { status: string };
-};
-type StatusApiErr = { ok: false; error: { message: string } };
 
 function folderBreadcrumb(
   folderId: string | null,
@@ -103,6 +98,10 @@ export function VideoLibraryClient(props: {
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [shareFolderOpen, setShareFolderOpen] = useState(false);
   const notifiedReady = useRef(new Set<string>());
+  const [manualOrder, setManualOrder] = useState<{
+    folderId: string;
+    ids: string[];
+  } | null>(null);
 
   const encodingVideoIds = useMemo(
     () =>
@@ -112,57 +111,37 @@ export function VideoLibraryClient(props: {
     [props.videos],
   );
 
-  useEffect(() => {
-    if (encodingVideoIds.length === 0) return;
-
-    let cancelled = false;
-
-    const poll = async () => {
-      let shouldRefresh = false;
-
-      await Promise.all(
-        encodingVideoIds.map(async (videoId) => {
-          try {
-            const res = await fetch(`/api/videos/${videoId}/status`);
-            const json = (await res.json()) as StatusApiOk | StatusApiErr;
-            if (!json.ok) return;
-
-            if (json.data.status === 'ready') {
-              if (!notifiedReady.current.has(videoId)) {
-                notifiedReady.current.add(videoId);
-                const title =
-                  props.videos.find((video) => video.id === videoId)?.title ??
-                  'Video';
-                toast.success(`${title} is ready`);
-              }
-              shouldRefresh = true;
-              return;
-            }
-
-            if (json.data.status === 'failed') {
-              shouldRefresh = true;
-            }
-          } catch {
-            // Keep polling; transient network errors are fine.
-          }
-        }),
-      );
-
-      if (!cancelled && shouldRefresh) {
-        router.refresh();
+  const encodeProgress = useEncodeProgress(
+    encodingVideoIds,
+    (videoId, status) => {
+      if (status === 'ready' && !notifiedReady.current.has(videoId)) {
+        notifiedReady.current.add(videoId);
+        const title =
+          props.videos.find((video) => video.id === videoId)?.title ?? 'Video';
+        toast.success(`${title} is ready`);
       }
-    };
+      // The status route has already saved the new state; refetch the list.
+      router.refresh();
+    },
+  );
 
-    void poll();
-    const interval = window.setInterval(() => {
-      void poll();
-    }, ENCODING_POLL_MS);
+  // One clock reading per render so every card agrees on what is stalled.
+  const now = Date.now();
 
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-    };
-  }, [encodingVideoIds, props.videos, router]);
+  const renderCard = (video: VideoRow) => (
+    <VideoCard
+      stalled={isStalledUpload(video, now)}
+      accountSlug={props.accountSlug}
+      video={video}
+      encodeProgress={encodeProgress[video.id]}
+      onPreview={setPreviewVideo}
+      onCopyEmbed={copyEmbed}
+      onCopyPublicLink={copyPublicLink}
+      onRename={setRenameVideoTarget}
+      onMove={setMoveVideoTarget}
+      onDelete={deleteVideo}
+    />
+  );
 
   const breadcrumb = folderBreadcrumb(selectedFolderId, props.folders);
   const presetsPath = pathsConfig.app.accountVideoPresets.replace(
@@ -186,8 +165,18 @@ export function VideoLibraryClient(props: {
       rows = rows.filter((video) => video.title.toLowerCase().includes(query));
     }
 
+    const byNewest = (a: VideoRow, b: VideoRow) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+
     rows.sort((a, b) => {
       switch (sort) {
+        case 'manual': {
+          // Never-ordered videos (new uploads) lead, newest first.
+          const aOrder = a.sort_order ?? -1;
+          const bOrder = b.sort_order ?? -1;
+          if (aOrder !== bOrder) return aOrder - bOrder;
+          return byNewest(a, b);
+        }
         case 'oldest':
           return (
             new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -204,8 +193,47 @@ export function VideoLibraryClient(props: {
       }
     });
 
+    if (
+      sort === 'manual' &&
+      manualOrder &&
+      manualOrder.folderId === selectedFolderId
+    ) {
+      const position = new Map(manualOrder.ids.map((id, i) => [id, i]));
+      rows.sort(
+        (a, b) =>
+          (position.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+          (position.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+      );
+    }
+
     return rows;
-  }, [props.videos, search, selectedFolderId, sort, statusFilter]);
+  }, [manualOrder, props.videos, search, selectedFolderId, sort, statusFilter]);
+
+  const canReorder =
+    sort === 'manual' &&
+    selectedFolderId != null &&
+    !search.trim() &&
+    statusFilter === 'all' &&
+    viewMode === 'grid';
+
+  const reorderVideos = async (orderedIds: string[]) => {
+    if (!selectedFolderId) return;
+    const previous = manualOrder;
+    setManualOrder({ folderId: selectedFolderId, ids: orderedIds });
+    try {
+      const res = await fetch('/api/videos/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoIds: orderedIds }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message ?? 'Reorder failed');
+      router.refresh();
+    } catch (error) {
+      setManualOrder(previous);
+      toast.error(getErrorMessage(error));
+    }
+  };
 
   const copyEmbed = async (video: VideoRow) => {
     try {
@@ -454,6 +482,7 @@ export function VideoLibraryClient(props: {
             <SelectValue placeholder="Sort" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="manual">Manual order</SelectItem>
             <SelectItem value="newest">Newest</SelectItem>
             <SelectItem value="oldest">Oldest</SelectItem>
             <SelectItem value="name">Name</SelectItem>
@@ -489,28 +518,37 @@ export function VideoLibraryClient(props: {
               </Button>
             </div>
           ) : viewMode === 'grid' ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {filteredVideos.map((video) => (
-                <VideoCard
-                  key={video.id}
-                  accountSlug={props.accountSlug}
-                  video={video}
-                  onPreview={setPreviewVideo}
-                  onCopyEmbed={copyEmbed}
-                  onCopyPublicLink={copyPublicLink}
-                  onRename={setRenameVideoTarget}
-                  onMove={setMoveVideoTarget}
-                  onDelete={deleteVideo}
+            <>
+              {sort === 'manual' && !canReorder ? (
+                <p className="text-muted-foreground mb-3 text-xs">
+                  {selectedFolderId
+                    ? 'Clear search and status filters to drag videos into order.'
+                    : 'Open a folder to drag its videos into order.'}
+                </p>
+              ) : null}
+              {canReorder ? (
+                <SortableVideoGrid
+                  videos={filteredVideos}
+                  onReorder={(ids) => void reorderVideos(ids)}
+                  renderCard={renderCard}
                 />
-              ))}
-            </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {filteredVideos.map((video) => (
+                    <div key={video.id}>{renderCard(video)}</div>
+                  ))}
+                </div>
+              )}
+            </>
           ) : (
             <div className="overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
               {filteredVideos.map((video) => (
                 <VideoListRow
                   key={video.id}
+                  stalled={isStalledUpload(video, now)}
                   accountSlug={props.accountSlug}
                   video={video}
+                  encodeProgress={encodeProgress[video.id]}
                   onPreview={setPreviewVideo}
                   onCopyEmbed={copyEmbed}
                   onCopyPublicLink={copyPublicLink}

@@ -21,6 +21,10 @@ export type VideoRow = {
   status: VideoStatus;
   original_filename: string | null;
   tags: string[];
+  /** Manual position within the folder; null = never ordered. */
+  sort_order?: number | null;
+  /** Thumbnail picked from a video frame (not synced from Bunny). */
+  thumbnail_custom?: boolean;
   public_share_enabled: boolean;
   public_share_token: string | null;
   source?: 'upload' | 'screen_recording';
@@ -51,9 +55,10 @@ export type VideoFolderRow = {
   parent_folder_id: string | null;
   public_share_enabled?: boolean;
   public_share_token?: string | null;
+  public_share_allow_download?: boolean;
   created_at: string;
 };
 
-export type VideoSort = 'newest' | 'oldest' | 'name' | 'duration';
+export type VideoSort = 'manual' | 'newest' | 'oldest' | 'name' | 'duration';
 
 export type VideoViewMode = 'grid' | 'list';

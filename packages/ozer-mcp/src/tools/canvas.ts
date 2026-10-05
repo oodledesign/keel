@@ -169,6 +169,13 @@ const updateItemSchema = z.object({
 });
 
 export const updateCanvasItemsSchema = z.object({
+  move_contents: z
+    .boolean()
+    .optional()
+    .default(true)
+    .describe(
+      'When a frame or phase is moved (x/y), also move the items inside it (centre within its box), like dragging it in the editor. Default true. Items you also patch in the same call keep their own patch. Set false to move only the container.',
+    ),
   items: z
     .array(updateItemSchema)
     .min(1)
@@ -811,6 +818,69 @@ export function buildCanvasUpdate(
   return update;
 }
 
+export type CarryMove = { id: string; dx: number; dy: number };
+
+/**
+ * Items carried along when containers move. Mirrors the editor
+ * (apps/web/lib/projects/canvas/canvas-geometry.ts `itemsInsideContainer`):
+ * an item whose centre sits inside the container's pre-move box travels with
+ * it; a nested container travels only if smaller than its parent. When
+ * several moving containers hold an item, the smallest one wins.
+ */
+export function planContainerCarries(
+  rows: CanvasRow[],
+  moves: CarryMove[],
+  skipIds: Set<string>,
+): Array<{ row: CanvasRow; x: number; y: number }> {
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const containers = moves
+    .map((move) => ({ move, row: byId.get(move.id) }))
+    .filter(
+      (entry): entry is { move: CarryMove; row: CanvasRow } =>
+        entry.row != null && isContainerKind(entry.row.kind),
+    )
+    .map((entry) => ({ ...entry, box: rowBox(entry.row) }));
+
+  const result = new Map<
+    string,
+    { row: CanvasRow; x: number; y: number; area: number }
+  >();
+
+  for (const row of rows) {
+    if (isConnectorKind(row.kind) || skipIds.has(row.id)) continue;
+    const inner = rowBox(row);
+    const cx = inner.x + inner.w / 2;
+    const cy = inner.y + inner.h / 2;
+
+    for (const { move, row: container, box } of containers) {
+      if (container.id === row.id) continue;
+      if (isContainerKind(row.kind) && inner.w * inner.h >= box.w * box.h) {
+        continue;
+      }
+      if (
+        cx < box.x ||
+        cx > box.x + box.w ||
+        cy < box.y ||
+        cy > box.y + box.h
+      ) {
+        continue;
+      }
+      const area = box.w * box.h;
+      const current = result.get(row.id);
+      if (!current || area < current.area) {
+        result.set(row.id, {
+          row,
+          x: inner.x + move.dx,
+          y: inner.y + move.dy,
+          area,
+        });
+      }
+    }
+  }
+
+  return [...result.values()].map(({ row, x, y }) => ({ row, x, y }));
+}
+
 function describeLinkedKinds() {
   return LINKED_CANVAS_KINDS.join(', ');
 }
@@ -914,7 +984,7 @@ export const registerCanvasTools: OzerMcpToolRegistrar = (server, context) => {
     'update_canvas_items',
     {
       description:
-        "Edit items already on a delivery project's shared canvas (ids from get_project_canvas). Only provided fields change. Any item can be moved, resized or restacked (x, y, w, h, z_index); freeform items can also change content: text/colour/font for sticky, text, shape and frame (frames use title), url/title/description for links, points/colour/stroke_width for drawings (new points replace the stroke), colour/label for connectors. Linked cards (tasks, phases, notes, …) can only be moved/resized; edit the underlying record with its own tool. Every patch is validated before any is applied; writes then run one at a time and stop at the first failure (not transactional).",
+        "Edit items already on a delivery project's shared canvas (ids from get_project_canvas). Only provided fields change. Any item can be moved, resized or restacked (x, y, w, h, z_index); freeform items can also change content: text/colour/font for sticky, text, shape and frame (frames use title), url/title/description for links, points/colour/stroke_width for drawings (new points replace the stroke), colour/label for connectors. Moving a frame or phase (x/y) also moves the items inside it, like dragging it in the editor (move_contents, default true; carried_with_container reports how many). Linked cards (tasks, phases, notes, …) can only be moved/resized; edit the underlying record with its own tool. Every patch is validated before any is applied; writes then run one at a time and stop at the first failure (not transactional).",
       inputSchema: updateCanvasItemsSchema,
     },
     async (input) => {
@@ -953,6 +1023,54 @@ export const registerCanvasTools: OzerMcpToolRegistrar = (server, context) => {
         return { row, update: buildCanvasUpdate(row, patch, index) };
       });
 
+      let carried = 0;
+      if (input.move_contents) {
+        const moves: CarryMove[] = [];
+        for (const { row } of updates) {
+          const patch = input.items.find((item) => item.id === row.id);
+          if (!patch || !isContainerKind(row.kind)) continue;
+          const dx = patch.x !== undefined ? patch.x - (Number(row.x) || 0) : 0;
+          const dy = patch.y !== undefined ? patch.y - (Number(row.y) || 0) : 0;
+          if (dx !== 0 || dy !== 0) moves.push({ id: row.id, dx, dy });
+        }
+
+        if (moves.length > 0) {
+          const moved = new Set(ids);
+          const moveProjects = [
+            ...new Set(moves.map((move) => rowsById.get(move.id)!.project_id)),
+          ];
+          const { data: all, error: allError } = await supabase
+            .from('project_canvas_items')
+            .select(`${CANVAS_ITEM_COLUMNS}, project_id, account_id`)
+            .in('project_id', moveProjects);
+          assertSupabaseOk(all, allError, 'load canvas contents');
+
+          const everything = (all ?? []) as Array<
+            CanvasRow & { project_id: string; account_id: string }
+          >;
+          // Contents are matched within each container's own project.
+          for (const projectId of moveProjects) {
+            const inProject = everything.filter(
+              (row) => row.project_id === projectId,
+            );
+            const projectMoves = moves.filter(
+              (move) => rowsById.get(move.id)!.project_id === projectId,
+            );
+            for (const carry of planContainerCarries(
+              inProject,
+              projectMoves,
+              moved,
+            )) {
+              updates.push({
+                row: carry.row as (typeof inProject)[number],
+                update: { x: carry.x, y: carry.y },
+              });
+              carried += 1;
+            }
+          }
+        }
+      }
+
       // Sequential so a failure stops the batch; PostgREST has no
       // multi-row transaction, so earlier patches stay applied.
       const results: CanvasRow[] = [];
@@ -979,6 +1097,7 @@ export const registerCanvasTools: OzerMcpToolRegistrar = (server, context) => {
 
       return toolJson({
         updated_count: results.length,
+        carried_with_container: carried,
         items: results.map((row) => mapCanvasRow(row)),
       });
     },

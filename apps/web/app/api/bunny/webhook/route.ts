@@ -241,7 +241,20 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  await admin.from('videos').update(patch).eq('bunny_video_id', bunnyVideoId);
+  const { thumbnail_url: syncedThumbnail, ...statusPatch } = patch;
+  await admin
+    .from('videos')
+    .update(statusPatch)
+    .eq('bunny_video_id', bunnyVideoId);
+
+  // Never replace a frame the user picked themselves.
+  if (syncedThumbnail) {
+    await admin
+      .from('videos')
+      .update({ thumbnail_url: syncedThumbnail })
+      .eq('bunny_video_id', bunnyVideoId)
+      .eq('thumbnail_custom', false);
+  }
 
   return NextResponse.json({ ok: true });
 }

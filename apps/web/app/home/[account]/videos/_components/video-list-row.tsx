@@ -14,14 +14,19 @@ import {
 } from '@kit/ui/dropdown-menu';
 
 import pathsConfig from '~/config/paths.config';
+import { formatSecondsLeft } from '~/lib/videos/eta';
 import { formatDuration, formatViewCount } from '~/lib/videos/format';
 import type { VideoRow } from '~/lib/videos/types';
 
+import type { EncodeProgress } from './use-encode-progress';
+import { VideoProcessingState } from './video-processing-state';
 import { VideoThumbnail } from './video-thumbnail';
 
 export function VideoListRow(props: {
   accountSlug: string;
   video: VideoRow;
+  encodeProgress?: EncodeProgress;
+  stalled?: boolean;
   onPreview: (video: VideoRow) => void;
   onCopyEmbed: (video: VideoRow) => void;
   onCopyPublicLink: (video: VideoRow) => void;
@@ -42,11 +47,32 @@ export function VideoListRow(props: {
         className="relative h-14 w-24 shrink-0 overflow-hidden rounded-md bg-black/40"
         aria-label={`Edit player config for ${video.title}`}
       >
-        <VideoThumbnail
-          candidates={video.thumbnail_candidates ?? []}
-          alt={video.title}
-          className="object-cover"
-        />
+        {props.stalled ? (
+          <>
+            <span className="text-xs text-amber-500">Upload didn’t finish</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 border-red-500/50 text-xs text-red-400 hover:text-red-400"
+              onClick={() => props.onDelete(video)}
+            >
+              Delete
+            </Button>
+          </>
+        ) : video.status === 'processing' || video.status === 'uploading' ? (
+          <VideoProcessingState
+            status={video.status}
+            stalled={props.stalled}
+            compact
+          />
+        ) : (
+          <VideoThumbnail
+            candidates={video.thumbnail_candidates ?? []}
+            alt={video.title}
+            className="object-cover"
+          />
+        )}
       </Link>
 
       <div className="min-w-0 flex-1">
@@ -86,7 +112,15 @@ export function VideoListRow(props: {
         {video.status === 'processing' || video.status === 'uploading' ? (
           <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
             <Loader2 className="h-3 w-3 animate-spin" />
-            {video.status}
+            {[
+              video.status === 'uploading' ? 'Uploading' : 'Processing',
+              props.encodeProgress && props.encodeProgress.percent > 0
+                ? `${Math.round(props.encodeProgress.percent)}%`
+                : null,
+              formatSecondsLeft(props.encodeProgress?.secondsLeft ?? null),
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </span>
         ) : null}
         {video.status === 'failed' ? (

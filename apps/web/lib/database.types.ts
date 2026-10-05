@@ -19865,6 +19865,7 @@ export type Database = {
           id: string
           name: string
           parent_folder_id: string | null
+          public_share_allow_download: boolean
         }
         Insert: {
           account_id: string
@@ -19872,6 +19873,7 @@ export type Database = {
           id?: string
           name: string
           parent_folder_id?: string | null
+          public_share_allow_download?: boolean
         }
         Update: {
           account_id?: string
@@ -19879,6 +19881,7 @@ export type Database = {
           id?: string
           name?: string
           parent_folder_id?: string | null
+          public_share_allow_download?: boolean
         }
         Relationships: [
           {
@@ -20211,10 +20214,12 @@ export type Database = {
           published_revision: number
           published_timeline: Json | null
           recorded_at: string | null
+          sort_order: number | null
           source: string
           status: string
           summary: string | null
           tags: string[]
+          thumbnail_custom: boolean
           thumbnail_url: string | null
           title: string
           updated_at: string
@@ -20244,10 +20249,12 @@ export type Database = {
           published_revision?: number
           published_timeline?: Json | null
           recorded_at?: string | null
+          sort_order?: number | null
           source?: string
           status?: string
           summary?: string | null
           tags?: string[]
+          thumbnail_custom?: boolean
           thumbnail_url?: string | null
           title: string
           updated_at?: string
@@ -20277,10 +20284,12 @@ export type Database = {
           published_revision?: number
           published_timeline?: Json | null
           recorded_at?: string | null
+          sort_order?: number | null
           source?: string
           status?: string
           summary?: string | null
           tags?: string[]
+          thumbnail_custom?: boolean
           thumbnail_url?: string | null
           title?: string
           updated_at?: string

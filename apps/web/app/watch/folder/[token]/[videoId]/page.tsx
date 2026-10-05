@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Download } from 'lucide-react';
 
 import { aspectRatioCss } from '~/lib/videos/embed';
 import { buildPublicFolderWatchPath } from '~/lib/videos/public-share';
@@ -62,13 +62,25 @@ export default async function PublicFolderVideoPage({
   return (
     <main className="min-h-screen bg-[var(--ozer-cream-50)] text-[var(--ozer-plum-900)]">
       <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-        <Link
-          href={buildPublicFolderWatchPath(token)}
-          className="mb-5 inline-flex items-center gap-1.5 self-start text-sm font-medium text-[var(--ozer-text-on-light-muted)] transition hover:text-[var(--ozer-plum-900)]"
-        >
-          <ArrowLeft className="size-4" aria-hidden />
-          {data.folder.name}
-        </Link>
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <Link
+            href={buildPublicFolderWatchPath(token)}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--ozer-text-on-light-muted)] transition hover:text-[var(--ozer-plum-900)]"
+          >
+            <ArrowLeft className="size-4" aria-hidden />
+            {data.folder.name}
+          </Link>
+          {data.allowDownload ? (
+            <a
+              href={`/api/watch/folder/${token}/${video.id}/download`}
+              download
+              className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--ozer-border-on-light)] bg-white px-3.5 py-1.5 text-sm font-medium text-[var(--ozer-plum-900)] shadow-sm transition hover:shadow-md"
+            >
+              <Download className="size-4" aria-hidden />
+              Download
+            </a>
+          ) : null}
+        </div>
 
         <PublicWatchClient
           video={video}

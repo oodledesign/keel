@@ -1,7 +1,9 @@
 import { registerAssigneeTools } from './assignees';
 import { registerCanvasTools } from './canvas';
 import { registerCanvasCardTools } from './canvas-cards';
+import { registerCirculationTools } from './circulation';
 import { registerClientTools } from './clients';
+import { registerCommercialMatchingTools } from './commercial-matching';
 import { registerContactTools } from './contacts';
 import { registerContentTools } from './content';
 import { registerExtractTaskTools } from './extract-tasks';
@@ -10,6 +12,7 @@ import { registerNoteTools } from './notes';
 import { registerPhaseTools } from './phases';
 import { registerPipelineTools } from './pipeline';
 import { registerProjectTools } from './projects';
+import { registerPropertyWorkspaceTools } from './property-workspaces';
 import { registerRecurringTools } from './recurring';
 import { registerTaskTools } from './tasks';
 import { registerTodayDigestTools } from './today-digest';
@@ -29,6 +32,9 @@ export const ozerMcpTools: OzerMcpToolRegistrar[] = [
   registerCanvasCardTools,
   registerRecurringTools,
   registerPipelineTools,
+  registerPropertyWorkspaceTools,
+  registerCommercialMatchingTools,
+  registerCirculationTools,
   registerClientTools,
   registerContactTools,
   registerMeetingTools,

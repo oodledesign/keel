@@ -36,11 +36,17 @@ export type PublicFolderSection = {
 
 export type PublicFolderPageData = {
   folder: { id: string; name: string };
+  allowDownload: boolean;
   sections: PublicFolderSection[];
   totalVideos: number;
 };
 
-type SharedFolder = { id: string; account_id: string; name: string };
+type SharedFolder = {
+  id: string;
+  account_id: string;
+  name: string;
+  public_share_allow_download: boolean;
+};
 
 async function loadSharedFolder(
   admin: SupabaseClient,
@@ -50,7 +56,7 @@ async function loadSharedFolder(
 
   const { data, error } = await admin
     .from('video_folders')
-    .select('id, account_id, name')
+    .select('id, account_id, name, public_share_allow_download')
     .eq('public_share_token', token)
     .eq('public_share_enabled', true)
     .maybeSingle();
@@ -95,6 +101,8 @@ export const loadPublicFolderByToken = cache(
         'folder_id',
         tree.map((entry) => entry.id),
       )
+      // Owner's manual order; never-ordered videos first, newest first.
+      .order('sort_order', { ascending: true, nullsFirst: true })
       .order('created_at', { ascending: false });
 
     if (error) throw new Error(error.message);
@@ -145,6 +153,7 @@ export const loadPublicFolderByToken = cache(
 
     return {
       folder: { id: folder.id, name: folder.name },
+      allowDownload: Boolean(folder.public_share_allow_download),
       sections,
       totalVideos: sections.reduce(
         (count, section) => count + section.videos.length,
@@ -156,6 +165,7 @@ export const loadPublicFolderByToken = cache(
 
 export type PublicFolderVideoPageData = {
   folder: { id: string; name: string };
+  allowDownload: boolean;
   page: PublicVideoPageData;
 };
 
@@ -190,6 +200,7 @@ export const loadPublicFolderVideo = cache(async function loadPublicFolderVideo(
 
   return {
     folder: { id: folder.id, name: folder.name },
+    allowDownload: Boolean(folder.public_share_allow_download),
     page: await buildPublicVideoPageData(admin, data as VideoRow),
   };
 });
@@ -198,7 +209,7 @@ export const loadPublicFolderVideo = cache(async function loadPublicFolderVideo(
 export async function findVideoInSharedFolder(
   token: string,
   videoId: string,
-): Promise<{ id: string } | null> {
+): Promise<{ id: string; allowDownload: boolean } | null> {
   const admin = getSupabaseServerAdminClient();
   const folder = await loadSharedFolder(admin, token);
   if (!folder) return null;
@@ -218,5 +229,9 @@ export async function findVideoInSharedFolder(
     .maybeSingle();
 
   if (error) throw new Error(error.message);
-  return (data as { id: string } | null) ?? null;
+  if (!data) return null;
+  return {
+    id: (data as { id: string }).id,
+    allowDownload: Boolean(folder.public_share_allow_download),
+  };
 }

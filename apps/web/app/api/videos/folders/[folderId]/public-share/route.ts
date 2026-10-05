@@ -10,7 +10,8 @@ import { requireVideoFolderById } from '~/lib/videos/server/videos-access';
 export const runtime = 'nodejs';
 
 const bodySchema = z.object({
-  enabled: z.boolean(),
+  enabled: z.boolean().optional(),
+  allowDownload: z.boolean().optional(),
 });
 
 type RouteContext = {
@@ -43,19 +44,25 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       | null
       | undefined;
     // Keep the token across off/on so a re-enabled link is the same URL.
+    const enabled = parsed.data.enabled ?? Boolean(folder.public_share_enabled);
+    const allowDownload =
+      parsed.data.allowDownload ?? Boolean(folder.public_share_allow_download);
     const nextToken =
-      parsed.data.enabled && !existingToken
+      enabled && !existingToken
         ? generatePublicShareToken()
         : (existingToken ?? null);
 
     const { data, error } = await access.client
       .from('video_folders')
       .update({
-        public_share_enabled: parsed.data.enabled,
+        public_share_enabled: enabled,
+        public_share_allow_download: allowDownload,
         public_share_token: nextToken,
       })
       .eq('id', folderId)
-      .select('public_share_enabled, public_share_token')
+      .select(
+        'public_share_enabled, public_share_token, public_share_allow_download',
+      )
       .single();
 
     if (error) {
@@ -63,12 +70,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
 
     const token = data.public_share_token as string | null;
-    const enabled = Boolean(data.public_share_enabled);
+    const isEnabled = Boolean(data.public_share_enabled);
 
     return jsonOk({
-      enabled,
+      enabled: isEnabled,
+      allowDownload: Boolean(data.public_share_allow_download),
       token,
-      publicUrl: enabled && token ? buildPublicFolderWatchUrl(token) : null,
+      publicUrl: isEnabled && token ? buildPublicFolderWatchUrl(token) : null,
     });
   } catch (error) {
     console.error('[videos] folder public-share PATCH', error);

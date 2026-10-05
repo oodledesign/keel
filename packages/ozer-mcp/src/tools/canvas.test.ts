@@ -16,6 +16,7 @@ import {
   addCanvasItemsSchema,
   buildCanvasAdditions,
   buildCanvasUpdate,
+  planContainerCarries,
   updateCanvasItemsSchema,
 } from './canvas';
 import {
@@ -808,5 +809,45 @@ describe('canvas tools over MCP', () => {
     expect(unsupported.text).toContain('only once per call');
 
     expect(updated).toEqual([]);
+  });
+});
+
+describe('planContainerCarries', () => {
+  const frame = row({ id: 'f', kind: 'frame', x: 0, y: 0, w: 400, h: 300 });
+  const inside = row({ id: 'a', kind: 'sticky', x: 50, y: 50 });
+  const outside = row({ id: 'b', kind: 'sticky', x: 900, y: 900 });
+  const edge = row({ id: 'c', kind: 'sticky', x: 350, y: 250 }); // centre 450,350: out
+  const inner = row({ id: 'g', kind: 'frame', x: 20, y: 20, w: 100, h: 100 });
+  const big = row({ id: 'h', kind: 'frame', x: 0, y: 0, w: 800, h: 600 });
+
+  it('carries items whose centre is inside, by the same delta', () => {
+    const carried = planContainerCarries(
+      [frame, inside, outside, edge],
+      [{ id: 'f', dx: 100, dy: -20 }],
+      new Set(['f']),
+    );
+    expect(carried.map((c) => [c.row.id, c.x, c.y])).toEqual([['a', 150, 30]]);
+  });
+
+  it('skips items patched explicitly and larger nested containers', () => {
+    const carried = planContainerCarries(
+      [frame, inside, inner, big],
+      [{ id: 'f', dx: 10, dy: 10 }],
+      new Set(['f', 'a']),
+    );
+    expect(carried.map((c) => c.row.id)).toEqual(['g']);
+  });
+
+  it('lets the smallest moving container win', () => {
+    const carried = planContainerCarries(
+      [big, frame, inside],
+      [
+        { id: 'h', dx: 1000, dy: 0 },
+        { id: 'f', dx: 5, dy: 0 },
+      ],
+      new Set(['h', 'f']),
+    );
+    expect(carried).toHaveLength(1);
+    expect(carried[0]!.x).toBe(55);
   });
 });

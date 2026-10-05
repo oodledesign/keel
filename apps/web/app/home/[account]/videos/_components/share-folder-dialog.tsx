@@ -30,6 +30,7 @@ type ApiResponse =
       ok: true;
       data: {
         enabled: boolean;
+        allowDownload: boolean;
         token: string | null;
         publicUrl: string | null;
       };
@@ -51,6 +52,9 @@ export function ShareFolderDialog(props: {
 }) {
   const { folder } = props;
   const [enabled, setEnabled] = useState(Boolean(folder?.public_share_enabled));
+  const [allowDownload, setAllowDownload] = useState(
+    Boolean(folder?.public_share_allow_download),
+  );
   const [publicUrl, setPublicUrl] = useState<string | null>(initialUrl(folder));
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -58,6 +62,7 @@ export function ShareFolderDialog(props: {
   // Re-sync when a different folder is opened or the library refreshes.
   useEffect(() => {
     setEnabled(Boolean(folder?.public_share_enabled));
+    setAllowDownload(Boolean(folder?.public_share_allow_download));
     setPublicUrl(initialUrl(folder));
     setCopied(false);
   }, [folder]);
@@ -72,21 +77,31 @@ export function ShareFolderDialog(props: {
 
   if (!folder) return null;
 
-  const updateShare = async (nextEnabled: boolean) => {
+  const updateShare = async (patch: {
+    enabled?: boolean;
+    allowDownload?: boolean;
+  }) => {
     setSaving(true);
     try {
       const res = await fetch(`/api/videos/folders/${folder.id}/public-share`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: nextEnabled }),
+        body: JSON.stringify(patch),
       });
       const json = (await res.json()) as ApiResponse;
       if (!json.ok) throw new Error(json.error.message);
 
       setEnabled(json.data.enabled);
+      setAllowDownload(json.data.allowDownload);
       setPublicUrl(json.data.publicUrl);
       toast.success(
-        json.data.enabled ? 'Folder link enabled' : 'Folder link disabled',
+        patch.allowDownload !== undefined
+          ? json.data.allowDownload
+            ? 'Downloads allowed'
+            : 'Downloads turned off'
+          : json.data.enabled
+            ? 'Folder link enabled'
+            : 'Folder link disabled',
       );
       props.onChanged();
     } catch (error) {
@@ -129,9 +144,25 @@ export function ShareFolderDialog(props: {
               id="folder-public-share"
               checked={enabled}
               disabled={saving}
-              onCheckedChange={(value) => void updateShare(value)}
+              onCheckedChange={(value) => void updateShare({ enabled: value })}
             />
           </div>
+
+          {enabled ? (
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="folder-allow-download" className="text-sm">
+                Allow viewers to download videos
+              </Label>
+              <Switch
+                id="folder-allow-download"
+                checked={allowDownload}
+                disabled={saving}
+                onCheckedChange={(value) =>
+                  void updateShare({ allowDownload: value })
+                }
+              />
+            </div>
+          ) : null}
 
           {enabled && publicUrl ? (
             <div className="space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">

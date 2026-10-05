@@ -159,7 +159,7 @@ class MeetingPollsService {
   async listPolls(accountId: string): Promise<MeetingPollListRow[]> {
     const { data, error } = await table(this.client, 'meeting_polls')
       .select(
-        'id, title, status, duration_minutes, timezone, range_start, range_end, created_at, chosen_slot_id, meeting_poll_slots(id, starts_at), meeting_poll_invitees(id, responded_at)',
+        'id, title, status, duration_minutes, timezone, range_start, range_end, created_at, chosen_slot_id, meeting_poll_slots!meeting_poll_slots_poll_id_fkey(id, starts_at), meeting_poll_invitees(id, responded_at)',
       )
       .eq('account_id', accountId)
       .order('created_at', { ascending: false });

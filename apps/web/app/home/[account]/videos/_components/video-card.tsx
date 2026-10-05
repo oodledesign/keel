@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 
-import { Eye, Loader2, MoreHorizontal, Settings2 } from 'lucide-react';
+import { Eye, MoreHorizontal, Settings2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -17,11 +17,16 @@ import pathsConfig from '~/config/paths.config';
 import { formatDuration, formatViewCount } from '~/lib/videos/format';
 import type { VideoRow } from '~/lib/videos/types';
 
+import type { EncodeProgress } from './use-encode-progress';
+import { VideoProcessingState } from './video-processing-state';
 import { VideoThumbnail } from './video-thumbnail';
 
 export function VideoCard(props: {
   accountSlug: string;
   video: VideoRow;
+  encodeProgress?: EncodeProgress;
+  /** Upload never finished; offer to delete instead of waiting. */
+  stalled?: boolean;
   onPreview: (video: VideoRow) => void;
   onCopyEmbed: (video: VideoRow) => void;
   onCopyPublicLink: (video: VideoRow) => void;
@@ -30,6 +35,8 @@ export function VideoCard(props: {
   onDelete: (video: VideoRow) => void;
 }) {
   const { video } = props;
+  const encoding =
+    video.status === 'processing' || video.status === 'uploading';
 
   const playerConfigPath = pathsConfig.app.accountVideoDetail
     .replace('[account]', props.accountSlug)
@@ -42,23 +49,28 @@ export function VideoCard(props: {
         className="relative block aspect-video w-full overflow-hidden bg-black/40 text-left"
         aria-label={`Edit player config for ${video.title}`}
       >
-        <VideoThumbnail
-          candidates={video.thumbnail_candidates ?? []}
-          alt={video.title}
-          className="object-cover transition group-hover:scale-[1.02]"
-        />
-        <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/30 group-hover:opacity-100">
-          <Settings2 className="h-10 w-10 text-[var(--workspace-shell-text)]" />
-        </div>
-        <span className="absolute right-2 bottom-2 rounded bg-black/70 px-1.5 py-0.5 text-xs text-[var(--workspace-shell-text)]">
-          {formatDuration(video.duration_seconds)}
-        </span>
-        {video.status === 'processing' || video.status === 'uploading' ? (
-          <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-xs text-[var(--workspace-shell-text)]">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            {video.status === 'uploading' ? 'Uploading' : 'Processing'}
-          </span>
-        ) : null}
+        {encoding ? (
+          <VideoProcessingState
+            status={video.status as 'uploading' | 'processing'}
+            stalled={props.stalled}
+            percent={props.encodeProgress?.percent}
+            secondsLeft={props.encodeProgress?.secondsLeft}
+          />
+        ) : (
+          <>
+            <VideoThumbnail
+              candidates={video.thumbnail_candidates ?? []}
+              alt={video.title}
+              className="object-cover transition group-hover:scale-[1.02]"
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/30 group-hover:opacity-100">
+              <Settings2 className="h-10 w-10 text-[var(--workspace-shell-text)]" />
+            </div>
+            <span className="absolute right-2 bottom-2 rounded bg-black/70 px-1.5 py-0.5 text-xs text-[var(--workspace-shell-text)]">
+              {formatDuration(video.duration_seconds)}
+            </span>
+          </>
+        )}
         {video.status === 'failed' ? (
           <span className="absolute top-2 left-2 rounded bg-red-500/90 px-2 py-0.5 text-xs text-[var(--workspace-shell-text)]">
             Failed
@@ -94,6 +106,17 @@ export function VideoCard(props: {
               </>
             ) : null}
           </p>
+          {props.stalled ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-2 h-7 border-red-500/50 text-xs text-red-400 hover:text-red-400"
+              onClick={() => props.onDelete(video)}
+            >
+              Delete unfinished upload
+            </Button>
+          ) : null}
         </div>
 
         <DropdownMenu>

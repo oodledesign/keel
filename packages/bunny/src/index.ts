@@ -189,6 +189,21 @@ export class BunnyStreamClient {
     return mapBunnyVideo(raw);
   }
 
+  /**
+   * Point the stream's poster at a publicly reachable image.
+   * @see https://docs.bunny.net/api-reference/stream/manage-videos/set-thumbnail
+   */
+  async setThumbnail(
+    libraryId: string,
+    videoId: string,
+    thumbnailUrl: string,
+  ): Promise<void> {
+    await this.request<unknown>(
+      `/library/${libraryId}/videos/${videoId}/thumbnail?thumbnailUrl=${encodeURIComponent(thumbnailUrl)}`,
+      { method: 'POST' },
+    );
+  }
+
   async getLibrary(libraryId: string): Promise<{ hostname: string | null }> {
     const raw = await this.request<{ Hostname?: string; hostname?: string }>(
       `/library/${libraryId}`,

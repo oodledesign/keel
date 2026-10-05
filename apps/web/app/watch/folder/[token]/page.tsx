@@ -7,6 +7,8 @@ import { formatDuration, formatPublishedAt } from '~/lib/videos/format';
 import { buildPublicFolderVideoWatchPath } from '~/lib/videos/public-share';
 import { loadPublicFolderByToken } from '~/lib/videos/server/public-folder.loader';
 
+import { FolderVideoMenu } from './_components/folder-video-menu';
+
 type PublicFolderPageProps = {
   params: Promise<{ token: string }>;
 };
@@ -76,13 +78,16 @@ export default async function PublicFolderPage({
                     const published = formatPublishedAt(video.created_at);
 
                     return (
-                      <li key={video.id}>
+                      <li
+                        key={video.id}
+                        className="relative overflow-hidden rounded-2xl border border-[color:var(--ozer-border-on-light)] bg-white shadow-sm transition hover:shadow-md"
+                      >
                         <Link
                           href={buildPublicFolderVideoWatchPath(
                             token,
                             video.id,
                           )}
-                          className="group block overflow-hidden rounded-2xl border border-[color:var(--ozer-border-on-light)] bg-white shadow-sm transition hover:shadow-md"
+                          className="group block"
                         >
                           <div className="relative aspect-video bg-black">
                             {video.thumbnail_url ? (
@@ -105,7 +110,9 @@ export default async function PublicFolderPage({
                               </span>
                             ) : null}
                           </div>
-                          <div className="space-y-0.5 px-4 py-3">
+                          <div
+                            className={`space-y-0.5 py-3 pl-4 ${data.allowDownload ? 'pr-12' : 'pr-4'}`}
+                          >
                             <p className="line-clamp-2 text-base font-medium text-[var(--ozer-plum-900)]">
                               {video.title}
                             </p>
@@ -116,6 +123,14 @@ export default async function PublicFolderPage({
                             ) : null}
                           </div>
                         </Link>
+                        {data.allowDownload ? (
+                          <div className="absolute right-2 bottom-2">
+                            <FolderVideoMenu
+                              title={video.title}
+                              downloadUrl={`/api/watch/folder/${token}/${video.id}/download`}
+                            />
+                          </div>
+                        ) : null}
                       </li>
                     );
                   })}

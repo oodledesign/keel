@@ -134,6 +134,8 @@ export async function loadVideoPlayerConfigPage(
       bunny_library_id: String(video.bunny_library_id),
       bunny_video_id: String(video.bunny_video_id),
       status: video.status as string,
+      thumbnailUrl: (video.thumbnail_url as string | null) ?? null,
+      thumbnailCustom: Boolean(video.thumbnail_custom),
       viewCount: analytics.view_count,
       watchTimeSeconds: analytics.watch_time_seconds,
       engagementScore: analytics.engagement_score,

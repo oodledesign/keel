@@ -4,8 +4,8 @@ import { createBunnyStreamClient } from '@kit/bunny';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { mapBunnyStatusToVideoStatus } from '~/lib/videos/map-bunny-status';
-import { resolveBunnyCdnHostname } from '~/lib/videos/server/videos-data';
 import { requireVideoById } from '~/lib/videos/server/videos-access';
+import { resolveBunnyCdnHostname } from '~/lib/videos/server/videos-data';
 
 export const runtime = 'nodejs';
 
@@ -51,7 +51,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       .from('videos')
       .update({
         status,
-        thumbnail_url: thumbnailUrl,
+        // A user-picked frame must survive Bunny syncs.
+        ...(video.thumbnail_custom ? {} : { thumbnail_url: thumbnailUrl }),
         duration_seconds: durationSeconds,
         file_size_bytes: bunnyVideo.storageSize || null,
       })

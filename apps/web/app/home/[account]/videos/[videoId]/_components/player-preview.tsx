@@ -8,8 +8,13 @@ import {
   useState,
 } from 'react';
 
+import { useRouter } from 'next/navigation';
+
 import { aspectRatioCss, buildEmbedUrl } from '~/lib/videos/embed';
 import type { VideoPlayerConfigValues } from '~/lib/videos/player-config-types';
+
+import { useEncodeProgress } from '../../_components/use-encode-progress';
+import { VideoProcessingState } from '../../_components/video-processing-state';
 
 function useDebouncedValue<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -31,9 +36,17 @@ export const PlayerPreview = forwardRef<
   {
     libraryId: string;
     bunnyVideoId: string;
+    videoId: string;
+    /** Bunny has finished encoding; until then the embed only shows its own error. */
+    ready: boolean;
     config: VideoPlayerConfigValues;
   }
 >(function PlayerPreview(props, ref) {
+  const router = useRouter();
+  const encodeProgress = useEncodeProgress(
+    props.ready ? [] : [props.videoId],
+    () => router.refresh(),
+  )[props.videoId];
   const debouncedConfig = useDebouncedValue(props.config, 500);
   const [startSeconds, setStartSeconds] = useState(0);
   const [seekKey, setSeekKey] = useState(0);
@@ -79,14 +92,22 @@ export const PlayerPreview = forwardRef<
         style={{ maxWidth }}
       >
         <div className="relative w-full" style={{ aspectRatio: ratio }}>
-          <iframe
-            key={`${seekKey}:${embedUrl}`}
-            src={embedUrl}
-            title="Player preview"
-            className="absolute inset-0 h-full w-full border-0"
-            allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture"
-            allowFullScreen
-          />
+          {props.ready ? (
+            <iframe
+              key={`${seekKey}:${embedUrl}`}
+              src={embedUrl}
+              title="Player preview"
+              className="absolute inset-0 h-full w-full border-0"
+              allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture"
+              allowFullScreen
+            />
+          ) : (
+            <VideoProcessingState
+              status="processing"
+              percent={encodeProgress?.percent}
+              secondsLeft={encodeProgress?.secondsLeft}
+            />
+          )}
         </div>
       </div>
     </div>

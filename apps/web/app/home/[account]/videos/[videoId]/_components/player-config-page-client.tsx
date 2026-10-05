@@ -28,6 +28,7 @@ import { PlayerConfigEditor } from './player-config-editor';
 import { PlayerPreview, type PlayerPreviewHandle } from './player-preview';
 import { PublicSharePanel } from './public-share-panel';
 import { VideoChaptersEditor } from './video-chapters-editor';
+import { VideoThumbnailPanel } from './video-thumbnail-panel';
 
 export function PlayerConfigPageClient(props: {
   accountSlug: string;
@@ -37,6 +38,8 @@ export function PlayerConfigPageClient(props: {
     bunny_library_id: string;
     bunny_video_id: string;
     status: string;
+    thumbnailUrl: string | null;
+    thumbnailCustom: boolean;
     viewCount: number;
     watchTimeSeconds: number;
     engagementScore: number | null;
@@ -340,6 +343,25 @@ export function PlayerConfigPageClient(props: {
           />
 
           <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
+            <VideoThumbnailPanel
+              videoId={props.video.id}
+              mp4Url={
+                props.cdnHostname
+                  ? `https://${props.cdnHostname.replace(/^https?:\/\//, '').replace(/\/$/, '')}/${props.video.bunny_video_id}/play_720p.mp4`
+                  : null
+              }
+              currentThumbnailUrl={
+                props.video.thumbnailUrl ??
+                (props.cdnHostname
+                  ? `https://${props.cdnHostname.replace(/^https?:\/\//, '').replace(/\/$/, '')}/${props.video.bunny_video_id}/thumbnail.jpg`
+                  : null)
+              }
+              isCustom={props.video.thumbnailCustom}
+              disabled={props.video.status !== 'ready'}
+            />
+          </div>
+
+          <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
             <PublicSharePanel
               videoId={props.video.id}
               videoTitle={title}
@@ -369,6 +391,8 @@ export function PlayerConfigPageClient(props: {
               ref={previewRef}
               libraryId={props.video.bunny_library_id}
               bunnyVideoId={props.video.bunny_video_id}
+              videoId={props.video.id}
+              ready={props.video.status === 'ready'}
               config={config}
             />
             <Link
