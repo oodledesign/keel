@@ -7,10 +7,13 @@ import {
   type PublicPollView,
   buildPublicPollView,
   isPollInviteToken,
+  rankPollSlots,
 } from '@kit/scheduling/polls';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { loadHostIdentity } from '~/home/[account]/scheduling/_lib/server/meeting-polls.service';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { sendPollResponseNotificationEmail } from '~/lib/scheduling/meeting-polls/emails';
 
 function table(client: unknown, name: string) {
   return (
@@ -194,10 +197,6 @@ export async function submitPublicPollVote(input: {
     seen.add(answer.slotId);
   }
 
-  if (seen.size !== expected.size) {
-    throw new Error('Mark every time before saving');
-  }
-
   const admin = getSupabaseServerAdminClient();
   const { data: invitee, error } = await table(admin, 'meeting_poll_invitees')
     .select('id, poll_id')
@@ -219,6 +218,11 @@ export async function submitPublicPollVote(input: {
   }
 
   const inviteeId = inviteeRow.id;
+  const slotIds = [...expected];
+  const wasComplete = await countAnswered(admin, inviteeId, slotIds).then(
+    (count) => count === slotIds.length,
+  );
+
   const rows = input.answers.map((answer) => ({
     invitee_id: inviteeId,
     slot_id: answer.slotId,
@@ -244,6 +248,133 @@ export async function submitPublicPollVote(input: {
   if (nameError) {
     throw new Error(nameError.message || 'Could not save your name');
   }
+
+  const answered = await countAnswered(admin, inviteeId, slotIds);
+  const complete = answered === slotIds.length;
+
+  if (complete && !wasComplete) {
+    // A failed organiser email must never fail the voter's save.
+    try {
+      await notifyOrganiser({
+        pollId: inviteeRow.poll_id,
+        responderName: input.name.trim(),
+      });
+    } catch (error) {
+      console.error('[meeting-poll] organiser notification failed', error);
+    }
+  }
+
+  return { answered, total: slotIds.length, complete };
+}
+
+async function countAnswered(
+  admin: unknown,
+  inviteeId: string,
+  slotIds: string[],
+) {
+  const { data } = await table(admin, 'meeting_poll_responses')
+    .select('slot_id')
+    .eq('invitee_id', inviteeId)
+    .in('slot_id', slotIds);
+
+  return (data ?? []).length;
+}
+
+async function notifyOrganiser(input: {
+  pollId: string;
+  responderName: string;
+}) {
+  const admin = getSupabaseServerAdminClient();
+  const { data: poll } = await table(admin, 'meeting_polls')
+    .select('id, account_id, title, timezone, host_user_id')
+    .eq('id', input.pollId)
+    .maybeSingle();
+
+  const pollRow = poll as {
+    id: string;
+    account_id: string;
+    title: string;
+    timezone: string;
+    host_user_id: string;
+  } | null;
+  if (!pollRow) return;
+
+  const [{ data: slots }, { data: invitees }, { data: account }, host] =
+    await Promise.all([
+      table(admin, 'meeting_poll_slots')
+        .select('id, starts_at')
+        .eq('poll_id', pollRow.id),
+      table(admin, 'meeting_poll_invitees')
+        .select('id')
+        .eq('poll_id', pollRow.id),
+      admin
+        .from('accounts')
+        .select('slug')
+        .eq('id', pollRow.account_id)
+        .maybeSingle(),
+      loadHostIdentity(pollRow.host_user_id),
+    ]);
+
+  if (!host.email || !account?.slug) return;
+
+  const slotRows = (slots ?? []) as Array<{ id: string; starts_at: string }>;
+  const inviteeIds = ((invitees ?? []) as Array<{ id: string }>).map(
+    (row) => row.id,
+  );
+  if (inviteeIds.length === 0 || slotRows.length === 0) return;
+
+  const { data: responses } = await table(admin, 'meeting_poll_responses')
+    .select('invitee_id, slot_id, answer')
+    .in('invitee_id', inviteeIds);
+
+  const responseRows = (
+    (responses ?? []) as Array<{
+      invitee_id: string;
+      slot_id: string;
+      answer: PollVote;
+    }>
+  ).map((row) => ({
+    inviteeId: row.invitee_id,
+    slotId: row.slot_id,
+    answer: row.answer,
+  }));
+
+  const perInvitee = new Map<string, number>();
+  for (const row of responseRows) {
+    perInvitee.set(row.inviteeId, (perInvitee.get(row.inviteeId) ?? 0) + 1);
+  }
+  const completedCount = inviteeIds.filter(
+    (id) => (perInvitee.get(id) ?? 0) >= slotRows.length,
+  ).length;
+
+  const ranked = rankPollSlots({
+    slots: slotRows.map((slot) => ({ id: slot.id, startsAt: slot.starts_at })),
+    responses: responseRows,
+    inviteeIds,
+  }).slice(0, 3);
+
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
+    'https://app.ozer.so';
+
+  await sendPollResponseNotificationEmail({
+    accountId: pollRow.account_id,
+    pollId: pollRow.id,
+    title: pollRow.title,
+    timezone: pollRow.timezone,
+    hostEmail: host.email,
+    hostName: host.name,
+    responderName: input.responderName,
+    completedCount,
+    totalInvitees: inviteeIds.length,
+    bestSlots: ranked.map((slot) => ({
+      startsAt: slot.startsAt,
+      yes: slot.yes,
+      ifNeedBe: slot.ifNeedBe,
+      no: slot.no,
+    })),
+    pollUrl: `${siteUrl}/app/${account.slug}/scheduling/polls/${pollRow.id}`,
+  });
 }
 
 function safeColor(value: string) {

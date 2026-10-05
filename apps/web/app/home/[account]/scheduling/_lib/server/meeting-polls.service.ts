@@ -52,6 +52,7 @@ function throwIfError(error: { message: string } | null, fallback: string) {
 export type MeetingPollStatus = 'draft' | 'open' | 'closed' | 'cancelled';
 
 export type MeetingPollListRow = {
+  chosenStartsAt: string | null;
   id: string;
   title: string;
   status: MeetingPollStatus;
@@ -158,7 +159,7 @@ class MeetingPollsService {
   async listPolls(accountId: string): Promise<MeetingPollListRow[]> {
     const { data, error } = await table(this.client, 'meeting_polls')
       .select(
-        'id, title, status, duration_minutes, timezone, range_start, range_end, created_at, meeting_poll_invitees(id, responded_at)',
+        'id, title, status, duration_minutes, timezone, range_start, range_end, created_at, chosen_slot_id, meeting_poll_slots(id, starts_at), meeting_poll_invitees(id, responded_at)',
       )
       .eq('account_id', accountId)
       .order('created_at', { ascending: false });
@@ -169,9 +170,19 @@ class MeetingPollsService {
       const invitees = (row.meeting_poll_invitees ?? []) as Array<{
         responded_at?: string | null;
       }>;
+      const slotRows = (row.meeting_poll_slots ?? []) as Array<{
+        id: string;
+        starts_at: string;
+      }>;
+      const chosenStartsAt =
+        row.status === 'closed'
+          ? (slotRows.find((slot) => slot.id === row.chosen_slot_id)
+              ?.starts_at ?? null)
+          : null;
       return {
         id: String(row.id),
         title: String(row.title),
+        chosenStartsAt,
         status: row.status as MeetingPollStatus,
         durationMinutes: Number(row.duration_minutes),
         timezone: String(row.timezone),
@@ -772,6 +783,11 @@ class MeetingPollsService {
       title: poll.title,
       description: poll.description,
       durationMinutes: poll.duration_minutes,
+      timezone: poll.timezone,
+      slots: (await this.listSlots(poll.id)).map((slot) => ({
+        startsAt: slot.starts_at,
+      })),
+      totalInvitees: (await this.listInvitees(poll.id)).length,
       organiserName: host.name,
       replyTo: host.email,
       invitees: pending.map((invitee) => ({
@@ -1284,7 +1300,7 @@ function blankToNull(value?: string | null) {
   return trimmed ? trimmed : null;
 }
 
-async function loadHostIdentity(hostUserId: string) {
+export async function loadHostIdentity(hostUserId: string) {
   const admin = getSupabaseServerAdminClient();
   const { data, error } = await admin.auth.admin.getUserById(hostUserId);
   if (error || !data.user) {

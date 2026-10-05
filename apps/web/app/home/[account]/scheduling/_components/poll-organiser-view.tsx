@@ -36,6 +36,37 @@ const ANSWER_LABEL: Record<PollVote, string> = {
   no: 'No',
 };
 
+const ANSWER_STYLE: Record<
+  PollVote,
+  { bg: string; fg: string; border: string }
+> = {
+  yes: { bg: '#DCFCE7', fg: '#166534', border: '#86EFAC' },
+  if_need_be: { bg: '#FEF3C7', fg: '#92400E', border: '#FCD34D' },
+  no: { bg: '#FEE2E2', fg: '#991B1B', border: '#FCA5A5' },
+};
+
+function Pill({
+  answer,
+  children,
+}: {
+  answer: PollVote;
+  children: React.ReactNode;
+}) {
+  const style = ANSWER_STYLE[answer];
+  return (
+    <span
+      className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap"
+      style={{
+        backgroundColor: style.bg,
+        color: style.fg,
+        borderColor: style.border,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function PollOrganiserView({
   accountId,
   accountSlug,
@@ -55,9 +86,13 @@ export function PollOrganiserView({
   const [confirmConflicts, setConfirmConflicts] = useState(false);
   const [checkedGoogle, setCheckedGoogle] = useState(true);
 
+  const isComplete = (invitee: MeetingPollDetail['invitees'][number]) =>
+    poll.slots.length > 0 && invitee.answers.length >= poll.slots.length;
   const waiting = poll.invitees.filter(
-    (invitee) => invitee.invitedAt && !invitee.respondedAt,
+    (invitee) => invitee.invitedAt && !isComplete(invitee),
   );
+  const completedCount = poll.invitees.filter(isComplete).length;
+  const chosenSlot = poll.slots.find((slot) => slot.id === poll.chosenSlotId);
   const unsent = poll.invitees.filter((invitee) => !invitee.invitedAt);
   const best = [...poll.slots]
     .sort((left, right) => left.rank - right.rank)
@@ -233,22 +268,6 @@ export function PollOrganiserView({
             {poll.clientLabel ? ` · ${poll.clientLabel}` : ''}
             {poll.projectLabel ? ` · ${poll.projectLabel}` : ''}
           </p>
-          {poll.status === 'closed' && poll.chosenSlotId ? (
-            <p className="mt-2 text-sm">
-              Confirmed:{' '}
-              {formatPollWhen(
-                poll.slots.find((slot) => slot.id === poll.chosenSlotId)
-                  ?.startsAt ?? '',
-                poll.timezone,
-              )}
-              {poll.calendarProvider === 'google'
-                ? ' · on Google Calendar'
-                : poll.calendarProvider === 'ozer'
-                  ? ' · on your Ozer calendar'
-                  : ''}
-              {poll.conferencingUrl ? ` · ${poll.conferencingUrl}` : ''}
-            </p>
-          ) : null}
         </div>
         {canEdit && (poll.status === 'draft' || poll.status === 'open') ? (
           <Button
@@ -260,6 +279,37 @@ export function PollOrganiserView({
           </Button>
         ) : null}
       </div>
+
+      {poll.status === 'closed' && chosenSlot ? (
+        <section className="rounded-2xl border-2 border-[#86EFAC] bg-[#DCFCE7] p-5 text-[#166534]">
+          <p className="text-xs font-bold tracking-wider uppercase">
+            Time confirmed
+          </p>
+          <p className="mt-1 text-2xl font-bold">
+            {formatPollWhen(chosenSlot.startsAt, poll.timezone)}
+          </p>
+          <p className="mt-1 text-sm">
+            {poll.durationMinutes} minutes · {poll.timezone} ·{' '}
+            {poll.calendarProvider === 'google'
+              ? 'On your Google Calendar'
+              : poll.calendarProvider === 'ozer'
+                ? 'On your Ozer calendar'
+                : 'Calendar invite sent'}
+          </p>
+          <p className="mt-1 text-sm">
+            {chosenSlot.yes} yes · {chosenSlot.ifNeedBe} if need be ·{' '}
+            {chosenSlot.no} no
+          </p>
+          {poll.conferencingUrl ? (
+            <a
+              href={poll.conferencingUrl}
+              className="mt-3 inline-block rounded-xl bg-[#166534] px-4 py-2 text-sm font-semibold text-white"
+            >
+              Join link
+            </a>
+          ) : null}
+        </section>
+      ) : null}
 
       {canEdit && unsent.length > 0 && poll.status !== 'cancelled' ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] p-4">
@@ -277,37 +327,48 @@ export function PollOrganiserView({
         </div>
       ) : null}
 
-      <section className="space-y-2">
-        <h3 className="text-lg font-semibold">Best times</h3>
-        <ol className="space-y-2">
-          {best.map((slot) => (
-            <li
-              key={slot.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-2"
-            >
-              <span>
-                <span className="font-medium">
-                  {slot.rank}. {formatPollWhen(slot.startsAt, poll.timezone)}
+      {poll.status === 'open' || poll.status === 'draft' ? (
+        <section className="space-y-2">
+          <h3 className="text-lg font-semibold">
+            Best times{' '}
+            <span className={`text-sm font-normal ${workspaceTextMuted}`}>
+              {completedCount} of {poll.invitees.length} responded
+            </span>
+          </h3>
+          <ol className="space-y-2">
+            {best.map((slot) => (
+              <li
+                key={slot.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-2"
+              >
+                <span>
+                  <span className="font-medium">
+                    {slot.rank}. {formatPollWhen(slot.startsAt, poll.timezone)}
+                  </span>
+                  <span className="ml-2 inline-flex flex-wrap items-center gap-1.5">
+                    <Pill answer="yes">{slot.yes} yes</Pill>
+                    <Pill answer="if_need_be">{slot.ifNeedBe} if need be</Pill>
+                    <Pill answer="no">{slot.no} no</Pill>
+                    <span className={`text-xs ${workspaceTextMuted}`}>
+                      {slot.pending} waiting
+                    </span>
+                  </span>
                 </span>
-                <span className={`ml-2 text-sm ${workspaceTextMuted}`}>
-                  {slot.yes} yes · {slot.ifNeedBe} if need be · {slot.no} no ·{' '}
-                  {slot.pending} waiting
-                </span>
-              </span>
-              {canEdit && poll.status === 'open' ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={pending}
-                  onClick={() => beginConfirm(slot.id)}
-                >
-                  Choose this time
-                </Button>
-              ) : null}
-            </li>
-          ))}
-        </ol>
-      </section>
+                {canEdit && poll.status === 'open' ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() => beginConfirm(slot.id)}
+                  >
+                    Choose this time
+                  </Button>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
 
       <section className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -334,9 +395,18 @@ export function PollOrganiserView({
                   <th
                     key={slot.id}
                     className="px-3 py-2 font-medium whitespace-nowrap"
+                    style={
+                      slot.id === poll.chosenSlotId
+                        ? { backgroundColor: '#DCFCE7', color: '#166534' }
+                        : undefined
+                    }
                   >
                     {formatPollWhen(slot.startsAt, poll.timezone)}
-                    {slot.id === poll.chosenSlotId ? ' · chosen' : ''}
+                    {slot.id === poll.chosenSlotId ? (
+                      <span className="block text-xs font-bold">
+                        Chosen time
+                      </span>
+                    ) : null}
                   </th>
                 ))}
               </tr>
@@ -352,7 +422,7 @@ export function PollOrganiserView({
                       {invitee.name || invitee.email}
                     </span>
                     <span className={`block text-xs ${workspaceTextMuted}`}>
-                      {inviteeStatus(invitee)}
+                      {inviteeStatus(invitee, poll.slots.length)}
                     </span>
                   </th>
                   {poll.slots.map((slot) => {
@@ -361,10 +431,31 @@ export function PollOrganiserView({
                     )?.answer;
                     return (
                       <td key={slot.id} className="px-3 py-2 whitespace-nowrap">
-                        {answer ? ANSWER_LABEL[answer] : '—'}
+                        {answer ? (
+                          <Pill answer={answer}>{ANSWER_LABEL[answer]}</Pill>
+                        ) : (
+                          <span className={workspaceTextMuted}>—</span>
+                        )}
                       </td>
                     );
                   })}
+                </tr>
+              ))}
+              {(['yes', 'if_need_be'] as const).map((kind) => (
+                <tr
+                  key={kind}
+                  className="border-b border-[color:var(--workspace-shell-border)]"
+                >
+                  <th className="sticky left-0 bg-[var(--workspace-shell-panel)] px-3 py-2 text-left font-medium">
+                    {ANSWER_LABEL[kind]} total
+                  </th>
+                  {poll.slots.map((slot) => (
+                    <td key={slot.id} className="px-3 py-2">
+                      <Pill answer={kind}>
+                        {kind === 'yes' ? slot.yes : slot.ifNeedBe}
+                      </Pill>
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
@@ -501,9 +592,15 @@ function statusLabel(status: MeetingPollDetail['status']) {
   return 'Cancelled';
 }
 
-function inviteeStatus(invitee: MeetingPollDetail['invitees'][number]) {
+function inviteeStatus(
+  invitee: MeetingPollDetail['invitees'][number],
+  slotCount: number,
+) {
   if (!invitee.invitedAt) return 'Invite not sent';
-  if (invitee.respondedAt) return 'Responded';
+  if (slotCount > 0 && invitee.answers.length >= slotCount) {
+    return 'Responded';
+  }
+  if (invitee.answers.length > 0) return 'Partly answered';
   if (invitee.lastRemindedAt) return 'Waiting · reminded';
   return 'Waiting';
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -124,6 +124,22 @@ export function CreatePollForm({
     initial?.rangeStart ?? rangeStart,
   );
   const [manualTime, setManualTime] = useState('10:00');
+  const manualTimeTouched = useRef(false);
+
+  // Default to the next whole hour so the first manual time is never in the past.
+  useEffect(() => {
+    if (manualTimeTouched.current) return;
+    const hour = Number(
+      new Intl.DateTimeFormat('en-GB', {
+        timeZone: timezone,
+        hour: '2-digit',
+        hourCycle: 'h23',
+      }).format(new Date()),
+    );
+    const next = Math.min(hour + 1, 23);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setManualTime(`${String(next).padStart(2, '0')}:00`);
+  }, [timezone]);
   const [suggestionNote, setSuggestionNote] = useState('');
 
   const zones = useMemo(
@@ -195,13 +211,18 @@ export function CreatePollForm({
   function addManualSlot() {
     startTransition(async () => {
       try {
-        const slot = await resolveManualPollSlotAction({
+        const result = await resolveManualPollSlotAction({
           accountId,
           timezone,
           dateYmd: manualDate,
           timeHm: manualTime,
           durationMinutes,
         });
+        if (!result.ok) {
+          toast.error(result.message);
+          return;
+        }
+        const slot = result.slot;
         setSlots((current) => {
           if (current.some((item) => item.startAtIso === slot.start)) {
             return current;
@@ -489,7 +510,10 @@ export function CreatePollForm({
           <Input
             type="time"
             value={manualTime}
-            onChange={(event) => setManualTime(event.target.value)}
+            onChange={(event) => {
+              manualTimeTouched.current = true;
+              setManualTime(event.target.value);
+            }}
             className={`w-32 ${FIELD}`}
             aria-label="Time"
           />

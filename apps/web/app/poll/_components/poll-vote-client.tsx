@@ -4,6 +4,14 @@ import { useState, useSyncExternalStore, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@kit/ui/dialog';
 import { toast } from '@kit/ui/sonner';
 
 import {
@@ -43,9 +51,24 @@ type VotePage = {
   counts: Array<{ slotId: string; yes: number; ifNeedBe: number; no: number }>;
 };
 
+const ANSWER_STYLE: Record<
+  Answer,
+  { label: string; bg: string; fg: string; border: string }
+> = {
+  yes: { label: 'Yes', bg: '#DCFCE7', fg: '#166534', border: '#86EFAC' },
+  if_need_be: {
+    label: 'If need be',
+    bg: '#FEF3C7',
+    fg: '#92400E',
+    border: '#FCD34D',
+  },
+  no: { label: 'No', bg: '#FEE2E2', fg: '#991B1B', border: '#FCA5A5' },
+};
+
 export function PollVoteClient({ page }: { page: VotePage }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [thanksOpen, setThanksOpen] = useState(false);
   const detectedZone = useSyncExternalStore(
     emptySubscribe,
     readLocalTimeZone,
@@ -64,19 +87,30 @@ export function PollVoteClient({ page }: { page: VotePage }) {
 
   const counts = new Map(page.counts.map((row) => [row.slotId, row]));
   const chosen = page.slots.find((slot) => slot.id === page.chosenSlotId);
+  const answeredCount = page.slots.filter((slot) => answers[slot.id]).length;
 
-  function save() {
+  function persist(next: Record<string, Answer>, slotIds: string[]) {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      toast.error('Add your name first so we know who answered');
+      return;
+    }
+
+    const wasComplete = page.slots.every((slot) => answers[slot.id]);
+
     startTransition(async () => {
       try {
-        await submitPollVoteAction({
+        const result = await submitPollVoteAction({
           token: page.token,
-          name,
-          answers: page.slots.map((slot) => ({
-            slotId: slot.id,
-            answer: answers[slot.id]!,
+          name: trimmed,
+          answers: slotIds.map((slotId) => ({
+            slotId,
+            answer: next[slotId]!,
           })),
         });
-        toast.success('Response saved');
+        if (result.complete && !wasComplete) {
+          setThanksOpen(true);
+        }
         router.refresh();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Could not save');
@@ -84,7 +118,20 @@ export function PollVoteClient({ page }: { page: VotePage }) {
     });
   }
 
-  const missing = page.slots.some((slot) => !answers[slot.id]);
+  function choose(slotId: string, answer: Answer) {
+    const next = { ...answers, [slotId]: answer };
+    setAnswers(next);
+    persist(next, [slotId]);
+  }
+
+  function saveName() {
+    const existing = page.slots
+      .filter((slot) => answers[slot.id])
+      .map((slot) => slot.id);
+    if (existing.length === 0 || name.trim() === page.yourName.trim()) return;
+    persist(answers, existing);
+  }
+
   const onBrand = readableOn(page.primaryColor);
 
   return (
@@ -134,20 +181,22 @@ export function PollVoteClient({ page }: { page: VotePage }) {
       ) : null}
 
       {page.pollStatus === 'closed' && chosen ? (
-        <div className="mt-4 rounded-xl border border-[#E7D7CC] bg-white px-4 py-3">
-          <p className="font-medium">The time is confirmed</p>
-          <p className="mt-1">
+        <div className="mt-4 rounded-2xl border-2 border-[#86EFAC] bg-[#DCFCE7] px-4 py-4 text-[#166534]">
+          <p className="text-xs font-bold tracking-wider uppercase">
+            The time is confirmed
+          </p>
+          <p className="mt-1 text-xl font-bold">
             {formatPollWhen(chosen.startsAt, voterZone)} your time
           </p>
           {voterZone !== page.organiserTimezone ? (
-            <p className="text-sm text-[#6B5B63]">
+            <p className="text-sm">
               {formatPollWhen(chosen.startsAt, page.organiserTimezone)}{' '}
               {page.organiserTimezone}
             </p>
           ) : null}
           {page.conferencingUrl ? (
             <a
-              className="mt-2 inline-block underline"
+              className="mt-2 inline-block font-medium underline"
               href={page.conferencingUrl}
             >
               {page.conferencingUrl}
@@ -156,6 +205,26 @@ export function PollVoteClient({ page }: { page: VotePage }) {
           {page.location && page.location !== page.conferencingUrl ? (
             <p className="mt-1">{page.location}</p>
           ) : null}
+        </div>
+      ) : null}
+
+      {page.canVote ? (
+        <div className="mt-6 rounded-2xl border border-[#E7D7CC] bg-white p-4">
+          <label className="block text-sm font-medium" htmlFor="voter-name">
+            Your name
+          </label>
+          <input
+            id="voter-name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            onBlur={saveName}
+            className="mt-1 h-11 w-full rounded-xl border border-[#E7D7CC] bg-white px-3"
+          />
+          <p className="mt-2 text-sm text-[#6B5B63]">
+            Pick an answer for each time below. Each choice saves straight away
+            ({answeredCount} of {page.slots.length} answered), and you can
+            change it any time until a time is chosen.
+          </p>
         </div>
       ) : null}
 
@@ -170,9 +239,8 @@ export function PollVoteClient({ page }: { page: VotePage }) {
             count={counts.get(slot.id)}
             chosen={slot.id === page.chosenSlotId}
             disabled={!page.canVote}
-            onAnswer={(answer) =>
-              setAnswers((current) => ({ ...current, [slot.id]: answer }))
-            }
+            busy={pending}
+            onAnswer={(answer) => choose(slot.id, answer)}
           />
         ))}
       </div>
@@ -182,19 +250,32 @@ export function PollVoteClient({ page }: { page: VotePage }) {
           <thead>
             <tr className="border-b border-[#E7D7CC] text-left">
               <th className="px-3 py-2"> </th>
-              {page.slots.map((slot) => (
-                <th key={slot.id} className="px-3 py-2 whitespace-nowrap">
-                  <span className="block">
-                    {formatPollDay(slot.startsAt, voterZone)}
-                  </span>
-                  <span className="block font-semibold">
-                    {formatPollClock(slot.startsAt, voterZone)}
-                  </span>
-                  {slot.id === page.chosenSlotId ? (
-                    <span className="block text-xs">Chosen</span>
-                  ) : null}
-                </th>
-              ))}
+              {page.slots.map((slot) => {
+                const isChosen = slot.id === page.chosenSlotId;
+                return (
+                  <th
+                    key={slot.id}
+                    className="px-3 py-2 whitespace-nowrap"
+                    style={
+                      isChosen
+                        ? { backgroundColor: '#DCFCE7', color: '#166534' }
+                        : undefined
+                    }
+                  >
+                    <span className="block">
+                      {formatPollDay(slot.startsAt, voterZone)}
+                    </span>
+                    <span className="block font-semibold">
+                      {formatPollClock(slot.startsAt, voterZone)}
+                    </span>
+                    {isChosen ? (
+                      <span className="block text-xs font-bold">
+                        Chosen time
+                      </span>
+                    ) : null}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -209,19 +290,15 @@ export function PollVoteClient({ page }: { page: VotePage }) {
                     : person.answers.find((row) => row.slotId === slot.id)
                         ?.answer;
                   return (
-                    <td key={slot.id} className="px-3 py-2">
+                    <td key={slot.id} className="px-2 py-2">
                       {person.isYou && page.canVote ? (
-                        <AnswerButtons
-                          value={answers[slot.id]}
-                          onChange={(next) =>
-                            setAnswers((current) => ({
-                              ...current,
-                              [slot.id]: next,
-                            }))
-                          }
+                        <AnswerSelect
+                          value={answer}
+                          label={`${formatPollDay(slot.startsAt, voterZone)} ${formatPollClock(slot.startsAt, voterZone)}`}
+                          onChange={(next) => choose(slot.id, next)}
                         />
                       ) : (
-                        answerLabel(answer)
+                        <AnswerPill answer={answer} />
                       )}
                     </td>
                   );
@@ -232,7 +309,10 @@ export function PollVoteClient({ page }: { page: VotePage }) {
               <th className="px-3 py-2 text-left font-medium">Yes</th>
               {page.slots.map((slot) => (
                 <td key={slot.id} className="px-3 py-2">
-                  {counts.get(slot.id)?.yes ?? 0}
+                  <TotalPill
+                    answer="yes"
+                    value={counts.get(slot.id)?.yes ?? 0}
+                  />
                 </td>
               ))}
             </tr>
@@ -240,7 +320,10 @@ export function PollVoteClient({ page }: { page: VotePage }) {
               <th className="px-3 py-2 text-left font-medium">If need be</th>
               {page.slots.map((slot) => (
                 <td key={slot.id} className="px-3 py-2">
-                  {counts.get(slot.id)?.ifNeedBe ?? 0}
+                  <TotalPill
+                    answer="if_need_be"
+                    value={counts.get(slot.id)?.ifNeedBe ?? 0}
+                  />
                 </td>
               ))}
             </tr>
@@ -255,33 +338,28 @@ export function PollVoteClient({ page }: { page: VotePage }) {
         </p>
       )}
 
-      {page.canVote ? (
-        <div className="sticky bottom-0 mt-6 border-t border-[#E7D7CC] bg-[#FBF6EC] py-4">
-          <label className="block text-sm font-medium" htmlFor="voter-name">
-            Your name
-          </label>
-          <input
-            id="voter-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className="mt-1 h-11 w-full rounded-xl border border-[#E7D7CC] bg-white px-3"
-          />
-          <button
-            type="button"
-            disabled={pending || missing || name.trim().length === 0}
-            onClick={save}
-            className="mt-3 h-11 w-full rounded-xl disabled:opacity-50 sm:w-auto sm:px-6"
-            style={{ backgroundColor: page.primaryColor, color: onBrand }}
-          >
-            Save response
-          </button>
-          {missing ? (
-            <p className="mt-2 text-sm text-[#6B5B63]">
-              Mark every time to save.
-            </p>
-          ) : null}
-        </div>
-      ) : null}
+      <Dialog open={thanksOpen} onOpenChange={setThanksOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Thanks, your answers are in</DialogTitle>
+            <DialogDescription>
+              {page.brandName} will pick a time once everyone has replied. You
+              can come back to this same link and change your answers any time
+              before the time is chosen.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              className="h-11 rounded-xl px-6"
+              style={{ backgroundColor: page.primaryColor, color: onBrand }}
+              onClick={() => setThanksOpen(false)}
+            >
+              Got it
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -294,6 +372,7 @@ function SlotCard({
   count,
   chosen,
   disabled,
+  busy,
   onAnswer,
 }: {
   slot: { id: string; startsAt: string };
@@ -303,10 +382,17 @@ function SlotCard({
   count?: { yes: number; ifNeedBe: number; no: number };
   chosen: boolean;
   disabled: boolean;
+  busy: boolean;
   onAnswer: (answer: Answer) => void;
 }) {
   return (
-    <article className="rounded-2xl border border-[#E7D7CC] bg-white p-4">
+    <article
+      className="rounded-2xl border bg-white p-4"
+      style={{
+        borderColor: chosen ? '#86EFAC' : '#E7D7CC',
+        backgroundColor: chosen ? '#F0FDF4' : '#FFFFFF',
+      }}
+    >
       <p className="text-sm text-[#6B5B63]">
         {formatPollDay(slot.startsAt, voterZone)}
       </p>
@@ -318,56 +404,105 @@ function SlotCard({
           {formatPollClock(slot.startsAt, organiserZone)} {organiserZone}
         </p>
       ) : null}
-      {chosen ? <p className="mt-1 text-sm font-medium">Chosen time</p> : null}
-      <p className="mt-2 text-sm text-[#6B5B63]">
-        {count?.yes ?? 0} yes · {count?.ifNeedBe ?? 0} if need be
-      </p>
-      {disabled ? (
-        <p className="mt-2 text-sm">{answerLabel(answer)}</p>
-      ) : (
-        <div className="mt-3">
-          <AnswerButtons value={answer} onChange={onAnswer} />
-        </div>
-      )}
+      {chosen ? (
+        <p className="mt-1 text-sm font-bold text-[#166534]">Chosen time</p>
+      ) : null}
+      <div className="mt-2 flex gap-2">
+        <TotalPill answer="yes" value={count?.yes ?? 0} withLabel />
+        <TotalPill answer="if_need_be" value={count?.ifNeedBe ?? 0} withLabel />
+      </div>
+      <div className="mt-3">
+        {disabled ? (
+          <AnswerPill answer={answer} />
+        ) : (
+          <AnswerSelect
+            value={answer}
+            busy={busy}
+            label={`${formatPollDay(slot.startsAt, voterZone)} ${formatPollClock(slot.startsAt, voterZone)}`}
+            onChange={onAnswer}
+          />
+        )}
+      </div>
     </article>
   );
 }
 
-function AnswerButtons({
+function AnswerSelect({
   value,
+  label,
+  busy,
   onChange,
 }: {
   value?: Answer;
+  label: string;
+  busy?: boolean;
   onChange: (answer: Answer) => void;
 }) {
-  const options: Array<{ id: Answer; label: string }> = [
-    { id: 'yes', label: 'Yes' },
-    { id: 'if_need_be', label: 'If need be' },
-    { id: 'no', label: 'No' },
-  ];
+  const style = value ? ANSWER_STYLE[value] : null;
 
   return (
-    <div className="grid grid-cols-3 gap-2">
-      {options.map((option) => {
-        const selected = value === option.id;
-        return (
-          <button
-            key={option.id}
-            type="button"
-            aria-pressed={selected}
-            onClick={() => onChange(option.id)}
-            className="h-11 rounded-xl border text-sm"
-            style={{
-              borderColor: selected ? '#351E28' : '#E7D7CC',
-              backgroundColor: selected ? '#351E28' : '#FFFFFF',
-              color: selected ? '#FBF6EC' : '#351E28',
-            }}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
+    <select
+      aria-label={`Your answer for ${label}`}
+      value={value ?? ''}
+      disabled={busy}
+      onChange={(event) => onChange(event.target.value as Answer)}
+      className="h-10 w-full min-w-[7.5rem] cursor-pointer rounded-xl border px-2 text-sm font-semibold"
+      style={{
+        backgroundColor: style?.bg ?? '#FFFFFF',
+        color: style?.fg ?? '#6B5B63',
+        borderColor: style?.border ?? '#E7D7CC',
+      }}
+    >
+      <option value="" disabled>
+        Choose…
+      </option>
+      <option value="yes">Yes</option>
+      <option value="if_need_be">If need be</option>
+      <option value="no">No</option>
+    </select>
+  );
+}
+
+function AnswerPill({ answer }: { answer?: Answer }) {
+  if (!answer) {
+    return <span className="px-2 text-[#6B5B63]">—</span>;
+  }
+  const style = ANSWER_STYLE[answer];
+  return (
+    <span
+      className="inline-block rounded-xl border px-3 py-1.5 text-sm font-semibold whitespace-nowrap"
+      style={{
+        backgroundColor: style.bg,
+        color: style.fg,
+        borderColor: style.border,
+      }}
+    >
+      {style.label}
+    </span>
+  );
+}
+
+function TotalPill({
+  answer,
+  value,
+  withLabel,
+}: {
+  answer: 'yes' | 'if_need_be';
+  value: number;
+  withLabel?: boolean;
+}) {
+  const style = ANSWER_STYLE[answer];
+  return (
+    <span
+      className="inline-flex min-w-8 items-center justify-center rounded-full px-2.5 py-0.5 text-sm font-bold"
+      style={{
+        backgroundColor: value > 0 ? style.bg : '#F3EEE8',
+        color: value > 0 ? style.fg : '#6B5B63',
+      }}
+    >
+      {value}
+      {withLabel ? ` ${style.label.toLowerCase()}` : ''}
+    </span>
   );
 }
 
@@ -377,13 +512,6 @@ function emptySubscribe() {
 
 function readLocalTimeZone() {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
-}
-
-function answerLabel(answer?: Answer) {
-  if (answer === 'yes') return 'Yes';
-  if (answer === 'if_need_be') return 'If need be';
-  if (answer === 'no') return 'No';
-  return '—';
 }
 
 /** Dark text on pale brand colours, white text otherwise. */

@@ -43,7 +43,18 @@ export const suggestMeetingPollSlotsAction = enhanceAction(
 export const resolveManualPollSlotAction = enhanceAction(
   async (input) => {
     const service = createMeetingPollsService(getSupabaseServerClient());
-    return service.resolveManualSlot(input);
+
+    // Return validation problems instead of throwing: thrown messages are
+    // masked in production and surface as an opaque 500.
+    try {
+      return { ok: true as const, slot: service.resolveManualSlot(input) };
+    } catch (error) {
+      return {
+        ok: false as const,
+        message:
+          error instanceof Error ? error.message : 'Could not add that time',
+      };
+    }
   },
   { schema: ResolveManualPollSlotSchema },
 );

@@ -11,6 +11,7 @@ import {
   workspaceTextMuted,
 } from '~/lib/workspace-ui';
 
+import { formatPollWhen } from '../_lib/format-poll-time';
 import type { MeetingPollListRow } from '../_lib/server/meeting-polls.service';
 
 const STATUS_LABEL: Record<MeetingPollListRow['status'], string> = {
@@ -68,7 +69,16 @@ export function PollsList({
                     {poll.durationMinutes} min · {poll.timezone}
                   </span>
                 </span>
-                <Badge variant="outline">{STATUS_LABEL[poll.status]}</Badge>
+                {poll.status === 'closed' ? (
+                  <span className="rounded-full border border-[#86EFAC] bg-[#DCFCE7] px-3 py-1 text-sm font-semibold text-[#166534]">
+                    Confirmed
+                    {poll.chosenStartsAt
+                      ? ` · ${formatPollWhen(poll.chosenStartsAt, poll.timezone)}`
+                      : ''}
+                  </span>
+                ) : (
+                  <Badge variant="outline">{STATUS_LABEL[poll.status]}</Badge>
+                )}
               </Link>
             </li>
           ))}

@@ -148,7 +148,7 @@ export function buildPublicPollView(input: PublicPollSource): PublicPollView {
         .filter((row) => row.id !== invitee.id)
         .map((row) => ({
           inviteeId: row.id,
-          label: row.name?.trim() || 'Invitee',
+          label: row.name?.trim().split(/\s+/)[0] || 'Invitee',
           isYou: false,
           answers: answersFor(row.id),
         }))
