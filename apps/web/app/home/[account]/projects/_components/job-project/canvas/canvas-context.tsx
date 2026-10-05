@@ -37,6 +37,7 @@ export type CanvasClient = {
 };
 
 export type CanvasLookups = {
+  accountId: string;
   accountSlug: string;
   jobId: string;
   canEdit: boolean;

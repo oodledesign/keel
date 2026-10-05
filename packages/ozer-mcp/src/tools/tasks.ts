@@ -102,6 +102,20 @@ export const updateTaskSchema = z.object({
   ...updateAssigneeFields,
 });
 
+export const updateTasksSchema = z.object({
+  updates: z
+    .array(updateTaskSchema)
+    .min(1)
+    .max(50)
+    .describe(
+      'Each entry has the same fields as update_task (id plus the fields to change).',
+    ),
+});
+
+export const deleteTasksSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(50),
+});
+
 const listSubtasksSchema = z.object({
   parent_task_id: z.string().uuid(),
 });
@@ -819,6 +833,67 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     async (input) => {
       const task = await applyTaskFieldUpdates(supabase, userId, input);
       return toolJson({ task: await mapNamedTask(supabase, task, userId) });
+    },
+  );
+
+  server.registerTool(
+    'update_tasks',
+    {
+      description:
+        'Update up to 50 tasks in one call (e.g. strip a name prefix from every title, move a set of tasks to a phase, reschedule a batch). Each entry has the same fields as update_task. Entries run one at a time; a failure on one does not stop the rest, and every entry reports ok or its error.',
+      inputSchema: updateTasksSchema,
+    },
+    async (input) => {
+      const results: Array<{
+        id: string;
+        ok: boolean;
+        error?: string;
+        task?: { id: string; title: string | null; status: string | null };
+      }> = [];
+      for (const update of input.updates) {
+        try {
+          const task = await applyTaskFieldUpdates(supabase, userId, update);
+          results.push({
+            id: update.id,
+            ok: true,
+            task: { id: task.id, title: task.title, status: task.status },
+          });
+        } catch (error) {
+          results.push({
+            id: update.id,
+            ok: false,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+      return toolJson({
+        updated_count: results.filter((r) => r.ok).length,
+        failed_count: results.filter((r) => !r.ok).length,
+        results,
+      });
+    },
+  );
+
+  server.registerTool(
+    'delete_tasks',
+    {
+      description:
+        'Permanently delete up to 50 tasks the user can edit (mistakes or duplicates). Subtasks under a deleted task go with it. This cannot be undone. Reports which ids were deleted and which were not found or not permitted.',
+      inputSchema: deleteTasksSchema,
+    },
+    async (input) => {
+      const ids = [...new Set(input.ids)];
+      const { data, error } = await supabase
+        .from('tasks')
+        .delete()
+        .in('id', ids)
+        .select('id');
+      assertSupabaseOk(data, error, 'delete tasks');
+      const deleted = ((data ?? []) as Array<{ id: string }>).map((r) => r.id);
+      return toolJson({
+        deleted,
+        not_deleted: ids.filter((id) => !deleted.includes(id)),
+      });
     },
   );
 

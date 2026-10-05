@@ -31,7 +31,7 @@ export type CanvasLinkedRef = { kind: LinkedCanvasKind; refId: string };
 export const PENDING_CANVAS_TIMESTAMP = new Date(0).toISOString();
 
 export const GAP = 48;
-export const PHASE_HEADER = 76;
+export const PHASE_HEADER = 108;
 export const PHASE_PAD = 20;
 export const TASK_GAP = 12;
 const PEOPLE_ROW_Y = 0;

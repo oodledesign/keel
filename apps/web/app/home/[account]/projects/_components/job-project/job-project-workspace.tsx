@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import {
+  CalendarDays,
   Columns3,
   Frame,
   GanttChart,
@@ -15,6 +16,7 @@ import {
   MessageSquare,
   MoreHorizontal,
   Plus,
+  Route,
   Sparkles,
   UserPlus,
 } from 'lucide-react';
@@ -61,6 +63,10 @@ import {
   saveProjectAsPhaseTemplate,
 } from '../../_lib/server/server-actions';
 import { JobProjectBoard } from './job-project-board';
+import {
+  JobProjectContent,
+  JobProjectRoadmap,
+} from './job-project-content-views';
 import { JobProjectHeader } from './job-project-header';
 import { JobProjectList } from './job-project-list';
 import { JobProjectProgressBoard } from './job-project-progress-board';
@@ -77,7 +83,13 @@ const JobProjectCanvas = dynamic(
   },
 );
 
-type ViewMode = 'board' | 'timeline' | 'list' | 'canvas';
+type ViewMode =
+  | 'board'
+  | 'timeline'
+  | 'list'
+  | 'canvas'
+  | 'roadmap'
+  | 'content';
 type BoardMode = 'phase' | 'progress';
 
 type JobSummary = {
@@ -96,6 +108,19 @@ type ClientSummary = {
   id: string;
   display_name: string | null;
 } | null;
+
+const VIEW_MODES: readonly ViewMode[] = [
+  'board',
+  'timeline',
+  'list',
+  'canvas',
+  'roadmap',
+  'content',
+];
+
+function viewFromParam(value: string | null): ViewMode {
+  return VIEW_MODES.find((mode) => mode === value) ?? 'board';
+}
 
 export function JobProjectWorkspace({
   accountSlug,
@@ -117,16 +142,26 @@ export function JobProjectWorkspace({
   onAssignmentsChange?: () => void;
 }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const viewParam = searchParams.get('view');
   const canvasItemParam = searchParams.get('canvasItem');
-  const [view, setView] = useState<ViewMode>(
-    viewParam === 'canvas' ? 'canvas' : 'board',
-  );
+  const [view, setView] = useState<ViewMode>(viewFromParam(viewParam));
   const [seenLink, setSeenLink] = useState(`${viewParam}:${canvasItemParam}`);
   if (seenLink !== `${viewParam}:${canvasItemParam}`) {
+    // Browser back/forward (or a deep link) changed the URL: follow it.
     setSeenLink(`${viewParam}:${canvasItemParam}`);
-    if (viewParam === 'canvas') setView('canvas');
+    setView(viewFromParam(viewParam));
   }
+  const changeView = (next: ViewMode) => {
+    setView(next);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('canvasItem');
+    if (next === 'board') params.delete('view');
+    else params.set('view', next);
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
   const isPhased = Boolean(job.is_phased);
   const [boardMode, setBoardMode] = useState<BoardMode>(
     isPhased ? 'phase' : 'progress',
@@ -196,14 +231,25 @@ export function JobProjectWorkspace({
     void loadBoard();
   }, [loadBoard]);
 
+  /** Bumped on every local board edit so slow refreshes can't undo it. */
+  const boardVersion = useRef(0);
+  const changeBoard = useCallback((next: JobBoardResult | null) => {
+    boardVersion.current += 1;
+    setBoard(next);
+  }, []);
+
   /** Background refresh for live views — keeps the current view mounted. */
   const refreshBoardSilently = useCallback(async () => {
+    const versionAtStart = boardVersion.current;
     try {
       const nextBoard = (await listJobBoard({
         accountId,
         accountSlug,
         jobId,
       })) as JobBoardResult;
+      // A local edit landed while this was loading: it would overwrite the
+      // newer optimistic state with older data, so skip it.
+      if (boardVersion.current !== versionAtStart) return;
       setBoard(nextBoard);
       setMembers(nextBoard.members ?? []);
     } catch {
@@ -339,6 +385,8 @@ export function JobProjectWorkspace({
       { key: 'timeline', label: 'Timeline', icon: GanttChart },
       { key: 'list', label: 'List', icon: List },
       { key: 'canvas', label: 'Canvas', icon: Frame },
+      { key: 'roadmap', label: 'Roadmap', icon: Route },
+      { key: 'content', label: 'Content', icon: CalendarDays },
     ];
 
   return (
@@ -354,7 +402,7 @@ export function JobProjectWorkspace({
               <button
                 key={key}
                 type="button"
-                onClick={() => setView(key)}
+                onClick={() => changeView(key)}
                 className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                   view === key
                     ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
@@ -527,6 +575,22 @@ export function JobProjectWorkspace({
                 onBoardChange={setBoard}
               />
             )}
+            {view === 'roadmap' && (
+              <JobProjectRoadmap
+                accountId={accountId}
+                accountSlug={accountSlug}
+                jobId={jobId}
+                board={board}
+                canEdit={canEditJobs && !isContractorView}
+              />
+            )}
+            {view === 'content' && (
+              <JobProjectContent
+                accountId={accountId}
+                jobId={jobId}
+                canEdit={canEditJobs && !isContractorView}
+              />
+            )}
             {view === 'canvas' && (
               <JobProjectCanvas
                 accountSlug={accountSlug}
@@ -534,7 +598,7 @@ export function JobProjectWorkspace({
                 jobId={jobId}
                 board={board}
                 canEdit={canEditJobs && !isContractorView}
-                onBoardChange={setBoard}
+                onBoardChange={changeBoard}
                 onRefreshBoard={refreshBoardSilently}
                 focusItemId={canvasItemParam}
               />

@@ -52,6 +52,7 @@ import {
   Minimize2,
   PanelLeftClose,
   PanelLeftOpen,
+  Route,
   Search,
   Sparkles,
   Target,
@@ -88,7 +89,7 @@ import {
   type CanvasBoardView,
   boardStatusColumn,
   layoutCanvasBoard,
-  moveInOrder,
+  moveManyInOrder,
   planBoardDrop,
   reorderBoardTasks,
 } from '~/lib/projects/canvas/canvas-board-layout';
@@ -434,6 +435,7 @@ const DATA_KEYS = [
   'metricSource',
   'milestones',
   'history',
+  'panel',
 ] as const satisfies ReadonlyArray<keyof CanvasItemData>;
 
 // Anything missing from DATA_KEYS is silently dropped on save. Adding a field
@@ -851,6 +853,7 @@ function ProjectCanvasInner({
         : null;
 
     return {
+      accountId,
       accountSlug,
       jobId,
       canEdit: editable,
@@ -925,6 +928,9 @@ function ProjectCanvasInner({
     };
   }, [board.members, people, user?.email, user?.id]);
 
+  const mutationsInFlight = useRef(0);
+  const refreshWanted = useRef(false);
+
   const realtime = useProjectCanvasRealtime({
     projectId: jobId,
     me,
@@ -938,7 +944,13 @@ function ProjectCanvasInner({
     onRemoteDeletes: (ids) =>
       updateItems((prev) => removeCanvasItems(prev, ids)),
     onLinkedDataChanged: () => {
-      void onRefreshBoard();
+      // Our own task writes echo back as database events. Refreshing in the
+      // middle of them would read half-saved data and snap cards back.
+      if (mutationsInFlight.current > 0) {
+        refreshWanted.current = true;
+      } else {
+        void onRefreshBoard();
+      }
       void resync();
     },
     onResync: () => void resync(),
@@ -1328,12 +1340,14 @@ function ProjectCanvasInner({
 
   /** Where a dragged board card would land, or null when it is over nothing. */
   const planBoardCardDrop = useCallback(
-    (node: FlowNode) => {
+    (node: FlowNode, dragged: FlowNode[] = [node]) => {
       if (!boardLayout) return null;
       const item = boardItemsById.get(node.id);
       if (!item || item.kind !== 'task') return null;
       const size = canvasItemSize(item);
-      return planBoardDrop(boardLayout.columns, boardItemsById, item.id, {
+      const excluded = new Set(dragged.map((n) => n.id));
+      excluded.add(node.id);
+      return planBoardDrop(boardLayout.columns, boardItemsById, excluded, {
         x: node.position.x + size.w / 2,
         y: node.position.y + size.h / 2,
       });
@@ -1342,15 +1356,16 @@ function ProjectCanvasInner({
   );
 
   const showBoardDrop = useCallback(
-    (node: FlowNode) => {
-      const plan = planBoardCardDrop(node);
+    (node: FlowNode, dragged: FlowNode[]) => {
+      const plan = planBoardCardDrop(node, dragged);
       if (!plan || !boardLayout) {
         setBoardDrop(null);
         setDropTargetId(null);
         return;
       }
       const { column } = plan;
-      const rest = column.tasks.filter((task) => task.itemId !== node.id);
+      const draggedIds = new Set(dragged.map((n) => n.id));
+      const rest = column.tasks.filter((task) => !draggedIds.has(task.itemId));
       const at = rest[Math.min(plan.index, rest.length)];
       const previous = rest[plan.index - 1];
       let y = column.y + (column.header ? 52 : PHASE_HEADER);
@@ -1377,6 +1392,14 @@ function ProjectCanvasInner({
     [boardItemsById, boardLayout, planBoardCardDrop],
   );
 
+  const finishMutation = useCallback(() => {
+    mutationsInFlight.current = Math.max(0, mutationsInFlight.current - 1);
+    if (mutationsInFlight.current === 0 && refreshWanted.current) {
+      refreshWanted.current = false;
+      void onRefreshBoard();
+    }
+  }, [onRefreshBoard]);
+
   const reorderTasks = useCallback(
     async (phaseId: string | null, order: string[]) => {
       onBoardChange({
@@ -1388,6 +1411,7 @@ function ProjectCanvasInner({
           order,
         ),
       });
+      mutationsInFlight.current += 1;
       try {
         await reorderPhaseTasks({
           accountId,
@@ -1399,7 +1423,9 @@ function ProjectCanvasInner({
         broadcastLinkedChanged();
       } catch (error) {
         toast.error(getErrorMessage(error));
-        void onRefreshBoard();
+        refreshWanted.current = true;
+      } finally {
+        finishMutation();
       }
     },
     [
@@ -1407,27 +1433,42 @@ function ProjectCanvasInner({
       accountSlug,
       board,
       broadcastLinkedChanged,
+      finishMutation,
       jobId,
       onBoardChange,
-      onRefreshBoard,
     ],
   );
 
-  const changeTaskStatus = useCallback(
-    async (task: JobBoardTask, status: string) => {
-      onBoardChange(replaceBoardTask(board, { ...task, status }));
+  const changeTaskStatuses = useCallback(
+    async (tasks: JobBoardTask[], status: string) => {
+      if (tasks.length === 0) return;
+      onBoardChange(
+        tasks.reduce(
+          (next, task) => replaceBoardTask(next, { ...task, status }),
+          board,
+        ),
+      );
+      mutationsInFlight.current += 1;
       try {
-        await updateJobTask({
-          accountId,
-          accountSlug,
-          jobId,
-          taskId: task.id,
-          status: status as 'todo',
-        });
+        const results = await Promise.allSettled(
+          tasks.map((task) =>
+            updateJobTask({
+              accountId,
+              accountSlug,
+              jobId,
+              taskId: task.id,
+              status: status as 'todo',
+            }),
+          ),
+        );
+        const failed = results.find((result) => result.status === 'rejected');
+        if (failed && failed.status === 'rejected') {
+          toast.error(getErrorMessage(failed.reason));
+          refreshWanted.current = true;
+        }
         broadcastLinkedChanged();
-      } catch (error) {
-        toast.error(getErrorMessage(error));
-        void onRefreshBoard();
+      } finally {
+        finishMutation();
       }
     },
     [
@@ -1435,38 +1476,73 @@ function ProjectCanvasInner({
       accountSlug,
       board,
       broadcastLinkedChanged,
+      finishMutation,
       jobId,
       onBoardChange,
-      onRefreshBoard,
     ],
   );
 
-  /** Drop a board card: reorder/move it between phases, or change its status. */
+  /** Drop board cards: reorder/move them between phases, or change their status. */
   const applyBoardDrop = useCallback(
-    (node: FlowNode) => {
-      const plan = planBoardCardDrop(node);
-      const refId = boardItemsById.get(node.id)?.refId;
-      const task = refId ? lookups.tasksById.get(refId) : undefined;
-      if (!plan || !task) return;
+    (node: FlowNode, dragged: FlowNode[]) => {
+      const plan = planBoardCardDrop(node, dragged);
+      if (!plan) return;
+
+      // Every dragged task card, in the order they sit on the board.
+      const movingIds = new Set(dragged.map((n) => n.id));
+      movingIds.add(node.id);
+      const columnPosition = new Map<string, number>();
+      boardLayout?.columns.forEach((column, columnIndex) =>
+        column.tasks.forEach((entry, taskIndex) =>
+          columnPosition.set(entry.itemId, columnIndex * 10_000 + taskIndex),
+        ),
+      );
+      const moving = [...movingIds]
+        .filter((id) => boardItemsById.get(id)?.kind === 'task')
+        .sort(
+          (left, right) =>
+            (columnPosition.get(left) ?? 0) - (columnPosition.get(right) ?? 0),
+        )
+        .flatMap((id) => {
+          const refId = boardItemsById.get(id)?.refId;
+          const task = refId ? lookups.tasksById.get(refId) : undefined;
+          return task ? [task] : [];
+        });
+      if (moving.length === 0) return;
+
       if (boardView === 'phase') {
         const current = plan.column.tasks.map((entry) => entry.taskId);
-        const order = moveInOrder(current, task.id, plan.index);
-        const samePhase = (task.phase_id ?? null) === plan.column.phaseId;
-        if (samePhase && order.every((id, index) => id === current[index])) {
+        const order = moveManyInOrder(
+          current,
+          moving.map((task) => task.id),
+          plan.index,
+        );
+        const samePhase = moving.every(
+          (task) => (task.phase_id ?? null) === plan.column.phaseId,
+        );
+        if (
+          samePhase &&
+          order.length === current.length &&
+          order.every((id, index) => id === current[index])
+        ) {
           return;
         }
         void reorderTasks(plan.column.phaseId, order);
         return;
       }
       const status = plan.column.status;
-      if (status && boardStatusColumn(task.status) !== status) {
-        void changeTaskStatus(task, status);
+      if (status) {
+        void changeTaskStatuses(
+          moving.filter((task) => boardStatusColumn(task.status) !== status),
+          status,
+        );
       }
     },
     [
       boardItemsById,
+      boardLayout,
       boardView,
-      changeTaskStatus,
+      changeTaskStatuses,
       lookups.tasksById,
       planBoardCardDrop,
       reorderTasks,
@@ -1518,7 +1594,7 @@ function ProjectCanvasInner({
       const drag = dragRef.current;
       if (!drag) return;
       if (boardLayout?.positioned.has(node.id)) {
-        showBoardDrop(node);
+        showBoardDrop(node, dragged);
         return;
       }
       const start = itemById(node.id);
@@ -1597,7 +1673,11 @@ function ProjectCanvasInner({
           : [],
       );
       if (managed.size > 0) {
-        if (editable && !isGuest && managed.has(node.id)) applyBoardDrop(node);
+        if (editable && !isGuest && managed.has(node.id))
+          applyBoardDrop(
+            node,
+            dragged.filter((n) => managed.has(n.id)),
+          );
         for (const id of managed) interactingIds.current.delete(id);
         setBoardTick((tick) => tick + 1);
       }
@@ -2837,6 +2917,30 @@ function ProjectCanvasInner({
     window.setTimeout(() => focusItem(item.id), 50);
   }, [allTasks, board.phases.length, commit, focusItem, viewportCenter]);
 
+  const insertRoadmap = useCallback(
+    (panel: 'roadmap' | 'calendar') => {
+      const bounds = canvasItemsBounds(itemsRef.current);
+      const size = CANVAS_DEFAULT_SIZES.roadmap;
+      const center = viewportCenter();
+      const item: CanvasItem = {
+        id: createCanvasItemId(),
+        kind: 'roadmap',
+        refId: null,
+        x: bounds ? bounds.x : center.x - size.w / 2,
+        y: bounds ? bounds.y + bounds.h + 120 : center.y - size.h / 2,
+        w: size.w,
+        h: size.h,
+        zIndex: nextZIndex(itemsRef.current, false),
+        data: { panel },
+        updatedAt: PENDING_CANVAS_TIMESTAMP,
+        updatedBy: null,
+      };
+      commit([{ before: null, after: item }]);
+      window.setTimeout(() => focusItem(item.id), 50);
+    },
+    [commit, focusItem, viewportCenter],
+  );
+
   const aiSelection = useMemo<CanvasAiItem[]>(() => {
     if (!aiOpen) return [];
     const seen = new Set<string>();
@@ -2846,7 +2950,8 @@ function ProjectCanvasInner({
         seen.has(item.id) ||
         item.kind === 'connector' ||
         item.kind === 'draw' ||
-        item.kind === 'timeline'
+        item.kind === 'timeline' ||
+        item.kind === 'roadmap'
       ) {
         return;
       }
@@ -4135,6 +4240,33 @@ function ProjectCanvasInner({
                             </div>
                           </div>
                         </DropdownMenuItem>
+                        {isGuest ? null : (
+                          <DropdownMenuItem
+                            onSelect={() => insertRoadmap('roadmap')}
+                          >
+                            <Route className="mr-2 h-4 w-4" />
+                            <div className="min-w-0">
+                              <div className="text-sm">Roadmap</div>
+                              <div className="text-xs text-[var(--workspace-shell-text-muted)]">
+                                Phases, tasks, content and notes by week or
+                                month
+                              </div>
+                            </div>
+                          </DropdownMenuItem>
+                        )}
+                        {isGuest ? null : (
+                          <DropdownMenuItem
+                            onSelect={() => insertRoadmap('calendar')}
+                          >
+                            <CalendarRange className="mr-2 h-4 w-4" />
+                            <div className="min-w-0">
+                              <div className="text-sm">Content calendar</div>
+                              <div className="text-xs text-[var(--workspace-shell-text-muted)]">
+                                Posts per day with platforms and status
+                              </div>
+                            </div>
+                          </DropdownMenuItem>
+                        )}
                         {isGuest ? null : (
                           <DropdownMenuItem onSelect={arrangeTeam}>
                             <Users className="mr-2 h-4 w-4" />

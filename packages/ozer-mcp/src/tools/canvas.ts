@@ -240,9 +240,13 @@ function applyContentFields(
   return next;
 }
 
-type CanvasProject = { id: string; account_id: string; name: string | null };
+export type CanvasProject = {
+  id: string;
+  account_id: string;
+  name: string | null;
+};
 
-async function loadCanvasProject(
+export async function loadCanvasProject(
   supabase: SupabaseClient,
   projectId: string,
   mode: 'view' | 'edit',
@@ -298,7 +302,7 @@ async function loadCanvasProject(
   };
 }
 
-async function loadCanvasRows(
+export async function loadCanvasRows(
   supabase: SupabaseClient,
   projectId: string,
 ): Promise<CanvasRow[]> {
@@ -365,7 +369,10 @@ async function loadLinkedLabels(
   return labels;
 }
 
-function mapCanvasRow(row: CanvasRow, linkedLabels?: Map<string, string>) {
+export function mapCanvasRow(
+  row: CanvasRow,
+  linkedLabels?: Map<string, string>,
+) {
   const data = rowData(row);
   const box = rowBox(row);
   const base = {
@@ -849,7 +856,7 @@ export const registerCanvasTools: OzerMcpToolRegistrar = (server, context) => {
     'add_canvas_items',
     {
       description:
-        "Add items to a delivery project's shared canvas: sticky notes, free text, shapes (rectangle/ellipse/diamond), frames (titled sections), link cards, freehand drawings (draw, from a list of [x, y] points), and connector arrows between items. Changes appear live for people viewing the canvas. Call get_project_canvas first to see existing content and bounds. Omit x/y to auto-place new items in a row below existing content; or pass x/y to lay things out yourself (canvas px, y grows downward; stickies are 200×200, text 240×48, shapes 180×120, frames 480×320 by default). To draw a line, arrow or shape outline, use draw with points; to join two items, use connector with source/target (item ids or keys from this call). Give items a key to connect them in the same call. Frames render behind other items and carry items inside them when moved, so create the frame first, then place items within its bounds. Cannot create linked cards (tasks, phases, …).",
+        "Add items to a delivery project's shared canvas: sticky notes, free text, shapes (rectangle/ellipse/diamond), frames (titled sections), link cards, freehand drawings (draw, from a list of [x, y] points), and connector arrows between items. Changes appear live for people viewing the canvas. Call get_project_canvas first to see existing content and bounds. Omit x/y to auto-place new items in a row below existing content; or pass x/y to lay things out yourself (canvas px, y grows downward; stickies are 200×200, text 240×48, shapes 180×120, frames 480×320 by default). To draw a line, arrow or shape outline, use draw with points; to join two items, use connector with source/target (item ids or keys from this call). Give items a key to connect them in the same call. Frames render behind other items and carry items inside them when moved, so create the frame first, then place items within its bounds. To put task, phase or note cards on the canvas at a position use place_canvas_cards; to remove items use delete_canvas_items; to show a dependency between tasks use link_tasks.",
       inputSchema: addCanvasItemsSchema,
     },
     async (input) => {

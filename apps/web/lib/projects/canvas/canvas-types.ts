@@ -18,6 +18,7 @@ export const FREEFORM_CANVAS_KINDS = [
   'draw',
   'timeline',
   'metric',
+  'roadmap',
 ] as const;
 
 export const CANVAS_ITEM_KINDS = [
@@ -103,6 +104,8 @@ export type CanvasItemData = {
   milestones?: CanvasMilestone[];
   /** Readings logged each time the figure is updated, oldest first. */
   history?: Array<{ date: string; value: number }>;
+  /** Roadmap card: the unified roadmap or just the content calendar. */
+  panel?: 'roadmap' | 'calendar';
 };
 
 export type CanvasMetricSource = 'manual' | 'tasks' | 'phases';
@@ -259,6 +262,7 @@ export const CANVAS_DEFAULT_SIZES: Record<
   draw: { w: 1, h: 1 },
   timeline: { w: 1200, h: 280 },
   metric: { w: 260, h: 180 },
+  roadmap: { w: 1280, h: 620 },
 };
 
 export function canvasItemSize(item: Pick<CanvasItem, 'kind' | 'w' | 'h'>) {

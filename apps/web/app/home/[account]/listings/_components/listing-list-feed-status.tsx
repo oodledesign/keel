@@ -52,7 +52,7 @@ function rightmoveStatusToneClass(status: RightmoveListSyncStatus | undefined) {
   return 'text-[var(--workspace-shell-text)]/40';
 }
 
-function ListingFeedSyncBadge({
+export function ListingFeedSyncBadge({
   channel,
   status,
 }: {
@@ -107,7 +107,7 @@ function ListingFeedSyncIcon({
   );
 }
 
-function ListingRightmoveSyncBadge({
+export function ListingRightmoveSyncBadge({
   listing,
 }: {
   listing: CommercialListing;

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import {
   ArrowLeft,
@@ -193,6 +193,8 @@ export function JobDetailContent({
   const jobsPath = projectListHref(accountSlug);
   const isPersonal = isPersonalProjectsScope(accountSlug);
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const requestedTab = searchParams.get('tab') ?? 'project';
   const initialTab =
     requestedTab === 'services' && !showServices ? 'project' : requestedTab;
@@ -276,8 +278,7 @@ export function JobDetailContent({
   }, [accountId, jobId]);
 
   useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (!tab) return;
+    const tab = searchParams.get('tab') ?? 'project';
     if (tab === 'services' && !showServices) {
       setActiveTab('project');
       return;
@@ -575,7 +576,19 @@ export function JobDetailContent({
 
       <Tabs
         value={activeTab}
-        onValueChange={setActiveTab}
+        onValueChange={(next) => {
+          setActiveTab(next);
+          const params = new URLSearchParams(searchParams.toString());
+          if (next === 'project') params.delete('tab');
+          else params.set('tab', next);
+          // Each tab keeps its own sub-view/deep link state.
+          params.delete('view');
+          params.delete('canvasItem');
+          const query = params.toString();
+          router.push(query ? `${pathname}?${query}` : pathname, {
+            scroll: false,
+          });
+        }}
         className={cn(
           'flex flex-1 flex-col',
           activeTab !== 'project' && 'min-h-0',

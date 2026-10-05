@@ -361,9 +361,13 @@ export function layoutCanvasBoard(input: BoardLayoutInput): BoardLayoutResult {
 export function planBoardDrop(
   columns: BoardColumn[],
   itemsById: ReadonlyMap<string, Pick<CanvasItem, 'y' | 'h' | 'kind' | 'w'>>,
-  draggedItemId: string,
+  draggedItemId: string | ReadonlySet<string>,
   center: { x: number; y: number },
 ): { column: BoardColumn; index: number } | null {
+  const dragged =
+    typeof draggedItemId === 'string'
+      ? new Set([draggedItemId])
+      : draggedItemId;
   let best: BoardColumn | null = null;
   let bestDistance = Infinity;
   for (const column of columns) {
@@ -380,7 +384,7 @@ export function planBoardDrop(
 
   let index = 0;
   for (const task of best.tasks) {
-    if (task.itemId === draggedItemId) continue;
+    if (dragged.has(task.itemId)) continue;
     const item = itemsById.get(task.itemId);
     if (!item) continue;
     const { h } = canvasItemSize({ kind: item.kind, w: item.w, h: item.h });
@@ -394,6 +398,18 @@ export function moveInOrder(ids: string[], movedId: string, index: number) {
   const rest = ids.filter((id) => id !== movedId);
   const at = Math.max(0, Math.min(index, rest.length));
   return [...rest.slice(0, at), movedId, ...rest.slice(at)];
+}
+
+/** `ids` with every id in `movedIds` taken out and put back, in order, at `index` (among the rest). */
+export function moveManyInOrder(
+  ids: string[],
+  movedIds: string[],
+  index: number,
+) {
+  const moving = new Set(movedIds);
+  const rest = ids.filter((id) => !moving.has(id));
+  const at = Math.max(0, Math.min(index, rest.length));
+  return [...rest.slice(0, at), ...movedIds, ...rest.slice(at)];
 }
 
 type OrderableTask = {

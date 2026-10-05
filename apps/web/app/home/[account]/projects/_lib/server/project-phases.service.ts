@@ -647,6 +647,8 @@ class ProjectPhasesService {
       throw new Error('Task does not belong to this job');
     }
 
+    // One round of parallel updates, then a single cascade for all subtasks,
+    // instead of two queries per task one after the other.
     await Promise.all(
       input.taskIds.map(async (taskId, index) => {
         const { error } = await this.db
@@ -655,14 +657,15 @@ class ProjectPhasesService {
           .eq('id', taskId)
           .eq('project_id', input.jobId);
         if (error) this.throwErr(error);
-        const { error: cascadeErr } = await this.db
-          .from('tasks')
-          .update({ phase_id: input.phaseId })
-          .eq('parent_task_id', taskId)
-          .eq('project_id', input.jobId);
-        if (cascadeErr) this.throwErr(cascadeErr);
       }),
     );
+
+    const { error: cascadeErr } = await this.db
+      .from('tasks')
+      .update({ phase_id: input.phaseId })
+      .in('parent_task_id', input.taskIds)
+      .eq('project_id', input.jobId);
+    if (cascadeErr) this.throwErr(cascadeErr);
   }
 
   async listJobBoard(input: ListJobBoardInput): Promise<JobBoardResult> {

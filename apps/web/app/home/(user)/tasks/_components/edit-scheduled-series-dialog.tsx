@@ -46,6 +46,8 @@ const PRIORITIES = [
 ];
 
 const FREQUENCIES = [
+  { key: 'daily', label: 'Every day' },
+  { key: 'weekdays', label: 'Every weekday' },
   { key: 'weekly', label: 'Every week' },
   { key: 'fortnightly', label: 'Every 2 weeks' },
   { key: 'monthly', label: 'Every month' },

@@ -20,6 +20,7 @@ export const CANVAS_KIND_LABELS: Record<CanvasItem['kind'], string> = {
   connector: 'Arrow',
   timeline: 'Timeline',
   metric: 'Figure',
+  roadmap: 'Roadmap',
 };
 
 function firstLine(value: string | undefined) {

@@ -65,6 +65,8 @@ export const CANVAS_DEFAULT_SIZES: Record<
   link: { w: 320, h: 150 },
   draw: { w: 1, h: 1 },
   timeline: { w: 1200, h: 280 },
+  metric: { w: 260, h: 180 },
+  roadmap: { w: 1280, h: 620 },
 };
 
 export type CanvasBox = { x: number; y: number; w: number; h: number };

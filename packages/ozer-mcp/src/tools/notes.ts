@@ -246,7 +246,7 @@ export const registerNoteTools: OzerMcpToolRegistrar = (server, context) => {
     'create_note',
     {
       description:
-        'Create a workspace note. Link to a task, CRM client, project, or meeting transcript when those ids are known. Prefer account_id from list_workspaces when the note is not linked. Cannot delete notes.',
+        'Create a workspace note. Link to a task, CRM client, project, or meeting transcript when those ids are known. Prefer account_id from list_workspaces when the note is not linked.',
       inputSchema: createNoteSchema,
     },
     async (input) => {
@@ -274,10 +274,31 @@ export const registerNoteTools: OzerMcpToolRegistrar = (server, context) => {
   );
 
   server.registerTool(
+    'delete_note',
+    {
+      description:
+        'Permanently delete a note the user can edit (a mistake or duplicate). This cannot be undone.',
+      inputSchema: z.object({ id: z.string().uuid() }),
+    },
+    async (input) => {
+      const { data, error } = await supabase
+        .from('notes')
+        .delete()
+        .eq('id', input.id)
+        .select('id');
+      assertSupabaseOk(data, error, 'delete note');
+      if (!data || data.length === 0) {
+        throw new Error('Note not found or you cannot delete it');
+      }
+      return toolJson({ deleted: true, id: input.id });
+    },
+  );
+
+  server.registerTool(
     'update_note',
     {
       description:
-        'Patch a note the user can access: title, content, or links (task_id, client_id, project_id). Only provided fields change. Cannot delete notes.',
+        'Patch a note the user can access: title, content, or links (task_id, client_id, project_id). Only provided fields change.',
       inputSchema: updateNoteSchema,
     },
     async (input) => {

@@ -103,7 +103,14 @@ export type CreateTaskInput = {
   assigneeContactId?: string | null;
   /** When set, creates a recurring series (and usually the first task). */
   recurrence?: {
-    frequency: 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'yearly';
+    frequency:
+      | 'daily'
+      | 'weekdays'
+      | 'weekly'
+      | 'fortnightly'
+      | 'monthly'
+      | 'quarterly'
+      | 'yearly';
     firstCreateDate: string;
     dayOfMonth?: number | null;
     dueDays?: number;
@@ -204,7 +211,14 @@ export async function updateTaskRecurringSeriesAction(input: {
   title: string;
   priority: string;
   notes?: string | null;
-  frequency: 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'yearly';
+  frequency:
+    | 'daily'
+    | 'weekdays'
+    | 'weekly'
+    | 'fortnightly'
+    | 'monthly'
+    | 'quarterly'
+    | 'yearly';
   nextCreateDate: string;
   dayOfMonth?: number | null;
   dueDays?: number;

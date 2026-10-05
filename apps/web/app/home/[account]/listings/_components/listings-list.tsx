@@ -20,6 +20,7 @@ import {
   Building2,
   CalendarClock,
   CircleDot,
+  Columns3,
   Download,
   Edit2,
   Eye,
@@ -51,8 +52,10 @@ import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
@@ -118,8 +121,8 @@ import { ListingCardFeedsIcon } from './listing-card-feeds-icon';
 import { ListingCoverImage } from './listing-cover-image';
 import { ListingFormModal } from './listing-form-modal';
 import {
-  ListingListFeedStatusCells,
-  ListingListFeedStatusHeaders,
+  ListingFeedSyncBadge,
+  ListingRightmoveSyncBadge,
 } from './listing-list-feed-status';
 import { ListingPublicPreviewSheet } from './listing-public-preview-sheet';
 import { ListingSectorPills } from './listing-sector-pills';
@@ -275,6 +278,55 @@ function listingPreviewHref(accountSlug: string, listingId: string) {
   return `${listingHref(accountSlug, listingId)}/preview`;
 }
 
+type DisposalColumnKey =
+  | 'office'
+  | 'disposal'
+  | 'status'
+  | 'website'
+  | 'each'
+  | 'rightmove'
+  | 'size'
+  | 'price'
+  | 'matches'
+  | 'updated';
+
+/** Listing and the row actions are always shown; everything else is optional. */
+const DISPOSAL_COLUMNS: Array<{ key: DisposalColumnKey; label: string }> = [
+  { key: 'office', label: 'Office' },
+  { key: 'disposal', label: 'Disposal' },
+  { key: 'status', label: 'Status' },
+  { key: 'website', label: 'Website' },
+  { key: 'each', label: 'EACH' },
+  { key: 'rightmove', label: 'Rightmove' },
+  { key: 'size', label: 'Size' },
+  { key: 'price', label: 'Rent / price' },
+  { key: 'matches', label: 'Matches' },
+  { key: 'updated', label: 'Updated' },
+];
+
+const DEFAULT_DISPOSAL_COLUMNS: DisposalColumnKey[] = DISPOSAL_COLUMNS.map(
+  (column) => column.key,
+);
+
+const columnsStorageKey = (accountId: string) =>
+  `disposals-list-columns:${accountId}`;
+
+function readStoredColumns(accountId: string): DisposalColumnKey[] {
+  if (typeof window === 'undefined') return DEFAULT_DISPOSAL_COLUMNS;
+  try {
+    const raw = window.localStorage.getItem(columnsStorageKey(accountId));
+    if (!raw) return DEFAULT_DISPOSAL_COLUMNS;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return DEFAULT_DISPOSAL_COLUMNS;
+    return DEFAULT_DISPOSAL_COLUMNS.filter((key) => parsed.includes(key));
+  } catch {
+    return DEFAULT_DISPOSAL_COLUMNS;
+  }
+}
+
+const TH = 'px-4 py-3 font-medium whitespace-nowrap';
+const TD = 'px-4 py-3 whitespace-nowrap';
+
 export function ListingsList({
   accountId,
   accountSlug,
@@ -326,6 +378,30 @@ export function ListingsList({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
+  const [visibleColumns, setVisibleColumns] = useState<DisposalColumnKey[]>(
+    () => readStoredColumns(accountId),
+  );
+  const officeNameById = useMemo(
+    () => new Map(offices.map((office) => [office.id, office.name])),
+    [offices],
+  );
+  const showColumn = (key: DisposalColumnKey) => visibleColumns.includes(key);
+  const toggleColumn = (key: DisposalColumnKey, on: boolean) => {
+    setVisibleColumns((current) => {
+      const next = DEFAULT_DISPOSAL_COLUMNS.filter((column) =>
+        column === key ? on : current.includes(column),
+      );
+      try {
+        window.localStorage.setItem(
+          columnsStorageKey(accountId),
+          JSON.stringify(next),
+        );
+      } catch {
+        // The choice just won't be remembered.
+      }
+      return next;
+    });
+  };
   const [sortMode, setSortMode] = useState<ListingSort>('updated');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CommercialListing | null>(null);
@@ -1369,120 +1445,240 @@ export function ListingsList({
           ))}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[11px] tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
-              <tr>
-                <th className="px-4 py-3 font-medium">Listing</th>
-                <th className="hidden px-4 py-3 font-medium md:table-cell">
-                  Disposal
-                </th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <ListingListFeedStatusHeaders />
-                <th className="hidden px-4 py-3 font-medium lg:table-cell">
-                  Size
-                </th>
-                <th className="hidden px-4 py-3 font-medium sm:table-cell">
-                  Rent / price
-                </th>
-                <th className="hidden px-4 py-3 font-medium md:table-cell">
-                  Matches
-                </th>
-                <th className="hidden px-4 py-3 font-medium xl:table-cell">
-                  Updated
-                </th>
-                <th className="px-4 py-3 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {pagedVisibleListings.map((listing) => {
-                const href = listingHref(accountSlug, listing.id);
-                const money = formatListingMoneyInline(listing);
-                const size = formatSize(listing) ?? '—';
-                const location = locationLabel(listing);
-
-                return (
-                  <tr
-                    key={listing.id}
-                    className="border-b border-[color:var(--workspace-shell-border)] last:border-0 hover:bg-[var(--workspace-shell-sidebar-accent)]/50"
+        <div className="space-y-2">
+          <div className="flex justify-end">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5"
+                  data-test="disposal-columns-trigger"
+                >
+                  <Columns3 className="h-3.5 w-3.5" />
+                  Columns
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel>Show columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {DISPOSAL_COLUMNS.map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.key}
+                    checked={showColumn(column.key)}
+                    onCheckedChange={(checked) =>
+                      toggleColumn(column.key, checked === true)
+                    }
+                    onSelect={(event) => event.preventDefault()}
                   >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <span
-                          className={`relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg ${workspaceIconChip}`}
-                        >
-                          {listing.coverUrl ? (
-                            <ListingCoverImage
-                              src={listing.coverUrl}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <Building2 className="h-3.5 w-3.5" />
-                          )}
-                        </span>
-                        <div className="min-w-0">
-                          <Link
-                            href={href}
-                            className={`font-medium ${disposalTitleLinkClass}`}
+                    {column.label}
+                  </DropdownMenuCheckboxItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    setVisibleColumns(DEFAULT_DISPOSAL_COLUMNS);
+                    try {
+                      window.localStorage.removeItem(
+                        columnsStorageKey(accountId),
+                      );
+                    } catch {
+                      // Nothing to clear.
+                    }
+                  }}
+                >
+                  Reset to all columns
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[11px] tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
+                <tr>
+                  <th className={TH}>Listing</th>
+                  {showColumn('office') ? <th className={TH}>Office</th> : null}
+                  {showColumn('disposal') ? (
+                    <th className={TH}>Disposal</th>
+                  ) : null}
+                  {showColumn('status') ? <th className={TH}>Status</th> : null}
+                  {showColumn('website') ? (
+                    <th className={TH} title="Website XML feed status">
+                      Website
+                    </th>
+                  ) : null}
+                  {showColumn('each') ? (
+                    <th className={TH} title="EACH feed status">
+                      EACH
+                    </th>
+                  ) : null}
+                  {showColumn('rightmove') ? (
+                    <th className={TH} title="Rightmove sync status">
+                      Rightmove
+                    </th>
+                  ) : null}
+                  {showColumn('size') ? <th className={TH}>Size</th> : null}
+                  {showColumn('price') ? (
+                    <th className={TH}>Rent / price</th>
+                  ) : null}
+                  {showColumn('matches') ? (
+                    <th className={TH}>Matches</th>
+                  ) : null}
+                  {showColumn('updated') ? (
+                    <th className={TH}>Updated</th>
+                  ) : null}
+                  <th className="px-4 py-3 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {pagedVisibleListings.map((listing) => {
+                  const href = listingHref(accountSlug, listing.id);
+                  const money = formatListingMoneyInline(listing);
+                  const size = formatSize(listing) ?? '—';
+                  const location = locationLabel(listing);
+                  const office = listing.accountBranchId
+                    ? officeNameById.get(listing.accountBranchId)
+                    : null;
+
+                  return (
+                    <tr
+                      key={listing.id}
+                      className="border-b border-[color:var(--workspace-shell-border)] last:border-0 hover:bg-[var(--workspace-shell-sidebar-accent)]/50"
+                    >
+                      <td className={TD}>
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className={`relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg ${workspaceIconChip}`}
                           >
-                            {listing.name}
-                          </Link>
-                          {location ? (
-                            <p className="truncate text-xs text-[var(--workspace-shell-text)]/45">
-                              {location}
-                            </p>
-                          ) : null}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="hidden px-4 py-3 md:table-cell">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${DISPOSAL_TYPE_BADGE_CLASS[listing.disposalType]}`}
-                      >
-                        {DISPOSAL_TYPE_LABELS[listing.disposalType]}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <ListingStatusBadge status={listing.status} />
-                    </td>
-                    <ListingListFeedStatusCells listing={listing} />
-                    <td className="hidden px-4 py-3 text-[var(--workspace-shell-text)]/70 lg:table-cell">
-                      {size}
-                    </td>
-                    <td className="hidden px-4 py-3 text-[var(--workspace-shell-text)]/70 sm:table-cell">
-                      {money}
-                    </td>
-                    <td className="hidden px-4 py-3 md:table-cell">
-                      {(listing.matchCount ?? 0) > 0 ? (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-[var(--ozer-accent)] px-2 py-0.5 text-[11px] font-semibold text-white">
-                          <Bell className="h-3 w-3" />
-                          <span className="tabular-nums">
-                            {listing.matchCount}
+                            {listing.coverUrl ? (
+                              <ListingCoverImage
+                                src={listing.coverUrl}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <Building2 className="h-3.5 w-3.5" />
+                            )}
                           </span>
-                        </span>
-                      ) : (
-                        <span className="text-[var(--workspace-shell-text)]/35">
-                          —
-                        </span>
-                      )}
-                    </td>
-                    <td className="hidden px-4 py-3 text-[var(--workspace-shell-text)]/55 xl:table-cell">
-                      {formatUpdatedAt(listing.updatedAt) ?? '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {canEditDisposals ? (
-                        <ListingActions
-                          onPreview={() => setPreviewListingId(listing.id)}
-                          onEdit={() => openEdit(listing)}
-                          onDelete={() => setDeleteTarget(listing)}
-                        />
+                          <div>
+                            <Link
+                              href={href}
+                              className={`font-medium ${disposalTitleLinkClass}`}
+                            >
+                              {listing.name}
+                            </Link>
+                            {location ? (
+                              <p className="text-xs text-[var(--workspace-shell-text)]/45">
+                                {location}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                      </td>
+                      {showColumn('office') ? (
+                        <td
+                          className={`${TD} text-[var(--workspace-shell-text)]/70`}
+                        >
+                          {office ?? '—'}
+                        </td>
                       ) : null}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      {showColumn('disposal') ? (
+                        <td className={TD}>
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap ${DISPOSAL_TYPE_BADGE_CLASS[listing.disposalType]}`}
+                          >
+                            {DISPOSAL_TYPE_LABELS[listing.disposalType]}
+                          </span>
+                        </td>
+                      ) : null}
+                      {showColumn('status') ? (
+                        <td className={TD}>
+                          <ListingStatusBadge status={listing.status} />
+                        </td>
+                      ) : null}
+                      {showColumn('website') ? (
+                        <td
+                          className={TD}
+                          data-test={`disposal-website-sync-${listing.websiteSyncStatus ?? 'unknown'}`}
+                        >
+                          <ListingFeedSyncBadge
+                            channel="website"
+                            status={listing.websiteSyncStatus}
+                          />
+                        </td>
+                      ) : null}
+                      {showColumn('each') ? (
+                        <td
+                          className={TD}
+                          data-test={`disposal-each-sync-${listing.eachSyncStatus ?? 'unknown'}`}
+                        >
+                          <ListingFeedSyncBadge
+                            channel="each"
+                            status={listing.eachSyncStatus}
+                          />
+                        </td>
+                      ) : null}
+                      {showColumn('rightmove') ? (
+                        <td
+                          className={TD}
+                          data-test={`disposal-rightmove-sync-${listing.rightmoveSyncStatus ?? 'unknown'}`}
+                        >
+                          <ListingRightmoveSyncBadge listing={listing} />
+                        </td>
+                      ) : null}
+                      {showColumn('size') ? (
+                        <td
+                          className={`${TD} text-[var(--workspace-shell-text)]/70`}
+                        >
+                          {size}
+                        </td>
+                      ) : null}
+                      {showColumn('price') ? (
+                        <td
+                          className={`${TD} text-[var(--workspace-shell-text)]/70`}
+                        >
+                          {money}
+                        </td>
+                      ) : null}
+                      {showColumn('matches') ? (
+                        <td className={TD}>
+                          {(listing.matchCount ?? 0) > 0 ? (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-[var(--ozer-accent)] px-2 py-0.5 text-[11px] font-semibold text-white">
+                              <Bell className="h-3 w-3" />
+                              <span className="tabular-nums">
+                                {listing.matchCount}
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="text-[var(--workspace-shell-text)]/35">
+                              —
+                            </span>
+                          )}
+                        </td>
+                      ) : null}
+                      {showColumn('updated') ? (
+                        <td
+                          className={`${TD} text-[var(--workspace-shell-text)]/55`}
+                        >
+                          {formatUpdatedAt(listing.updatedAt) ?? '—'}
+                        </td>
+                      ) : null}
+                      <td className="px-4 py-3 text-right">
+                        {canEditDisposals ? (
+                          <ListingActions
+                            onPreview={() => setPreviewListingId(listing.id)}
+                            onEdit={() => openEdit(listing)}
+                            onDelete={() => setDeleteTarget(listing)}
+                          />
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

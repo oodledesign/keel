@@ -16,6 +16,7 @@ import {
   type LucideIcon,
   NotebookText,
   PenLine,
+  Route,
   Search,
   Shapes,
   StickyNote,
@@ -52,6 +53,7 @@ const KIND_ICONS: Record<CanvasItem['kind'], LucideIcon> = {
   connector: ArrowRight,
   timeline: GanttChart,
   metric: Gauge,
+  roadmap: Route,
 };
 
 type CanvasSearchDialogProps = {

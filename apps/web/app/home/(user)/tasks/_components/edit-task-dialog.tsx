@@ -89,6 +89,8 @@ const STATUSES = [
 ];
 
 const FREQUENCIES = [
+  { key: 'daily', label: 'Daily' },
+  { key: 'weekdays', label: 'Weekdays' },
   { key: 'weekly', label: 'Weekly' },
   { key: 'fortnightly', label: 'Fortnightly' },
   { key: 'monthly', label: 'Monthly' },

@@ -68,6 +68,7 @@ export const CanvasItemDataSchema = z
     start: z.string().max(60).optional(),
     startDate: isoDate.optional(),
     dueDate: isoDate.optional(),
+    panel: z.enum(['roadmap', 'calendar']).optional(),
     metricSource: z.enum(['manual', 'tasks', 'phases']).optional(),
     milestones: z
       .array(

@@ -12,6 +12,8 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 
 export type TaskRecurrenceFrequency =
+  | 'daily'
+  | 'weekdays'
   | 'weekly'
   | 'fortnightly'
   | 'monthly'
@@ -28,6 +30,8 @@ export type TaskRecurringSeriesRow = {
   project_id: string | null;
   client_id: string | null;
   area_id: string | null;
+  phase_id?: string | null;
+  assignee_user_id?: string | null;
   frequency: TaskRecurrenceFrequency;
   day_of_month: number | null;
   next_create_at: string;
@@ -53,6 +57,14 @@ export function addTaskRecurrenceFrequency(
   const anchorDay = dayOfMonth ?? next.getUTCDate();
 
   switch (frequency) {
+    case 'daily':
+      next.setUTCDate(next.getUTCDate() + 1);
+      break;
+    case 'weekdays':
+      do {
+        next.setUTCDate(next.getUTCDate() + 1);
+      } while (next.getUTCDay() === 0 || next.getUTCDay() === 6);
+      break;
     case 'weekly':
       next.setUTCDate(next.getUTCDate() + 7);
       break;
@@ -243,6 +255,8 @@ async function spawnTaskFromSeries(
     projectId: series.project_id ?? undefined,
     clientId: series.client_id ?? undefined,
     areaId: series.area_id ?? undefined,
+    phaseId: series.phase_id ?? undefined,
+    assigneeUserId: series.assignee_user_id ?? undefined,
     accountId: series.account_id ?? undefined,
     notes: series.notes,
     durationMinutes: series.duration_minutes,

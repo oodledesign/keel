@@ -85,6 +85,9 @@ import {
 import { projectPhaseHref } from '~/lib/projects/project-paths';
 import { taskStatusBadgeClass } from '~/lib/projects/task-status-badge';
 
+import { ContentCalendarPanel } from '../content/content-calendar-panel';
+import { RoadmapPanel } from '../content/roadmap-panel';
+import { useProjectContent } from '../content/use-project-content';
 import {
   PHASE_STATUS_LABELS,
   PHASE_STATUS_STYLES,
@@ -166,8 +169,10 @@ function Resizer({
       minWidth={minWidth}
       minHeight={minHeight}
       keepAspectRatio={keepAspectRatio}
-      lineClassName="!border-[var(--ozer-accent)]"
-      handleClassName="!h-2.5 !w-2.5 !rounded-sm !border-[var(--ozer-accent)] !bg-[var(--ozer-surface-panel)]"
+      // The pseudo-element widens the grab area of each edge, and the z-index
+      // keeps it above embedded iframes, which would otherwise swallow drags.
+      lineClassName="!z-20 !border-[var(--ozer-accent)] after:absolute after:-inset-[7px] after:content-['']"
+      handleClassName="!z-20 !h-2.5 !w-2.5 !rounded-sm !border-[var(--ozer-accent)] !bg-[var(--ozer-surface-panel)]"
       onResizeEnd={(_event, box) => resizeItem(id, box)}
     />
   );
@@ -368,6 +373,14 @@ function PhaseNode({ id, data, selected }: CanvasNodeProps) {
           style={{ width: `${phase.progressPct}%`, background: colour }}
         />
       </div>
+      {phase.description?.trim() ? (
+        <p
+          className="mx-4 mt-1.5 line-clamp-2 text-[11px] leading-[14px] text-[var(--workspace-shell-text-muted)]"
+          title={phase.description.trim()}
+        >
+          {phase.description.trim()}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -2079,6 +2092,41 @@ function TotalizerBody({
   );
 }
 
+function RoadmapNode({ data, selected }: CanvasNodeProps) {
+  const { accountId, jobId, phasesById, tasksById, canEdit, guest } =
+    useCanvasLookups();
+  const content = useProjectContent({ accountId, jobId });
+  const phases = useMemo(() => [...phasesById.values()], [phasesById]);
+  const tasks = useMemo(() => [...tasksById.values()], [tasksById]);
+  const calendar = data.item.data.panel === 'calendar';
+
+  return (
+    <div
+      className={cn(
+        cardClass,
+        'nodrag nowheel flex h-full w-full flex-col overflow-auto p-3',
+        selected && 'ring-2 ring-[var(--ozer-accent)]',
+      )}
+    >
+      {guest ? (
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+          The roadmap is only available to team members.
+        </p>
+      ) : calendar ? (
+        <ContentCalendarPanel content={content} canEdit={canEdit} compact />
+      ) : (
+        <RoadmapPanel
+          content={content}
+          phases={phases}
+          tasks={tasks}
+          canEdit={canEdit}
+          showSummary={false}
+        />
+      )}
+    </div>
+  );
+}
+
 function MetricNode({ id, data, selected }: CanvasNodeProps) {
   const { canEdit, tasksById, phasesById } = useCanvasLookups();
   const { editingId, setEditingId } = useCanvasActions();
@@ -2246,6 +2294,7 @@ export const canvasNodeTypes = {
   draw: memo(DrawNode),
   timeline: memo(TimelineNode),
   metric: memo(MetricNode),
+  roadmap: memo(RoadmapNode),
   boardColumn: memo(BoardColumnNode),
   boardDrop: memo(BoardDropNode),
 };
