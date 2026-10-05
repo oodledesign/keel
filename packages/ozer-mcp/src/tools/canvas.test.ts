@@ -464,7 +464,11 @@ function createCanvasSupabase(options: {
     rpc(name: string) {
       return Promise.resolve({
         data:
-          name === 'can_edit_project_canvas' ? (options.canEdit ?? true) : true,
+          name === 'can_edit_project_canvas'
+            ? (options.canEdit ?? true)
+            : name === 'can_guest_edit_project_canvas'
+              ? false
+              : true,
         error: null,
       });
     },

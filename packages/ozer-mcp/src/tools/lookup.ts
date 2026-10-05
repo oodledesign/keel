@@ -233,15 +233,23 @@ export async function loadSearchableClients(
 export async function loadSearchableProjects(
   supabase: SupabaseClient,
   accountIds: string[],
+  guestProjectIds: string[] = [],
 ): Promise<Array<SearchableNamed & { row: ProjectNameRow }>> {
-  if (accountIds.length === 0) {
+  if (accountIds.length === 0 && guestProjectIds.length === 0) {
     return [];
   }
 
-  const { data, error } = await supabase
+  const base = supabase
     .from('projects')
-    .select('id, name, title, status, client_id, account_id, is_phased')
-    .in('account_id', accountIds);
+    .select('id, name, title, status, client_id, account_id, is_phased');
+  const { data, error } =
+    accountIds.length > 0 && guestProjectIds.length > 0
+      ? await base.or(
+          `account_id.in.(${accountIds.join(',')}),id.in.(${guestProjectIds.join(',')})`,
+        )
+      : accountIds.length > 0
+        ? await base.in('account_id', accountIds)
+        : await base.in('id', guestProjectIds);
 
   assertSupabaseOk(data, error, 'load projects for search');
 

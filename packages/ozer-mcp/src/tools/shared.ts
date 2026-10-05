@@ -256,3 +256,25 @@ export const OPEN_TASK_STATUSES = [
   'in_progress',
   'client_review',
 ] as const;
+
+/** Projects the user was invited to as an accepted guest (not a workspace member). */
+export async function loadGuestProjectIds(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('project_guests')
+    .select('project_id')
+    .eq('user_id', userId)
+    .eq('status', 'accepted');
+
+  assertSupabaseOk(data, error, 'load guest projects');
+
+  return [
+    ...new Set(
+      ((data ?? []) as Array<{ project_id: string | null }>)
+        .map((row) => row.project_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+}

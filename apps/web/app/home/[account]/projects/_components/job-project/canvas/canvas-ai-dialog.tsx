@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import {
+  CalendarPlus,
   CalendarRange,
   LayoutTemplate,
   Lightbulb,
@@ -23,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@kit/ui/dialog';
+import { Input } from '@kit/ui/input';
 import {
   Select,
   SelectContent,
@@ -35,6 +37,7 @@ import { cn } from '@kit/ui/utils';
 
 import { isInsufficientAiCreditsMessage } from '~/lib/ai/ai-credits-exhausted';
 import type {
+  CanvasAiContentPostSuggestion,
   CanvasAiItem,
   CanvasAiRequest,
   CanvasAiResult,
@@ -44,11 +47,19 @@ import type {
   CanvasSectionOutline,
   CanvasSectionPlacement,
 } from '~/lib/projects/canvas/canvas-fill';
+import {
+  CONTENT_PLATFORMS,
+  type ContentPlatform,
+  contentPlatform,
+} from '~/lib/projects/content/content-calendar';
 
 import { getErrorMessage } from '../../../_lib/error-message';
 import { assistProjectCanvas } from '../../../_lib/server/project-canvas-ai.actions';
 
-type Mode = 'summarise' | 'tasks' | 'fill' | 'brainstorm';
+type Mode = 'summarise' | 'tasks' | 'fill' | 'brainstorm' | 'content';
+
+const isoDay = (date: Date) => date.toISOString().slice(0, 10);
+const DEFAULT_PLATFORMS: ContentPlatform[] = ['linkedin', 'instagram'];
 
 type Entry = {
   key: string;
@@ -58,12 +69,16 @@ type Entry = {
   checked: boolean;
   placement?: Omit<CanvasSectionPlacement, 'text'>;
   task?: CanvasAiTaskSuggestion;
+  post?: CanvasAiContentPostSuggestion;
+  /** Read-only second line, e.g. a post caption. */
+  detail?: string | null;
 };
 
 export type CanvasAiApply =
   | { mode: 'summarise'; title: string; bullets: string[] }
   | { mode: 'brainstorm'; ideas: string[] }
   | { mode: 'section'; sectionId: string; placements: CanvasSectionPlacement[] }
+  | { mode: 'content_posts'; posts: CanvasAiContentPostSuggestion[] }
   | {
       mode: 'tasks';
       tasks: CanvasAiTaskSuggestion[];
@@ -105,6 +120,12 @@ const MODES: Array<{
     label: 'Fill a section',
     description: 'Draft notes for a brief, marketing plan or calendar',
     icon: LayoutTemplate,
+  },
+  {
+    id: 'content',
+    label: 'Draft content posts',
+    description: 'Plan posts for the Content calendar, then review and add',
+    icon: CalendarPlus,
   },
   {
     id: 'brainstorm',
@@ -162,6 +183,29 @@ function entriesFor(result: CanvasAiResult, request: CanvasAiRequest): Entry[] {
         text: task.title,
         checked: true,
         task,
+      }));
+    case 'content_posts':
+      return result.posts.map((post, i) => ({
+        key: `p${i}`,
+        group: null,
+        meta: [
+          new Date(`${post.postDate}T00:00:00Z`).toLocaleDateString('en-GB', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            timeZone: 'UTC',
+          }),
+          post.platforms
+            .map((key) => contentPlatform(key)?.label ?? key)
+            .join(', '),
+          post.status,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+        detail: post.body ? post.body.replace(/\s+/g, ' ').slice(0, 220) : null,
+        text: post.title,
+        checked: true,
+        post,
       }));
     case 'fill_areas': {
       const titles = new Map(
@@ -233,6 +277,12 @@ function AiBody({
   const [focus, setFocus] = useState('');
   const [prompt, setPrompt] = useState('');
   const [phaseId, setPhaseId] = useState<string>('none');
+  const [contentStart, setContentStart] = useState(() => isoDay(new Date()));
+  const [contentEnd, setContentEnd] = useState(() =>
+    isoDay(new Date(Date.now() + 28 * 86_400_000)),
+  );
+  const [contentPlatforms, setContentPlatforms] =
+    useState<ContentPlatform[]>(DEFAULT_PLATFORMS);
   const [running, setRunning] = useState(false);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -256,6 +306,20 @@ function AiBody({
               mode: 'brainstorm',
               prompt: prompt.trim(),
               items: selection.slice(0, 40),
+            }
+          : null;
+      case 'content':
+        return prompt.trim().length >= 3 &&
+          contentPlatforms.length > 0 &&
+          contentStart &&
+          contentEnd &&
+          contentStart <= contentEnd
+          ? {
+              mode: 'content_posts',
+              prompt: prompt.trim(),
+              startDate: contentStart,
+              endDate: contentEnd,
+              platforms: contentPlatforms,
             }
           : null;
       case 'fill': {
@@ -355,6 +419,14 @@ function AiBody({
           mode: 'brainstorm',
           ideas: chosen.map((entry) => entry.text.trim()),
         });
+      } else if (data.mode === 'content_posts') {
+        await onApply({
+          mode: 'content_posts',
+          posts: chosen.map((entry) => ({
+            ...entry.post!,
+            title: entry.text.trim(),
+          })),
+        });
       } else if (data.mode === 'tasks') {
         await onApply({
           mode: 'tasks',
@@ -385,13 +457,15 @@ function AiBody({
   if (result) {
     const checkedCount = result.entries.filter((e) => e.checked).length;
     const applyLabel =
-      result.data.mode === 'tasks'
-        ? `Create ${checkedCount} task${checkedCount === 1 ? '' : 's'}`
-        : result.data.mode === 'summarise'
-          ? 'Add summary sticky'
-          : result.data.mode === 'brainstorm'
-            ? `Add ${checkedCount} ${checkedCount === 1 ? 'sticky' : 'stickies'}`
-            : `Add ${checkedCount} to section`;
+      result.data.mode === 'content_posts'
+        ? `Add ${checkedCount} post${checkedCount === 1 ? '' : 's'} to Content calendar`
+        : result.data.mode === 'tasks'
+          ? `Create ${checkedCount} task${checkedCount === 1 ? '' : 's'}`
+          : result.data.mode === 'summarise'
+            ? 'Add summary sticky'
+            : result.data.mode === 'brainstorm'
+              ? `Add ${checkedCount} ${checkedCount === 1 ? 'sticky' : 'stickies'}`
+              : `Add ${checkedCount} to section`;
     return (
       <div className="space-y-3">
         {result.data.mode === 'summarise' ? (
@@ -436,6 +510,11 @@ function AiBody({
                     {entry.meta ? (
                       <p className="text-[11px] text-[var(--workspace-shell-text-muted)] capitalize">
                         {entry.meta}
+                      </p>
+                    ) : null}
+                    {entry.detail ? (
+                      <p className="mt-0.5 line-clamp-3 text-xs text-[var(--workspace-shell-text-muted)]">
+                        {entry.detail}
                       </p>
                     ) : null}
                   </div>
@@ -568,6 +647,70 @@ function AiBody({
             placeholder="Anything to focus on? (optional) e.g. launch in March, target first-time buyers"
             onChange={(event) => setFocus(event.target.value)}
           />
+        </div>
+      ) : null}
+
+      {mode === 'content' ? (
+        <div className="space-y-3">
+          <Textarea
+            value={prompt}
+            maxLength={500}
+            rows={3}
+            autoFocus
+            placeholder="What should we plan? e.g. 4 LinkedIn posts a week building to the launch, plus a weekly email"
+            onChange={(event) => setPrompt(event.target.value)}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <label className="space-y-1 text-xs text-[var(--workspace-shell-text-muted)]">
+              From
+              <Input
+                type="date"
+                value={contentStart}
+                max={contentEnd || undefined}
+                onChange={(event) => setContentStart(event.target.value)}
+              />
+            </label>
+            <label className="space-y-1 text-xs text-[var(--workspace-shell-text-muted)]">
+              To
+              <Input
+                type="date"
+                value={contentEnd}
+                min={contentStart || undefined}
+                onChange={(event) => setContentEnd(event.target.value)}
+              />
+            </label>
+          </div>
+          <div
+            className="flex flex-wrap gap-1.5"
+            role="group"
+            aria-label="Channels"
+          >
+            {CONTENT_PLATFORMS.map((platform) => {
+              const on = contentPlatforms.includes(platform.key);
+              return (
+                <button
+                  key={platform.key}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() =>
+                    setContentPlatforms((current) =>
+                      on
+                        ? current.filter((key) => key !== platform.key)
+                        : [...current, platform.key],
+                    )
+                  }
+                  className={cn(
+                    'rounded-full border px-2.5 py-1 text-xs transition-colors',
+                    on
+                      ? 'border-[var(--ozer-accent)] bg-[var(--workspace-shell-sidebar-accent)] font-medium'
+                      : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:border-[var(--ozer-accent)]/60',
+                  )}
+                >
+                  {platform.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       ) : null}
 

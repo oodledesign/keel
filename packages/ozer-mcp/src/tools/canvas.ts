@@ -288,7 +288,21 @@ export async function loadCanvasProject(
       { p_account_id: project.account_id },
     );
     assertSupabaseOk(canEdit, rpcError, 'check canvas permission');
-    if (canEdit !== true) {
+    let allowed = canEdit === true;
+    if (!allowed) {
+      // Guests invited with the edit_canvas permission can edit this project.
+      const { data: guestCanEdit, error: guestError } = await supabase.rpc(
+        'can_guest_edit_project_canvas',
+        { p_account_id: project.account_id, p_project_id: project.id },
+      );
+      assertSupabaseOk(
+        guestCanEdit,
+        guestError,
+        'check guest canvas permission',
+      );
+      allowed = guestCanEdit === true;
+    }
+    if (!allowed) {
       throw new Error('You do not have permission to edit this project canvas');
     }
   } else {

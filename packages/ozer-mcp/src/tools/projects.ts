@@ -14,6 +14,7 @@ import {
 import {
   OPEN_TASK_STATUSES,
   assertSupabaseOk,
+  loadGuestProjectIds,
   loadUserWorkspaces,
   pickDefined,
   toolJson,
@@ -242,15 +243,29 @@ export const registerProjectTools: OzerMcpToolRegistrar = (server, context) => {
           : []
         : workspaces.map((workspace) => workspace.id);
 
-      if (accountIds.length === 0) {
+      const guestIds = await loadGuestProjectIds(supabase, userId);
+
+      if (accountIds.length === 0 && guestIds.length === 0) {
         return toolJson({ projects: [] });
       }
 
       let query = supabase
         .from('projects')
         .select(PROJECT_SELECT)
-        .in('account_id', accountIds)
         .order('name', { ascending: true });
+
+      if (accountIds.length > 0 && guestIds.length > 0) {
+        query = query.or(
+          `account_id.in.(${accountIds.join(',')}),id.in.(${guestIds.join(',')})`,
+        );
+      } else if (accountIds.length > 0) {
+        query = query.in('account_id', accountIds);
+      } else {
+        query = query.in('id', guestIds);
+      }
+      if (input.account_id) {
+        query = query.eq('account_id', input.account_id);
+      }
 
       if (input.business_id) {
         query = query.eq('business_id', input.business_id);
@@ -290,12 +305,16 @@ export const registerProjectTools: OzerMcpToolRegistrar = (server, context) => {
           : []
         : workspaces.map((workspace) => workspace.id);
 
-      if (accountIds.length === 0) {
+      const guestIds = await loadGuestProjectIds(supabase, userId);
+
+      if (accountIds.length === 0 && guestIds.length === 0) {
         return toolJson({ projects: [] });
       }
 
       const matches = filterNamedByQuery(
-        await loadSearchableProjects(supabase, accountIds),
+        (await loadSearchableProjects(supabase, accountIds, guestIds)).filter(
+          (row) => !input.account_id || row.account_id === input.account_id,
+        ),
         input.q,
         input.limit,
       );

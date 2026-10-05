@@ -208,6 +208,7 @@ import {
   loadProjectCanvasNote,
   upsertProjectCanvasItems,
 } from '../../_lib/server/project-canvas.actions';
+import { saveContentPost } from '../../_lib/server/project-content.actions';
 import {
   createJobTask,
   moveTask,
@@ -3019,6 +3020,37 @@ function ProjectCanvasInner({
         updatedAt: PENDING_CANVAS_TIMESTAMP,
         updatedBy: null,
       });
+
+      if (result.mode === 'content_posts') {
+        const results = await Promise.allSettled(
+          result.posts.map((post) =>
+            saveContentPost({
+              accountId,
+              jobId,
+              post: {
+                postDate: post.postDate,
+                title: post.title,
+                body: post.body,
+                status: post.status,
+                platforms: post.platforms,
+              },
+            }),
+          ),
+        );
+        const saved = results.filter((r) => r.status === 'fulfilled').length;
+        const failed = results.length - saved;
+        if (saved > 0) {
+          toast.success(
+            `${saved} post${saved === 1 ? '' : 's'} added to the Content calendar`,
+          );
+        }
+        if (failed > 0) {
+          throw new Error(
+            `${failed} post${failed === 1 ? '' : 's'} couldn't be saved — try again.`,
+          );
+        }
+        return;
+      }
 
       if (result.mode === 'summarise') {
         const sticky = item(

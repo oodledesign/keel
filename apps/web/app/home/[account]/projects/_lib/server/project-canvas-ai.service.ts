@@ -42,7 +42,17 @@ class ProjectCanvasAiService {
     if (error) throw new Error(error.message);
     if (canEdit !== true) throw new Error('Permission denied');
 
-    const context = await this.projectContext(input.accountId, input.jobId);
+    let context = await this.projectContext(input.accountId, input.jobId);
+    if (input.request.mode === 'content_posts') {
+      const { startDate, endDate } = input.request;
+      if (startDate > endDate) {
+        throw new Error('The end date must be after the start date');
+      }
+      if (Date.parse(endDate) - Date.parse(startDate) > 190 * 86_400_000) {
+        throw new Error('Pick a window of six months or less');
+      }
+      context += await this.existingPostsBlock(input.jobId, startDate, endDate);
+    }
     const today = new Date().toISOString().slice(0, 10);
     const { system, user: prompt } = buildCanvasAiPrompt(
       input.request,
@@ -57,6 +67,32 @@ class ProjectCanvasAiService {
       supabase: this.client,
     });
     return parseCanvasAiResponse(input.request, raw);
+  }
+
+  /** Posts already planned around the window, so the AI avoids clashes. */
+  private async existingPostsBlock(
+    jobId: string,
+    startDate: string,
+    endDate: string,
+  ) {
+    const { data } = await this.loose
+      .from('project_content_posts')
+      .select('post_date, title, platforms, status')
+      .eq('project_id', jobId)
+      .gte('post_date', startDate)
+      .order('post_date', { ascending: true })
+      .limit(60);
+    const rows = ((data ?? []) as Row[]).filter(
+      (row) => str(row.post_date) <= endDate,
+    );
+    if (rows.length === 0) return '';
+    const lines = rows.map((row) => {
+      const platforms = Array.isArray(row.platforms)
+        ? (row.platforms as unknown[]).map(String).join('/')
+        : '';
+      return `- ${str(row.post_date)}: ${str(row.title)}${platforms ? ` [${platforms}]` : ''} (${str(row.status)})`;
+    });
+    return `\n\nEXISTING CONTENT POSTS IN THIS WINDOW (do not duplicate)\n${lines.join('\n')}`;
   }
 
   /** A compact plain-text brief of the project for grounding. */

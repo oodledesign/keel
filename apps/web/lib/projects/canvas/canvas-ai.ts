@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { extractJsonObject } from '~/lib/ai/extract-json-object';
 
+import { type ContentPlatform } from '../content/content-calendar';
+
 export type CanvasAiItem = { kind: string; text: string };
 type SectionArea = { key: string; title: string; existing: string[] };
 
@@ -21,7 +23,25 @@ export type CanvasAiRequest =
       instructions?: string;
       rows: SectionArea[];
       weeks: Array<{ key: string; label: string }>;
+    }
+  | {
+      mode: 'content_posts';
+      /** What to plan, e.g. "4 LinkedIn posts a week for the launch". */
+      prompt: string;
+      /** Inclusive date window, YYYY-MM-DD. */
+      startDate: string;
+      endDate: string;
+      /** Channels the posts may use. */
+      platforms: ContentPlatform[];
     };
+
+export type CanvasAiContentPostSuggestion = {
+  postDate: string;
+  title: string;
+  body: string;
+  platforms: ContentPlatform[];
+  status: 'idea' | 'draft';
+};
 
 export type CanvasAiTaskSuggestion = {
   title: string;
@@ -37,7 +57,8 @@ export type CanvasAiResult =
   | {
       mode: 'fill_calendar';
       cells: Array<{ row: string; week: string; text: string }>;
-    };
+    }
+  | { mode: 'content_posts'; posts: CanvasAiContentPostSuggestion[] };
 
 const SYSTEM = `You are a sharp project lead helping a small agency team plan on a shared visual canvas.
 Use the project context and canvas content provided. UK English. Be concrete and brief — every line should fit on a sticky note (under 140 characters).
@@ -114,6 +135,13 @@ JSON: {"areas": [{"key": "area key exactly as given", "notes": ["string"]}]}`,
           request.instructions ? `\nFOCUS: ${request.instructions}` : ''
         }\nAREAS\n${areasBlock(request.areas)}`,
       };
+    case 'content_posts':
+      return {
+        system: `${SYSTEM}
+Plan real content posts for the project's content calendar. Each post needs a publish date inside the window, a short title, a ready-to-edit caption in "body" (can be several sentences — the 140 character limit does not apply to body), and the channels it is for. Spread posts sensibly across the window, build towards the project's milestones, vary formats, and do not repeat or clash with posts that already exist. Use status "draft" when you wrote a full caption and "idea" when it is only a concept.
+JSON: {"posts": [{"postDate": "YYYY-MM-DD", "title": "string", "body": "string", "platforms": ["channel keys"], "status": "idea|draft"}]} — at most 30 posts.`,
+        user: `${context}\n\nWINDOW: ${request.startDate} to ${request.endDate}\nALLOWED CHANNELS: ${request.platforms.join(', ')}\nREQUEST\n${request.prompt}`,
+      };
     case 'fill_calendar':
       return {
         system: `${SYSTEM}
@@ -152,6 +180,19 @@ const TasksSchema = z.object({
       }),
     )
     .max(25),
+});
+const PostsSchema = z.object({
+  posts: z
+    .array(
+      z.object({
+        postDate: z.string().regex(isoDate),
+        title: z.string().trim().min(1).max(300),
+        body: z.string().trim().max(5000).default(''),
+        platforms: z.array(z.string()).max(12).default([]),
+        status: z.enum(['idea', 'draft']).catch('draft').default('draft'),
+      }),
+    )
+    .max(40),
 });
 const IdeasSchema = z.object({ ideas: z.array(note).min(1).max(15) });
 const AreasSchema = z.object({
@@ -212,6 +253,40 @@ export function parseCanvasAiResponse(
         areas: parsed.data.areas
           .filter((area) => keys.has(area.key) && area.notes.length > 0)
           .map((area) => ({ key: area.key, notes: area.notes.slice(0, 3) })),
+      };
+    }
+    case 'content_posts': {
+      const parsed = PostsSchema.safeParse(json);
+      if (!parsed.success) return fail();
+      const allowed = new Set<string>(request.platforms);
+      const fallback = request.platforms.slice(0, 1);
+      const seen = new Set<string>();
+      return {
+        mode: 'content_posts',
+        posts: parsed.data.posts
+          .filter((post) => {
+            // The model only sees the window; enforce it.
+            if (post.postDate < request.startDate) return false;
+            if (post.postDate > request.endDate) return false;
+            const key = `${post.postDate}:${post.title.toLowerCase()}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          })
+          .slice(0, 30)
+          .map((post) => {
+            const platforms = [
+              ...new Set(post.platforms.filter((p) => allowed.has(p))),
+            ] as ContentPlatform[];
+            return {
+              postDate: post.postDate,
+              title: post.title,
+              body: post.body,
+              platforms: platforms.length ? platforms : fallback,
+              status: post.status,
+            };
+          })
+          .sort((a, b) => a.postDate.localeCompare(b.postDate)),
       };
     }
     case 'fill_calendar': {

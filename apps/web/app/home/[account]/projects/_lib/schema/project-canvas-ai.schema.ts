@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
 import type { CanvasAiRequest } from '~/lib/projects/canvas/canvas-ai';
+import { CONTENT_PLATFORM_KEYS } from '~/lib/projects/content/content-calendar';
+
+const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 const CanvasAiItemSchema = z.object({
   kind: z.string().max(20),
@@ -36,6 +39,13 @@ export const CanvasAiRequestSchema: z.ZodType<
     sectionTitle: z.string().trim().max(200),
     instructions: z.string().trim().max(500).optional(),
     areas: z.array(SectionAreaSchema).min(1).max(12),
+  }),
+  z.object({
+    mode: z.literal('content_posts'),
+    prompt: z.string().trim().min(3).max(500),
+    startDate: ymd,
+    endDate: ymd,
+    platforms: z.array(z.enum(CONTENT_PLATFORM_KEYS)).min(1).max(12),
   }),
   z.object({
     mode: z.literal('fill_calendar'),
