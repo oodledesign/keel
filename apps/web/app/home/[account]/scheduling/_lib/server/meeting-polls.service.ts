@@ -29,6 +29,8 @@ import {
 } from '~/lib/scheduling/meeting-polls/emails';
 
 import type {
+  AddMeetingPollInviteesSchema,
+  AddMeetingPollSlotsSchema,
   ConfirmMeetingPollSchema,
   ResolveManualPollSlotSchema,
   SaveMeetingPollSchema,
@@ -511,6 +513,115 @@ class MeetingPollsService {
     }
 
     return mail;
+  }
+
+  /** Add more times to a poll that has already been sent. */
+  async addSlots(input: z.infer<typeof AddMeetingPollSlotsSchema>) {
+    const poll = await this.requirePoll(input.accountId, input.pollId);
+    if (poll.status !== 'open') {
+      throw new Error('Times can only be added while the poll is open');
+    }
+
+    const existing = await this.listSlots(poll.id);
+    const known = new Set(
+      existing.map((slot) => new Date(slot.starts_at).toISOString()),
+    );
+    const fresh = normaliseSlots(input.slots, poll.duration_minutes, {
+      requireFuture: true,
+    }).filter((slot) => !known.has(slot.starts_at));
+
+    if (fresh.length === 0) {
+      throw new Error('Those times are already on the poll');
+    }
+    if (existing.length + fresh.length > 20) {
+      throw new Error('A poll can have up to 20 times');
+    }
+
+    const { error } = await table(this.client, 'meeting_poll_slots').insert(
+      fresh.map((slot) => ({ ...slot, poll_id: poll.id })),
+    );
+    throwIfError(error, 'Could not add the times');
+
+    if (!input.notify) {
+      return { added: fresh.length, mail: EMPTY_MAIL };
+    }
+
+    const total = existing.length + fresh.length;
+    const invitees = (await this.listInvitees(poll.id)).filter(
+      (invitee) => invitee.invited_at,
+    );
+    const answered = await this.countAnswers(invitees.map((row) => row.id));
+    const needing = invitees.filter((invitee) => {
+      const count = answered.get(invitee.id) ?? 0;
+      return count < total;
+    });
+
+    if (needing.length === 0) {
+      return { added: fresh.length, mail: EMPTY_MAIL };
+    }
+
+    const host = await loadHostIdentity(poll.host_user_id);
+    const mail = await sendPollReminderEmails({
+      accountId: input.accountId,
+      pollId: poll.id,
+      title: poll.title,
+      organiserName: host.name,
+      replyTo: host.email,
+      reason: 'new_times',
+      invitees: needing.map((invitee) => ({
+        email: invitee.email,
+        name: invitee.name,
+        token: invitee.token,
+      })),
+    });
+
+    return { added: fresh.length, mail };
+  }
+
+  /** Add more people to a poll that has already been sent, and invite them. */
+  async addInvitees(input: z.infer<typeof AddMeetingPollInviteesSchema>) {
+    const poll = await this.requirePoll(input.accountId, input.pollId);
+    if (poll.status !== 'open') {
+      throw new Error('People can only be added while the poll is open');
+    }
+
+    const existing = await this.listInvitees(poll.id);
+    const known = new Set(existing.map((row) => row.email.toLowerCase()));
+    const fresh = (
+      await this.normaliseInvitees(input.accountId, input.invitees)
+    ).filter((invitee) => !known.has(invitee.email));
+
+    if (fresh.length === 0) {
+      throw new Error('Everyone you added is already invited');
+    }
+    if (existing.length + fresh.length > 50) {
+      throw new Error('A poll can have up to 50 people');
+    }
+
+    const { error } = await table(this.client, 'meeting_poll_invitees').insert(
+      fresh.map((invitee) => ({
+        ...invitee,
+        poll_id: poll.id,
+        token: randomBytes(32).toString('hex'),
+      })),
+    );
+    throwIfError(error, 'Could not add the people');
+
+    const mail = await this.sendUnsentInvites(input.accountId, poll.id);
+    return { added: fresh.length, mail };
+  }
+
+  private async countAnswers(inviteeIds: string[]) {
+    const counts = new Map<string, number>();
+    if (inviteeIds.length === 0) return counts;
+    const { data, error } = await table(this.client, 'meeting_poll_responses')
+      .select('invitee_id')
+      .in('invitee_id', inviteeIds);
+    throwIfError(error, 'Could not load responses');
+    for (const row of (data ?? []) as Array<{ invitee_id: string }>) {
+      counts.set(row.invitee_id, (counts.get(row.invitee_id) ?? 0) + 1);
+    }
+    return counts;
   }
 
   async previewSlot(accountId: string, pollId: string, slotId: string) {

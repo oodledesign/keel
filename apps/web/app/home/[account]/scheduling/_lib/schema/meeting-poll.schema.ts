@@ -89,3 +89,16 @@ export const ConfirmMeetingPollSchema = MeetingPollIdSchema.extend({
 export const PreviewMeetingPollSlotSchema = MeetingPollIdSchema.extend({
   slotId: z.string().uuid(),
 });
+
+export const AddMeetingPollSlotsSchema = MeetingPollIdSchema.extend({
+  slots: z.array(slotInputSchema).min(1, 'Add at least one time').max(20),
+  /** Email people who still need to answer the new times. */
+  notify: z.boolean().default(true),
+});
+
+export const AddMeetingPollInviteesSchema = MeetingPollIdSchema.extend({
+  invitees: z
+    .array(inviteeInputSchema)
+    .min(1, 'Add at least one person')
+    .max(50),
+});

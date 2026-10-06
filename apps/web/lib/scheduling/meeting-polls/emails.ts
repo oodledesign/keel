@@ -132,15 +132,27 @@ function slotList(
   max = 8,
 ) {
   const shown = slots.slice(0, max);
-  const rows = shown
-    .map(
-      (slot) =>
-        `<tr><td style="padding:7px 0;border-top:1px solid ${LINE};font-size:14px;color:${INK};"><strong>${escapeHtml(formatDay(slot.startsAt, timeZone))}</strong></td><td align="right" style="padding:7px 0;border-top:1px solid ${LINE};font-size:14px;color:${INK};">${escapeHtml(formatClock(slot.startsAt, timeZone))}</td></tr>`,
-    )
+  const days = new Map<string, string[]>();
+  for (const slot of shown) {
+    const day = formatDay(slot.startsAt, timeZone);
+    const times = days.get(day) ?? [];
+    times.push(formatClock(slot.startsAt, timeZone));
+    days.set(day, times);
+  }
+  const rows = [...days.entries()]
+    .map(([day, times]) => {
+      const pills = times
+        .map(
+          (time) =>
+            `<span style="display:inline-block;margin:0 6px 6px 0;padding:4px 11px;border:1px solid ${LINE};border-radius:999px;background:#FFFFFF;font-size:13px;font-weight:600;color:${INK};">${escapeHtml(time)}</span>`,
+        )
+        .join('');
+      return `<tr><td style="padding:10px 0 4px;border-top:1px solid ${LINE};"><div style="margin:0 0 6px;font-size:14px;font-weight:700;color:${INK};">${escapeHtml(day)}</div>${pills}</td></tr>`;
+    })
     .join('');
   const more =
     slots.length > max
-      ? `<tr><td colspan="2" style="padding:7px 0;border-top:1px solid ${LINE};font-size:13px;color:${MUTED};">+ ${slots.length - max} more on the poll</td></tr>`
+      ? `<tr><td style="padding:7px 0;border-top:1px solid ${LINE};font-size:13px;color:${MUTED};">+ ${slots.length - max} more on the poll</td></tr>`
       : '';
   const zone = slots[0] ? zoneName(slots[0].startsAt, timeZone) : timeZone;
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">${rows}${more}</table><p style="margin:8px 0 0;font-size:12px;color:${MUTED};">Times in ${escapeHtml(zone)} (${escapeHtml(timeZone)}). Your poll page shows them in your own timezone.</p>`;
@@ -291,9 +303,12 @@ export async function sendPollReminderEmails(input: {
   organiserName: string;
   replyTo: string | null;
   invitees: InviteeMail[];
+  /** `new_times`: more times were added after the poll was sent. */
+  reason?: 'waiting' | 'new_times';
 }): Promise<PollMailResult> {
   const { workspaceName, brand } = await workspaceIdentity(input.accountId);
   const who = input.organiserName.trim() || workspaceName;
+  const newTimes = input.reason === 'new_times';
 
   return settle(
     input.invitees.map((invitee) => invitee.email),
@@ -302,10 +317,10 @@ export async function sendPollReminderEmails(input: {
       if (!invitee) return;
       const href = pollHref(invitee.token);
       const inner = `
-        ${eyebrow('Reminder')}
+        ${eyebrow(newTimes ? 'New times added' : 'Reminder')}
         ${heading(input.title)}
         ${greeting(invitee.name)}
-        <p style="margin:0;font-size:15px;color:${INK};">${escapeHtml(who)} is still waiting on your times. It only takes a moment.</p>
+        <p style="margin:0;font-size:15px;color:${INK};">${newTimes ? `${escapeHtml(who)} has added more times to this poll. Please check them and mark the new ones.` : `${escapeHtml(who)} is still waiting on your times.`} It only takes a moment.</p>
         ${button(href, 'Choose your times', brand.accent_color)}
         <p style="margin:12px 0 0;font-size:12px;color:${MUTED};word-break:break-all;">Or open: ${escapeHtml(href)}</p>
       `;
@@ -314,10 +329,15 @@ export async function sendPollReminderEmails(input: {
         accountId: input.accountId,
         workspaceName,
         to: email,
-        subject: `Reminder: please vote on ${input.title}`,
+        subject: newTimes
+          ? `New times added: ${input.title}`
+          : `Reminder: please vote on ${input.title}`,
         html: branded(brand, inner),
         replyTo: input.replyTo,
-        metadata: { pollId: input.pollId, kind: 'meeting_poll_reminder' },
+        metadata: {
+          pollId: input.pollId,
+          kind: newTimes ? 'meeting_poll_new_times' : 'meeting_poll_reminder',
+        },
       });
     },
   );

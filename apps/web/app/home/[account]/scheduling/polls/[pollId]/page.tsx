@@ -79,8 +79,14 @@ async function MeetingPollPage({ params }: Props) {
     );
   }
 
+  const contacts =
+    poll.status === 'open' && canEditScheduling
+      ? (await service.listFormOptions(accountId)).contacts
+      : [];
+
   return (
     <PollOrganiserView
+      contacts={contacts}
       accountId={accountId}
       accountSlug={accountSlug}
       canEdit={canEditScheduling}

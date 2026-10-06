@@ -27,6 +27,7 @@ import {
   sendMeetingPollInvitesAction,
 } from '../_lib/server/meeting-poll-actions';
 import type { MeetingPollDetail } from '../_lib/server/meeting-polls.service';
+import { PollAddMore } from './poll-add-more';
 
 type PollVote = 'yes' | 'if_need_be' | 'no';
 
@@ -71,11 +72,13 @@ export function PollOrganiserView({
   accountId,
   accountSlug,
   canEdit,
+  contacts = [],
   poll,
 }: {
   accountId: string;
   accountSlug: string;
   canEdit: boolean;
+  contacts?: Array<{ id: string; fullName: string; email: string }>;
   poll: MeetingPollDetail;
 }) {
   const router = useRouter();
@@ -374,14 +377,27 @@ export function PollOrganiserView({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-lg font-semibold">Responses</h3>
           {canEdit && poll.status === 'open' ? (
-            <Button
-              type="button"
-              variant="outline"
-              disabled={pending || waiting.length === 0}
-              onClick={() => setRemindOpen(true)}
-            >
-              Remind {waiting.length} waiting
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <PollAddMore
+                accountId={accountId}
+                accountSlug={accountSlug}
+                pollId={poll.id}
+                timezone={poll.timezone}
+                durationMinutes={poll.durationMinutes}
+                contacts={contacts}
+                existingEmails={poll.invitees.map((row) =>
+                  row.email.toLowerCase(),
+                )}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pending || waiting.length === 0}
+                onClick={() => setRemindOpen(true)}
+              >
+                Remind {waiting.length} waiting
+              </Button>
+            </div>
           ) : null}
         </div>
         <div className="overflow-x-auto rounded-2xl border border-[color:var(--workspace-shell-border)]">

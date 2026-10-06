@@ -8,6 +8,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 
 import {
+  AddMeetingPollInviteesSchema,
+  AddMeetingPollSlotsSchema,
   ConfirmMeetingPollSchema,
   MeetingPollIdSchema,
   PreviewMeetingPollSlotSchema,
@@ -133,4 +135,41 @@ export const cancelMeetingPollAction = enhanceAction(
     return { ok: true };
   },
   { schema: MeetingPollIdSchema },
+);
+
+// These return problems instead of throwing: thrown messages are masked in
+// production and surface as an opaque 500.
+function failure(error: unknown, fallback: string) {
+  return {
+    ok: false as const,
+    message: error instanceof Error ? error.message : fallback,
+  };
+}
+
+export const addMeetingPollSlotsAction = enhanceAction(
+  async (input) => {
+    const service = createMeetingPollsService(getSupabaseServerClient());
+    try {
+      const result = await service.addSlots(input);
+      revalidatePolls(input.accountSlug, input.pollId);
+      return { ok: true as const, ...result };
+    } catch (error) {
+      return failure(error, 'Could not add the times');
+    }
+  },
+  { schema: AddMeetingPollSlotsSchema },
+);
+
+export const addMeetingPollInviteesAction = enhanceAction(
+  async (input) => {
+    const service = createMeetingPollsService(getSupabaseServerClient());
+    try {
+      const result = await service.addInvitees(input);
+      revalidatePolls(input.accountSlug, input.pollId);
+      return { ok: true as const, ...result };
+    } catch (error) {
+      return failure(error, 'Could not add the people');
+    }
+  },
+  { schema: AddMeetingPollInviteesSchema },
 );
