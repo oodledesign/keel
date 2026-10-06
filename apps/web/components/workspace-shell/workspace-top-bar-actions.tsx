@@ -58,7 +58,7 @@ function TopBarIconLink({
           size="icon"
           className="h-8 w-8 rounded-md text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
         >
-          <Link href={href} aria-label={label}>
+          <Link href={href} prefetch={false} aria-label={label}>
             {children}
           </Link>
         </Button>

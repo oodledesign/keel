@@ -47,6 +47,7 @@ export function WorkspaceSettingsSidebar({
             <li key={item.id} className="shrink-0">
               <Link
                 href={item.href}
+                prefetch={false}
                 className={cn(
                   'flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
                   active

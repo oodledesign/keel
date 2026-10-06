@@ -7,7 +7,6 @@ import { PageBody } from '@kit/ui/page';
 import pathsConfig from '~/config/paths.config';
 import { isGovUkEpcConfigured } from '~/lib/building-surveyor/epc/env';
 import { getWebsiteChannelStatus } from '~/lib/commercial/channel-publish-status';
-import { loadWebsiteChannelUrlState } from '~/lib/commercial/listing-website-url-resolve.server';
 import { collectRightmoveUrls } from '~/lib/commercial/rightmove-publish-status';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
@@ -17,6 +16,11 @@ import {
   redirectIfSpaceNotIn,
 } from '../../_lib/server/workspace-route-guard';
 import { ListingDetailShell } from '../_components/listing-detail-shell';
+import {
+  loadListingPublicMediaDatesOnce,
+  loadListingPublicationsOnce,
+  loadListingWebsiteUrlStateOnce,
+} from '../_lib/server/listing-detail-request-cache';
 import { createListingsService } from '../_lib/server/listings.service';
 
 interface LayoutProps {
@@ -43,14 +47,9 @@ async function ListingDetailLayout({ children, params }: LayoutProps) {
     notFound();
   }
 
-  const [publications, mediaRows] = await Promise.all([
-    service.listPublicationsForListing(listingId),
-    client
-      .from('commercial_listing_media')
-      .select('created_at')
-      .eq('listing_id', listingId)
-      .eq('account_id', accountId)
-      .eq('is_private', false),
+  const [publications, mediaCreatedAt] = await Promise.all([
+    loadListingPublicationsOnce(service, listingId),
+    loadListingPublicMediaDatesOnce(client, accountId, listingId),
   ]);
   const rightmoveUrls = publications
     .filter((publication) => publication.portal === 'rightmove')
@@ -66,7 +65,7 @@ async function ListingDetailLayout({ children, params }: LayoutProps) {
       },
       publications,
     }).state === 'live';
-  const websiteUrlState = await loadWebsiteChannelUrlState({
+  const websiteUrlState = await loadListingWebsiteUrlStateOnce({
     accountId,
     listingId,
     listing: {
@@ -101,7 +100,7 @@ async function ListingDetailLayout({ children, params }: LayoutProps) {
           epcConfigured={isGovUkEpcConfigured()}
           rightmoveUrls={rightmoveUrls}
           publications={publications}
-          mediaCreatedAt={(mediaRows.data ?? []).map((row) => row.created_at)}
+          mediaCreatedAt={mediaCreatedAt}
           websitePublicPageUrl={websiteUrlState.publicPageUrl}
           websiteUrlHealth={websiteUrlState.health}
         >

@@ -257,7 +257,7 @@ export function SidebarItem({
             size={'sm'}
             variant={variant}
           >
-            <Link href={path}>
+            <Link href={path} prefetch={false}>
               {Icon}
               <span
                 className={cn('w-auto transition-opacity duration-300', {

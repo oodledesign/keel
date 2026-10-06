@@ -130,6 +130,8 @@ async function TeamAccountPipelinePage({
       requirementsList,
       attention,
       activity,
+      careByDealId,
+      latestUpdates,
     ] = await Promise.all([
       db
         .from('commercial_listings')
@@ -147,8 +149,13 @@ async function TeamAccountPipelinePage({
       createRequirementsService(client).listRequirements(accountId),
       loadWipAttentionDigest(client, accountId),
       loadWipDeskActivity(client, accountId),
+      // None of these need the agents or listings, so they share the wave.
+      loadLatestCareLogByInstruction(data.deals.map((deal) => deal.id)),
+      loadLatestWipUpdateByDeal(client, accountId),
     ]);
 
+    latestCareByDealId = careByDealId;
+    latestUpdateByDealId = latestUpdates;
     requirements = requirementsList;
     attentionDigest = attention;
     deskActivity = activity;
@@ -211,11 +218,6 @@ async function TeamAccountPipelinePage({
     }));
     stageConfig = boardSettings.stages;
     boardName = boardSettings.boardName;
-
-    [latestCareByDealId, latestUpdateByDealId] = await Promise.all([
-      loadLatestCareLogByInstruction(data.deals.map((deal) => deal.id)),
-      loadLatestWipUpdateByDeal(client, accountId),
-    ]);
   }
 
   const activeDeals = data.deals.filter((d) => {

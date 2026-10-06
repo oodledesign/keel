@@ -2,6 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "cd ../.. && pnpm run build --filter=web",
   "installCommand": "cd ../.. && pnpm install",
+  "regions": ["lhr1"],
   "ignoreCommand": "bash ../../scripts/vercel-ignore.sh web",
   "build": {
     "env": {

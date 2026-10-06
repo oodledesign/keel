@@ -2,12 +2,16 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { getCachedDisposalDetail } from '~/lib/cache/disposals-data-cache';
 import { getWebsiteChannelStatus } from '~/lib/commercial/channel-publish-status';
-import { loadWebsiteChannelUrlState } from '~/lib/commercial/listing-website-url-resolve.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import { ListingOverviewSection } from '../_components/listing-detail-sections';
+import {
+  loadListingPublicMediaDatesOnce,
+  loadListingPublicationsOnce,
+  loadListingWebsiteUrlStateOnce,
+} from '../_lib/server/listing-detail-request-cache';
 import { createListingsService } from '../_lib/server/listings.service';
 
 interface PageProps {
@@ -31,23 +35,23 @@ async function ListingOverviewPage({ params }: PageProps) {
 
   if (!listing) return null;
 
-  const [interestSummary, viewingsResult, parties, publications, mediaRows] =
-    await Promise.all([
-      service.getInterestSummary(listingId),
-      client
-        .from('commercial_viewings')
-        .select('status')
-        .eq('listing_id', listingId)
-        .eq('account_id', accountId),
-      service.listParties(listingId, accountId),
-      service.listPublicationsForListing(listingId),
-      client
-        .from('commercial_listing_media')
-        .select('created_at')
-        .eq('listing_id', listingId)
-        .eq('account_id', accountId)
-        .eq('is_private', false),
-    ]);
+  const [
+    interestSummary,
+    viewingsResult,
+    parties,
+    publications,
+    mediaCreatedAt,
+  ] = await Promise.all([
+    service.getInterestSummary(listingId),
+    client
+      .from('commercial_viewings')
+      .select('status')
+      .eq('listing_id', listingId)
+      .eq('account_id', accountId),
+    service.listParties(listingId, accountId),
+    loadListingPublicationsOnce(service, listingId),
+    loadListingPublicMediaDatesOnce(client, accountId, listingId),
+  ]);
 
   const viewingRows = viewingsResult.data ?? [];
   const upcomingViewings = viewingRows.filter(
@@ -66,7 +70,7 @@ async function ListingOverviewPage({ params }: PageProps) {
       },
       publications,
     }).state === 'live';
-  const websiteUrlState = await loadWebsiteChannelUrlState({
+  const websiteUrlState = await loadListingWebsiteUrlStateOnce({
     accountId,
     listingId,
     listing: {
@@ -89,7 +93,7 @@ async function ListingOverviewPage({ params }: PageProps) {
       accountSlug={slug}
       parties={parties}
       publications={publications}
-      mediaCreatedAt={(mediaRows.data ?? []).map((row) => row.created_at)}
+      mediaCreatedAt={mediaCreatedAt}
       websitePublicPageUrl={websiteUrlState.publicPageUrl}
       websiteUrlHealth={websiteUrlState.health}
       interestSummary={{
