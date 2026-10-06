@@ -255,6 +255,7 @@ import {
   placedImageSize,
 } from './canvas/canvas-images';
 import { CANVAS_KIND_LABELS, canvasItemText } from './canvas/canvas-item-text';
+import { CanvasLoading } from './canvas/canvas-loading';
 import { CanvasMetricDialog } from './canvas/canvas-metric-dialog';
 import {
   type CanvasEdgeData,
@@ -4047,9 +4048,7 @@ function ProjectCanvasInner({
   };
 
   if (status === 'loading') {
-    return (
-      <div className="h-[calc(100vh-15rem)] min-h-[560px] animate-pulse rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/40" />
-    );
+    return <CanvasLoading />;
   }
 
   if (status === 'error') {

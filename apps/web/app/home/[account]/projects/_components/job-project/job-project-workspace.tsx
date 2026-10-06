@@ -62,6 +62,7 @@ import {
   listPhaseTemplates,
   saveProjectAsPhaseTemplate,
 } from '../../_lib/server/server-actions';
+import { CanvasLoading } from './canvas/canvas-loading';
 import { JobProjectBoard } from './job-project-board';
 import {
   JobProjectContent,
@@ -77,9 +78,7 @@ const JobProjectCanvas = dynamic(
   () => import('./job-project-canvas').then((mod) => mod.JobProjectCanvas),
   {
     ssr: false,
-    loading: () => (
-      <div className="h-[calc(100vh-15rem)] min-h-[560px] animate-pulse rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/40" />
-    ),
+    loading: () => <CanvasLoading />,
   },
 );
 
