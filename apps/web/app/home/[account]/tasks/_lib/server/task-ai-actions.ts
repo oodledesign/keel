@@ -27,6 +27,7 @@ import {
   listPendingMeetingSuggestedTasks,
   mergeNewMeetingSuggestedTasks,
 } from '~/lib/recorder/meeting-suggested-tasks';
+import { findDuplicateTasks } from '~/lib/tasks/find-duplicate-tasks';
 import {
   parsePersonAssigneeSelectValue,
   personAssigneeSelectValue,
@@ -245,7 +246,7 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
       { accountId: input.accountId, supabase: getSupabaseServerClient() },
     );
 
-    const rows: ExtractedTaskReviewRow[] = drafts.map((d) => {
+    const extractedRows: ExtractedTaskReviewRow[] = drafts.map((d) => {
       const { projectId, clientId } = resolveDraftAssignment(d, context);
       const matched = resolvePersonAssigneeFromSuggestion(
         {
@@ -285,6 +286,21 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
         })),
       };
     });
+
+    // Skip tasks already tracked on the same client/project.
+    const duplicates = await findDuplicateTasks({
+      admin,
+      accountId: input.accountId,
+      candidates: extractedRows.map((row) => ({
+        key: row.id,
+        title: row.title,
+        notes: row.notes,
+        clientId: row.clientId,
+        projectId: row.projectId,
+      })),
+    });
+    const rows = extractedRows.filter((row) => !duplicates.has(row.id));
+    const skippedDuplicates = extractedRows.length - rows.length;
 
     if (input.meetingTranscriptId && rows.length > 0) {
       const preferredClientId =
@@ -354,6 +370,7 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
         rows: persistedRows,
         personAssigneeOptions: personOptions,
         reusedExisting: inserted.length === 0,
+        skippedDuplicates,
       };
     }
 
@@ -361,6 +378,7 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
       rows,
       personAssigneeOptions: personOptions,
       reusedExisting: false,
+      skippedDuplicates,
     };
   },
   { schema: extractSchema },

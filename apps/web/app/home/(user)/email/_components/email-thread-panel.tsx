@@ -35,11 +35,7 @@ import {
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
 import { Label } from '@kit/ui/label';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@kit/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
@@ -47,7 +43,6 @@ import { cn } from '@kit/ui/utils';
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { listTemplatesPickerAction } from '~/lib/content-templates/account.actions';
 import type { PickerTemplate } from '~/lib/content-templates/types';
-import { MOBILE_FLOATING_CHROME_SCROLL_PB } from '~/lib/mobile-nav/mobile-floating-chrome';
 import {
   addEmailTriageRuleFromThreadAction,
   setEmailThreadCategoryAction,
@@ -70,15 +65,20 @@ import {
   previewEmailBody,
   splitEmailQuotedHistory,
 } from '~/lib/email-assistant/message-body-display';
+import { MOBILE_FLOATING_CHROME_SCROLL_PB } from '~/lib/mobile-nav/mobile-floating-chrome';
 import { RetainerMatchReviewCard } from '~/lib/retainers/retainer-match-review-card';
 
 import { loadEmailThreadDetail } from '../_lib/actions/email-assistant-actions';
+import {
+  EmailApiError,
+  emailApiFetch,
+  formatEmailApiError,
+} from '../_lib/email-api';
 import { EMAIL_CATEGORY_STYLES } from '../_lib/email-category-styles';
-import { EmailApiError, emailApiFetch, formatEmailApiError } from '../_lib/email-api';
 import type {
-  EmailGmailLabel,
   EmailActionItemRow,
   EmailDraftRow,
+  EmailGmailLabel,
   EmailMessageRow,
   EmailThreadDetail,
   EmailThreadSummary,
@@ -275,7 +275,11 @@ export function EmailThreadPanel({
   }
 
   function runSuggestPipelineLead() {
-    if (!threadId || mailboxKind !== 'business' || detail?.thread.pipeline_deal_id) {
+    if (
+      !threadId ||
+      mailboxKind !== 'business' ||
+      detail?.thread.pipeline_deal_id
+    ) {
       return;
     }
 
@@ -294,7 +298,8 @@ export function EmailThreadPanel({
                   ...current.thread,
                   pipeline_lead_suggestion:
                     data.thread.pipeline_lead_suggestion,
-                  pipeline_lead_confidence: data.thread.pipeline_lead_confidence,
+                  pipeline_lead_confidence:
+                    data.thread.pipeline_lead_confidence,
                   pipeline_deal_id: data.thread.pipeline_deal_id,
                 },
               }
@@ -323,23 +328,34 @@ export function EmailThreadPanel({
 
     startTransition(async () => {
       try {
-        const data = await emailApiFetch<{ items: EmailActionItemRow[] }>(
-          `/api/gmail/threads/${threadId}/extract`,
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              instructions: extractInstructions.trim() || undefined,
-            }),
-          },
-        );
+        const data = await emailApiFetch<{
+          items: EmailActionItemRow[];
+          skippedDuplicates?: number;
+        }>(`/api/gmail/threads/${threadId}/extract`, {
+          method: 'POST',
+          body: JSON.stringify({
+            instructions: extractInstructions.trim() || undefined,
+          }),
+        });
         const count = data.items?.length ?? 0;
+        const skipped = data.skippedDuplicates ?? 0;
+        const skippedNote =
+          skipped > 0
+            ? ` (${skipped} skipped, already on this client/project)`
+            : '';
         if (count === 0) {
-          toast.message('No actionable to-dos found in this thread');
+          toast.message(
+            skipped > 0
+              ? `No new to-dos: ${skipped} already on this client/project`
+              : 'No actionable to-dos found in this thread',
+          );
         } else {
           toast.success(
-            count === 1
-              ? '1 suggested to-do added'
-              : `${count} suggested to-dos added`,
+            `${
+              count === 1
+                ? '1 suggested to-do added'
+                : `${count} suggested to-dos added`
+            }${skippedNote}`,
           );
         }
         refreshDetail();
@@ -458,9 +474,7 @@ export function EmailThreadPanel({
                 thread: {
                   ...current.thread,
                   assistant_category: category,
-                  ...(result.labelIds
-                    ? { label_ids: result.labelIds }
-                    : {}),
+                  ...(result.labelIds ? { label_ids: result.labelIds } : {}),
                 },
               }
             : current,
@@ -697,7 +711,7 @@ export function EmailThreadPanel({
                 </Button>
               ) : null}
               <div className="min-w-0 flex-1">
-                <h2 className="line-clamp-2 text-base font-semibold text-[var(--workspace-shell-text)] lg:truncate lg:line-clamp-none">
+                <h2 className="line-clamp-2 text-base font-semibold text-[var(--workspace-shell-text)] lg:line-clamp-none lg:truncate">
                   {detail.thread.subject?.trim() || '(no subject)'}
                 </h2>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -730,165 +744,163 @@ export function EmailThreadPanel({
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5 lg:mt-0.5 lg:shrink-0">
-            <div className="-mx-3 flex items-center gap-1.5 overflow-x-auto px-3 pb-1 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0 lg:pb-0">
-            <EmailLabelsPicker
-              threadId={detail.thread.id}
-              labelIds={detail.thread.label_ids ?? []}
-              labels={gmailLabels}
-              onLabelsChange={(labelIds) => {
-                setDetail((current) =>
-                  current
-                    ? {
-                        ...current,
-                        thread: {
-                          ...current.thread,
-                          label_ids: labelIds,
-                        },
-                      }
-                    : current,
-                );
-              }}
-            />
-            <EmailThreadLinkSection
-              threadId={threadId}
-              link={detail.thread.link}
-              linkSuggestion={detail.thread.link_suggestion}
-              linkConfidence={detail.thread.link_confidence}
-              workspaces={workspaces}
-              preferredAccountId={preferredAccountId}
-              onUpdated={(link) => {
-                setDetail((current) =>
-                  current
-                    ? { ...current, thread: { ...current.thread, link } }
-                    : current,
-                );
-              }}
-              onSuggestionUpdated={(link_suggestion) => {
-                setDetail((current) =>
-                  current
-                    ? {
-                        ...current,
-                        thread: { ...current.thread, link_suggestion },
-                      }
-                    : current,
-                );
-              }}
-            />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-8 shrink-0 border-[color:var(--workspace-shell-border)] bg-transparent px-2.5 text-xs text-[var(--workspace-shell-text)]"
-                  disabled={pending}
-                >
-                  {displayCategory ? (
-                    <span
-                      className={cn(
-                        'mr-1.5 h-2 w-2 shrink-0 rounded-full',
-                        EMAIL_CATEGORY_STYLES[displayCategory].dot,
-                      )}
-                      aria-hidden
-                    />
-                  ) : null}
-                  {displayCategory
-                    ? EMAIL_THREAD_CATEGORY_LABELS[displayCategory]
-                    : 'Category'}
-                  <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {EMAIL_THREAD_CATEGORIES.map((category) => {
-                  const styles = EMAIL_CATEGORY_STYLES[category];
-
-                  return (
-                    <DropdownMenuItem
-                      key={category}
-                      disabled={
-                        pending || displayCategory === category
-                      }
-                      onSelect={() => setCategory(category)}
-                      className="flex flex-col items-start gap-0.5 py-2"
+              <div className="-mx-3 flex items-center gap-1.5 overflow-x-auto px-3 pb-1 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0 lg:pb-0">
+                <EmailLabelsPicker
+                  threadId={detail.thread.id}
+                  labelIds={detail.thread.label_ids ?? []}
+                  labels={gmailLabels}
+                  onLabelsChange={(labelIds) => {
+                    setDetail((current) =>
+                      current
+                        ? {
+                            ...current,
+                            thread: {
+                              ...current.thread,
+                              label_ids: labelIds,
+                            },
+                          }
+                        : current,
+                    );
+                  }}
+                />
+                <EmailThreadLinkSection
+                  threadId={threadId}
+                  link={detail.thread.link}
+                  linkSuggestion={detail.thread.link_suggestion}
+                  linkConfidence={detail.thread.link_confidence}
+                  workspaces={workspaces}
+                  preferredAccountId={preferredAccountId}
+                  onUpdated={(link) => {
+                    setDetail((current) =>
+                      current
+                        ? { ...current, thread: { ...current.thread, link } }
+                        : current,
+                    );
+                  }}
+                  onSuggestionUpdated={(link_suggestion) => {
+                    setDetail((current) =>
+                      current
+                        ? {
+                            ...current,
+                            thread: { ...current.thread, link_suggestion },
+                          }
+                        : current,
+                    );
+                  }}
+                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 shrink-0 border-[color:var(--workspace-shell-border)] bg-transparent px-2.5 text-xs text-[var(--workspace-shell-text)]"
+                      disabled={pending}
                     >
-                      <span className="flex items-center">
+                      {displayCategory ? (
                         <span
                           className={cn(
-                            'mr-2 h-2 w-2 shrink-0 rounded-full',
-                            styles.dot,
+                            'mr-1.5 h-2 w-2 shrink-0 rounded-full',
+                            EMAIL_CATEGORY_STYLES[displayCategory].dot,
                           )}
                           aria-hidden
                         />
-                        {EMAIL_THREAD_CATEGORY_LABELS[category]}
-                      </span>
-                      <span className="pl-4 text-xs font-normal text-[var(--workspace-shell-text-muted)]">
-                        {EMAIL_THREAD_CATEGORY_HINTS[category]}
-                      </span>
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {detail.thread.assistant_category_reason?.trim() ? (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
-                    aria-label="Why this category?"
-                  >
-                    <HelpCircle className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  align="end"
-                  className="w-72 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3 text-xs text-[var(--workspace-shell-text)]"
-                >
-                  <p className="font-medium">Why this category?</p>
-                  <p className="mt-1.5 text-[var(--workspace-shell-text-muted)]">
-                    {detail.thread.assistant_category_reason.trim()}
-                  </p>
-                </PopoverContent>
-              </Popover>
-            ) : null}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
-                  disabled={pending}
-                  aria-label="Thread triage actions"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {mailboxKind === 'business' &&
-                !detail.thread.pipeline_deal_id ? (
-                  <DropdownMenuItem
-                    disabled={pending}
-                    onSelect={runSuggestPipelineLead}
-                  >
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Re-scan for pipeline lead
-                  </DropdownMenuItem>
+                      ) : null}
+                      {displayCategory
+                        ? EMAIL_THREAD_CATEGORY_LABELS[displayCategory]
+                        : 'Category'}
+                      <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {EMAIL_THREAD_CATEGORIES.map((category) => {
+                      const styles = EMAIL_CATEGORY_STYLES[category];
+
+                      return (
+                        <DropdownMenuItem
+                          key={category}
+                          disabled={pending || displayCategory === category}
+                          onSelect={() => setCategory(category)}
+                          className="flex flex-col items-start gap-0.5 py-2"
+                        >
+                          <span className="flex items-center">
+                            <span
+                              className={cn(
+                                'mr-2 h-2 w-2 shrink-0 rounded-full',
+                                styles.dot,
+                              )}
+                              aria-hidden
+                            />
+                            {EMAIL_THREAD_CATEGORY_LABELS[category]}
+                          </span>
+                          <span className="pl-4 text-xs font-normal text-[var(--workspace-shell-text-muted)]">
+                            {EMAIL_THREAD_CATEGORY_HINTS[category]}
+                          </span>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {detail.thread.assistant_category_reason?.trim() ? (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                        aria-label="Why this category?"
+                      >
+                        <HelpCircle className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      align="end"
+                      className="w-72 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3 text-xs text-[var(--workspace-shell-text)]"
+                    >
+                      <p className="font-medium">Why this category?</p>
+                      <p className="mt-1.5 text-[var(--workspace-shell-text-muted)]">
+                        {detail.thread.assistant_category_reason.trim()}
+                      </p>
+                    </PopoverContent>
+                  </Popover>
                 ) : null}
-                {mailboxKind === 'business' &&
-                !detail.thread.pipeline_deal_id ? (
-                  <DropdownMenuSeparator />
-                ) : null}
-                <EmailTriageRulesMenuItems
-                  subject={detail.thread.subject}
-                  disabled={pending}
-                  onSelectRule={addTriageRule}
-                />
-              </DropdownMenuContent>
-            </DropdownMenu>
-            </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                      disabled={pending}
+                      aria-label="Thread triage actions"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {mailboxKind === 'business' &&
+                    !detail.thread.pipeline_deal_id ? (
+                      <DropdownMenuItem
+                        disabled={pending}
+                        onSelect={runSuggestPipelineLead}
+                      >
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Re-scan for pipeline lead
+                      </DropdownMenuItem>
+                    ) : null}
+                    {mailboxKind === 'business' &&
+                    !detail.thread.pipeline_deal_id ? (
+                      <DropdownMenuSeparator />
+                    ) : null}
+                    <EmailTriageRulesMenuItems
+                      subject={detail.thread.subject}
+                      disabled={pending}
+                      onSelectRule={addTriageRule}
+                    />
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </div>
 
@@ -993,158 +1005,158 @@ export function EmailThreadPanel({
             </div>
 
             <div className="shrink-0 space-y-4 border-t border-[color:var(--workspace-shell-border)] px-3 py-3 lg:px-4">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                Suggested to-dos
-              </h3>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                onClick={runExtract}
-                disabled={pending || !connected}
-              >
-                {pending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="mr-2 h-4 w-4" />
-                )}
-                {suggestedItems.length > 0 ? 'Refresh' : 'Extract'}
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <Label
-                htmlFor="email-extract-instructions"
-                className="text-xs text-[var(--workspace-shell-text-muted)]"
-              >
-                Extraction instructions{' '}
-                <span className="font-normal">(optional)</span>
-              </Label>
-              <Textarea
-                id="email-extract-instructions"
-                value={extractInstructions}
-                onChange={(e) => setExtractInstructions(e.target.value)}
-                placeholder="e.g. Put everything I need to email the client into one task, with bullet points in the notes"
-                className="min-h-[68px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-              />
-            </div>
-
-            {suggestedItems.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-5 text-sm text-[var(--workspace-shell-text-muted)]">
-                No open suggestions yet. Extract action items from this thread
-                with AI.
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {suggestedItems.map((item) => (
-                  <li
-                    key={item.id}
-                    className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/50 p-3"
-                  >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                          {item.title}
-                        </p>
-                        {item.detail ? (
-                          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-                            {item.detail}
-                          </p>
-                        ) : null}
-                        {item.suggested_due_date || item.linkLabel ? (
-                          <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                            {item.suggested_due_date ? (
-                              <span>
-                                Suggested due{' '}
-                                {formatDueDate(item.suggested_due_date)}
-                              </span>
-                            ) : null}
-                            {item.suggested_due_date && item.linkLabel ? (
-                              <span className="text-[var(--workspace-shell-text-muted)]">
-                                ·
-                              </span>
-                            ) : null}
-                            {item.linkLabel ? (
-                              <span className="text-[var(--ozer-accent)]">
-                                {item.linkLabel}
-                              </span>
-                            ) : null}
-                          </p>
-                        ) : null}
-                        {item.retainerMatch ? (
-                          <RetainerMatchReviewCard
-                            suggestion={item.retainerMatch}
-                            services={detail.retainerServices ?? []}
-                            accountSlug={accountSlug ?? undefined}
-                            onResolved={refreshDetail}
-                          />
-                        ) : null}
-                      </div>
-                      <div className="flex shrink-0 flex-wrap gap-2 sm:flex-nowrap">
-                        {item.retainerMatch ? null : (
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="ozer-gradient-btn h-8 px-3 text-[var(--workspace-shell-text)]"
-                          onClick={() => {
-                            setAcceptItem(item);
-                            setAcceptOpen(true);
-                          }}
-                          disabled={pending}
-                        >
-                          <Check className="mr-1 h-3.5 w-3.5" />
-                          Accept
-                        </Button>
-                        )}
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="h-8 border-[color:var(--workspace-shell-border)] bg-transparent px-3 text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                          onClick={() => runDismiss(item.id)}
-                          disabled={pending}
-                        >
-                          <X className="mr-1 h-3.5 w-3.5" />
-                          Dismiss
-                        </Button>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {resolvedItems.length > 0 ? (
-              <div className="space-y-2 pt-2">
-                <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
-                  Resolved
-                </p>
-                <ul className="space-y-2">
-                  {resolvedItems.map((item) => {
-                    const dismissed = item.status === 'dismissed';
-
-                    return (
-                      <li
-                        key={item.id}
-                        className="flex items-start justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-2"
-                      >
-                        <span
-                          className={cn(
-                            'min-w-0 flex-1 text-sm text-[var(--workspace-shell-text-muted)]',
-                            dismissed && 'line-through',
-                          )}
-                        >
-                          {item.title}
-                        </span>
-                        <ActionItemStatusPill status={item.status} />
-                      </li>
-                    );
-                  })}
-                </ul>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                  Suggested to-dos
+                </h3>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                  onClick={runExtract}
+                  disabled={pending || !connected}
+                >
+                  {pending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="mr-2 h-4 w-4" />
+                  )}
+                  {suggestedItems.length > 0 ? 'Refresh' : 'Extract'}
+                </Button>
               </div>
-            ) : null}
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="email-extract-instructions"
+                  className="text-xs text-[var(--workspace-shell-text-muted)]"
+                >
+                  Extraction instructions{' '}
+                  <span className="font-normal">(optional)</span>
+                </Label>
+                <Textarea
+                  id="email-extract-instructions"
+                  value={extractInstructions}
+                  onChange={(e) => setExtractInstructions(e.target.value)}
+                  placeholder="e.g. Put everything I need to email the client into one task, with bullet points in the notes"
+                  className="min-h-[68px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                />
+              </div>
+
+              {suggestedItems.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-5 text-sm text-[var(--workspace-shell-text-muted)]">
+                  No open suggestions yet. Extract action items from this thread
+                  with AI.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {suggestedItems.map((item) => (
+                    <li
+                      key={item.id}
+                      className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/50 p-3"
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                            {item.title}
+                          </p>
+                          {item.detail ? (
+                            <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+                              {item.detail}
+                            </p>
+                          ) : null}
+                          {item.suggested_due_date || item.linkLabel ? (
+                            <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                              {item.suggested_due_date ? (
+                                <span>
+                                  Suggested due{' '}
+                                  {formatDueDate(item.suggested_due_date)}
+                                </span>
+                              ) : null}
+                              {item.suggested_due_date && item.linkLabel ? (
+                                <span className="text-[var(--workspace-shell-text-muted)]">
+                                  ·
+                                </span>
+                              ) : null}
+                              {item.linkLabel ? (
+                                <span className="text-[var(--ozer-accent)]">
+                                  {item.linkLabel}
+                                </span>
+                              ) : null}
+                            </p>
+                          ) : null}
+                          {item.retainerMatch ? (
+                            <RetainerMatchReviewCard
+                              suggestion={item.retainerMatch}
+                              services={detail.retainerServices ?? []}
+                              accountSlug={accountSlug ?? undefined}
+                              onResolved={refreshDetail}
+                            />
+                          ) : null}
+                        </div>
+                        <div className="flex shrink-0 flex-wrap gap-2 sm:flex-nowrap">
+                          {item.retainerMatch ? null : (
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="ozer-gradient-btn h-8 px-3 text-[var(--workspace-shell-text)]"
+                              onClick={() => {
+                                setAcceptItem(item);
+                                setAcceptOpen(true);
+                              }}
+                              disabled={pending}
+                            >
+                              <Check className="mr-1 h-3.5 w-3.5" />
+                              Accept
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-8 border-[color:var(--workspace-shell-border)] bg-transparent px-3 text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                            onClick={() => runDismiss(item.id)}
+                            disabled={pending}
+                          >
+                            <X className="mr-1 h-3.5 w-3.5" />
+                            Dismiss
+                          </Button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {resolvedItems.length > 0 ? (
+                <div className="space-y-2 pt-2">
+                  <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                    Resolved
+                  </p>
+                  <ul className="space-y-2">
+                    {resolvedItems.map((item) => {
+                      const dismissed = item.status === 'dismissed';
+
+                      return (
+                        <li
+                          key={item.id}
+                          className="flex items-start justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-2"
+                        >
+                          <span
+                            className={cn(
+                              'min-w-0 flex-1 text-sm text-[var(--workspace-shell-text-muted)]',
+                              dismissed && 'line-through',
+                            )}
+                          >
+                            {item.title}
+                          </span>
+                          <ActionItemStatusPill status={item.status} />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ) : null}
             </div>
 
             <div
@@ -1198,7 +1210,9 @@ export function EmailThreadPanel({
                               const text = preset.bodyText.trim();
                               if (!text) return;
                               setDraftBody((prev) =>
-                                prev.trim() ? `${prev.trim()}\n\n${text}` : text,
+                                prev.trim()
+                                  ? `${prev.trim()}\n\n${text}`
+                                  : text,
                               );
                               toast.success(`Inserted “${preset.name}”`);
                             }}
@@ -1401,96 +1415,96 @@ function ThreadMessages({ messages }: { messages: EmailMessageRow[] }) {
 
   return (
     <ul className="space-y-2">
-        {messages.map((message) => {
-          const isLatest = message.id === latestMessageId;
-          const isExpanded = isLatest || expandedOlderIds.has(message.id);
-          const rawBody =
-            message.body_text?.trim() || message.snippet?.trim() || '';
-          const { visible, quoted } = splitEmailQuotedHistory(rawBody);
-          const body = visible || '(no content)';
-          const preview = previewEmailBody(rawBody);
-          const showQuoted = showQuotedIds.has(message.id);
+      {messages.map((message) => {
+        const isLatest = message.id === latestMessageId;
+        const isExpanded = isLatest || expandedOlderIds.has(message.id);
+        const rawBody =
+          message.body_text?.trim() || message.snippet?.trim() || '';
+        const { visible, quoted } = splitEmailQuotedHistory(rawBody);
+        const body = visible || '(no content)';
+        const preview = previewEmailBody(rawBody);
+        const showQuoted = showQuotedIds.has(message.id);
 
-          if (!isExpanded) {
-            return (
-              <li key={message.id}>
-                <button
-                  type="button"
-                  onClick={() => toggleOlderMessage(message.id)}
-                  className="flex w-full items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/25 px-3 py-2.5 text-left transition-colors hover:bg-[var(--ozer-surface-canvas)]/40"
-                >
-                  <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="min-w-0 truncate text-sm font-medium text-[var(--workspace-shell-text-muted)]">
-                        {message.from_address ?? 'Unknown sender'}
-                      </p>
-                      <p className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)] tabular-nums">
-                        {formatEmailDateTime(message.internal_date)}
-                      </p>
-                    </div>
-                    {preview ? (
-                      <p className="mt-1 line-clamp-2 text-sm text-[var(--workspace-shell-text-muted)]">
-                        {preview}
-                      </p>
-                    ) : null}
-                  </div>
-                </button>
-              </li>
-            );
-          }
-
+        if (!isExpanded) {
           return (
-            <li
-              key={message.id}
-              className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/40 p-3"
-            >
-              <div className="flex items-start gap-2">
-                {!isLatest ? (
-                  <button
-                    type="button"
-                    onClick={() => toggleOlderMessage(message.id)}
-                    className="mt-0.5 shrink-0 rounded-md p-0.5 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text-muted)]"
-                    aria-label="Collapse message"
-                  >
-                    <ChevronUp className="h-4 w-4" />
-                  </button>
-                ) : null}
+            <li key={message.id}>
+              <button
+                type="button"
+                onClick={() => toggleOlderMessage(message.id)}
+                className="flex w-full items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/25 px-3 py-2.5 text-left transition-colors hover:bg-[var(--ozer-surface-canvas)]/40"
+              >
+                <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="min-w-0 text-sm font-medium break-words text-[var(--workspace-shell-text)]">
+                    <p className="min-w-0 truncate text-sm font-medium text-[var(--workspace-shell-text-muted)]">
                       {message.from_address ?? 'Unknown sender'}
                     </p>
                     <p className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)] tabular-nums">
                       {formatEmailDateTime(message.internal_date)}
                     </p>
                   </div>
-                  <p className="mt-3 text-sm leading-relaxed break-words whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
-                    {body}
-                  </p>
-                  {quoted ? (
-                    <div className="mt-3">
-                      <button
-                        type="button"
-                        onClick={() => toggleQuotedHistory(message.id)}
-                        className="text-xs font-medium text-[var(--ozer-accent)] hover:underline"
-                      >
-                        {showQuoted
-                          ? 'Hide quoted history'
-                          : 'Show quoted history'}
-                      </button>
-                      {showQuoted ? (
-                        <p className="mt-2 border-l border-[color:var(--workspace-shell-border)] pl-3 text-sm leading-relaxed whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
-                          {quoted}
-                        </p>
-                      ) : null}
-                    </div>
+                  {preview ? (
+                    <p className="mt-1 line-clamp-2 text-sm text-[var(--workspace-shell-text-muted)]">
+                      {preview}
+                    </p>
                   ) : null}
                 </div>
-              </div>
+              </button>
             </li>
           );
-        })}
-      </ul>
+        }
+
+        return (
+          <li
+            key={message.id}
+            className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/40 p-3"
+          >
+            <div className="flex items-start gap-2">
+              {!isLatest ? (
+                <button
+                  type="button"
+                  onClick={() => toggleOlderMessage(message.id)}
+                  className="mt-0.5 shrink-0 rounded-md p-0.5 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text-muted)]"
+                  aria-label="Collapse message"
+                >
+                  <ChevronUp className="h-4 w-4" />
+                </button>
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="min-w-0 text-sm font-medium break-words text-[var(--workspace-shell-text)]">
+                    {message.from_address ?? 'Unknown sender'}
+                  </p>
+                  <p className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)] tabular-nums">
+                    {formatEmailDateTime(message.internal_date)}
+                  </p>
+                </div>
+                <p className="mt-3 text-sm leading-relaxed break-words whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
+                  {body}
+                </p>
+                {quoted ? (
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleQuotedHistory(message.id)}
+                      className="text-xs font-medium text-[var(--ozer-accent)] hover:underline"
+                    >
+                      {showQuoted
+                        ? 'Hide quoted history'
+                        : 'Show quoted history'}
+                    </button>
+                    {showQuoted ? (
+                      <p className="mt-2 border-l border-[color:var(--workspace-shell-border)] pl-3 text-sm leading-relaxed whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
+                        {quoted}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

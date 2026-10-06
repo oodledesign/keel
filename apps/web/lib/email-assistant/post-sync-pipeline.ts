@@ -28,6 +28,7 @@ import {
   matchEmailTriageRule,
   normalizeEmailTriageRules,
 } from './email-triage-rules';
+import { classifyThreadWithJev } from './jev-classify';
 import type { MailboxKind } from './mailbox-kind';
 import { createMeteredEmailGenerateText } from './metered-generate-text';
 import { ensureNeedsReplyWorkspaceAffinity } from './needs-reply-workspace-affinity';
@@ -550,15 +551,23 @@ export async function runEmailAssistantPipeline(
       const threadText = buildThreadText((messages ?? []) as MessageRow[]);
 
       try {
-        const classified = await classify(
-          threadText,
-          owner,
-          createMeteredEmailGenerateText({
-            feature: 'email_triage',
-            accountId: billingAccountId,
-            supabase: admin,
-          }),
-        );
+        // Jev (cheap structured classifier) first; fall back to the generative
+        // model when it is not configured, errors, or is not confident.
+        const classified =
+          (await classifyThreadWithJev({
+            threadText,
+            ownerEmail: owner.email,
+            ownerDisplayName: owner.displayName ?? null,
+          })) ??
+          (await classify(
+            threadText,
+            owner,
+            createMeteredEmailGenerateText({
+              feature: 'email_triage',
+              accountId: billingAccountId,
+              supabase: admin,
+            }),
+          ));
         category = classified.category;
         reason = classified.reason;
         confidence = classified.confidence;

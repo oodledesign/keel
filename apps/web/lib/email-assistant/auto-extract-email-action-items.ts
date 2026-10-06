@@ -6,6 +6,7 @@ import { type EmailActionItem, extract } from '@kit/email-assistant';
 
 import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
 import { isInsufficientCreditsError } from '~/lib/ai/router';
+import { findDuplicateTasks } from '~/lib/tasks/find-duplicate-tasks';
 
 import {
   loadAccountMembersForExtraction,
@@ -231,7 +232,30 @@ export async function autoExtractEmailActionItems(params: {
     },
   );
 
-  const rows = filteredItems.map((item) => ({
+  // Drop suggestions for work already tracked on this client/project.
+  const dedupeAccountId = threadLink.accountId ?? preferredAccountId ?? null;
+  const duplicates = dedupeAccountId
+    ? await findDuplicateTasks({
+        admin,
+        accountId: dedupeAccountId,
+        candidates: filteredItems.map((item, index) => ({
+          key: String(index),
+          title: item.title,
+          notes: item.detail,
+          clientId: threadLink.clientId,
+          projectId: threadLink.projectId,
+        })),
+      })
+    : new Map();
+  const newItems = filteredItems.filter(
+    (_item, index) => !duplicates.has(String(index)),
+  );
+
+  if (newItems.length === 0) {
+    return { itemsInserted: 0, attempted: true };
+  }
+
+  const rows = newItems.map((item) => ({
     user_id: userId,
     thread_id: threadId,
     message_id: latestMessageId,
@@ -262,9 +286,8 @@ export async function autoExtractEmailActionItems(params: {
   }
 
   if (inserted?.length && threadLink.projectId) {
-    const { suggestRetainerMatchesForInsertedItems } = await import(
-      '~/lib/retainers/suggest-match'
-    );
+    const { suggestRetainerMatchesForInsertedItems } =
+      await import('~/lib/retainers/suggest-match');
     await suggestRetainerMatchesForInsertedItems({
       admin,
       actionItemIds: inserted.map((row) => String((row as { id: string }).id)),

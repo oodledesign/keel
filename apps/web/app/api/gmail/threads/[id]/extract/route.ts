@@ -26,6 +26,7 @@ import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-emai
 import { resolveEmailAssistantBillingAccountId } from '~/lib/email-assistant/resolve-email-assistant-billing-account';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { findDuplicateTasks } from '~/lib/tasks/find-duplicate-tasks';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -210,10 +211,33 @@ export async function POST(request: Request, context: RouteContext) {
     return jsonOk({ items: [] });
   }
 
+  // Skip suggestions for work already tracked on this client/project.
+  const duplicates = threadLink.accountId
+    ? await findDuplicateTasks({
+        admin,
+        accountId: threadLink.accountId,
+        candidates: filteredItems.map((item, index) => ({
+          key: String(index),
+          title: item.title,
+          notes: item.detail,
+          clientId: threadLink.clientId,
+          projectId: threadLink.projectId,
+        })),
+      })
+    : new Map();
+  const newItems = filteredItems.filter(
+    (_item, index) => !duplicates.has(String(index)),
+  );
+  const skippedDuplicates = filteredItems.length - newItems.length;
+
+  if (newItems.length === 0) {
+    return jsonOk({ items: [], skippedDuplicates });
+  }
+
   const latestMessageId =
     (messages?.at(-1) as { id?: string } | undefined)?.id ?? null;
 
-  const rows = filteredItems.map((item: EmailActionItem) => ({
+  const rows = newItems.map((item: EmailActionItem) => ({
     user_id: auth.user.id,
     thread_id: threadId,
     message_id: latestMessageId,
@@ -246,9 +270,8 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   if (inserted?.length && threadLink.projectId) {
-    const { suggestRetainerMatchesForInsertedItems } = await import(
-      '~/lib/retainers/suggest-match'
-    );
+    const { suggestRetainerMatchesForInsertedItems } =
+      await import('~/lib/retainers/suggest-match');
     const admin = getSupabaseServerAdminClient();
     await suggestRetainerMatchesForInsertedItems({
       admin,
@@ -257,5 +280,5 @@ export async function POST(request: Request, context: RouteContext) {
     });
   }
 
-  return jsonOk({ items: inserted ?? [] });
+  return jsonOk({ items: inserted ?? [], skippedDuplicates });
 }
