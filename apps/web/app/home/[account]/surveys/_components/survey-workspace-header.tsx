@@ -110,6 +110,7 @@ export function SurveyWorkspaceHeader({
         {tabs.map((tab) => (
           <Link
             key={tab.key}
+            prefetch={false}
             href={tab.href}
             aria-current={active === tab.key ? 'page' : undefined}
             data-test={`survey-tab-${tab.key}`}
@@ -169,19 +170,14 @@ export function SurveyGenerateDraftButton({
         accountName,
         surveyorName,
       });
-      router.refresh();
       toast.success(
         result.source === 'ai'
-          ? 'Draft report updated from your notes.'
+          ? 'Draft report ready from your notes.'
           : (result.fallbackReason ??
               'Drafted from keyword routing because the AI path was unavailable.'),
-        {
-          action: {
-            label: 'Open builder',
-            onClick: () => router.push(builderHref),
-          },
-        },
       );
+      // The draft lives in the report builder, so take the surveyor there.
+      router.push(builderHref);
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -202,7 +198,7 @@ export function SurveyGenerateDraftButton({
       ) : (
         <FileText className="h-4 w-4" />
       )}
-      Generate draft
+      {generating ? 'Drafting report…' : 'Generate draft'}
     </button>
   );
 }

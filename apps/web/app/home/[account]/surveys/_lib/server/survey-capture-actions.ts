@@ -8,6 +8,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { confirmSurveyGapCheckWithAi } from '~/lib/ai/survey-gap-check';
+import { sectionConditionRating } from '~/lib/building-surveyor/condition-rating';
+import { checkRatingsWithJev } from '~/lib/building-surveyor/jev-rating-check';
 import { deskReviewSections } from '~/lib/building-surveyor/survey-desk-review';
 import { parseSurveyReportDocument } from '~/lib/building-surveyor/survey-report-document';
 import {
@@ -357,6 +359,47 @@ export const checkSurveyPublishGapsAction = enhanceAction(
     );
     const deterministic = buildSurveyGapCheck(sections);
     let flags = deterministic.flags;
+
+    // Jev suggests ratings from the notes (no AI credits). Suggestions replace
+    // the plain "missing rating" flag and can warn about under-rated elements.
+    const ratingFlags = await checkRatingsWithJev(
+      sections
+        .filter((section) => ELEMENT_CODE_RE.test(section.ricsCode))
+        .map((section) => {
+          const rows = observations.filter(
+            (row) =>
+              (row.sectionKey === section.key ||
+                row.ricsCode === section.ricsCode) &&
+              row.body.trim(),
+          );
+          return {
+            key: section.key,
+            ricsCode: section.ricsCode,
+            label: section.label,
+            notes: rows.map((row) => row.body.trim()).join('\n\n'),
+            currentRating: sectionConditionRating(
+              rows.map((row) => row.conditionRating),
+            ),
+          };
+        }),
+    );
+    if (ratingFlags.length > 0) {
+      const suggestedKeys = new Set(
+        ratingFlags
+          .filter((item) => item.kind === 'missing_rating')
+          .map((item) => item.sectionKey),
+      );
+      flags = mergeSurveyGapFlags(
+        flags.filter(
+          (item) =>
+            !(
+              item.kind === 'missing_rating' &&
+              suggestedKeys.has(item.sectionKey)
+            ),
+        ),
+        ratingFlags,
+      );
+    }
     let source: 'deterministic' | 'ai' | 'passthrough' = 'deterministic';
 
     if (data.useAi) {
@@ -372,7 +415,7 @@ export const checkSurveyPublishGapsAction = enhanceAction(
           photoCount: section.photoCount,
         })),
       });
-      flags = mergeSurveyGapFlags(deterministic.flags, confirmed.flags);
+      flags = mergeSurveyGapFlags(flags, confirmed.flags);
       source = confirmed.source === 'ai' ? 'ai' : 'passthrough';
     }
 

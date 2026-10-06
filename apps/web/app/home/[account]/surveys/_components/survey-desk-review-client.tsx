@@ -641,6 +641,7 @@ export function SurveyDeskReviewClient({
                   return (
                     <li key={item.key}>
                       <Link
+                        prefetch={false}
                         href={reviewHref(accountSlug, proposalId, item.key)}
                         aria-current={active ? 'page' : undefined}
                         onClick={(event) => {

@@ -7,6 +7,7 @@ export const SURVEY_GAP_KINDS = [
   'photos_without_text',
   'text_without_photos',
   'missing_rating',
+  'rating_mismatch',
 ] as const;
 
 export type SurveyGapKind = (typeof SURVEY_GAP_KINDS)[number];

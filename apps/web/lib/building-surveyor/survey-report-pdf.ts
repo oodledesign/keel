@@ -900,8 +900,24 @@ function drawParagraph(ctx: Ctx, item: ParaItem) {
   const { size, leading, color } = ctx.style;
   const indent = item.bullet ? 16 : 0;
   const lines = layoutRuns(ctx, item.runs, size, ctx.frame.width - indent);
+
+  // Widow/orphan control: never leave a single line stranded at the bottom of
+  // a page, or a lone last line at the top of the next one.
+  const fits = ctx.flowing
+    ? Math.max(0, Math.floor((ctx.y - BOTTOM) / leading))
+    : 0;
+  let firstChunk = lines.length;
+  if (lines.length > fits && ctx.flowing) {
+    if (fits < 2) firstChunk = 0;
+    else if (lines.length - fits === 1)
+      firstChunk = fits - 1 >= 2 ? fits - 1 : 0;
+    else firstChunk = fits;
+  }
+  if (firstChunk === 0 && ctx.flowing) startContentPage(ctx);
+
   lines.forEach((line, index) => {
-    ensure(ctx, leading);
+    if (index === firstChunk && firstChunk > 0) startContentPage(ctx);
+    else ensure(ctx, leading);
     const page = currentPage(ctx);
     if (item.bullet && index === 0) {
       page.drawCircle({
@@ -1464,6 +1480,16 @@ function startSubsection(ctx: Ctx, label: string) {
   startContentPage(ctx);
 }
 
+const RATING_PILL_LABELS: Record<BadgeRating, string> = {
+  '3': 'Serious / urgent',
+  '2': 'Needs repair',
+  '1': 'No repair needed',
+  NI: 'Not inspected',
+  NA: 'Not applicable',
+  R: 'Documents to request',
+};
+
+/** Element title on a tinted band, with a large rating badge and plain-English label. */
 function drawElementHeading(ctx: Ctx, block: HeadingBlock) {
   const size = 10.5;
   const text = headingText(block);
@@ -1472,27 +1498,64 @@ function drawElementHeading(ctx: Ctx, block: HeadingBlock) {
     ELEMENT_CODE_RE.test(code) && !text.startsWith(code)
       ? `${code} ${text}`
       : text;
-  const lines = wrap(ctx, label, ctx.fonts.bold, size, CONTENT_W - 32);
-  ensure(ctx, lines.length * 15 + 70);
+  const rating = block.conditionRating ?? null;
+  const titleWidth = CONTENT_W - (rating ? 190 : 32);
+  const lines = wrap(ctx, label, ctx.fonts.bold, size, titleWidth);
+  const bandHeight = Math.max(34, lines.length * 15 + 16);
+  ensure(ctx, bandHeight + 70);
   ctx.contents
     .at(-1)
     ?.children.push({ label, pageIndex: ctx.pages.length - 1 });
   const page = currentPage(ctx);
   const top = ctx.y;
-  for (const line of lines) {
+  const ratingRgb = rating
+    ? hexToRgb(CONDITION_RATING_COLORS[rating], ctx.palette.muted)
+    : ctx.palette.border;
+
+  page.drawRectangle({
+    x: LEFT,
+    y: top - bandHeight,
+    width: CONTENT_W,
+    height: bandHeight,
+    color: rating ? mix(ratingRgb, ctx.palette.white, 0.9) : ctx.palette.panel,
+  });
+  page.drawRectangle({
+    x: LEFT,
+    y: top - bandHeight,
+    width: 4,
+    height: bandHeight,
+    color: ratingRgb,
+  });
+
+  const textTop = top - (bandHeight - lines.length * 15) / 2;
+  lines.forEach((line, index) => {
     page.drawText(line, {
-      x: LEFT,
-      y: ctx.y - size * 0.85,
+      x: LEFT + 14,
+      y: textTop - index * 15 - size * 0.85,
       size,
       font: ctx.fonts.bold,
       color: ctx.palette.ink,
     });
-    ctx.y -= 15;
+  });
+
+  if (rating) {
+    const radius = 12.5;
+    const cx = RIGHT - 10 - radius;
+    const cy = top - bandHeight / 2;
+    drawRatingBadge(ctx, page, rating, cx, cy, radius);
+    const pill = clean(ctx, RATING_PILL_LABELS[rating]);
+    const pillSize = 9;
+    const pillWidth = ctx.fonts.bold.widthOfTextAtSize(pill, pillSize);
+    page.drawText(pill, {
+      x: cx - radius - 10 - pillWidth,
+      y: cy - pillSize * 0.35,
+      size: pillSize,
+      font: ctx.fonts.bold,
+      color: rating === 'NI' || rating === 'NA' ? ctx.palette.muted : ratingRgb,
+    });
   }
-  if (block.conditionRating) {
-    drawRatingBadge(ctx, page, block.conditionRating, RIGHT - 9, top - 5, 8.5);
-  }
-  ctx.y -= 6;
+
+  ctx.y = top - bandHeight - 10;
 }
 
 function elementNameAndCode(block: HeadingBlock): {
