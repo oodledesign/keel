@@ -80,7 +80,9 @@ export function BoardCompanySettingsCard({
           <code className="text-xs">{'{{status}}'}</code>,{' '}
           <code className="text-xs">{'{{listing_ref}}'}</code>,{' '}
           <code className="text-xs">{'{{branch_name}}'}</code>,{' '}
-          <code className="text-xs">{'{{agent_name}}'}</code>.
+          <code className="text-xs">{'{{agent_name}}'}</code>. The prompt can be
+          turned off for the workspace or a single office under Settings &gt;
+          Notifications.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">

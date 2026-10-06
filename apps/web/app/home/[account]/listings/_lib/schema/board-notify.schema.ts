@@ -26,3 +26,11 @@ export const SendBoardNotifySchema = AccountListingSchema.extend({
 export const SkipBoardNotifySchema = AccountListingSchema.extend({
   status: z.enum(BOARD_NOTIFY_STATUSES),
 });
+
+export const CheckBoardNotifyPromptSchema = AccountListingSchema;
+
+export const SaveBoardPromptPreferencesSchema = z.object({
+  accountId: z.string().uuid(),
+  promptEnabled: z.boolean(),
+  promptOffBranchIds: z.array(z.string().uuid()).max(200),
+});

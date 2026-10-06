@@ -12,6 +12,7 @@ import {
   dedupeBoardEmails,
   formatBoardListingRef,
   formatBoardPropertyAddress,
+  isBoardPromptEnabled,
   isValidBoardEmail,
   parseCcList,
   resolveBoardRecipients,
@@ -22,6 +23,7 @@ import { requireCommercialBillableActor } from '~/lib/commercial/require-commerc
 import { sendClientFacingEmail } from '~/lib/server/send-client-facing-email';
 
 import {
+  CheckBoardNotifyPromptSchema,
   PrepareBoardNotifySchema,
   SendBoardNotifySchema,
   SkipBoardNotifySchema,
@@ -46,6 +48,38 @@ function actorDisplayName(user: {
   }
   return user.email?.trim() || 'Agent';
 }
+
+/**
+ * Should the "Notify board company?" prompt open for this disposal? Off for
+ * the whole workspace, or for the disposal's office, means no prompt.
+ * A failed lookup falls back to prompting rather than hiding it.
+ */
+export const checkBoardNotifyPromptAction = enhanceAction(
+  async (input): Promise<{ enabled: boolean }> => {
+    await requireCommercialBillableActor(
+      input.accountId,
+      'check board company notify',
+    );
+
+    const client = getSupabaseServerClient();
+    const settings = await loadCommercialBoardSettings(client, input.accountId);
+    if (!settings.promptEnabled) return { enabled: false };
+    if (settings.promptOffBranchIds.length === 0) return { enabled: true };
+
+    const listing = await createListingsService(client).getListing(
+      input.listingId,
+      input.accountId,
+    );
+    let branchId = listing?.accountBranchId ?? null;
+    if (!branchId) {
+      const branches = await loadAccountBranches(input.accountId);
+      branchId = branches.find((b) => b.isDefault)?.id ?? null;
+    }
+
+    return { enabled: isBoardPromptEnabled(settings, branchId) };
+  },
+  { schema: CheckBoardNotifyPromptSchema },
+);
 
 export type BoardNotifyPreview = {
   to: string;

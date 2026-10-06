@@ -30,6 +30,13 @@ export type CommercialBoardSettings = {
   bodyTemplate: string;
   /** Optional per-branch To/CC overrides keyed by account_branches.id. */
   byBranch: Record<string, BoardBranchOverride>;
+  /**
+   * Whether agents get the "Notify board company?" prompt when a disposal
+   * moves to Under offer / Let / Sold. Off silences it for the workspace.
+   */
+  promptEnabled: boolean;
+  /** Offices (account_branches.id) that don't get the prompt. */
+  promptOffBranchIds: string[];
 };
 
 export const DEFAULT_BOARD_SUBJECT_TEMPLATE =
@@ -53,7 +60,39 @@ export const DEFAULT_COMMERCIAL_BOARD_SETTINGS: CommercialBoardSettings = {
   subjectTemplate: DEFAULT_BOARD_SUBJECT_TEMPLATE,
   bodyTemplate: DEFAULT_BOARD_BODY_TEMPLATE,
   byBranch: {},
+  promptEnabled: true,
+  promptOffBranchIds: [],
 };
+
+function parseBranchIdList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return [
+    ...new Set(
+      value
+        .filter((v): v is string => typeof v === 'string')
+        .map((v) => v.trim())
+        .filter(Boolean),
+    ),
+  ];
+}
+
+/** Should this disposal's status change open the board notify prompt? */
+export function isBoardPromptEnabled(
+  settings: Pick<
+    CommercialBoardSettings,
+    'promptEnabled' | 'promptOffBranchIds'
+  >,
+  accountBranchId: string | null | undefined,
+): boolean {
+  if (!settings.promptEnabled) return false;
+  if (
+    accountBranchId &&
+    settings.promptOffBranchIds.includes(accountBranchId)
+  ) {
+    return false;
+  }
+  return true;
+}
 
 function asTrimmedString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
@@ -94,6 +133,8 @@ export function parseCommercialBoardSettings(
     bodyTemplate:
       asTrimmedString(row.bodyTemplate) || DEFAULT_BOARD_BODY_TEMPLATE,
     byBranch,
+    promptEnabled: row.promptEnabled !== false,
+    promptOffBranchIds: parseBranchIdList(row.promptOffBranchIds),
   };
 }
 
@@ -115,6 +156,8 @@ export function serializeCommercialBoardSettings(
       settings.subjectTemplate.trim() || DEFAULT_BOARD_SUBJECT_TEMPLATE,
     bodyTemplate: settings.bodyTemplate.trim() || DEFAULT_BOARD_BODY_TEMPLATE,
     byBranch,
+    promptEnabled: settings.promptEnabled,
+    promptOffBranchIds: parseBranchIdList(settings.promptOffBranchIds),
   };
 }
 

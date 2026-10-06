@@ -764,8 +764,20 @@ export const saveBoardCompanySettingsAction = enhanceAction(
       'save board company settings',
     );
 
-    const { saveCommercialBoardSettings } =
+    // Saving uses the admin client, so confirm the caller belongs to this
+    // workspace first (RLS only returns accounts they can see).
+    const { data: visible } = await db()
+      .from('accounts')
+      .select('id')
+      .eq('id', input.accountId)
+      .maybeSingle();
+    if (!visible) throw new Error('Workspace not found');
+
+    const { loadCommercialBoardSettings, saveCommercialBoardSettings } =
       await import('~/lib/commercial/board-company-settings.server');
+
+    // The prompt switches live on the Notifications tab; keep them as saved.
+    const current = await loadCommercialBoardSettings(db(), input.accountId);
 
     return saveCommercialBoardSettings(db(), input.accountId, {
       email: input.email,
@@ -773,6 +785,8 @@ export const saveBoardCompanySettingsAction = enhanceAction(
       subjectTemplate: input.subjectTemplate,
       bodyTemplate: input.bodyTemplate,
       byBranch: input.byBranch ?? {},
+      promptEnabled: current.promptEnabled,
+      promptOffBranchIds: current.promptOffBranchIds,
     });
   },
   { schema: SaveBoardCompanySettingsSchema },

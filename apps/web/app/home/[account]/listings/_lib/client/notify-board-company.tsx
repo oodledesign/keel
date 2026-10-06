@@ -8,6 +8,7 @@ import {
 } from '~/lib/commercial/board-company-settings';
 
 import { NotifyBoardCompanyDialog } from '../../_components/notify-board-company-dialog';
+import { checkBoardNotifyPromptAction } from '../server/board-notify-actions';
 
 const handledKeys = new Set<string>();
 
@@ -27,13 +28,15 @@ export function useNotifyBoardCompanyPrompt(input: {
   const [listingId, setListingId] = useState<string | null>(null);
   const [status, setStatus] = useState<BoardNotifyStatus | null>(null);
 
+  const accountId = input.accountId;
   const maybePrompt = useCallback(
     (params: {
       listingId: string;
       previousStatus: string | null | undefined;
       nextStatus: string;
     }) => {
-      if (!isBoardNotifyStatus(params.nextStatus)) return;
+      const nextStatus = params.nextStatus;
+      if (!isBoardNotifyStatus(nextStatus)) return;
       if (params.previousStatus === params.nextStatus) return;
 
       const key = transitionKey(params.listingId, params.nextStatus);
@@ -47,11 +50,22 @@ export function useNotifyBoardCompanyPrompt(input: {
         );
       }
 
-      setListingId(params.listingId);
-      setStatus(params.nextStatus);
-      setOpen(true);
+      // The workspace (or this disposal's office) may have the prompt off.
+      void checkBoardNotifyPromptAction({
+        accountId,
+        listingId: params.listingId,
+      })
+        .then((result) => result.enabled)
+        // If the check fails, prompt anyway so a board email isn't missed.
+        .catch(() => true)
+        .then((enabled) => {
+          if (!enabled) return;
+          setListingId(params.listingId);
+          setStatus(nextStatus);
+          setOpen(true);
+        });
     },
-    [],
+    [accountId],
   );
 
   const dialog =
