@@ -316,6 +316,7 @@ type JobProjectCanvasProps = {
 };
 
 const UPSERT_CHUNK = 300;
+const LINKED_RESYNC_MIN_MS = 60_000;
 const DELETE_CHUNK = 500;
 const DUPLICATE_OFFSET = 24;
 const NUDGE_SAVE_DELAY_MS = 400;
@@ -734,7 +735,9 @@ function ProjectCanvasInner({
     [],
   );
 
+  const lastResyncAt = useRef(0);
   const resync = useCallback(async () => {
+    lastResyncAt.current = Date.now();
     try {
       const snapshot = await loadProjectCanvas({ accountId, jobId });
       setAvailable(snapshot.available);
@@ -952,7 +955,11 @@ function ProjectCanvasInner({
       } else {
         void onRefreshBoard();
       }
-      void resync();
+      // Linked cards come from the board; the heavier canvas snapshot (people,
+      // docs, notes) only needs a refresh now and then.
+      if (Date.now() - lastResyncAt.current > LINKED_RESYNC_MIN_MS) {
+        void resync();
+      }
     },
     onResync: () => void resync(),
   });

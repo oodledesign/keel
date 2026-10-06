@@ -161,9 +161,13 @@ export function ProjectGuestsPanel(props: {
   accountSlug: string;
   projectId: string;
   canManage: boolean;
+  /** Already-loaded guests, so the panel does not fetch them again. */
+  initialGuests?: ProjectGuest[] | null;
 }) {
-  const [guests, setGuests] = useState<ProjectGuest[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [guests, setGuests] = useState<ProjectGuest[]>(
+    props.initialGuests ?? [],
+  );
+  const [loading, setLoading] = useState(!props.initialGuests);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [permissions, setPermissions] =
@@ -190,9 +194,11 @@ export function ProjectGuestsPanel(props: {
     }
   }, [props.accountId, props.projectId]);
 
+  const hadInitial = Boolean(props.initialGuests);
   useEffect(() => {
+    if (hadInitial) return;
     void refresh();
-  }, [refresh]);
+  }, [refresh, hadInitial]);
 
   const visible = guests.filter((g) => g.status !== 'revoked');
 

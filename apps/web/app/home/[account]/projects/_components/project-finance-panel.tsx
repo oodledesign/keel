@@ -102,6 +102,7 @@ export function ProjectFinancePanel({
           <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
             Tag transactions on the{' '}
             <Link
+              prefetch={false}
               href={financesHref}
               className="text-[var(--workspace-shell-text-muted)] underline hover:text-[var(--workspace-shell-text)]"
             >
@@ -208,6 +209,7 @@ export function ProjectFinancePanel({
           <div className="space-y-2 p-4 text-sm text-[var(--workspace-shell-text-muted)]">
             <p>No transactions tagged to this project yet.</p>
             <Link
+              prefetch={false}
               href={financesHref}
               className="text-[var(--ozer-accent)] underline hover:text-[var(--workspace-shell-text)]"
             >

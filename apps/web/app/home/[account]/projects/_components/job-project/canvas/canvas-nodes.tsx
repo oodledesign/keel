@@ -347,6 +347,7 @@ function PhaseNode({ id, data, selected }: CanvasNodeProps) {
         </span>
         {guest ? null : (
           <Link
+            prefetch={false}
             href={projectPhaseHref(accountSlug, jobId, phase.id)}
             className={iconLinkClass}
             title="Open phase"
@@ -736,7 +737,12 @@ function ClientNode({ selected }: CanvasNodeProps) {
           {[client.companyName, client.email].filter(Boolean).join(' · ')}
         </p>
       </div>
-      <Link href={href} className={iconLinkClass} title="Open client">
+      <Link
+        prefetch={false}
+        href={href}
+        className={iconLinkClass}
+        title="Open client"
+      >
         <ExternalLink className="h-3.5 w-3.5" />
       </Link>
     </div>
@@ -1531,6 +1537,7 @@ function LinkNode({ id, data, selected }: CanvasNodeProps) {
             </span>
           ) : linkId ? (
             <Link
+              prefetch={false}
               href={notesHref}
               className="nodrag inline-flex items-center gap-1 font-medium text-[var(--workspace-shell-accent-text)] hover:underline"
               title="Saved to the project's links in Notes"
@@ -1714,6 +1721,7 @@ function TimelineNode({ id, data, selected }: CanvasNodeProps) {
                   />
                   {row.id && !guest ? (
                     <Link
+                      prefetch={false}
                       href={projectPhaseHref(accountSlug, jobId, row.id)}
                       className="nodrag truncate hover:underline"
                       title={row.name}

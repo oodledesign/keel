@@ -80,12 +80,31 @@ async function ProjectDetailPage({
     await loadJobsPageData(accountSlug);
 
   const client = getSupabaseServerClient();
-  const { data: projectRow } = await client
-    .from('projects')
-    .select('id, project_type')
-    .eq('id', id)
-    .eq('account_id', accountId)
-    .maybeSingle();
+  const service = createJobsService(client);
+
+  // Independent lookups run together instead of one after another.
+  const [{ data: projectRow }, jobResult, statuses, showPartnerCosts] =
+    await Promise.all([
+      client
+        .from('projects')
+        .select('id, project_type')
+        .eq('id', id)
+        .eq('account_id', accountId)
+        .maybeSingle(),
+      service.getJob({ accountId, jobId: id }).then(
+        (value) => ({ ok: true as const, value }),
+        () => ({ ok: false as const }),
+      ),
+      createProjectStatusesService(client)
+        .list(accountId)
+        .catch(() => undefined),
+      isContractorView
+        ? Promise.resolve(false)
+        : projectHasPartnerCostShares({
+            ownerAccountId: accountId,
+            projectId: id,
+          }),
+    ]);
 
   if (!projectRow) {
     notFound();
@@ -126,35 +145,32 @@ async function ProjectDetailPage({
     }
   }
 
-  const service = createJobsService(client);
-  let job: Awaited<ReturnType<typeof service.getJob>>;
-  try {
-    job = await service.getJob({ accountId, jobId: id });
-  } catch {
+  if (!jobResult.ok) {
     notFound();
   }
+  const job = jobResult.value;
+  const jobClientId =
+    (job as { client_id?: string | null } | null)?.client_id ?? null;
 
-  let jobClient: {
-    id: string;
-    display_name: string | null;
-    email: string | null;
-    phone: string | null;
-    company_name: string | null;
-  } | null = null;
+  const clientPromise = jobClientId
+    ? client
+        .from('clients')
+        .select('id, display_name, email, phone, company_name')
+        .eq('id', jobClientId)
+        .eq('account_id', accountId)
+        .maybeSingle()
+    : Promise.resolve({ data: null });
 
-  if (job?.client_id) {
-    const { data } = await client
-      .from('clients')
-      .select('id, display_name, email, phone, company_name')
-      .eq('id', job.client_id)
-      .eq('account_id', accountId)
-      .maybeSingle();
-    jobClient = data;
-  }
+  const partnerLinesPromise = showPartnerCosts
+    ? createPartnerCostLinesService(client).listForHost({
+        ownerAccountId: accountId,
+        projectId: id,
+      })
+    : Promise.resolve([]);
 
-  const workspaceContent =
+  const workspaceContentPromise =
     initialTab === 'docs'
-      ? await loadContextWorkspaceContent({
+      ? loadContextWorkspaceContent({
           accountId,
           spaceType: (workspace.account as { space_type?: string }).space_type,
           businessType: workspace.businessType,
@@ -177,27 +193,16 @@ async function ProjectDetailPage({
           defaultLink: { type: 'job' as const, id },
         };
 
-  const showPartnerCosts =
-    !isContractorView &&
-    (await projectHasPartnerCostShares({
-      ownerAccountId: accountId,
-      projectId: id,
-    }));
-
   // Retainer is project-primary: always available for team members so they
   // can attach a plan. Contractors stay off this tab.
   const showServices = !isContractorView;
 
-  const partnerCostLines = showPartnerCosts
-    ? await createPartnerCostLinesService(client).listForHost({
-        ownerAccountId: accountId,
-        projectId: id,
-      })
-    : [];
-
-  const statuses = await createProjectStatusesService(client)
-    .list(accountId)
-    .catch(() => undefined);
+  const [{ data: jobClient }, workspaceContent, partnerCostLines] =
+    await Promise.all([
+      clientPromise,
+      workspaceContentPromise,
+      partnerLinesPromise,
+    ]);
 
   return (
     <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] px-2 py-2 md:px-3 md:py-3">

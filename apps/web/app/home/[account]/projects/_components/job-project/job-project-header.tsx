@@ -13,7 +13,7 @@ export function JobProjectHeader({
     <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] pb-3">
       <div className="mb-1.5 flex items-center justify-between text-xs text-[var(--workspace-shell-text-muted)]">
         <span>Progress</span>
-        <span className="tabular-nums text-[var(--workspace-shell-text-muted)]">
+        <span className="text-[var(--workspace-shell-text-muted)] tabular-nums">
           {progressPct}%
         </span>
       </div>

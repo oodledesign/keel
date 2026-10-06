@@ -30,10 +30,14 @@ export function ProjectPortalAccessPanel(props: {
   hasClient: boolean;
   canManage: boolean;
   initialPortalVisible?: boolean;
+  /** Already-loaded access, so the panel does not fetch it again. */
+  initialAccess?: ProjectPortalAccess | null;
   onSummaryChange?: (summary: string, isVisible: boolean) => void;
 }) {
-  const [access, setAccess] = useState<ProjectPortalAccess | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [access, setAccess] = useState<ProjectPortalAccess | null>(
+    props.initialAccess ?? null,
+  );
+  const [loading, setLoading] = useState(!props.initialAccess);
   const [pending, startTransition] = useTransition();
 
   const onSummaryChange = props.onSummaryChange;
@@ -53,13 +57,22 @@ export function ProjectPortalAccessPanel(props: {
     }
   }, [props.accountId, props.jobId, onSummaryChange]);
 
+  const hadInitial = Boolean(props.initialAccess);
   useEffect(() => {
+    if (hadInitial) {
+      onSummaryChange?.(
+        summarizeProjectPortalAccess(props.initialAccess!),
+        props.initialAccess!.portalVisible,
+      );
+      return;
+    }
     void refresh().catch((err) => {
       toast.error(
         err instanceof Error ? err.message : 'Could not load portal access',
       );
     });
-  }, [refresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refresh, hadInitial]);
 
   const disabled = !props.canManage || !props.hasClient || pending || loading;
   const portalVisible = Boolean(

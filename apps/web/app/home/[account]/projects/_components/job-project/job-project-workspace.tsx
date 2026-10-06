@@ -460,7 +460,7 @@ export function JobProjectWorkspace({
                 asChild
                 className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
               >
-                <Link href={askAiHref}>
+                <Link prefetch={false} href={askAiHref}>
                   <MessageSquare className="mr-2 h-4 w-4" />
                   Ask AI
                 </Link>

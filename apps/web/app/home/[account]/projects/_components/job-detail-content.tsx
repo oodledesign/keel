@@ -41,6 +41,7 @@ import { cn } from '@kit/ui/utils';
 import { ProjectAuditFeed } from '~/components/projects/project-audit-feed';
 import pathsConfig from '~/config/paths.config';
 import type { PartnerCostLine } from '~/lib/projects/partner-cost-lines.service';
+import type { ProjectGuest } from '~/lib/projects/project-guests.types';
 import {
   isPersonalProjectsScope,
   projectListHref,
@@ -62,12 +63,13 @@ import type {
   SavedLinkListItem,
 } from '../../_lib/workspace-content/types';
 import { getErrorMessage } from '../_lib/error-message';
+import type { ProjectPortalAccess } from '../_lib/schema/project-portal-access.schema';
 import {
   addJobAssignment,
   addJobNote,
-  listAccountMembers,
   listJobAssignments,
   listJobNotes,
+  loadProjectTeamTab,
   removeJobAssignment,
 } from '../_lib/server/server-actions';
 import { HostPartnerCostsPanel } from './host-partner-costs-panel';
@@ -232,6 +234,10 @@ export function JobDetailContent({
       picture_url?: string | null;
     }[]
   >([]);
+  const [teamExtras, setTeamExtras] = useState<{
+    portalAccess: ProjectPortalAccess | null;
+    guests: ProjectGuest[] | null;
+  }>({ portalAccess: null, guests: null });
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [assignRole, setAssignRole] = useState('');
   const [assigning, setAssigning] = useState(false);
@@ -324,52 +330,62 @@ export function JobDetailContent({
     jobId,
   ]);
 
+  // The overview only needs who is assigned.
   useEffect(() => {
-    if (activeTab !== 'team' && activeTab !== 'overview') {
+    if (activeTab !== 'overview') {
       return;
     }
 
     if (!accountId || !jobId) return;
-    setLoadingAssignments(true);
-    listJobAssignments({ accountId, jobId })
-      .then((result: unknown) => {
-        const raw = result as { data?: unknown } | unknown[];
-        const list = Array.isArray(raw)
-          ? raw
-          : Array.isArray((raw as { data?: unknown })?.data)
-            ? (raw as { data: unknown[] }).data
-            : [];
-        setAssignments(
-          (list ?? []) as { user_id: string; role_on_job: string | null }[],
-        );
-      })
-      .catch(() => {
-        toast.error('Failed to load assignments');
-        setAssignments([]);
-      })
-      .finally(() => setLoadingAssignments(false));
-  }, [accountId, activeTab, jobId]);
+    refreshAssignments();
+  }, [accountId, activeTab, jobId, refreshAssignments]);
 
+  // The Team tab loads everything in one round trip (assignments, members,
+  // portal access, guests) instead of four queued server actions.
   useEffect(() => {
     if (activeTab !== 'team') {
       return;
     }
 
-    if (!accountSlug) return;
-    listAccountMembers({ accountSlug })
-      .then((raw: unknown) => {
-        const list = Array.isArray(raw) ? raw : [];
+    if (!accountId || !jobId || !accountSlug) return;
+    let cancelled = false;
+    setLoadingAssignments(true);
+    loadProjectTeamTab({ accountId, accountSlug, jobId })
+      .then((result) => {
+        if (cancelled) return;
+        setAssignments(
+          (result.assignments ?? []) as {
+            user_id: string;
+            role_on_job: string | null;
+          }[],
+        );
         setMembers(
-          list as {
+          (result.members ?? []) as {
             user_id: string;
             name: string | null;
             email: string | null;
             picture_url?: string | null;
           }[],
         );
+        setTeamExtras({
+          portalAccess: result.portalAccess ?? null,
+          guests: (result.guests ?? null) as ProjectGuest[] | null,
+        });
       })
-      .catch(() => setMembers([]));
-  }, [accountSlug, activeTab]);
+      .catch(() => {
+        if (cancelled) return;
+        toast.error('Failed to load the team');
+        setAssignments([]);
+        setMembers([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingAssignments(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, accountSlug, activeTab, jobId]);
 
   useEffect(() => {
     if (activeTab !== 'overview') {
@@ -452,6 +468,7 @@ export function JobDetailContent({
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-1 py-3 md:px-1">
         <div className="min-w-0 flex-1">
           <Link
+            prefetch={false}
             href={jobsPath}
             className="mb-2 inline-flex items-center gap-1 text-xs text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
           >
@@ -501,6 +518,7 @@ export function JobDetailContent({
               <span>
                 Client{' '}
                 <Link
+                  prefetch={false}
                   href={`${clientsPath}/${client.id}`}
                   className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
                 >
@@ -562,6 +580,7 @@ export function JobDetailContent({
             className="h-8 border-[color:var(--workspace-shell-border)] text-xs"
           >
             <Link
+              prefetch={false}
               href={pathsConfig.app.accountJobEdit
                 .replace('[account]', accountSlug)
                 .replace('[id]', jobId)}
@@ -764,7 +783,11 @@ export function JobDetailContent({
                   </h3>
                   <div className="mt-3 space-y-2 text-sm">
                     <p className="font-medium text-[var(--workspace-shell-text)]">
-                      <Link href={clientsPath} className="hover:underline">
+                      <Link
+                        prefetch={false}
+                        href={clientsPath}
+                        className="hover:underline"
+                      >
                         {client.display_name ?? 'Unnamed'}
                       </Link>
                     </p>
@@ -981,12 +1004,14 @@ export function JobDetailContent({
                   hasClient={Boolean(job.client_id)}
                   canManage={canEditJobs && !isContractorView}
                   initialPortalVisible={Boolean(job.portal_visible)}
+                  initialAccess={teamExtras.portalAccess}
                 />
                 <ProjectGuestsPanel
                   accountId={accountId}
                   accountSlug={accountSlug}
                   projectId={jobId}
                   canManage={canEditJobs && !isContractorView}
+                  initialGuests={teamExtras.guests}
                 />
               </div>
             </>
@@ -1024,6 +1049,7 @@ export function JobDetailContent({
           </p>
           <Button asChild className="mt-3" variant="outline">
             <Link
+              prefetch={false}
               href={`${pathsConfig.app.accountMessages.replace('[account]', accountSlug)}${jobId ? `?threadJob=${jobId}` : ''}`}
             >
               Open messages
@@ -1103,6 +1129,7 @@ export function JobDetailContent({
                     {' '}
                     Manage sharing on the{' '}
                     <Link
+                      prefetch={false}
                       href={pathsConfig.app.accountClientDetail
                         .replace('[account]', accountSlug)
                         .replace('[clientId]', client.id)}

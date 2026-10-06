@@ -55,6 +55,7 @@ export function PhasePlanningLinks({
           </p>
         </div>
         <Link
+          prefetch={false}
           href={toolHref}
           className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/50 px-3 py-1.5 text-sm text-[var(--ozer-accent)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
         >

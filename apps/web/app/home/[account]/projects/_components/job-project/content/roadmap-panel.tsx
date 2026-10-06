@@ -391,7 +391,9 @@ export function RoadmapPanel({
                         }}
                       >
                         {phaseHref ? (
-                          <Link href={phaseHref(phase.id)}>{body}</Link>
+                          <Link prefetch={false} href={phaseHref(phase.id)}>
+                            {body}
+                          </Link>
                         ) : (
                           body
                         )}

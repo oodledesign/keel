@@ -42,8 +42,13 @@ const PEER_COLORS = [
 ];
 
 const LIVE_THROTTLE_MS = 40;
+/** Fallback poll while Realtime is down. */
 const RESYNC_INTERVAL_MS = 30_000;
-const LINKED_DEBOUNCE_MS = 600;
+/** Safety net while Realtime is healthy — events already keep us current. */
+const RESYNC_CONNECTED_INTERVAL_MS = 5 * 60_000;
+/** Returning to the tab only resyncs if we were away at least this long. */
+const RESYNC_AWAY_MS = 20_000;
+const LINKED_DEBOUNCE_MS = 1_500;
 const CURSOR_TTL_MS = 10_000;
 const DRAG_TTL_MS = 3_000;
 /** Keeps broadcast messages well under the Realtime payload limit. */
@@ -296,18 +301,31 @@ export function useProjectCanvasRealtime(params: {
   }, [projectId, supabase]);
 
   useEffect(() => {
+    let hiddenAt: number | null = null;
     const resyncIfVisible = () => {
       if (document.visibilityState === 'visible') {
         handlersRef.current.onResync();
       }
     };
-    const interval = setInterval(resyncIfVisible, RESYNC_INTERVAL_MS);
-    document.addEventListener('visibilitychange', resyncIfVisible);
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+        return;
+      }
+      const away = hiddenAt === null ? Infinity : Date.now() - hiddenAt;
+      hiddenAt = null;
+      if (away >= RESYNC_AWAY_MS) resyncIfVisible();
+    };
+    const interval = setInterval(
+      resyncIfVisible,
+      connected ? RESYNC_CONNECTED_INTERVAL_MS : RESYNC_INTERVAL_MS,
+    );
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
       clearInterval(interval);
-      document.removeEventListener('visibilitychange', resyncIfVisible);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, []);
+  }, [connected]);
 
   useEffect(() => {
     const interval = setInterval(() => {

@@ -289,7 +289,7 @@ export function JobScheduleTabContent({
               {details.status ? (
                 <TaskStatusBadge
                   status={String(details.status)}
-                  className="normal-case tracking-normal"
+                  className="tracking-normal normal-case"
                 />
               ) : null}
               {details.priority && (
@@ -317,6 +317,7 @@ export function JobScheduleTabContent({
               <p className="text-[var(--workspace-shell-text-muted)]">
                 Job:{' '}
                 <Link
+                  prefetch={false}
                   href={jobPath ?? '#'}
                   className="text-[var(--ozer-accent)] hover:underline"
                 >
@@ -387,7 +388,7 @@ export function JobScheduleTabContent({
                 variant="outline"
                 className="mt-2 border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)]"
               >
-                <Link href={jobEditPath ?? '#'}>
+                <Link prefetch={false} href={jobEditPath ?? '#'}>
                   <Pencil className="mr-1.5 h-4 w-4" />
                   Edit (Schedule tab)
                 </Link>

@@ -606,6 +606,7 @@ export function JobProjectTaskSheet({
                       <StickyNote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]" />
                       <div className="min-w-0 flex-1">
                         <Link
+                          prefetch={false}
                           href={noteDetailPath(ref.id)}
                           className="block truncate text-sm font-medium text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent)] hover:underline"
                         >

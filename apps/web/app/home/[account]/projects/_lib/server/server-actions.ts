@@ -9,6 +9,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { listProjectGuests } from '~/lib/projects/project-guests.service';
 import { loadTaskPersonAssigneeOptions } from '~/lib/tasks/task-person-assignee.server';
 
 import {
@@ -564,4 +565,56 @@ export const setProjectPortalAccess = enhanceAction(
     return result;
   },
   { schema: SetProjectPortalAccessSchema },
+);
+
+const LoadProjectTeamTabSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  jobId: z.string().uuid(),
+});
+
+/**
+ * Everything the project Team tab shows, in one round trip. Server actions run
+ * one at a time from the browser, so four separate calls made the tab load in a
+ * slow chain.
+ */
+export const loadProjectTeamTab = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+    const orNull = async <T>(work: Promise<T>) => {
+      try {
+        return await work;
+      } catch {
+        return null;
+      }
+    };
+
+    const [assignments, members, portalAccess, guests] = await Promise.all([
+      orNull(
+        createJobsService(client).listJobAssignments({
+          accountId: input.accountId,
+          jobId: input.jobId,
+        }),
+      ),
+      orNull(
+        (async () => {
+          const { data, error } = await client.rpc('get_account_members', {
+            account_slug: input.accountSlug,
+          });
+          if (error) throw error;
+          return data ?? [];
+        })(),
+      ),
+      orNull(
+        getProjectPortalAccessService().getAccess({
+          accountId: input.accountId,
+          jobId: input.jobId,
+        }),
+      ),
+      orNull(listProjectGuests(input.accountId, input.jobId)),
+    ]);
+
+    return { assignments, members, portalAccess, guests };
+  },
+  { schema: LoadProjectTeamTabSchema },
 );

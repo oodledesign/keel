@@ -60,6 +60,7 @@ export function PhaseDetailContent({
     <div className={cn('w-full space-y-6', workspacePageContentClassName)}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
+          prefetch={false}
           href={jobPath}
           className="inline-flex items-center gap-1 text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
         >
