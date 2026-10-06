@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import { callAI } from '~/lib/ai/router';
 import type { DisposalType } from '~/lib/commercial/commercial-constants';
+import { triageMatchesWithJev } from '~/lib/commercial/jev-match-triage';
 import { extractJson } from '~/lib/websites/extract-json';
 
 /** Slim pair payload for AI explain/outreach (avoids app↔lib coupling). */
@@ -138,10 +139,31 @@ export async function explainMatchSuggestions<
   suggestions: T[];
   mode?: 'explain' | 'triage';
 }): Promise<T[]> {
+  const triage = input.mode === 'triage';
+
+  // Triage is a yes/no/unsure call: Jev does it cheaply without AI credits.
+  // The "why" text is the rule engine's own reasons, so nothing is invented.
+  if (triage) {
+    const verdicts = await triageMatchesWithJev(input.suggestions);
+    if (verdicts) {
+      return input.suggestions
+        .map((s) => {
+          const verdict = verdicts.get(`${s.listingId}:${s.requirementId}`);
+          if (!verdict) return s;
+          const blended = Math.round(s.score * 0.65 + verdict.fitScore * 0.35);
+          return {
+            ...s,
+            score: Math.max(0, Math.min(100, blended)),
+            aiWhyFit: s.aiWhyFit ?? (s.reasons.join('; ') || null),
+            aiRecommendation: verdict.recommendation,
+          };
+        })
+        .sort((a, b) => b.score - a.score);
+    }
+  }
+
   const suggestions = input.suggestions.slice(0, 12);
   if (suggestions.length === 0) return [];
-
-  const triage = input.mode === 'triage';
   const systemPrompt = `You are a UK commercial agency desk assistant.
 Given scored disposal↔requirement pairs (already rule-scored), return JSON only in this exact shape:
 {"items":[{"listingId":"...","requirementId":"...","whyFit":"...","softScore":0,"recommendation":"add|skip|review"}]}
