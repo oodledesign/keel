@@ -31,6 +31,11 @@ export type RightmoveDisposalStatusRow = {
   urls: string[];
   lastUpdatedAt: string | null;
   lastError: string | null;
+  /**
+   * Sides with no stored price or rent, which go to Rightmove as POA with a
+   * placeholder figure until someone adds a real (still hidden) one.
+   */
+  missingFigures: Array<'lettings' | 'sales'>;
 };
 
 export function collectRightmoveUrls(input: {
@@ -53,6 +58,12 @@ export function collectRightmoveUrls(input: {
   const metadata = input.metadata ?? {};
   add(metadata.displayUrl);
   add(metadata.externalUrl);
+
+  // The for-sale property of a to-let-and-for-sale disposal.
+  const sale = metadata.rightmoveSale;
+  if (sale && typeof sale === 'object') {
+    add((sale as Record<string, unknown>).externalUrl);
+  }
 
   const links = metadata.links;
   if (links && typeof links === 'object') {

@@ -61,6 +61,11 @@ import {
 
 const PUSH_ALL_CONFIRM_WORD = 'CONFIRM';
 
+function missingFigureLabel(sides: Array<'lettings' | 'sales'>): string {
+  if (sides.length === 2) return 'rent or sale price';
+  return sides[0] === 'lettings' ? 'rent' : 'sale price';
+}
+
 function jobProgressLabel(job: RightmoveBulkJobPublic | null): string | null {
   if (!job) return null;
   const isResync = job.scope === 'unsynced';
@@ -452,6 +457,17 @@ export function RightmoveBulkPublishPanel({
                             {row.lastError ? (
                               <p className="mt-1 max-w-xs truncate text-xs text-rose-500">
                                 {row.lastError}
+                              </p>
+                            ) : null}
+                            {row.missingFigures.length > 0 ? (
+                              <p
+                                className="mt-1 max-w-xs text-xs text-amber-200/90"
+                                data-test="rightmove-missing-figure"
+                              >
+                                No {missingFigureLabel(row.missingFigures)}{' '}
+                                stored. Add one (it can stay hidden) so
+                                Rightmove gets a real value, not a £1
+                                placeholder.
                               </p>
                             ) : null}
                           </TableCell>

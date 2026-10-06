@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isLiveRightmovePublication,
   isRightmoveRemovalPending,
+  isRightmoveSaleSideRetryDue,
   isRightmoveSyncStale,
   resolveRightmoveLiveSyncAction,
   rightmoveRemovalReasonForStatus,
@@ -192,6 +193,54 @@ describe('isRightmoveRemovalPending', () => {
           stage: 'validation',
           updatedAt: hoursAgo(2),
         },
+        now,
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('isRightmoveSaleSideRetryDue', () => {
+  const now = new Date('2026-10-06T12:00:00Z');
+  const base = {
+    listingStatus: 'marketing',
+    publicationStatus: 'error',
+    stage: 'sale_side_error',
+  };
+
+  it('retries an on-market listing an hour after the failure', () => {
+    expect(
+      isRightmoveSaleSideRetryDue(
+        { ...base, updatedAt: '2026-10-06T10:00:00Z' },
+        now,
+      ),
+    ).toBe(true);
+  });
+
+  it('waits out the first hour and gives up after three days', () => {
+    expect(
+      isRightmoveSaleSideRetryDue(
+        { ...base, updatedAt: '2026-10-06T11:30:00Z' },
+        now,
+      ),
+    ).toBe(false);
+    expect(
+      isRightmoveSaleSideRetryDue(
+        { ...base, updatedAt: '2026-10-01T10:00:00Z' },
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it('ignores off-market listings and other errors', () => {
+    expect(
+      isRightmoveSaleSideRetryDue(
+        { ...base, listingStatus: 'let', updatedAt: '2026-10-06T10:00:00Z' },
+        now,
+      ),
+    ).toBe(false);
+    expect(
+      isRightmoveSaleSideRetryDue(
+        { ...base, stage: 'put_error', updatedAt: '2026-10-06T10:00:00Z' },
         now,
       ),
     ).toBe(false);

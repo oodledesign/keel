@@ -126,6 +126,7 @@ function statusRow(
       resolveRightmoveOverviewStatus({ storedStatus: rightmoveStatus }),
     externalId: partial.externalId ?? null,
     urls: partial.urls ?? [],
+    missingFigures: partial.missingFigures ?? [],
     lastUpdatedAt: partial.lastUpdatedAt ?? null,
     lastError: partial.lastError ?? null,
   };

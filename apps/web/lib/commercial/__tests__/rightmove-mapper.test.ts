@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   MAX_RIGHTMOVE_ANNUAL_CHARGE_PER_SQFT,
+  RIGHTMOVE_POA_PLACEHOLDER_PRICE,
   type RightmoveMapperListing,
   annualChargeFromPerSqft,
   asOptionalNumber,
@@ -12,6 +13,8 @@ import {
   mapListingToRightmovePayload,
   mapSectorToSubType,
   mapUseClasses,
+  rightmovePoaFiguresMissing,
+  rightmoveSaleReference,
   roundCoordinate,
 } from '../rightmove-mapper';
 
@@ -670,6 +673,170 @@ describe('mapListingToRightmovePayload', () => {
       price: 25500,
       frequency: 'YEARLY',
     });
+  });
+
+  it('builds the sales property of a dual disposal on its own reference', () => {
+    const listing = baseListing({
+      disposalType: 'to_let_and_for_sale',
+      askingRentPence: 2_550_000,
+      askingPricePence: 20_000_000,
+      askingPriceQualifier: 'guide_price',
+      hideRentFromMarketing: false,
+      hidePriceFromMarketing: false,
+      letType: 'LONG',
+    });
+    const lettings = mapListingToRightmovePayload({
+      listing,
+      agentId: 283634,
+    });
+    const sales = mapListingToRightmovePayload({
+      listing,
+      transaction: 'SALES',
+      agentId: 283634,
+    });
+
+    expect(sales.reference).toBe(rightmoveSaleReference(lettings.reference));
+    expect(sales.reference).not.toBe(lettings.reference);
+    expect(sales.reference).toMatch(/^[a-zA-Z0-9-_]{1,100}$/);
+    expect(sales.payload.building.transactionType).toBe('SALES');
+    expect(lettings.payload.building.transactionType).toBe('LETTINGS');
+    expect(sales.payload.building.pricing).toMatchObject({ price: 200000 });
+    expect(sales.payload.building.pricing).not.toHaveProperty('frequency');
+    expect(sales.payload.building.letType).toBeUndefined();
+  });
+
+  it('never sends the sale price as the rent of a dual disposal', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        disposalType: 'to_let_and_for_sale',
+        askingRentPence: null,
+        askingPricePence: 20_000_000,
+        hideRentFromMarketing: true,
+      }),
+      agentId: 283634,
+    });
+    expect(payload.building.pricing).toMatchObject({
+      price: RIGHTMOVE_POA_PLACEHOLDER_PRICE,
+      displayQualifier: 'PRICE_ON_APPLICATION',
+    });
+  });
+
+  it('keeps a hidden rent off the sales side and a hidden price off the lettings side', () => {
+    const listing = baseListing({
+      disposalType: 'to_let_and_for_sale',
+      askingRentPence: 2_550_000,
+      askingPricePence: 20_000_000,
+      hideRentFromMarketing: true,
+      hidePriceFromMarketing: false,
+    });
+    const sales = mapListingToRightmovePayload({
+      listing,
+      transaction: 'SALES',
+      agentId: 1,
+    });
+    expect(sales.payload.building.pricing).toMatchObject({ price: 200000 });
+    expect(sales.payload.building.pricing).not.toMatchObject({
+      displayQualifier: 'PRICE_ON_APPLICATION',
+    });
+  });
+
+  it('leaves the sales property without spaces', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({ disposalType: 'to_let_and_for_sale' }),
+      transaction: 'SALES',
+      agentId: 1,
+      units: [
+        {
+          id: 'u1',
+          label: 'Unit 1',
+          floorOrUnit: null,
+          sizeSqft: 500,
+          askingRentPence: 1_000_000,
+        } as never,
+      ],
+    });
+    expect('spaces' in payload.building).toBe(false);
+  });
+
+  it('ignores the transaction for single-purpose disposals', () => {
+    const { payload, reference } = mapListingToRightmovePayload({
+      listing: baseListing({ disposalType: 'to_let' }),
+      transaction: 'SALES',
+      agentId: 1,
+    });
+    expect(payload.building.transactionType).toBe('LETTINGS');
+    expect(reference).not.toMatch(/-sale$/);
+  });
+
+  it('sends a placeholder, not zero, for POA with no stored figure', () => {
+    const toLet = mapListingToRightmovePayload({
+      listing: baseListing({
+        disposalType: 'to_let',
+        askingRentPence: null,
+        hideRentFromMarketing: true,
+      }),
+      agentId: 1,
+    });
+    expect(toLet.payload.building.pricing).toMatchObject({
+      price: RIGHTMOVE_POA_PLACEHOLDER_PRICE,
+      displayQualifier: 'PRICE_ON_APPLICATION',
+    });
+
+    const sale = mapListingToRightmovePayload({
+      listing: baseListing({
+        disposalType: 'for_sale',
+        askingPricePence: 0,
+        hidePriceFromMarketing: true,
+        askingRentPence: 500_000,
+      }),
+      agentId: 1,
+    });
+    expect(sale.payload.building.pricing).toEqual({
+      price: RIGHTMOVE_POA_PLACEHOLDER_PRICE,
+      displayQualifier: 'PRICE_ON_APPLICATION',
+    });
+  });
+
+  it('keeps a stored figure behind POA instead of the placeholder', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        disposalType: 'for_sale',
+        askingPricePence: 25_000_000,
+        hidePriceFromMarketing: true,
+      }),
+      agentId: 1,
+    });
+    expect(payload.building.pricing).toEqual({
+      price: 250000,
+      displayQualifier: 'PRICE_ON_APPLICATION',
+    });
+  });
+
+  it('reports which sides of a disposal have no figure', () => {
+    expect(
+      rightmovePoaFiguresMissing({
+        disposalType: 'to_let_and_for_sale',
+        askingRentPence: null,
+        askingPricePence: 20_000_000,
+      }),
+    ).toEqual({ rent: true, sale: false });
+    expect(
+      rightmovePoaFiguresMissing({
+        disposalType: 'to_let',
+        askingRentPence: null,
+        askingPricePence: null,
+        units: [
+          { askingRentPence: 100_000, rentPerSqft: null, sizeSqft: null },
+        ],
+      }),
+    ).toEqual({ rent: false, sale: false });
+    expect(
+      rightmovePoaFiguresMissing({
+        disposalType: 'for_sale',
+        askingRentPence: null,
+        askingPricePence: 0,
+      }),
+    ).toEqual({ rent: false, sale: true });
   });
 
   it('omits let terms for sale-only disposals', () => {

@@ -3,11 +3,22 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
+  disposalIncludesToLet,
+  listingStatusPublishesToPortals,
+} from '~/lib/commercial/commercial-constants';
+import { rightmovePoaFiguresMissing } from '~/lib/commercial/rightmove-mapper';
+import {
   type RightmoveDisposalStatusRow,
   collectRightmoveUrls,
   resolveRightmoveDisposalOverviewStatus,
   sortRightmoveDisposalRows,
 } from '~/lib/commercial/rightmove-publish-status';
+
+function toNumber(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
 
 export async function listRightmoveDisposalStatuses(
   client: SupabaseClient,
@@ -20,7 +31,9 @@ export async function listRightmoveDisposalStatuses(
   ] = await Promise.all([
     client
       .from('commercial_listings')
-      .select('id, name, status, updated_at')
+      .select(
+        'id, name, status, updated_at, disposal_type, asking_rent_pence, asking_price_pence',
+      )
       .eq('account_id', accountId)
       .order('name', { ascending: true }),
     client
@@ -40,6 +53,28 @@ export async function listRightmoveDisposalStatuses(
   if (listingsError) throw new Error(listingsError.message);
   if (pubsError) throw new Error(pubsError.message);
   if (mediaError) throw new Error(mediaError.message);
+
+  // A lettings disposal with no rent of its own may still take one from its
+  // units, so only those listings need their units read.
+  const needsUnits = ((listings ?? []) as Array<Record<string, unknown>>)
+    .filter(
+      (l) =>
+        disposalIncludesToLet(String(l.disposal_type ?? '') as never) &&
+        !(Number(l.asking_rent_pence) > 0),
+    )
+    .map((l) => String(l.id));
+  const unitsByListing = new Map<string, Array<Record<string, unknown>>>();
+  for (let i = 0; i < needsUnits.length; i += 50) {
+    const { data: units, error: unitsError } = await client
+      .from('commercial_listing_units')
+      .select('listing_id, asking_rent_pence, rent_per_sqft, size_sqft')
+      .in('listing_id', needsUnits.slice(i, i + 50));
+    if (unitsError) throw new Error(unitsError.message);
+    for (const unit of (units ?? []) as Array<Record<string, unknown>>) {
+      const key = String(unit.listing_id);
+      unitsByListing.set(key, [...(unitsByListing.get(key) ?? []), unit]);
+    }
+  }
 
   const pubByListing = new Map(
     ((pubs ?? []) as Array<Record<string, unknown>>).map((row) => [
@@ -74,6 +109,23 @@ export async function listRightmoveDisposalStatuses(
       const externalUrl = (pub?.external_url as string | null) ?? null;
       const mediaCreatedAt = mediaByListing.get(String(listing.id)) ?? [];
 
+      const missing =
+        rightmoveStatus === 'published' ||
+        listingStatusPublishesToPortals(String(listing.status ?? ''))
+          ? rightmovePoaFiguresMissing({
+              disposalType: String(listing.disposal_type ?? '') as never,
+              askingRentPence: toNumber(listing.asking_rent_pence),
+              askingPricePence: toNumber(listing.asking_price_pence),
+              units: (unitsByListing.get(String(listing.id)) ?? []).map(
+                (u) => ({
+                  askingRentPence: toNumber(u.asking_rent_pence),
+                  rentPerSqft: toNumber(u.rent_per_sqft),
+                  sizeSqft: toNumber(u.size_sqft),
+                }),
+              ),
+            })
+          : { rent: false, sale: false };
+
       return {
         listingId: String(listing.id),
         name: ((listing.name as string | null) ?? '').trim() || 'Untitled',
@@ -83,6 +135,10 @@ export async function listRightmoveDisposalStatuses(
         urls,
         lastUpdatedAt: lastSyncAt ?? listingUpdatedAt,
         lastError,
+        missingFigures: [
+          ...(missing.rent ? (['lettings'] as const) : []),
+          ...(missing.sale ? (['sales'] as const) : []),
+        ],
         overviewStatus: resolveRightmoveDisposalOverviewStatus({
           listingStatus: String(listing.status ?? ''),
           listingUpdatedAt,

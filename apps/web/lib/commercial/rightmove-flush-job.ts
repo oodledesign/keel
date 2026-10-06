@@ -6,6 +6,10 @@ import {
   publishToRightmove,
   setPortalPublishersClient,
 } from '~/lib/commercial/portal-publishers';
+import {
+  RIGHTMOVE_SALE_SIDE_ERROR_STAGE,
+  isRightmoveSaleSideRetryDue,
+} from '~/lib/commercial/portal-sync-policy';
 import { isRightmoveFlushCandidate } from '~/lib/commercial/rightmove-bulk-eligibility';
 import { loadActiveRightmoveBulkJob } from '~/lib/commercial/rightmove-bulk-job';
 import type { RightmoveFlushRun } from '~/lib/commercial/rightmove-flush-job-types';
@@ -78,10 +82,12 @@ export async function listRightmoveFlushCandidates(
   const { data: pubs, error: pubsError } = await client
     .from('commercial_portal_publications')
     .select(
-      'listing_id, account_id, status, last_sync_at, last_error, external_id, external_url',
+      'listing_id, account_id, status, last_sync_at, last_error, external_id, external_url, metadata, updated_at',
     )
     .eq('portal', 'rightmove')
-    .eq('status', 'published')
+    .or(
+      `status.eq.published,and(status.eq.error,metadata->>stage.eq.${RIGHTMOVE_SALE_SIDE_ERROR_STAGE})`,
+    )
     .order('last_sync_at', { ascending: true, nullsFirst: true })
     .limit(LOOKAHEAD);
 
@@ -140,7 +146,17 @@ export async function listRightmoveFlushCandidates(
     if (busyIds.has(listingId)) continue;
     const listing = listingById.get(listingId);
     if (!listing) continue;
+    // Lettings is live but the for sale side failed: retry it.
+    const saleSideRetry = isRightmoveSaleSideRetryDue({
+      listingStatus: String(listing.status ?? ''),
+      publicationStatus: String(pub.status ?? ''),
+      stage: (pub.metadata as { stage?: unknown } | null)?.stage as
+        | string
+        | undefined,
+      updatedAt: (pub.updated_at as string | null) ?? null,
+    });
     if (
+      !saleSideRetry &&
       !isRightmoveFlushCandidate({
         listingStatus: String(listing.status ?? ''),
         listingUpdatedAt: (listing.updated_at as string | null) ?? null,

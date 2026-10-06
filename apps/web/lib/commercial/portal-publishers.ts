@@ -29,6 +29,7 @@ import { isPublicListingPageUrl } from '~/lib/commercial/listing-website-url';
 import { resolveLiveWordpressListingUrl } from '~/lib/commercial/listing-website-url-resolve.server';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import {
+  RIGHTMOVE_SALE_SIDE_ERROR_STAGE,
   resolveRightmoveLiveSyncAction,
   rightmoveRemovalReasonForStatus,
 } from '~/lib/commercial/portal-sync-policy';
@@ -420,6 +421,22 @@ async function recordPublication(input: {
   metadata?: Record<string, unknown>;
 }) {
   const now = new Date().toISOString();
+
+  // The for-sale side of a dual disposal is tracked in this row's metadata;
+  // every update keeps it unless the caller sets it explicitly.
+  let metadata = input.metadata ?? {};
+  if (input.portal === 'rightmove' && !('rightmoveSale' in metadata)) {
+    const { data: previous } = await db()
+      .from('commercial_portal_publications')
+      .select('metadata')
+      .eq('account_id', input.accountId)
+      .eq('listing_id', input.listingId)
+      .eq('portal', 'rightmove')
+      .maybeSingle();
+    const carried = readRightmoveSaleSide(previous?.metadata);
+    if (carried) metadata = { ...metadata, rightmoveSale: carried };
+  }
+
   const { data, error } = await db()
     .from('commercial_portal_publications')
     .upsert(
@@ -433,7 +450,7 @@ async function recordPublication(input: {
         branch_ref: input.branchRef ?? null,
         last_sync_at: now,
         last_error: input.lastError,
-        metadata: input.metadata ?? {},
+        metadata,
         updated_at: now,
       },
       { onConflict: 'listing_id,portal' },
@@ -571,6 +588,96 @@ async function resolveRightmoveAgentFromListing(input: {
  * Validate commercial fields, map listing → Rightmove payload, and PUT
  * /v2/property/commercial/{reference}. Branch ID is sent as building.agentId.
  */
+const RIGHTMOVE_SALE_SIDE_DELAY_MS = 300;
+
+/**
+ * Push (or clear) the sale-side property of a to-let-and-for-sale disposal.
+ * `side` is undefined when there is nothing to record; `failure` carries the
+ * reason when Rightmove refused the sale property.
+ */
+async function syncRightmoveSaleSide(input: {
+  listing: Awaited<ReturnType<typeof loadListingForRightmove>>;
+  media: Awaited<ReturnType<typeof loadPublicMediaForRightmove>>;
+  agentId: number;
+  accountId: string;
+  listingId: string;
+}): Promise<{ side?: RightmoveSaleSide; failure?: string }> {
+  const now = new Date().toISOString();
+
+  if (input.listing.disposalType === 'to_let_and_for_sale') {
+    const mapped = mapListingToRightmovePayload({
+      listing: input.listing,
+      transaction: 'SALES',
+      agentId: input.agentId,
+      media: input.media,
+    });
+    await sleep(RIGHTMOVE_SALE_SIDE_DELAY_MS);
+    try {
+      const result = await putCommercialProperty({
+        reference: mapped.reference,
+        payload: mapped.payload,
+      });
+      return {
+        side: {
+          reference: mapped.reference,
+          status: mapped.published ? 'published' : 'draft',
+          externalUrl: result.displayUrl,
+          syncedAt: now,
+          error: null,
+        },
+      };
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Rightmove publish failed';
+      return {
+        side: {
+          reference: mapped.reference,
+          status: 'error',
+          externalUrl: null,
+          syncedAt: now,
+          error: message,
+        },
+        failure: message,
+      };
+    }
+  }
+
+  // No longer a dual disposal: take down a sale property we put up earlier.
+  const { data: existing } = await db()
+    .from('commercial_portal_publications')
+    .select('metadata')
+    .eq('account_id', input.accountId)
+    .eq('listing_id', input.listingId)
+    .eq('portal', 'rightmove')
+    .maybeSingle();
+  const previous = readRightmoveSaleSide(existing?.metadata);
+  if (!previous || previous.status === 'unpublished') return {};
+
+  try {
+    await deleteRightmovePropertyIfPresent({
+      reference: previous.reference,
+      agentId: input.agentId,
+      removalReason: 'REMOVED',
+    });
+    return {
+      side: {
+        ...previous,
+        status: 'unpublished',
+        externalUrl: null,
+        error: null,
+        syncedAt: now,
+      },
+    };
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : 'Rightmove remove failed';
+    return {
+      side: { ...previous, error: message, syncedAt: now },
+      failure: `could not remove the old for sale property: ${message}`,
+    };
+  }
+}
+
 export async function publishToRightmove(
   accountId: string,
   listingId: string,
@@ -668,17 +775,29 @@ export async function publishToRightmove(
         : 'Updated on Rightmove (async processing may delay live visibility).'
       : 'Uploaded with published=false (listing status is not Marketing / Under offer).';
 
+    // "To let and for sale" goes up as two Rightmove properties.
+    const sale = await syncRightmoveSaleSide({
+      listing,
+      media,
+      agentId: resolved.agentId,
+      accountId,
+      listingId,
+    });
+
     return recordPublication({
       accountId,
       listingId,
       portal: 'rightmove',
-      status: mapped.published ? 'published' : 'draft',
-      lastError: null,
+      status: sale.failure ? 'error' : mapped.published ? 'published' : 'draft',
+      lastError: sale.failure
+        ? `The lettings side is on Rightmove, but the for sale side failed: ${sale.failure}`
+        : null,
       externalId: mapped.reference,
       externalUrl: result.displayUrl,
       branchRef: resolved.branchRef,
       metadata: {
-        stage: 'put_ok',
+        stage: sale.failure ? RIGHTMOVE_SALE_SIDE_ERROR_STAGE : 'put_ok',
+        ...(sale.side ? { rightmoveSale: sale.side } : {}),
         environment: env.environment,
         httpStatus: result.status,
         created: result.created,
@@ -861,8 +980,67 @@ export async function bulkPublishToRightmove(input: {
   };
 }
 
+/** What we know about the "for sale" property of a to-let-and-for-sale disposal. */
+export type RightmoveSaleSide = {
+  reference: string;
+  status: 'published' | 'draft' | 'unpublished' | 'error';
+  externalUrl: string | null;
+  syncedAt: string;
+  error: string | null;
+};
+
 /**
- * Remove a previously published commercial listing from Rightmove.
+ * Rightmove takes one transaction type per property, so the sale side of a
+ * dual disposal lives under its own reference. It is tracked in the metadata
+ * of the lettings publication row (`rightmoveSale`) and carried across every
+ * update of that row.
+ */
+export function readRightmoveSaleSide(
+  metadata: unknown,
+): RightmoveSaleSide | null {
+  if (!metadata || typeof metadata !== 'object') return null;
+  const value = (metadata as Record<string, unknown>).rightmoveSale;
+  if (!value || typeof value !== 'object') return null;
+  const row = value as Record<string, unknown>;
+  if (typeof row.reference !== 'string' || !row.reference) return null;
+  const status = row.status;
+  if (
+    status !== 'published' &&
+    status !== 'draft' &&
+    status !== 'unpublished' &&
+    status !== 'error'
+  ) {
+    return null;
+  }
+  return {
+    reference: row.reference,
+    status,
+    externalUrl: typeof row.externalUrl === 'string' ? row.externalUrl : null,
+    syncedAt: typeof row.syncedAt === 'string' ? row.syncedAt : '',
+    error: typeof row.error === 'string' ? row.error : null,
+  };
+}
+
+/** DELETE a Rightmove property; one that is already gone counts as removed. */
+async function deleteRightmovePropertyIfPresent(input: {
+  reference: string;
+  agentId: number;
+  removalReason: RightmoveRemovalReason;
+}): Promise<{ alreadyGone: boolean }> {
+  try {
+    await deleteCommercialProperty(input);
+    return { alreadyGone: false };
+  } catch (err) {
+    if (err instanceof RightmoveApiError && err.status === 404) {
+      return { alreadyGone: true };
+    }
+    throw err;
+  }
+}
+
+/**
+ * Remove a previously published commercial listing from Rightmove. For a
+ * to-let-and-for-sale disposal this removes both of its Rightmove properties.
  */
 export async function unpublishFromRightmove(
   accountId: string,
@@ -899,7 +1077,7 @@ export async function unpublishFromRightmove(
     const env = getRightmoveEnv();
     const { data: existing } = await db()
       .from('commercial_portal_publications')
-      .select('external_id')
+      .select('external_id, metadata')
       .eq('account_id', accountId)
       .eq('listing_id', listingId)
       .eq('portal', 'rightmove')
@@ -910,11 +1088,28 @@ export async function unpublishFromRightmove(
       ((existing?.external_id as string | null) ?? null)?.trim() ||
       resolveRightmovePropertyReference(listing);
 
-    await deleteCommercialProperty({
+    const removed = await deleteRightmovePropertyIfPresent({
       reference,
       agentId: resolved.agentId,
       removalReason,
     });
+
+    // The sale side of a dual disposal is a separate Rightmove property.
+    let saleSide = readRightmoveSaleSide(existing?.metadata);
+    if (saleSide && saleSide.status !== 'unpublished') {
+      await deleteRightmovePropertyIfPresent({
+        reference: saleSide.reference,
+        agentId: resolved.agentId,
+        removalReason,
+      });
+      saleSide = {
+        ...saleSide,
+        status: 'unpublished',
+        externalUrl: null,
+        error: null,
+        syncedAt: new Date().toISOString(),
+      };
+    }
 
     return recordPublication({
       accountId,
@@ -932,31 +1127,13 @@ export async function unpublishFromRightmove(
         accountBranchId: resolved.accountBranchId,
         accountBranchName: resolved.accountBranchName,
         agentId: resolved.agentId,
-        note: 'Removed from Rightmove (async processing may delay site updates).',
+        note: removed.alreadyGone
+          ? 'Rightmove no longer had this property.'
+          : 'Removed from Rightmove (async processing may delay site updates).',
+        ...(saleSide ? { rightmoveSale: saleSide } : {}),
       },
     });
   } catch (err) {
-    // Already gone from Rightmove: that is the outcome we wanted.
-    if (err instanceof RightmoveApiError && err.status === 404) {
-      return recordPublication({
-        accountId,
-        listingId,
-        portal: 'rightmove',
-        status: 'unpublished',
-        lastError: null,
-        externalId: null,
-        externalUrl: null,
-        branchRef: resolved.branchRef,
-        metadata: {
-          stage: 'delete_ok',
-          removalReason,
-          accountBranchId: resolved.accountBranchId,
-          accountBranchName: resolved.accountBranchName,
-          agentId: resolved.agentId,
-          note: 'Rightmove no longer had this property.',
-        },
-      });
-    }
     return recordStubPublication({
       accountId,
       listingId,
@@ -989,7 +1166,7 @@ export async function syncRightmoveIfLive(input: {
 }): Promise<'unpublished' | 'queued' | 'skipped'> {
   const { data, error } = await db()
     .from('commercial_portal_publications')
-    .select('status')
+    .select('status, metadata')
     .eq('account_id', input.accountId)
     .eq('listing_id', input.listingId)
     .eq('portal', 'rightmove')
@@ -1000,8 +1177,14 @@ export async function syncRightmoveIfLive(input: {
     return 'skipped';
   }
 
+  // A failed sale push leaves the lettings property live on Rightmove.
+  const storedStatus = (data?.status as string | null) ?? null;
+  const stage = (data?.metadata as { stage?: unknown } | null)?.stage;
+  const lettingsLive =
+    storedStatus === 'error' && stage === RIGHTMOVE_SALE_SIDE_ERROR_STAGE;
+
   const action = resolveRightmoveLiveSyncAction({
-    publicationStatus: (data?.status as string | null) ?? null,
+    publicationStatus: lettingsLive ? 'published' : storedStatus,
     listingStatus: input.status,
   });
 

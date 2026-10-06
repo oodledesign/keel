@@ -251,6 +251,41 @@ function penceToPounds(pence: number | null | undefined): number | null {
   return Math.round(pence) / 100;
 }
 
+/**
+ * Rightmove wants a number even when the price is shown as "Price on
+ * application", and a zero reads as a mistake. When we hold no figure at all
+ * we send this instead; the POA qualifier keeps it off the public page.
+ */
+export const RIGHTMOVE_POA_PLACEHOLDER_PRICE = 1;
+
+/** A stored figure of zero is "not set", not a price. */
+function positivePounds(pence: number | null | undefined): number | null {
+  const pounds = penceToPounds(pence);
+  return pounds != null && pounds > 0 ? pounds : null;
+}
+
+/**
+ * Which sides of a disposal would go to Rightmove as POA with only the
+ * placeholder figure, so the team can add a real (still hidden) one.
+ */
+export function rightmovePoaFiguresMissing(input: {
+  disposalType: DisposalType;
+  askingRentPence: number | null;
+  askingPricePence: number | null;
+  units?: Array<
+    Pick<RightmoveMapperUnit, 'askingRentPence' | 'rentPerSqft' | 'sizeSqft'>
+  >;
+}): { rent: boolean; sale: boolean } {
+  const rent =
+    disposalIncludesToLet(input.disposalType) &&
+    positivePounds(input.askingRentPence) == null &&
+    deriveAskingRentPenceFromUnits(input.units ?? []) == null;
+  const sale =
+    disposalIncludesForSale(input.disposalType) &&
+    positivePounds(input.askingPricePence) == null;
+  return { rent, sale };
+}
+
 export function sanitizeRightmoveReference(raw: string): string {
   const cleaned = raw
     .trim()
@@ -304,6 +339,37 @@ export function resolveRightmovePropertyReference(
     return sanitizeRightmoveReference(preferred);
   }
   return sanitizeRightmoveReference(listing.id);
+}
+
+/**
+ * Rightmove takes one transaction type per property, so a "to let and for
+ * sale" disposal goes up as two properties: lettings on the usual reference
+ * and sales on this one. Stays stable so a re-publish updates the same record.
+ */
+export function rightmoveSaleReference(reference: string): string {
+  return sanitizeRightmoveReference(`${reference.slice(0, 94)}-sale`);
+}
+
+/** Dual disposals show only the figures that belong to the side being sent. */
+function narrowListingToTransaction(
+  listing: RightmoveMapperListing,
+  transaction: RightmoveTransactionType,
+): RightmoveMapperListing {
+  if (listing.disposalType !== 'to_let_and_for_sale') return listing;
+  if (transaction === 'SALES') {
+    return {
+      ...listing,
+      disposalType: 'for_sale',
+      askingRentPence: null,
+      hideRentFromMarketing: false,
+    };
+  }
+  return {
+    ...listing,
+    disposalType: 'to_let',
+    askingPricePence: null,
+    hidePriceFromMarketing: false,
+  };
 }
 
 export function mapSectorToSubType(sector: string | null): RightmoveSubType {
@@ -504,7 +570,7 @@ function buildSpacePricing(input: {
   if (!isLettings) return undefined;
 
   const hideRent = listing.hideRentFromMarketing;
-  let rentPounds = penceToPounds(unit.askingRentPence);
+  let rentPounds = positivePounds(unit.askingRentPence);
   if (rentPounds == null) {
     const psf = asOptionalNumber(unit.rentPerSqft);
     const size = asOptionalNumber(unit.sizeSqft);
@@ -513,14 +579,14 @@ function buildSpacePricing(input: {
     }
   }
   if (rentPounds == null) {
-    rentPounds = penceToPounds(listing.askingRentPence);
+    rentPounds = positivePounds(listing.askingRentPence);
   }
 
   const frequency = mapRentFrequency(listing.rentFrequency) ?? 'YEARLY';
 
   if (hideRent || rentPounds == null) {
     return {
-      price: rentPounds ?? 0,
+      price: rentPounds ?? RIGHTMOVE_POA_PLACEHOLDER_PRICE,
       displayQualifier: 'PRICE_ON_APPLICATION',
       frequency,
     };
@@ -643,16 +709,15 @@ function buildBuildingPricing(listing: RightmoveMapperListing): {
   const isSales = disposalIncludesForSale(listing.disposalType);
   const hideRent = listing.hideRentFromMarketing && isLettings;
   const hidePrice = listing.hidePriceFromMarketing && isSales;
-  const rent = penceToPounds(listing.askingRentPence);
-  const price = penceToPounds(listing.askingPricePence);
+  const rent = positivePounds(listing.askingRentPence);
+  const price = positivePounds(listing.askingPricePence);
 
-  // Prefer lettings channel pricing when dual / to-let and we have a rent
-  // (or explicit POA). Pure to-let with no rent → POA. Dual with only a
-  // sale price falls through to the sales branch below.
+  // Lettings pricing: rent, or POA when hidden / missing. Dual disposals are
+  // narrowed to one side before they get here.
   if (isLettings) {
     if (hideRent || (rent == null && !isSales)) {
       return {
-        price: rent ?? price ?? 0,
+        price: rent ?? RIGHTMOVE_POA_PLACEHOLDER_PRICE,
         displayQualifier: 'PRICE_ON_APPLICATION',
         frequency: mapRentFrequency(listing.rentFrequency) ?? 'YEARLY',
       };
@@ -667,7 +732,7 @@ function buildBuildingPricing(listing: RightmoveMapperListing): {
 
   if (hidePrice || (isSales && price == null)) {
     return {
-      price: price ?? rent ?? 0,
+      price: price ?? RIGHTMOVE_POA_PLACEHOLDER_PRICE,
       displayQualifier: 'PRICE_ON_APPLICATION',
     };
   }
@@ -678,7 +743,7 @@ function buildBuildingPricing(listing: RightmoveMapperListing): {
   });
 
   return {
-    price: price ?? 0,
+    price: price ?? RIGHTMOVE_POA_PLACEHOLDER_PRICE,
     ...(displayQualifier ? { displayQualifier } : {}),
   };
 }
@@ -968,14 +1033,27 @@ export type MapListingToRightmoveResult = {
  */
 export function mapListingToRightmovePayload(input: {
   listing: RightmoveMapperListing;
+  /**
+   * Which side of a "to let and for sale" disposal to build (default
+   * lettings). Ignored for single-purpose disposals.
+   */
+  transaction?: RightmoveTransactionType;
   agentId: number;
   units?: RightmoveMapperUnit[];
   media?: RightmoveMapperMedia[];
   /** Override published flag (defaults from listing status). */
   published?: boolean;
 }): MapListingToRightmoveResult {
-  const { listing, agentId } = input;
-  const reference = resolveRightmovePropertyReference(listing);
+  const { agentId } = input;
+  const isDual = input.listing.disposalType === 'to_let_and_for_sale';
+  const transaction: RightmoveTransactionType =
+    isDual && input.transaction === 'SALES' ? 'SALES' : 'LETTINGS';
+  const listing = narrowListingToTransaction(input.listing, transaction);
+  const baseReference = resolveRightmovePropertyReference(input.listing);
+  const reference =
+    isDual && transaction === 'SALES'
+      ? rightmoveSaleReference(baseReference)
+      : baseReference;
   const published =
     input.published ?? isRightmoveMarketableStatus(listing.status);
   const status = mapListingStatusToRightmove(listing.status);
@@ -1073,9 +1151,13 @@ export function mapListingToRightmovePayload(input: {
       : {}),
   };
 
-  const units = (input.units ?? []).filter(
-    (u) => u.label?.trim() || u.floorOrUnit?.trim() || u.sizeSqft != null,
-  );
+  // Spaces carry rents, so the sales property is the building on its own.
+  const units =
+    isDual && transaction === 'SALES'
+      ? []
+      : (input.units ?? []).filter(
+          (u) => u.label?.trim() || u.floorOrUnit?.trim() || u.sizeSqft != null,
+        );
 
   if (units.length > 0) {
     const spaces = mapUnitsToSpaces({
