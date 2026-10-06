@@ -28,7 +28,10 @@ import {
 import { isPublicListingPageUrl } from '~/lib/commercial/listing-website-url';
 import { resolveLiveWordpressListingUrl } from '~/lib/commercial/listing-website-url-resolve.server';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
-import { resolveRightmoveLiveSyncAction } from '~/lib/commercial/portal-sync-policy';
+import {
+  resolveRightmoveLiveSyncAction,
+  rightmoveRemovalReasonForStatus,
+} from '~/lib/commercial/portal-sync-policy';
 import {
   RightmoveApiError,
   deleteCommercialProperty,
@@ -469,6 +472,8 @@ async function recordStubPublication(input: {
   listingId: string;
   portal: 'rightmove' | 'each';
   lastError: string;
+  /** Keep the Rightmove reference on a failure so a retry targets the same property. */
+  externalId?: string | null;
   metadata?: Record<string, unknown>;
 }) {
   return recordPublication({
@@ -477,6 +482,7 @@ async function recordStubPublication(input: {
     portal: input.portal,
     status: 'error',
     lastError: input.lastError,
+    externalId: input.externalId,
     metadata: input.metadata,
   });
 }
@@ -888,6 +894,7 @@ export async function unpublishFromRightmove(
     });
   }
 
+  let reference: string | null = null;
   try {
     const env = getRightmoveEnv();
     const { data: existing } = await db()
@@ -899,7 +906,7 @@ export async function unpublishFromRightmove(
       .maybeSingle();
 
     const listing = await loadListingForRightmove(accountId, listingId);
-    const reference =
+    reference =
       ((existing?.external_id as string | null) ?? null)?.trim() ||
       resolveRightmovePropertyReference(listing);
 
@@ -929,11 +936,33 @@ export async function unpublishFromRightmove(
       },
     });
   } catch (err) {
+    // Already gone from Rightmove: that is the outcome we wanted.
+    if (err instanceof RightmoveApiError && err.status === 404) {
+      return recordPublication({
+        accountId,
+        listingId,
+        portal: 'rightmove',
+        status: 'unpublished',
+        lastError: null,
+        externalId: null,
+        externalUrl: null,
+        branchRef: resolved.branchRef,
+        metadata: {
+          stage: 'delete_ok',
+          removalReason,
+          accountBranchId: resolved.accountBranchId,
+          accountBranchName: resolved.accountBranchName,
+          agentId: resolved.agentId,
+          note: 'Rightmove no longer had this property.',
+        },
+      });
+    }
     return recordStubPublication({
       accountId,
       listingId,
       portal: 'rightmove',
       lastError: err instanceof Error ? err.message : 'Rightmove remove failed',
+      externalId: reference,
       metadata: {
         stage: 'delete_error',
         removalReason,
@@ -984,6 +1013,7 @@ export async function syncRightmoveIfLive(input: {
     const publication = await unpublishFromRightmove(
       input.accountId,
       input.listingId,
+      rightmoveRemovalReasonForStatus(input.status),
     );
     if (publication.status === 'error') {
       console.error(

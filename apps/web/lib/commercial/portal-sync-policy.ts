@@ -2,6 +2,7 @@ import {
   type ListingStatus,
   listingStatusPublishesToPortals,
 } from '~/lib/commercial/commercial-constants';
+import type { RightmoveRemovalReason } from '~/lib/commercial/rightmove-types';
 
 /** Live Rightmove rows are opt-in publications we must keep in sync. */
 export function isLiveRightmovePublication(
@@ -66,4 +67,52 @@ export function isRightmoveSyncStale(input: {
   }, 0);
 
   return Math.max(listingUpdated, newestMedia) > lastSync;
+}
+
+/** Why a listing came off Rightmove, in Rightmove's own terms. */
+export function rightmoveRemovalReasonForStatus(
+  status: ListingStatus | string | null | undefined,
+): RightmoveRemovalReason {
+  switch (status) {
+    case 'let':
+      return 'LET_BY_US';
+    case 'sold':
+      return 'SOLD_BY_US';
+    case 'withdrawn':
+      return 'WITHDRAWN_FROM_MARKET';
+    default:
+      return 'REMOVED';
+  }
+}
+
+/** A failed removal is retried after this long, so a blip is not hammered. */
+export const RIGHTMOVE_REMOVAL_RETRY_AFTER_MS = 60 * 60 * 1000;
+/** ...and given up on (left showing its error) after this long. */
+export const RIGHTMOVE_REMOVAL_RETRY_GIVE_UP_MS = 72 * 60 * 60 * 1000;
+
+/**
+ * Off-market listing that Rightmove may still be showing: still marked live,
+ * or a removal that failed recently enough to be worth retrying.
+ */
+export function isRightmoveRemovalPending(
+  input: {
+    listingStatus: string;
+    publicationStatus: string | null | undefined;
+    stage?: string | null;
+    updatedAt?: string | null;
+  },
+  now: Date = new Date(),
+): boolean {
+  if (listingStatusPublishesToPortals(input.listingStatus)) return false;
+  if (input.publicationStatus === 'published') return true;
+  if (input.publicationStatus !== 'error' || input.stage !== 'delete_error') {
+    return false;
+  }
+  const updated = parseTime(input.updatedAt);
+  if (updated == null) return false;
+  const age = now.getTime() - updated;
+  return (
+    age >= RIGHTMOVE_REMOVAL_RETRY_AFTER_MS &&
+    age <= RIGHTMOVE_REMOVAL_RETRY_GIVE_UP_MS
+  );
 }

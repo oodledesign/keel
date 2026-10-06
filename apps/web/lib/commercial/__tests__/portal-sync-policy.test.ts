@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   isLiveRightmovePublication,
+  isRightmoveRemovalPending,
   isRightmoveSyncStale,
   resolveRightmoveLiveSyncAction,
+  rightmoveRemovalReasonForStatus,
   shouldUnpublishRightmoveForListingStatus,
 } from '../portal-sync-policy';
 
@@ -105,6 +107,93 @@ describe('isRightmoveSyncStale', () => {
         lastSyncAt: '2026-09-07T11:47:00.000Z',
         listingUpdatedAt: '2026-09-15T11:28:00.000Z',
       }),
+    ).toBe(false);
+  });
+});
+
+describe('rightmoveRemovalReasonForStatus', () => {
+  it('tells Rightmove why the property came off', () => {
+    expect(rightmoveRemovalReasonForStatus('let')).toBe('LET_BY_US');
+    expect(rightmoveRemovalReasonForStatus('sold')).toBe('SOLD_BY_US');
+    expect(rightmoveRemovalReasonForStatus('withdrawn')).toBe(
+      'WITHDRAWN_FROM_MARKET',
+    );
+    expect(rightmoveRemovalReasonForStatus('draft')).toBe('REMOVED');
+    expect(rightmoveRemovalReasonForStatus(undefined)).toBe('REMOVED');
+  });
+});
+
+describe('isRightmoveRemovalPending', () => {
+  const now = new Date('2026-10-06T12:00:00Z');
+  const hoursAgo = (hours: number) =>
+    new Date(now.getTime() - hours * 3_600_000).toISOString();
+
+  it('flags off-market listings still marked live', () => {
+    for (const listingStatus of ['let', 'sold', 'withdrawn', 'draft']) {
+      expect(
+        isRightmoveRemovalPending(
+          { listingStatus, publicationStatus: 'published' },
+          now,
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it('leaves on-market listings and already-removed ones alone', () => {
+    expect(
+      isRightmoveRemovalPending(
+        { listingStatus: 'marketing', publicationStatus: 'published' },
+        now,
+      ),
+    ).toBe(false);
+    expect(
+      isRightmoveRemovalPending(
+        { listingStatus: 'under_offer', publicationStatus: 'published' },
+        now,
+      ),
+    ).toBe(false);
+    expect(
+      isRightmoveRemovalPending(
+        { listingStatus: 'let', publicationStatus: 'unpublished' },
+        now,
+      ),
+    ).toBe(false);
+    expect(
+      isRightmoveRemovalPending(
+        { listingStatus: 'let', publicationStatus: null },
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it('retries a failed removal after an hour, and gives up after three days', () => {
+    const failed = {
+      listingStatus: 'sold',
+      publicationStatus: 'error',
+      stage: 'delete_error',
+    };
+    expect(
+      isRightmoveRemovalPending({ ...failed, updatedAt: hoursAgo(0.2) }, now),
+    ).toBe(false);
+    expect(
+      isRightmoveRemovalPending({ ...failed, updatedAt: hoursAgo(2) }, now),
+    ).toBe(true);
+    expect(
+      isRightmoveRemovalPending({ ...failed, updatedAt: hoursAgo(100) }, now),
+    ).toBe(false);
+  });
+
+  it('does not retry errors that were not failed removals', () => {
+    expect(
+      isRightmoveRemovalPending(
+        {
+          listingStatus: 'let',
+          publicationStatus: 'error',
+          stage: 'validation',
+          updatedAt: hoursAgo(2),
+        },
+        now,
+      ),
     ).toBe(false);
   });
 });
