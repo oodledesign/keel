@@ -96,6 +96,161 @@ actor NativeAPIClient {
         }
     }
 
+    func personalSettings(accessToken: String) async throws -> PersonalSettings {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/me/settings",
+            queryItems: [],
+            body: nil,
+            accessToken: accessToken
+        )
+        return try decodeSettings(PersonalSettings.self, from: data)
+    }
+
+    func updatePersonalSettings(_ changes: [String: Any], accessToken: String) async throws -> PersonalSettings {
+        let data = try await send(
+            method: "PATCH",
+            path: "api/native/v1/me/settings",
+            queryItems: [],
+            body: changes,
+            accessToken: accessToken
+        )
+        return try decodeSettings(PersonalSettings.self, from: data)
+    }
+
+    func uploadProfilePhoto(imageData: Data, accessToken: String) async throws -> String? {
+        let data = try await sendMultipartFields(
+            path: "api/native/v1/me/photo",
+            fields: [:],
+            fileData: imageData,
+            filename: "profile.jpg",
+            mimeType: "image/jpeg",
+            accessToken: accessToken
+        )
+        return try decodeSettings(ProfilePhotoResult.self, from: data).pictureUrl
+    }
+
+    func removeProfilePhoto(accessToken: String) async throws {
+        _ = try await send(
+            method: "DELETE",
+            path: "api/native/v1/me/photo",
+            queryItems: [],
+            body: nil,
+            accessToken: accessToken
+        )
+    }
+
+    func workspaceSettings(workspace: String, accessToken: String) async throws -> WorkspaceSettings {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/workspace-settings",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        return try decodeSettings(WorkspaceSettings.self, from: data)
+    }
+
+    func renameWorkspace(workspace: String, name: String, accessToken: String) async throws -> WorkspaceSettings {
+        let data = try await send(
+            method: "PATCH",
+            path: "api/native/v1/workspace-settings",
+            queryItems: [],
+            body: ["workspace": workspace, "name": name],
+            accessToken: accessToken
+        )
+        return try decodeSettings(WorkspaceSettings.self, from: data)
+    }
+
+    func uploadWorkspaceLogo(workspace: String, imageData: Data, accessToken: String) async throws -> WorkspaceSettings {
+        let data = try await sendMultipartFields(
+            path: "api/native/v1/workspace-settings/logo",
+            fields: ["workspace": workspace],
+            fileData: imageData,
+            filename: "logo.png",
+            mimeType: "image/png",
+            accessToken: accessToken
+        )
+        return try decodeSettings(WorkspaceSettings.self, from: data)
+    }
+
+    func removeWorkspaceLogo(workspace: String, accessToken: String) async throws -> WorkspaceSettings {
+        let data = try await send(
+            method: "DELETE",
+            path: "api/native/v1/workspace-settings/logo",
+            queryItems: [],
+            body: ["workspace": workspace],
+            accessToken: accessToken
+        )
+        return try decodeSettings(WorkspaceSettings.self, from: data)
+    }
+
+    func inviteWorkspaceMember(
+        workspace: String,
+        firstName: String,
+        lastName: String,
+        email: String,
+        role: String,
+        accessToken: String
+    ) async throws -> WorkspaceSettings {
+        let data = try await send(
+            method: "POST",
+            path: "api/native/v1/workspace-settings/invitations",
+            queryItems: [],
+            body: [
+                "workspace": workspace,
+                "invitations": [[
+                    "first_name": firstName,
+                    "last_name": lastName,
+                    "email": email,
+                    "role": role,
+                ]],
+            ],
+            accessToken: accessToken
+        )
+        return try decodeSettings(WorkspaceSettings.self, from: data)
+    }
+
+    func cancelWorkspaceInvitation(workspace: String, invitationId: Int, accessToken: String) async throws -> WorkspaceSettings {
+        let data = try await send(
+            method: "DELETE",
+            path: "api/native/v1/workspace-settings/invitations/\(invitationId)",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        return try decodeSettings(WorkspaceSettings.self, from: data)
+    }
+
+    func removeWorkspaceMember(workspace: String, userId: String, accessToken: String) async throws -> WorkspaceSettings {
+        let data = try await send(
+            method: "DELETE",
+            path: "api/native/v1/workspace-settings/members/\(userId)",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        return try decodeSettings(WorkspaceSettings.self, from: data)
+    }
+
+    func leaveWorkspace(workspace: String, accessToken: String) async throws {
+        _ = try await send(
+            method: "POST",
+            path: "api/native/v1/workspace-settings/leave",
+            queryItems: [],
+            body: ["workspace": workspace],
+            accessToken: accessToken
+        )
+    }
+
+    private func decodeSettings<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+        do {
+            return try JSONDecoder().decode(type, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
     func today(workspace: String, accessToken: String) async throws -> TodayPayload {
         let data = try await send(
             method: "GET",

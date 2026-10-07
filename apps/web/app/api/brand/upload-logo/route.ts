@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 
-import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { assertCanEditBrandSettings } from '~/home/[account]/settings/_lib/server/brand-settings-access';
@@ -8,11 +7,10 @@ import {
   saveBrandLogoVariant,
   syncWorkspaceLogo,
 } from '~/lib/brand/sync-workspace-logo';
-import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
+import { uploadWorkspaceLogo } from '~/lib/brand/upload-workspace-logo';
 
 export const runtime = 'nodejs';
 
-const BRAND_ASSETS_BUCKET = 'brand-assets';
 const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024;
 const LOGO_VARIANTS = ['primary', 'on_light', 'on_dark'] as const;
 
@@ -23,13 +21,6 @@ function parseLogoVariant(value: unknown): LogoUploadVariant {
   return LOGO_VARIANTS.includes(raw as LogoUploadVariant)
     ? (raw as LogoUploadVariant)
     : 'primary';
-}
-
-function extensionForMime(mimeType: string) {
-  if (mimeType.includes('png')) return 'png';
-  if (mimeType.includes('webp')) return 'webp';
-  if (mimeType.includes('gif')) return 'gif';
-  return 'jpg';
 }
 
 async function authorizeWorkspaceLogoEdit(accountId: string, userId: string) {
@@ -92,59 +83,14 @@ export async function POST(request: Request) {
   const authError = await authorizeWorkspaceLogoEdit(accountId, user.id);
   if (authError) return authError;
 
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const ext = extensionForMime(file.type || 'image/jpeg');
-  const path =
-    variant === 'primary'
-      ? `${accountId}/logo-${Date.now()}.${ext}`
-      : `${accountId}/logo-${variant}-${Date.now()}.${ext}`;
-  const admin = getSupabaseServerAdminClient();
-
-  const { error: uploadError } = await admin.storage
-    .from(BRAND_ASSETS_BUCKET)
-    .upload(path, bytes, {
-      contentType: file.type || 'image/jpeg',
-      upsert: true,
-    });
-
-  if (uploadError) {
-    console.error('[brand] upload-logo:', uploadError.message);
-    const hint =
-      uploadError.message?.toLowerCase().includes('bucket') ||
-      uploadError.message?.toLowerCase().includes('not found')
-        ? ' Run Supabase migrations to create the brand-assets storage bucket.'
-        : '';
-    return NextResponse.json(
-      {
-        error:
-          (uploadError.message ||
-            'Failed to upload logo. Ensure brand storage is configured.') +
-          hint,
-      },
-      { status: 500 },
-    );
-  }
-
-  const logoUrl = toSupabasePublicStorageUrl(
-    admin.storage.from(BRAND_ASSETS_BUCKET).getPublicUrl(path).data.publicUrl,
-  );
-
-  if (!logoUrl) {
-    return NextResponse.json(
-      { error: 'Upload succeeded but public URL could not be generated.' },
-      { status: 500 },
-    );
-  }
-
-  const { nanoid } = await import('nanoid');
-  const pictureUrl = `${logoUrl}?v=${nanoid(16)}`;
-
+  let pictureUrl: string;
   try {
-    if (variant === 'primary') {
-      await syncWorkspaceLogo(accountId, pictureUrl);
-    } else if (variant === 'on_light' || variant === 'on_dark') {
-      await saveBrandLogoVariant(accountId, variant, pictureUrl);
-    }
+    pictureUrl = await uploadWorkspaceLogo({
+      accountId,
+      variant,
+      bytes: Buffer.from(await file.arrayBuffer()),
+      contentType: file.type || 'image/jpeg',
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Failed to save workspace logo.';

@@ -3,7 +3,8 @@ import SwiftUI
 struct MenuView: View {
     @Environment(AppSession.self) private var session
     @State private var showSwitcher = false
-    @State private var showDeleteAccount = false
+    @State private var showPersonalSettings = false
+    @State private var showWorkspaceSettings = false
     var onOpen: (AppScreen) -> Void
     var onClose: () -> Void
 
@@ -39,19 +40,23 @@ struct MenuView: View {
                 }
 
                 Section {
-                    Button(role: .destructive) {
-                        Task { await session.signOut() }
+                    Button {
+                        showPersonalSettings = true
                     } label: {
-                        Text("Sign out")
+                        Label("Personal settings", systemImage: "person.crop.circle")
+                            .foregroundStyle(OzerPalette.plum)
                     }
                     .listRowBackground(OzerPalette.panel)
 
-                    Button(role: .destructive) {
-                        showDeleteAccount = true
-                    } label: {
-                        Text("Delete account")
+                    if let workspace = session.selectedWorkspace, !workspace.isPersonal {
+                        Button {
+                            showWorkspaceSettings = true
+                        } label: {
+                            Label("Workspace settings", systemImage: "gearshape")
+                                .foregroundStyle(OzerPalette.plum)
+                        }
+                        .listRowBackground(OzerPalette.panel)
                     }
-                    .listRowBackground(OzerPalette.panel)
                 } footer: {
                     Text(session.userEmail ?? "Signed in")
                         .foregroundStyle(OzerPalette.plumSoft)
@@ -70,8 +75,11 @@ struct MenuView: View {
                 WorkspaceSwitcherView()
                     .presentationDetents([.medium, .large])
             }
-            .sheet(isPresented: $showDeleteAccount) {
-                DeleteAccountView()
+            .sheet(isPresented: $showPersonalSettings) {
+                PersonalSettingsView()
+            }
+            .sheet(isPresented: $showWorkspaceSettings) {
+                WorkspaceSettingsView()
             }
             .task {
                 if !session.workspacesLoaded {
