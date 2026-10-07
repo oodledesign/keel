@@ -102,6 +102,7 @@ export const WorkspaceFormThemeSchema = z.object({
     .startsWith('https://')
     .nullable()
     .optional(),
+  showTitle: z.boolean().optional(),
   customCss: z
     .string()
     .max(WORKSPACE_FORM_CUSTOM_CSS_MAX)

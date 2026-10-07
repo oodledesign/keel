@@ -95,6 +95,8 @@ type Props = {
   initialValues?: PublicFormValues;
   initialStepIndex?: number;
   logoUrl?: string | null;
+  /** Workspace name + form title heading; off when the host page has its own. */
+  showTitle?: boolean;
   accentColor: string;
   primaryColor: string;
   /** Light text for workspace name/title when page bg is dark brand gradient. */
@@ -127,6 +129,7 @@ export function PublicWorkspaceForm({
   initialValues,
   initialStepIndex,
   logoUrl,
+  showTitle = true,
   accentColor,
   primaryColor,
   chromeOnDark = false,
@@ -442,6 +445,7 @@ export function PublicWorkspaceForm({
       eventDate={eventDate}
       eventTime={eventTime}
       logoUrl={logoUrl}
+      showTitle={showTitle}
       primaryColor={primaryColor}
       chromeOnDark={chromeOnDark}
       align={eventLayout ? 'left' : 'center'}
@@ -516,6 +520,7 @@ export function PublicWorkspaceForm({
               accountName={accountName}
               formName={formName}
               logoUrl={logoUrl}
+              showTitle={showTitle}
               primaryColor={primaryColor}
               onChange={setField}
               onBack={goBack}
@@ -604,6 +609,7 @@ function PublicFormSteps({
   accountName,
   formName,
   logoUrl,
+  showTitle,
   primaryColor,
   onChange,
   onBack,
@@ -628,6 +634,7 @@ function PublicFormSteps({
   accountName: string;
   formName: string;
   logoUrl?: string | null;
+  showTitle: boolean;
   primaryColor: string;
   onChange: (key: string, value: PublicFormValue) => void;
   onBack: () => void;
@@ -693,18 +700,20 @@ function PublicFormSteps({
         </div>
       ) : currentFields.length > 0 ? (
         <div className="space-y-3">
-          {!eventLayout ? (
+          {!eventLayout && (logoUrl || showTitle) ? (
             <div className="flex items-center gap-3">
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={logoUrl} alt={accountName} className="h-8 w-auto" />
               ) : null}
-              <p
-                className="font-heading text-sm font-semibold"
-                style={{ color: primaryColor }}
-              >
-                {formName}
-              </p>
+              {showTitle ? (
+                <p
+                  className="font-heading text-sm font-semibold"
+                  style={{ color: primaryColor }}
+                >
+                  {formName}
+                </p>
+              ) : null}
             </div>
           ) : null}
           <h2 ref={stepHeadingRef} tabIndex={-1} className="sr-only">
@@ -887,6 +896,7 @@ function PublicFormIntro({
   eventDate,
   eventTime,
   logoUrl,
+  showTitle,
   primaryColor,
   chromeOnDark,
   align,
@@ -899,6 +909,7 @@ function PublicFormIntro({
   eventDate?: string | null;
   eventTime?: string | null;
   logoUrl?: string | null;
+  showTitle: boolean;
   primaryColor: string;
   chromeOnDark: boolean;
   align: 'left' | 'center';
@@ -928,15 +939,23 @@ function PublicFormIntro({
           )}
         />
       ) : null}
-      <p className={cn('text-xs font-medium tracking-wide uppercase', muted)}>
-        {accountName}
-      </p>
-      <h1
-        className="ozer-form-title font-heading mt-2 text-2xl font-bold md:text-3xl"
-        style={{ color: titleColor }}
-      >
-        {formName}
-      </h1>
+      {showTitle ? (
+        <>
+          <p
+            className={cn('text-xs font-medium tracking-wide uppercase', muted)}
+          >
+            {accountName}
+          </p>
+          <h1
+            className="ozer-form-title font-heading mt-2 text-2xl font-bold md:text-3xl"
+            style={{ color: titleColor }}
+          >
+            {formName}
+          </h1>
+        </>
+      ) : (
+        <h1 className="sr-only">{formName}</h1>
+      )}
       <EventMetaList
         eventAddress={eventAddress}
         eventDate={eventDate}

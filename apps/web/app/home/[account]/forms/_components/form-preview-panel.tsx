@@ -141,6 +141,7 @@ export function FormPreviewPanel({
             }
             fields={fields}
             logoUrl={logoUrl}
+            showTitle={theme.showTitle}
             accentColor={colors.accentColor}
             primaryColor={colors.primaryColor}
             chromeOnDark={false}

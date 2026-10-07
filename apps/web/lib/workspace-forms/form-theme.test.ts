@@ -298,6 +298,7 @@ describe('form branding theme', () => {
       cornerStyle: 'sharp',
       logoMode: 'custom',
       logoUrl: 'https://example.com/logo.png',
+      showTitle: false,
       customCss: '.ozer-form-title { color: red; }',
     });
     expect(theme).toMatchObject({
@@ -306,8 +307,15 @@ describe('form branding theme', () => {
       cornerStyle: 'sharp',
       logoMode: 'custom',
       logoUrl: 'https://example.com/logo.png',
+      showTitle: false,
     });
     expect(serializeWorkspaceFormTheme(theme)).toEqual(theme);
+  });
+
+  it('shows the title unless explicitly hidden', () => {
+    expect(parseWorkspaceFormTheme({}).showTitle).toBe(true);
+    expect(parseWorkspaceFormTheme({ showTitle: 'no' }).showTitle).toBe(true);
+    expect(parseWorkspaceFormTheme({ showTitle: false }).showTitle).toBe(false);
   });
 
   it('drops non-https logo URLs and falls back to the brand logo', () => {

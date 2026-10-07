@@ -194,6 +194,7 @@ export function FormBuilder({
     cornerStyle: form.theme.cornerStyle,
     logoMode: form.theme.logoMode,
     logoUrl: form.theme.logoUrl,
+    showTitle: form.theme.showTitle,
     customCss: form.theme.customCss,
   });
   const [contactFields, setContactFields] = useState(initialContactFields);

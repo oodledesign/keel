@@ -129,6 +129,7 @@ async function PublicWorkspaceFormPage({
           form.theme,
           resolveBrandLogoForSurface(form.brand, logoSurface),
         )}
+        showTitle={form.theme.showTitle}
         accentColor={themeColors.accentColor}
         primaryColor={themeColors.primaryColor}
         chromeOnDark={brandGradient && !useContentShell}

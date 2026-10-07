@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 
 import { validateFormCustomCss } from '~/lib/workspace-forms/form-custom-css';
@@ -56,6 +57,7 @@ export type FormBrandingValues = {
   cornerStyle: WorkspaceFormCornerStyle;
   logoMode: WorkspaceFormLogoMode;
   logoUrl: string | null;
+  showTitle: boolean;
   customCss: string;
 };
 
@@ -303,6 +305,22 @@ export function FormAppearancePanel({
             />
           ) : null}
         </div>
+      </div>
+
+      <div className="flex items-start justify-between gap-4">
+        <div className="grid gap-0.5">
+          <Label htmlFor="form-show-title">Show form title</Label>
+          <p className={`text-xs ${workspaceTextMuted}`}>
+            Workspace name and form title above the questions. Turn off when
+            your page already has its own heading.
+          </p>
+        </div>
+        <Switch
+          id="form-show-title"
+          checked={branding.showTitle}
+          onCheckedChange={(checked) => onBranding({ showTitle: checked })}
+          data-test="form-show-title"
+        />
       </div>
 
       <div className="grid gap-1.5">

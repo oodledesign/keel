@@ -74,6 +74,8 @@ export type WorkspaceFormTheme = {
   /** brand = workspace logo, custom = logoUrl below, none = hide. */
   logoMode: WorkspaceFormLogoMode;
   logoUrl: string | null;
+  /** Workspace name + form title heading above the questions. */
+  showTitle: boolean;
   /** Scoped to the public form only; validated in form-custom-css.ts. */
   customCss: string;
 };
@@ -90,6 +92,7 @@ export const DEFAULT_WORKSPACE_FORM_THEME: WorkspaceFormTheme = {
   cornerStyle: 'soft',
   logoMode: 'brand',
   logoUrl: null,
+  showTitle: true,
   customCss: '',
 };
 
@@ -279,6 +282,7 @@ export function parseWorkspaceFormTheme(raw: unknown): WorkspaceFormTheme {
     cornerStyle,
     logoMode: logoMode === 'custom' && !logoUrl ? 'brand' : logoMode,
     logoUrl,
+    showTitle: record.showTitle !== false,
     customCss,
     layout: readStoredLayout(raw) ?? 'standard',
     layoutExplicit:
@@ -370,6 +374,7 @@ export function serializeWorkspaceFormTheme(
     cornerStyle: parsed.cornerStyle,
     logoMode: parsed.logoMode,
     logoUrl: parsed.logoUrl,
+    showTitle: parsed.showTitle,
     customCss: parsed.customCss,
   };
 }
