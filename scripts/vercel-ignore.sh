@@ -100,6 +100,12 @@ else
     proceed "missing compare ref ${COMPARE_TO}"
   fi
 
+  # Same commit as the last successful deploy means a deliberate redeploy
+  # (e.g. to pick up new env vars), never an accidental duplicate build.
+  if [[ "$(git rev-parse "${COMPARE_FROM}^{commit}")" == "$(git rev-parse "${COMPARE_TO}^{commit}")" ]]; then
+    proceed "redeploy of an already-deployed commit (${COMPARE_TO})"
+  fi
+
   echo "[vercel-ignore] comparing ${COMPARE_FROM}..${COMPARE_TO}"
   if ! CHANGED_FILES="$(git diff --name-only "$COMPARE_FROM" "$COMPARE_TO")"; then
     proceed "git diff failed"
@@ -120,7 +126,6 @@ WEB_SKIP_ONLY=(
   "apps/docs/"
   "apps/sites/"
   "apps/ios/"
-  "scripts/vercel-ignore.sh"
 )
 
 # Shared workspace / install inputs that affect every Vercel app.
