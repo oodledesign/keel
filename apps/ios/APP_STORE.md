@@ -114,13 +114,13 @@ These match `Ozer/PrivacyInfo.xcprivacy`. Update both if a new SDK or data type 
 >
 > Background audio: Meetings (Menu → Meetings → Start a new meeting) and Surveys (Surveyor workspace → Surveys) record from the microphone and keep recording when the screen locks, so a surveyor or meeting host can pocket the phone. Transcription runs on-device using Apple's Speech framework. Live captions need a real iPhone; the Simulator shows a placeholder.
 >
-> Account deletion: Menu → Delete account.
+> Account deletion: Menu → Personal settings → Delete account. Deletion locks the account immediately and removes the data after 30 days.
 
 ## Before you submit
 
 - [ ] Create `appreview@ozer.so` in Supabase (Authentication → Users → Add user, auto-confirm, set a password). Make sure the Email provider allows password sign-in.
 - [ ] Give the demo account a Personal, Family, Studio (`work_design`) and Surveyor (`building_surveyor`) workspace with realistic sample data — no real client data.
-- [ ] Confirm `NEXT_PUBLIC_ENABLE_PERSONAL_ACCOUNT_DELETION=true` in the production Vercel environment and deploy the web app, so `/api/native/v1/me/account` is live before the build is reviewed.
-- [ ] Confirm `APNS_KEY_ID` and `APNS_P8` are set in production for push.
+- [x] Account deletion API is live in production (`NEXT_PUBLIC_ENABLE_PERSONAL_ACCOUNT_DELETION=true` comes from `apps/web/.env`).
+- [ ] Set `APNS_KEY_ID`, `APNS_P8` and `APNS_PRODUCTION=true` in production Vercel and redeploy. TestFlight and App Store builds use Apple's production push server.
 - [ ] Check https://www.ozer.so/privacy-policy mentions on-device speech, microphone, camera, and photo use, and how to delete an account.
 - [ ] Bump `CURRENT_PROJECT_VERSION` in `Config/Shared.xcconfig` for each upload.

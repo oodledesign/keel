@@ -191,7 +191,7 @@ struct WorkspaceSettingsView: View {
                         .foregroundStyle(OzerPalette.plum)
                 }
             } footer: {
-                Text("Billing, roles, branding, integrations, and more.")
+                Text("Roles, branding, integrations, and more.")
                     .foregroundStyle(OzerPalette.plumSoft)
             }
             .listRowBackground(OzerPalette.panel)
