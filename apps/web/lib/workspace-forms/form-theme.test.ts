@@ -60,7 +60,7 @@ describe('brandPageGradientCss', () => {
 
 describe('parseWorkspaceFormTheme', () => {
   it('defaults to light standard classic', () => {
-    expect(parseWorkspaceFormTheme(null)).toEqual({
+    expect(parseWorkspaceFormTheme(null)).toMatchObject({
       pageBackground: 'light',
       layout: 'standard',
       layoutExplicit: false,
@@ -76,7 +76,7 @@ describe('parseWorkspaceFormTheme', () => {
         pageBackground: 'brand_gradient',
         layout: 'event',
       }),
-    ).toEqual({
+    ).toMatchObject({
       pageBackground: 'brand_gradient',
       layout: 'event',
       layoutExplicit: false,
@@ -102,7 +102,7 @@ describe('parseWorkspaceFormTheme', () => {
         layout: 'standard',
         layoutExplicit: true,
       }),
-    ).toEqual({
+    ).toMatchObject({
       pageBackground: 'brand_gradient',
       layout: 'standard',
       layoutExplicit: true,
@@ -137,7 +137,7 @@ describe('serializeWorkspaceFormTheme', () => {
         layoutExplicit: true,
         presentation: 'steps',
       }),
-    ).toEqual({
+    ).toMatchObject({
       pageBackground: 'brand_gradient',
       layout: 'event',
       layoutExplicit: true,
@@ -287,5 +287,44 @@ describe('resolveWorkspaceFormLayout', () => {
         },
       ),
     ).toBe('standard');
+  });
+});
+
+describe('form branding theme', () => {
+  it('reads and round-trips branding keys', () => {
+    const theme = parseWorkspaceFormTheme({
+      backgroundColor: '#FFF',
+      fontFamily: 'serif',
+      cornerStyle: 'sharp',
+      logoMode: 'custom',
+      logoUrl: 'https://example.com/logo.png',
+      customCss: '.ozer-form-title { color: red; }',
+    });
+    expect(theme).toMatchObject({
+      backgroundColor: '#ffffff',
+      fontFamily: 'serif',
+      cornerStyle: 'sharp',
+      logoMode: 'custom',
+      logoUrl: 'https://example.com/logo.png',
+    });
+    expect(serializeWorkspaceFormTheme(theme)).toEqual(theme);
+  });
+
+  it('drops non-https logo URLs and falls back to the brand logo', () => {
+    const theme = parseWorkspaceFormTheme({
+      logoMode: 'custom',
+      logoUrl: 'http://example.com/logo.png',
+    });
+    expect(theme.logoUrl).toBeNull();
+    expect(theme.logoMode).toBe('brand');
+  });
+
+  it('ignores unknown font and corner values', () => {
+    const theme = parseWorkspaceFormTheme({
+      fontFamily: 'comic',
+      cornerStyle: 'blob',
+    });
+    expect(theme.fontFamily).toBe('default');
+    expect(theme.cornerStyle).toBe('soft');
   });
 });

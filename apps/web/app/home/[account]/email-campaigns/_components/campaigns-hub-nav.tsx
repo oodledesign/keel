@@ -14,6 +14,11 @@ const TABS = [
     path: 'accountEmailCampaignAudiences',
   },
   {
+    key: 'forms',
+    label: 'Sign-up forms',
+    path: 'accountEmailCampaignForms',
+  },
+  {
     key: 'contacts',
     label: 'Contacts',
     path: 'accountEmailCampaignContacts',

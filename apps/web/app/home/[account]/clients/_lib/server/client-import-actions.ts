@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { z } from 'zod';
 
 import { enhanceAction } from '@kit/next/actions';
@@ -18,11 +20,26 @@ import {
   validateClientImportDraft,
 } from '~/lib/clients/client-import';
 import {
+  buildClientsExportCsv,
+  extractCustomValues,
+  normalizeCustomMapping,
+  suggestCustomFieldMapping,
+} from '~/lib/contacts/custom-fields-csv';
+import {
+  listContactCustomFields,
+  setContactCustomValues,
+} from '~/lib/contacts/custom-fields.service';
+import {
   type CsvFieldMapping,
   applyCsvColumnMapping,
 } from '~/lib/csv/rows-to-records';
 
 import { createClientsService } from './clients.service';
+
+function fromTable(client: SupabaseClient, table: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (client as any).from(table);
+}
 
 async function assertCanEditClients(accountId: string) {
   const service = createClientsService(getSupabaseServerClient());
@@ -134,6 +151,7 @@ function recordToDraft(
 
   return {
     ...base,
+    customFields: extractCustomValues(record),
     errors: validateClientImportDraft(base),
   };
 }
@@ -142,12 +160,23 @@ export const suggestClientImportMappingAction = enhanceAction(
   async (input) => {
     await assertCanEditClients(input.accountId);
 
-    return suggestClientCsvColumnMapping({
+    const client = getSupabaseServerClient();
+    const result = await suggestClientCsvColumnMapping({
       headers: input.headers,
       sampleRows: input.sampleRows,
       accountId: input.accountId,
-      supabase: getSupabaseServerClient(),
+      supabase: client,
     });
+    const definitions = await listContactCustomFields(client, input.accountId);
+
+    return {
+      ...result,
+      mapping: suggestCustomFieldMapping(
+        input.headers,
+        result.mapping,
+        definitions,
+      ),
+    };
   },
   { schema: suggestSchema },
 );
@@ -157,10 +186,11 @@ export const previewClientImportAction = enhanceAction(
     const client = getSupabaseServerClient();
     await assertCanEditClients(input.accountId);
 
+    const definitions = await listContactCustomFields(client, input.accountId);
     const records = applyCsvColumnMapping(
       input.headers,
       input.rows,
-      input.mapping as CsvFieldMapping,
+      normalizeCustomMapping(input.mapping as CsvFieldMapping, definitions),
     );
 
     const drafts = records.map((record, index) => recordToDraft(index, record));
@@ -211,10 +241,11 @@ export const commitClientImportAction = enhanceAction(
     const service = createClientsService(client);
     await assertCanEditClients(input.accountId);
 
+    const definitions = await listContactCustomFields(client, input.accountId);
     const records = applyCsvColumnMapping(
       input.headers,
       input.rows,
-      input.mapping as CsvFieldMapping,
+      normalizeCustomMapping(input.mapping as CsvFieldMapping, definitions),
     );
     const drafts = records.map((record, index) => recordToDraft(index, record));
 
@@ -240,6 +271,19 @@ export const commitClientImportAction = enhanceAction(
         clientType: (row.client_type as string | null) ?? null,
       }),
     );
+
+    const saveCustomValues = async (
+      clientId: string,
+      values: Record<string, string> | undefined,
+    ) => {
+      if (!values || Object.keys(values).length === 0) return;
+      await setContactCustomValues(client, {
+        accountId: input.accountId,
+        clientId,
+        values,
+        definitions,
+      });
+    };
 
     let imported = 0;
     let updated = 0;
@@ -275,6 +319,7 @@ export const commitClientImportAction = enhanceAction(
             continue;
           }
 
+          const overwriteId = match.existing.id;
           await service.updateClient({
             accountId: input.accountId,
             clientId: match.existing.id,
@@ -289,11 +334,12 @@ export const commitClientImportAction = enhanceAction(
             postcode: draft.postcode,
             country: draft.country,
           });
+          await saveCustomValues(overwriteId, draft.customFields);
           updated += 1;
           continue;
         }
 
-        await service.createClient({
+        const created = await service.createClient({
           accountId: input.accountId,
           client_type: draft.clientType,
           first_name: draft.firstName ?? undefined,
@@ -317,6 +363,14 @@ export const commitClientImportAction = enhanceAction(
               }
             : undefined,
         });
+        const createdId = (created as { id?: string } | null)?.id;
+        if (createdId) {
+          await saveCustomValues(createdId, draft.customFields);
+        } else if (Object.keys(draft.customFields ?? {}).length > 0) {
+          throw new Error(
+            'Client created but custom fields could not be saved',
+          );
+        }
         imported += 1;
       } catch (err) {
         failed.push({
@@ -336,4 +390,37 @@ export const commitClientImportAction = enhanceAction(
     return { imported, updated, skipped, failed };
   },
   { schema: commitSchema },
+);
+
+export const exportClientsCsvAction = enhanceAction(
+  async (input) => {
+    await assertCanEditClients(input.accountId);
+    const client = getSupabaseServerClient();
+    const definitions = await listContactCustomFields(client, input.accountId);
+
+    const rows: Parameters<typeof buildClientsExportCsv>[0] = [];
+    const pageSize = 1000;
+    for (let from = 0; ; from += pageSize) {
+      // RLS limits this to workspaces the caller belongs to.
+      const { data, error } = await fromTable(client, 'clients')
+        .select(
+          'client_type, company_name, first_name, last_name, email, phone, address_line_1, address_line_2, city, postcode, country, custom_fields',
+        )
+        .eq('account_id', input.accountId)
+        .is('archived_at', null)
+        .order('id', { ascending: true })
+        .range(from, from + pageSize - 1);
+      if (error) throw new Error(error.message);
+      const page = (data ?? []) as typeof rows;
+      rows.push(...page);
+      if (page.length < pageSize) break;
+    }
+
+    return {
+      filename: 'ozer-clients-export.csv',
+      csv: buildClientsExportCsv(rows, definitions),
+      count: rows.length,
+    };
+  },
+  { schema: z.object({ accountId: z.string().uuid() }) },
 );

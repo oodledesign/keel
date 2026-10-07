@@ -1,6 +1,8 @@
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
 import { hasCampaignsGrowthFeatures } from '~/lib/billing/campaign-pricing';
+import { listContactCustomFields } from '~/lib/contacts/custom-fields.service';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
@@ -20,6 +22,10 @@ async function NewAudienceListPage({ params }: NewAudienceListPageProps) {
   const workspace = await loadTeamWorkspace(accountSlug);
   const data = await loadCampaignAudienceEditor(workspace.account.id);
   const growth = hasCampaignsGrowthFeatures(data.snapshot.planTier);
+  const customFields = await listContactCustomFields(
+    getSupabaseServerClient(),
+    workspace.account.id,
+  );
 
   return (
     <>
@@ -41,6 +47,7 @@ async function NewAudienceListPage({ params }: NewAudienceListPageProps) {
           categories={data.categories}
           contacts={data.contacts}
           allowLogicFilters={growth}
+          customFields={customFields}
         />
       </PageBody>
     </>

@@ -11,10 +11,22 @@ import {
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
+import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
+import {
+  type ContactCustomFieldDefinition,
+  contactFieldTypeForFormField,
+} from '~/lib/contacts/custom-fields';
 import {
   type WorkspaceFormField,
   type WorkspaceFormFieldType,
@@ -27,6 +39,7 @@ import {
   workspaceTextMuted,
 } from '~/lib/workspace-ui';
 
+import { createContactCustomFieldAction } from '../../clients/_lib/server/custom-fields-actions';
 import { FormFieldTypePicker } from './form-field-type-picker';
 import { FormQuestionLogic } from './form-question-logic';
 
@@ -51,7 +64,39 @@ type Props = {
   onRemove: () => void;
   logicEnabled?: boolean;
   formsMode?: WorkspaceFormsMode;
+  /** Mailing-list forms only: contact fields answers can be saved to. */
+  contactFields?: ContactCustomFieldDefinition[] | null;
+  accountId?: string;
+  onContactFieldCreated?: (definition: ContactCustomFieldDefinition) => void;
 };
+
+const CONTACT_MAPPABLE_EXCLUDED_TYPES = new Set([
+  'name',
+  'email',
+  'phone',
+  'message',
+  'hidden',
+  'file',
+]);
+const BUILT_IN_KEYS = new Set([
+  'name',
+  'email',
+  'phone',
+  'message',
+  'company',
+  'company_name',
+  'marketing_opt_in',
+  'listing_id',
+  'sector',
+  'tenure',
+  'location_text',
+  'search_radius_miles',
+  'size_min_sqft',
+  'size_max_sqft',
+  'use_class',
+  'budget_min',
+  'budget_max',
+]);
 
 export function FormQuestionCard({
   field,
@@ -70,7 +115,37 @@ export function FormQuestionCard({
   onRemove,
   logicEnabled = true,
   formsMode = 'full',
+  contactFields = null,
+  accountId,
+  onContactFieldCreated,
 }: Props) {
+  const canMapToContact =
+    contactFields != null &&
+    Boolean(accountId) &&
+    !CONTACT_MAPPABLE_EXCLUDED_TYPES.has(field.type) &&
+    !BUILT_IN_KEYS.has(field.key);
+
+  async function createContactField() {
+    if (!accountId) return;
+    try {
+      const { definition } = await createContactCustomFieldAction({
+        accountId,
+        label: field.label.trim() || field.key,
+        fieldType: contactFieldTypeForFormField(field.type),
+        options: field.options,
+      });
+      onContactFieldCreated?.(definition);
+      onChange({ contactFieldKey: definition.key });
+      toast.success(`Contact field "${definition.label}" created`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Could not create contact field',
+      );
+    }
+  }
+
   return (
     <div
       onClick={onActivate}
@@ -223,6 +298,49 @@ export function FormQuestionCard({
             placeholder="Optional — shown under the question on the public form"
             data-test="form-field-help-text"
           />
+        </div>
+      ) : null}
+
+      {canMapToContact ? (
+        <div className="mt-3 grid gap-1.5" data-test="form-contact-field-map">
+          <Label>Save answer to contact field</Label>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={field.contactFieldKey ?? '__none__'}
+              onValueChange={(value) =>
+                onChange({
+                  contactFieldKey: value === '__none__' ? undefined : value,
+                })
+              }
+            >
+              <SelectTrigger className="w-60">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">
+                  Submission only (not on contact)
+                </SelectItem>
+                {contactFields.map((definition) => (
+                  <SelectItem key={definition.key} value={definition.key}>
+                    {definition.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {!field.contactFieldKey ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void createContactField();
+                }}
+              >
+                Create contact field from this question
+              </Button>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

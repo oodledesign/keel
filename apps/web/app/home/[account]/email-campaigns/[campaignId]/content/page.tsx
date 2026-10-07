@@ -1,10 +1,14 @@
 import { notFound } from 'next/navigation';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
+
 import { campaignTemplateWorkspaceFromProfile } from '~/lib/campaigns/templates';
+import { listContactCustomFields } from '~/lib/contacts/custom-fields.service';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { CampaignContentPanel } from '../../_components/campaign-content-panel';
+import { CampaignMergeFieldsProvider } from '../../_components/campaign-merge-fields-context';
 import { loadCampaignDetail } from '../../_lib/server/campaigns.loader';
 
 interface CampaignContentPageProps {
@@ -26,17 +30,24 @@ async function CampaignContentPage({ params }: CampaignContentPageProps) {
     notFound();
   }
 
+  const customFields = await listContactCustomFields(
+    getSupabaseServerClient(),
+    workspace.account.id,
+  );
+
   return (
-    <CampaignContentPanel
-      accountId={workspace.account.id}
-      accountSlug={account}
-      campaign={data.campaign}
-      brand={data.brand}
-      publishedForms={data.publishedForms}
-      workspace={campaignTemplateWorkspaceFromProfile(
-        workspace.workspaceProfile,
-      )}
-    />
+    <CampaignMergeFieldsProvider customFields={customFields}>
+      <CampaignContentPanel
+        accountId={workspace.account.id}
+        accountSlug={account}
+        campaign={data.campaign}
+        brand={data.brand}
+        publishedForms={data.publishedForms}
+        workspace={campaignTemplateWorkspaceFromProfile(
+          workspace.workspaceProfile,
+        )}
+      />
+    </CampaignMergeFieldsProvider>
   );
 }
 

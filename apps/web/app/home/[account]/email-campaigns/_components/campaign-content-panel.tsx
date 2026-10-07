@@ -11,6 +11,7 @@ import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import { UnsavedChangesGuard } from '~/components/unsaved-changes-guard';
 import pathsConfig from '~/config/paths.config';
 import {
   type CampaignDocument,
@@ -25,6 +26,7 @@ import {
 import { mergeValuesForRecipient } from '~/lib/campaigns/merge-fields';
 import { previewCampaignHtml } from '~/lib/campaigns/preview-campaign-html';
 import type { CampaignTemplateWorkspace } from '~/lib/campaigns/templates';
+import { useFormDirtyState } from '~/lib/hooks/use-unsaved-changes-warning';
 import { MOBILE_FLOATING_CHROME_ABOVE } from '~/lib/mobile-nav/mobile-floating-chrome';
 import {
   workspaceBtnPrimary,
@@ -37,6 +39,7 @@ import {
   CampaignFormLinkCard,
   type CampaignFormOption,
 } from './campaign-form-link-card';
+import { useCampaignCustomFields } from './campaign-merge-fields-context';
 import { CampaignPreviewDialog } from './campaign-preview-dialog';
 import { CampaignTemplateGallery } from './campaign-template-gallery';
 
@@ -65,6 +68,7 @@ export function CampaignContentPanel({
   workspace: CampaignTemplateWorkspace;
 }) {
   const router = useRouter();
+  const customFields = useCampaignCustomFields();
   const editable =
     campaign.status === 'draft' || campaign.status === 'scheduled';
   const [document, setDocument] = useState<CampaignDocument>(() =>
@@ -79,6 +83,10 @@ export function CampaignContentPanel({
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const { isDirty, markClean } = useFormDirtyState(
+    { document, subject, previewText, name },
+    { enabled: editable },
+  );
 
   const useTemplateLabel =
     !subject.trim() && name === 'Untitled campaign'
@@ -93,13 +101,16 @@ export function CampaignContentPanel({
         merge: mergeValuesForRecipient({
           displayName: 'Alex Taylor',
           email: 'alex@example.com',
+          customFields: Object.fromEntries(
+            customFields.map((field) => [field.key, `[${field.label}]`]),
+          ),
           formUrl: formUrlForMerge({
             formLink: document.formLink,
             recipientEmail: 'alex@example.com',
           }),
         }),
       }),
-    [brand, document],
+    [brand, document, customFields],
   );
 
   const sendHref = pathsConfig.app.accountEmailCampaignSend
@@ -119,6 +130,13 @@ export function CampaignContentPanel({
 
   return (
     <div className="space-y-6 pb-28">
+      <UnsavedChangesGuard
+        isDirty={isDirty}
+        onSave={async () => {
+          await save();
+          markClean();
+        }}
+      />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           Build the email with blocks, form links, and templates. Preview opens
@@ -225,6 +243,7 @@ export function CampaignContentPanel({
                 startTransition(async () => {
                   try {
                     await save();
+                    markClean();
                     toast.success('Content saved');
                     router.refresh();
                   } catch (error) {
@@ -249,6 +268,7 @@ export function CampaignContentPanel({
                 try {
                   if (editable) {
                     await save();
+                    markClean();
                   }
                   setPreviewOpen(true);
                   router.refresh();

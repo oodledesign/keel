@@ -24,6 +24,8 @@ type Props = {
   forms: WorkspaceFormRecord[];
   showListingDestination: boolean;
   formsMode: WorkspaceFormsMode;
+  /** mailing_list = campaign sign-up forms (Campaigns › Sign-up forms). */
+  scope?: 'all' | 'mailing_list';
 };
 
 export function FormsList({
@@ -32,8 +34,13 @@ export function FormsList({
   forms,
   showListingDestination,
   formsMode,
+  scope = 'all',
 }: Props) {
-  const audienceOnly = formsMode === 'audience';
+  const audienceOnly = formsMode === 'audience' || scope === 'mailing_list';
+  const detailPath =
+    scope === 'mailing_list'
+      ? pathsConfig.app.accountEmailCampaignFormDetail
+      : pathsConfig.app.accountFormDetail;
 
   return (
     <div className="space-y-6 px-4 py-6 lg:px-8">
@@ -48,6 +55,7 @@ export function FormsList({
           accountSlug={accountSlug}
           showListingDestination={showListingDestination}
           formsMode={formsMode}
+          scope={scope}
         />
       </div>
 
@@ -66,7 +74,7 @@ export function FormsList({
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {forms.map((form) => {
-            const href = pathsConfig.app.accountFormDetail
+            const href = detailPath
               .replace('[account]', accountSlug)
               .replace('[formId]', form.id);
 

@@ -1,10 +1,9 @@
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
 
-import { CookieBanner } from '@kit/ui/cookie-banner';
 import { cn } from '@kit/ui/utils';
 
 import { AppToaster } from '~/components/app-toaster';
-import { GoogleAnalytics } from '~/components/google-analytics';
+import { ConsentChrome } from '~/components/consent-chrome';
 import { PwaRegister } from '~/components/pwa-register';
 import { RootProviders } from '~/components/root-providers';
 import { TextSizeSync } from '~/components/text-size-sync';
@@ -57,8 +56,7 @@ export default async function RootLayout({
           {children}
         </RootProviders>
         <PwaRegister />
-        <CookieBanner />
-        <GoogleAnalytics />
+        <ConsentChrome />
 
         <AppToaster />
       </body>

@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { randomBytes } from 'crypto';
 
 import { isUsableMailingListUnsubscribeToken } from '~/lib/campaigns/campaign-test-send';
+import { loadCustomValuesByEmail } from '~/lib/contacts/custom-fields.service';
 import {
   type PublicMailingPreferenceResult,
   type WorkspaceMailingLawfulBasis,
@@ -21,6 +22,7 @@ import {
 import {
   type AudienceFilterSubject,
   applyAudienceFilters,
+  audienceFilterRulesUseCustomFields,
   parseAudienceListFilters,
 } from './campaign-audience-filters';
 import { loadListOptOutEmails } from './campaign-list-preferences';
@@ -487,6 +489,16 @@ export async function resolveCampaignAudience(
     }
 
     if (list.source !== 'manual') {
+      if (audienceFilterRulesUseCustomFields(filters)) {
+        const customByEmail = await loadCustomValuesByEmail(
+          client,
+          accountId,
+          subjects.map((subject) => subject.email),
+        );
+        for (const subject of subjects) {
+          subject.customFields = customByEmail.get(subject.email.toLowerCase());
+        }
+      }
       const matched = applyAudienceFilters(subjects, filters);
       for (const row of matched) {
         const extra = row as (typeof subjects)[number];

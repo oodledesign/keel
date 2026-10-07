@@ -10,6 +10,7 @@ import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
+import { UnsavedChangesGuard } from '~/components/unsaved-changes-guard';
 import pathsConfig from '~/config/paths.config';
 import { campaignHasSendHistory } from '~/lib/campaigns/campaign-delete';
 import {
@@ -27,6 +28,7 @@ import type {
   EmailCampaign,
   EmailCampaignSeries,
 } from '~/lib/campaigns/campaign.types';
+import { useFormDirtyState } from '~/lib/hooks/use-unsaved-changes-warning';
 import {
   workspaceBtnPrimary,
   workspacePanelCard,
@@ -71,9 +73,38 @@ export function CampaignSeriesDetail({
   const [timezone, setTimezone] = useState(series.timezone);
   const [generateAhead, setGenerateAhead] = useState(series.generateAhead);
   const [subject, setSubject] = useState(series.subject);
+  const saveSeries = () =>
+    updateCampaignSeriesAction({
+      accountId,
+      accountSlug,
+      seriesId: series.id,
+      name,
+      timezone,
+      recurrenceByWeekday: weekday,
+      sendHour,
+      sendMinute,
+      generateAhead,
+      subject,
+    });
+  const { isDirty, markClean } = useFormDirtyState({
+    name,
+    weekday,
+    sendHour,
+    sendMinute,
+    timezone,
+    generateAhead,
+    subject,
+  });
 
   return (
     <div className="space-y-6">
+      <UnsavedChangesGuard
+        isDirty={isDirty}
+        onSave={async () => {
+          await saveSeries();
+          markClean();
+        }}
+      />
       <div className={`${workspacePanelCard} space-y-4 p-4`}>
         <div>
           <h2 className={`font-semibold ${workspaceText}`}>Series settings</h2>
@@ -184,6 +215,7 @@ export function CampaignSeriesDetail({
                     generateAhead,
                     subject,
                   });
+                  markClean();
                   toast.success('Series updated');
                   router.refresh();
                 } catch (error) {

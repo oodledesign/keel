@@ -181,7 +181,12 @@ export function FormSharePanel({
       {enabled ? (
         <div className="space-y-4">
           <div className="grid gap-1.5">
-            <Label>Public link</Label>
+            <Label>Landing page link</Label>
+            <p className={`text-xs ${workspaceTextMuted}`}>
+              A standalone, hosted page for this form with your logo, intro and
+              branding. Link to it from emails, social posts or QR codes — or
+              use the inline and popup embeds below on your own site.
+            </p>
             <div className="flex flex-wrap gap-2">
               <code className="block min-w-0 flex-1 truncate rounded-md bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5 text-xs">
                 {listingUrl}

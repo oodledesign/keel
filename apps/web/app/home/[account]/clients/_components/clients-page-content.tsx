@@ -7,6 +7,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import {
   Archive,
+  Download,
   LayoutGrid,
   Linkedin,
   List,
@@ -39,6 +40,7 @@ import type {
   ContactsViewCounts,
   ContactsViewState,
 } from '../_lib/contacts-view';
+import { exportClientsCsvAction } from '../_lib/server/client-import-actions';
 import {
   listClientsOverview,
   pauseClientsCirculation,
@@ -242,6 +244,30 @@ export function ClientsPageContent({
     '[account]',
     accountSlug,
   );
+
+  const [exporting, setExporting] = useState(false);
+
+  const exportCsv = async () => {
+    setExporting(true);
+    try {
+      const result = await exportClientsCsvAction({ accountId });
+      const url = URL.createObjectURL(
+        new Blob([result.csv], { type: 'text/csv;charset=utf-8' }),
+      );
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = result.filename;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${result.count} clients`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Could not export clients',
+      );
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createFormInitialValues, setCreateFormInitialValues] = useState<
@@ -664,6 +690,17 @@ export function ClientsPageContent({
                 <Upload className="mr-1.5 h-3.5 w-3.5" />
                 Import CSV
               </Link>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-xs text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)]"
+              disabled={exporting}
+              onClick={() => void exportCsv()}
+              data-test="export-clients-csv-button"
+            >
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              {exporting ? 'Exporting…' : 'Export CSV'}
             </Button>
             {showLinkedInImport ? (
               <Button

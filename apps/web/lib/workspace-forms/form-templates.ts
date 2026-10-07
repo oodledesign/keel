@@ -7,7 +7,10 @@ import {
   type WorkspaceFormField,
   defaultWorkspaceFormFields,
 } from './form-fields';
-import type { WorkspaceFormTheme } from './form-theme';
+import {
+  DEFAULT_WORKSPACE_FORM_THEME,
+  type WorkspaceFormTheme,
+} from './form-theme';
 import type { WorkspaceFormsMode } from './forms-mode';
 
 export const WORKSPACE_FORM_TEMPLATES = [
@@ -192,12 +195,8 @@ export function workspaceFormCreateDefaultsForTemplate(
     defaultName: meta.defaultName,
     suggestedDestination: meta.suggestedDestination,
     theme: {
-      pageBackground: 'light',
+      ...DEFAULT_WORKSPACE_FORM_THEME,
       layout: isRsvp ? 'event' : 'standard',
-      layoutExplicit: false,
-      presentation: 'classic',
-      primaryColor: null,
-      accentColor: null,
     },
     eventAddress: null,
     eventDate: null,

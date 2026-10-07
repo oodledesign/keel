@@ -45,6 +45,7 @@ import {
 } from '~/lib/campaigns/render-campaign-html';
 import { resolveCampaignReplyTo } from '~/lib/campaigns/resolve-campaign-reply-to';
 import { sendCampaignEmailViaSes } from '~/lib/campaigns/send-campaign-email';
+import { loadCustomValuesByEmail } from '~/lib/contacts/custom-fields.service';
 import {
   SendingDomainError,
   emailDomainOf,
@@ -1544,6 +1545,12 @@ class CampaignsService {
           ],
         );
 
+        const customByEmail = await loadCustomValuesByEmail(
+          admin,
+          input.accountId,
+          claimed.recipients.map((recipient) => recipient.email),
+        );
+
         const outcome = await deliverClaimedRecipients({
           recipients: claimed.recipients,
           settings,
@@ -1553,6 +1560,7 @@ class CampaignsService {
             const merge = mergeValuesForRecipient({
               displayName: recipient.displayName,
               email: recipient.email,
+              customFields: customByEmail.get(recipient.email.toLowerCase()),
               formUrl: formUrlForMerge({
                 formLink: campaign.bodyDocument?.formLink,
                 recipientEmail: recipient.email,
@@ -1749,6 +1757,12 @@ class CampaignsService {
     let lastSubject = subjectTemplate;
     const errors: string[] = [];
 
+    const customByEmail = await loadCustomValuesByEmail(
+      this.client,
+      input.accountId,
+      emails,
+    );
+
     for (const email of emails) {
       const displayName =
         input.displayNames?.[email]?.trim() ||
@@ -1759,6 +1773,7 @@ class CampaignsService {
         const merge = mergeValuesForRecipient({
           displayName,
           email,
+          customFields: customByEmail.get(email.toLowerCase()),
           formUrl: formUrlForMerge({
             formLink: campaign.bodyDocument?.formLink,
             recipientEmail: email,

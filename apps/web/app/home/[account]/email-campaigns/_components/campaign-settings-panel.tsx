@@ -12,6 +12,7 @@ import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
+import { UnsavedChangesGuard } from '~/components/unsaved-changes-guard';
 import pathsConfig from '~/config/paths.config';
 import { hasCampaignsGrowthFeatures } from '~/lib/billing/campaign-pricing';
 import {
@@ -33,6 +34,7 @@ import type {
   CampaignAudienceList,
   EmailCampaign,
 } from '~/lib/campaigns/campaign.types';
+import { useFormDirtyState } from '~/lib/hooks/use-unsaved-changes-warning';
 import {
   workspaceBtnPrimary,
   workspacePanelCard,
@@ -119,6 +121,23 @@ export function CampaignSettingsPanel({
   );
   const growth = hasCampaignsGrowthFeatures(usage.planTier);
   const [pending, startTransition] = useTransition();
+  const { isDirty, markClean } = useFormDirtyState(
+    {
+      name,
+      subject,
+      subjectB,
+      abEnabled,
+      abSplitPercent,
+      previewText,
+      fromName,
+      fromEmail,
+      replyTo,
+      audienceType,
+      audienceConfig,
+      scheduledTimezone,
+    },
+    { enabled: editable },
+  );
 
   const contentHref = pathsConfig.app.accountEmailCampaignContent
     .replace('[account]', accountSlug)
@@ -180,6 +199,13 @@ export function CampaignSettingsPanel({
 
   return (
     <div className="space-y-6">
+      <UnsavedChangesGuard
+        isDirty={isDirty}
+        onSave={async () => {
+          await saveSettings();
+          markClean();
+        }}
+      />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="campaign-name">Internal name</Label>
@@ -336,6 +362,7 @@ export function CampaignSettingsPanel({
                   startTransition(async () => {
                     try {
                       await saveSettings();
+                      markClean();
                       await scheduleCampaignAction({
                         accountId,
                         accountSlug,
@@ -413,6 +440,7 @@ export function CampaignSettingsPanel({
               startTransition(async () => {
                 try {
                   await saveSettings();
+                  markClean();
                   toast.success(
                     campaignAudienceListMissing(audienceType, audienceConfig)
                       ? 'Draft saved. Pick a list (or create one) before sending.'

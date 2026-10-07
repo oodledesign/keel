@@ -20,6 +20,42 @@ export const WORKSPACE_FORM_PRESENTATIONS = ['classic', 'steps'] as const;
 export type WorkspaceFormPresentation =
   (typeof WORKSPACE_FORM_PRESENTATIONS)[number];
 
+export const WORKSPACE_FORM_FONTS = [
+  'default',
+  'serif',
+  'rounded',
+  'mono',
+] as const;
+
+export type WorkspaceFormFont = (typeof WORKSPACE_FORM_FONTS)[number];
+
+export const WORKSPACE_FORM_CORNER_STYLES = ['soft', 'sharp', 'round'] as const;
+
+export type WorkspaceFormCornerStyle =
+  (typeof WORKSPACE_FORM_CORNER_STYLES)[number];
+
+export const WORKSPACE_FORM_LOGO_MODES = ['brand', 'custom', 'none'] as const;
+
+export type WorkspaceFormLogoMode = (typeof WORKSPACE_FORM_LOGO_MODES)[number];
+
+export const WORKSPACE_FORM_CUSTOM_CSS_MAX = 4000;
+
+export const WORKSPACE_FORM_FONT_LABELS: Record<WorkspaceFormFont, string> = {
+  default: 'Default',
+  serif: 'Serif',
+  rounded: 'Rounded',
+  mono: 'Monospace',
+};
+
+export const WORKSPACE_FORM_CORNER_LABELS: Record<
+  WorkspaceFormCornerStyle,
+  string
+> = {
+  soft: 'Soft (default)',
+  sharp: 'Sharp',
+  round: 'Extra round',
+};
+
 export type WorkspaceFormTheme = {
   pageBackground: WorkspaceFormPageBackground;
   layout: WorkspaceFormLayout;
@@ -31,6 +67,15 @@ export type WorkspaceFormTheme = {
   primaryColor: string | null;
   /** Form-level override; null uses workspace brand accent (buttons). */
   accentColor: string | null;
+  /** Solid page colour (used with the light page background). */
+  backgroundColor: string | null;
+  fontFamily: WorkspaceFormFont;
+  cornerStyle: WorkspaceFormCornerStyle;
+  /** brand = workspace logo, custom = logoUrl below, none = hide. */
+  logoMode: WorkspaceFormLogoMode;
+  logoUrl: string | null;
+  /** Scoped to the public form only; validated in form-custom-css.ts. */
+  customCss: string;
 };
 
 export const DEFAULT_WORKSPACE_FORM_THEME: WorkspaceFormTheme = {
@@ -40,6 +85,12 @@ export const DEFAULT_WORKSPACE_FORM_THEME: WorkspaceFormTheme = {
   presentation: 'classic',
   primaryColor: null,
   accentColor: null,
+  backgroundColor: null,
+  fontFamily: 'default',
+  cornerStyle: 'soft',
+  logoMode: 'brand',
+  logoUrl: null,
+  customCss: '',
 };
 
 export const WORKSPACE_FORM_LAYOUT_LABELS: Record<
@@ -95,6 +146,28 @@ export function parseThemeHex(raw: unknown): string | null {
   const value = raw.trim();
   if (!HEX_RE.test(value)) return null;
   return expandHex(value).toLowerCase();
+}
+
+/** https-only logo URL; anything else is dropped. */
+export function parseThemeLogoUrl(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const value = raw.trim();
+  if (!value || value.length > 500) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function resolveFormLogoUrl(
+  theme: Pick<WorkspaceFormTheme, 'logoMode' | 'logoUrl'>,
+  brandLogoUrl: string | null,
+): string | null {
+  if (theme.logoMode === 'none') return null;
+  if (theme.logoMode === 'custom') return theme.logoUrl ?? brandLogoUrl;
+  return brandLogoUrl;
 }
 
 export function resolveFormThemeColors(
@@ -178,8 +251,35 @@ export function parseWorkspaceFormTheme(raw: unknown): WorkspaceFormTheme {
     (raw as { pageBackground?: unknown }).pageBackground === 'brand_gradient'
       ? 'brand_gradient'
       : 'light';
+  const record = raw as Record<string, unknown>;
+  const fontFamily = (WORKSPACE_FORM_FONTS as readonly unknown[]).includes(
+    record.fontFamily,
+  )
+    ? (record.fontFamily as WorkspaceFormFont)
+    : 'default';
+  const cornerStyle = (
+    WORKSPACE_FORM_CORNER_STYLES as readonly unknown[]
+  ).includes(record.cornerStyle)
+    ? (record.cornerStyle as WorkspaceFormCornerStyle)
+    : 'soft';
+  const logoUrl = parseThemeLogoUrl(record.logoUrl);
+  const logoMode = (WORKSPACE_FORM_LOGO_MODES as readonly unknown[]).includes(
+    record.logoMode,
+  )
+    ? (record.logoMode as WorkspaceFormLogoMode)
+    : 'brand';
+  const customCss =
+    typeof record.customCss === 'string'
+      ? record.customCss.slice(0, WORKSPACE_FORM_CUSTOM_CSS_MAX)
+      : '';
   return {
     pageBackground,
+    backgroundColor: parseThemeHex(record.backgroundColor),
+    fontFamily,
+    cornerStyle,
+    logoMode: logoMode === 'custom' && !logoUrl ? 'brand' : logoMode,
+    logoUrl,
+    customCss,
     layout: readStoredLayout(raw) ?? 'standard',
     layoutExplicit:
       (raw as { layoutExplicit?: unknown }).layoutExplicit === true,
@@ -265,5 +365,11 @@ export function serializeWorkspaceFormTheme(
     presentation: parsed.presentation,
     primaryColor: parsed.primaryColor,
     accentColor: parsed.accentColor,
+    backgroundColor: parsed.backgroundColor,
+    fontFamily: parsed.fontFamily,
+    cornerStyle: parsed.cornerStyle,
+    logoMode: parsed.logoMode,
+    logoUrl: parsed.logoUrl,
+    customCss: parsed.customCss,
   };
 }

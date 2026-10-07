@@ -16,7 +16,33 @@ export const AUDIENCE_FILTER_FIELDS = [
   'has_company',
 ] as const;
 
-export type AudienceFilterField = (typeof AUDIENCE_FILTER_FIELDS)[number];
+export type BuiltInAudienceFilterField =
+  (typeof AUDIENCE_FILTER_FIELDS)[number];
+
+/** Contact custom field rule, e.g. `custom:budget`. */
+export type CustomAudienceFilterField = `custom:${string}`;
+
+export type AudienceFilterField =
+  | BuiltInAudienceFilterField
+  | CustomAudienceFilterField;
+
+const CUSTOM_FILTER_FIELD_RE = /^custom:[a-z][a-z0-9_]{0,59}$/;
+
+export function customFilterField(key: string): CustomAudienceFilterField {
+  return `custom:${key}`;
+}
+
+export function isCustomFilterField(
+  field: string,
+): field is CustomAudienceFilterField {
+  return CUSTOM_FILTER_FIELD_RE.test(field);
+}
+
+export function audienceFilterRulesUseCustomFields(
+  filters: AudienceListFilters,
+): boolean {
+  return filters.rules.some((rule) => isCustomFilterField(rule.field));
+}
 
 export const AUDIENCE_FILTER_OPS = ['eq', 'contains', 'gte', 'in'] as const;
 
@@ -32,7 +58,12 @@ export const AUDIENCE_LIST_SOURCES = [
 export type AudienceListSource = (typeof AUDIENCE_LIST_SOURCES)[number];
 
 export const AudienceFilterRuleSchema = z.object({
-  field: z.enum(AUDIENCE_FILTER_FIELDS),
+  field: z.union([
+    z.enum(AUDIENCE_FILTER_FIELDS),
+    z.custom<CustomAudienceFilterField>(
+      (value) => typeof value === 'string' && isCustomFilterField(value),
+    ),
+  ]),
   op: z.enum(AUDIENCE_FILTER_OPS),
   value: z.string().trim().max(200),
 });
@@ -47,22 +78,24 @@ export const AudienceListFiltersSchema = z.object({
 
 export type AudienceListFilters = z.infer<typeof AudienceListFiltersSchema>;
 
-export const AUDIENCE_FILTER_FIELD_LABEL: Record<AudienceFilterField, string> =
-  {
-    category: 'Category',
-    industry: 'Industry',
-    email_domain: 'Email domain',
-    email: 'Email contains',
-    display_name: 'Name contains',
-    subscribed_after: 'Subscribed after',
-    created_after: 'Created after',
-    client_type: 'Client type',
-    has_company: 'Has company name',
-  };
+export const AUDIENCE_FILTER_FIELD_LABEL: Record<
+  BuiltInAudienceFilterField,
+  string
+> = {
+  category: 'Category',
+  industry: 'Industry',
+  email_domain: 'Email domain',
+  email: 'Email contains',
+  display_name: 'Name contains',
+  subscribed_after: 'Subscribed after',
+  created_after: 'Created after',
+  client_type: 'Client type',
+  has_company: 'Has company name',
+};
 
 export const AUDIENCE_FILTER_FIELD_GROUPS: Array<{
   label: string;
-  fields: AudienceFilterField[];
+  fields: BuiltInAudienceFilterField[];
 }> = [
   { label: 'Categories', fields: ['category'] },
   { label: 'Industry', fields: ['industry'] },
@@ -142,7 +175,48 @@ export type AudienceFilterSubject = {
   industry?: string | null;
   categoryIds?: string[];
   categoryNames?: string[];
+  /** Contact custom field values keyed by field key. */
+  customFields?: Record<string, unknown>;
 };
+
+function customValueText(value: unknown): string {
+  if (typeof value === 'boolean') return value ? 'yes' : 'no';
+  if (value === null || value === undefined) return '';
+  return String(value).trim().toLowerCase();
+}
+
+function matchesCustomRule(
+  subject: AudienceFilterSubject,
+  key: string,
+  rule: AudienceFilterRule,
+): boolean {
+  const actual = customValueText(subject.customFields?.[key]);
+  if (!actual) return false;
+  const wanted = rule.value.trim().toLowerCase();
+  const truthy = (text: string) => ['yes', 'true', '1'].includes(text);
+  const falsy = (text: string) => ['no', 'false', '0'].includes(text);
+
+  switch (rule.op) {
+    case 'contains':
+      return actual.includes(wanted);
+    case 'in':
+      return splitFilterList(rule.value).includes(actual);
+    case 'gte': {
+      const a = Number(actual);
+      const w = Number(wanted);
+      if (Number.isFinite(a) && Number.isFinite(w)) return a >= w;
+      const at = Date.parse(actual);
+      const min = Date.parse(wanted);
+      return Number.isFinite(at) && Number.isFinite(min) && at >= min;
+    }
+    default:
+      return (
+        actual === wanted ||
+        (truthy(actual) && truthy(wanted)) ||
+        (falsy(actual) && falsy(wanted))
+      );
+  }
+}
 
 function domainOf(email: string): string {
   const at = email.lastIndexOf('@');
@@ -155,6 +229,10 @@ function matchesRule(
 ): boolean {
   const value = rule.value.trim().toLowerCase();
   if (!value) return true;
+
+  if (isCustomFilterField(rule.field)) {
+    return matchesCustomRule(subject, rule.field.slice('custom:'.length), rule);
+  }
 
   switch (rule.field) {
     case 'email_domain': {

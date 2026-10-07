@@ -55,6 +55,11 @@ export type WorkspaceFormField = {
    * field starts a new step. Set false to keep the next question on this step.
    */
   stepBreakAfter?: boolean;
+  /**
+   * Mailing-list forms: save this answer onto the contact's custom field with
+   * this key (see contact_custom_fields).
+   */
+  contactFieldKey?: string;
   /** Show this field only when a prior answer matches. */
   visibleWhen?: WorkspaceFormVisibleWhen;
   /** After this field is answered, optionally jump to another field or submit. */

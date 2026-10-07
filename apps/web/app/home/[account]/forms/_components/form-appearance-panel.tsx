@@ -7,15 +7,33 @@ import {
   RadioGroupItem,
   RadioGroupItemLabel,
 } from '@kit/ui/radio-group';
-
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
+import { Textarea } from '@kit/ui/textarea';
+
+import { validateFormCustomCss } from '~/lib/workspace-forms/form-custom-css';
+import {
+  WORKSPACE_FORM_CORNER_LABELS,
+  WORKSPACE_FORM_CORNER_STYLES,
+  WORKSPACE_FORM_CUSTOM_CSS_MAX,
+  WORKSPACE_FORM_FONTS,
+  WORKSPACE_FORM_FONT_LABELS,
   WORKSPACE_FORM_LAYOUTS,
   WORKSPACE_FORM_LAYOUT_LABELS,
+  WORKSPACE_FORM_LOGO_MODES,
   WORKSPACE_FORM_PAGE_BACKGROUNDS,
   WORKSPACE_FORM_PAGE_BACKGROUND_LABELS,
   WORKSPACE_FORM_PRESENTATIONS,
   WORKSPACE_FORM_PRESENTATION_LABELS,
+  type WorkspaceFormCornerStyle,
+  type WorkspaceFormFont,
   type WorkspaceFormLayout,
+  type WorkspaceFormLogoMode,
   type WorkspaceFormPageBackground,
   type WorkspaceFormPresentation,
   parseThemeHex,
@@ -32,7 +50,24 @@ type BrandColors = {
   accent: string;
 };
 
+export type FormBrandingValues = {
+  backgroundColor: string | null;
+  fontFamily: WorkspaceFormFont;
+  cornerStyle: WorkspaceFormCornerStyle;
+  logoMode: WorkspaceFormLogoMode;
+  logoUrl: string | null;
+  customCss: string;
+};
+
+const LOGO_MODE_LABELS: Record<WorkspaceFormLogoMode, string> = {
+  brand: 'Workspace logo',
+  custom: 'Custom logo URL',
+  none: 'No logo',
+};
+
 type Props = {
+  branding: FormBrandingValues;
+  onBranding: (patch: Partial<FormBrandingValues>) => void;
   formsMode: WorkspaceFormsMode;
   brandColors: BrandColors;
   pageBackground: WorkspaceFormPageBackground;
@@ -99,6 +134,8 @@ function ColorField({
 }
 
 export function FormAppearancePanel({
+  branding,
+  onBranding,
   formsMode,
   brandColors,
   pageBackground,
@@ -113,6 +150,7 @@ export function FormAppearancePanel({
   onAccentColor,
 }: Props) {
   const full = formsMode === 'full';
+  const cssError = validateFormCustomCss(branding.customCss);
 
   return (
     <section
@@ -180,6 +218,116 @@ export function FormAppearancePanel({
             );
           })}
         </RadioGroup>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2" data-test="form-branding">
+        <ColorField
+          label="Page colour"
+          description="Solid page background (when not using the brand gradient)."
+          value={branding.backgroundColor}
+          fallback="#FBF6EC"
+          onChange={(value) => onBranding({ backgroundColor: value })}
+          testId="form-background-color"
+        />
+        <div className="grid gap-1.5">
+          <Label>Font</Label>
+          <p className={`text-xs ${workspaceTextMuted}`}>
+            System fonts only, so the form stays fast on your website.
+          </p>
+          <Select
+            value={branding.fontFamily}
+            onValueChange={(value) =>
+              onBranding({ fontFamily: value as WorkspaceFormFont })
+            }
+          >
+            <SelectTrigger data-test="form-font">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {WORKSPACE_FORM_FONTS.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {WORKSPACE_FORM_FONT_LABELS[value]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid gap-1.5">
+          <Label>Corners</Label>
+          <Select
+            value={branding.cornerStyle}
+            onValueChange={(value) =>
+              onBranding({ cornerStyle: value as WorkspaceFormCornerStyle })
+            }
+          >
+            <SelectTrigger data-test="form-corner-style">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {WORKSPACE_FORM_CORNER_STYLES.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {WORKSPACE_FORM_CORNER_LABELS[value]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid gap-1.5">
+          <Label>Logo</Label>
+          <Select
+            value={branding.logoMode}
+            onValueChange={(value) =>
+              onBranding({ logoMode: value as WorkspaceFormLogoMode })
+            }
+          >
+            <SelectTrigger data-test="form-logo-mode">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {WORKSPACE_FORM_LOGO_MODES.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {LOGO_MODE_LABELS[value]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {branding.logoMode === 'custom' ? (
+            <Input
+              value={branding.logoUrl ?? ''}
+              placeholder="https://example.com/logo.png"
+              spellCheck={false}
+              onChange={(event) =>
+                onBranding({ logoUrl: event.target.value.trim() || null })
+              }
+              data-test="form-logo-url"
+            />
+          ) : null}
+        </div>
+      </div>
+
+      <div className="grid gap-1.5">
+        <Label>Custom CSS (optional)</Label>
+        <p className={`text-xs ${workspaceTextMuted}`}>
+          Applies to this form only. Target <code>.ozer-form-card</code>,{' '}
+          <code>.ozer-form-title</code>, <code>.ozer-form-submit</code>, or{' '}
+          <code>input</code>, <code>label</code>, <code>button</code>. External
+          resources (url(), @import) are blocked.
+        </p>
+        <Textarea
+          rows={7}
+          value={branding.customCss}
+          maxLength={WORKSPACE_FORM_CUSTOM_CSS_MAX}
+          spellCheck={false}
+          className="font-mono text-xs"
+          placeholder={`.ozer-form-title { letter-spacing: 0.02em; }\n.ozer-form-submit { text-transform: uppercase; }`}
+          onChange={(event) => onBranding({ customCss: event.target.value })}
+          data-test="form-custom-css"
+        />
+        {cssError ? (
+          <p className="text-xs text-red-600" role="alert">
+            {cssError}
+          </p>
+        ) : null}
       </div>
 
       {full ? (

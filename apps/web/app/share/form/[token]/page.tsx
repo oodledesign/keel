@@ -1,5 +1,6 @@
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { FormThemeStyle } from '~/components/workspace-forms/form-theme-style';
 import {
   brandLogoSurfaceForPage,
   resolveBrandLogoForSurface,
@@ -13,6 +14,7 @@ import {
 import { shouldIncludeWelcomeStep } from '~/lib/workspace-forms/form-steps';
 import {
   brandPageGradientCss,
+  resolveFormLogoUrl,
   resolveFormThemeColors,
 } from '~/lib/workspace-forms/form-theme';
 import { loadCachedPublicWorkspaceForm } from '~/lib/workspace-forms/public-form';
@@ -69,7 +71,7 @@ async function PublicWorkspaceFormPage({
   const brandGradient = form.theme.pageBackground === 'brand_gradient';
   const pageBackground = brandGradient
     ? brandPageGradientCss(themeColors.primaryColor)
-    : form.brand.secondary_color || '#FBF6EC';
+    : form.theme.backgroundColor || form.brand.secondary_color || '#FBF6EC';
   const useContentShell = !embed;
   const logoSurface = brandLogoSurfaceForPage({
     pageOnDark: brandGradient,
@@ -102,6 +104,7 @@ async function PublicWorkspaceFormPage({
       className={`flex min-h-[100dvh] flex-col px-4 ${embed ? 'py-4' : 'py-10 sm:px-6'}`}
       style={{ background: pageBackground }}
     >
+      <FormThemeStyle theme={form.theme} />
       <PublicWorkspaceForm
         token={token}
         accountName={form.accountName}
@@ -122,7 +125,10 @@ async function PublicWorkspaceFormPage({
         resumeToken={draft?.resumeToken ?? null}
         initialValues={draft?.values}
         initialStepIndex={draft?.stepIndex}
-        logoUrl={resolveBrandLogoForSurface(form.brand, logoSurface)}
+        logoUrl={resolveFormLogoUrl(
+          form.theme,
+          resolveBrandLogoForSurface(form.brand, logoSurface),
+        )}
         accentColor={themeColors.accentColor}
         primaryColor={themeColors.primaryColor}
         chromeOnDark={brandGradient && !useContentShell}

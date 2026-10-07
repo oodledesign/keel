@@ -35,7 +35,6 @@ import type {
   CampaignPadding,
 } from '~/lib/campaigns/campaign-document';
 import { isCampaignFormUrlToken } from '~/lib/campaigns/form-link';
-import { CAMPAIGN_MERGE_FIELDS } from '~/lib/campaigns/merge-fields';
 import {
   workspaceSelectContentClass,
   workspaceSelectItemClass,
@@ -44,6 +43,7 @@ import {
 } from '~/lib/workspace-ui';
 
 import { CampaignImagePicker } from './campaign-image-picker';
+import { useCampaignMergeFields } from './campaign-merge-fields-context';
 import { CampaignTextBlockEditor } from './campaign-text-block-editor';
 
 export function CampaignBlockInspector({
@@ -61,6 +61,8 @@ export function CampaignBlockInspector({
   onChange: (patch: Partial<CampaignBlock>) => void;
   onInsertMerge: (token: string) => void;
 }) {
+  const mergeFields = useCampaignMergeFields();
+
   if (!block) {
     return (
       <p className={`text-sm ${workspaceTextMuted}`}>
@@ -174,7 +176,7 @@ export function CampaignBlockInspector({
           <MergeChips
             disabled={disabled}
             onInsert={onInsertMerge}
-            tokens={CAMPAIGN_MERGE_FIELDS.filter(
+            tokens={mergeFields.filter(
               (field) => !isCampaignFormUrlToken(field.token),
             )}
           />
@@ -189,7 +191,7 @@ export function CampaignBlockInspector({
           <MergeChips
             disabled={disabled}
             onInsert={onInsertMerge}
-            tokens={CAMPAIGN_MERGE_FIELDS.filter((field) =>
+            tokens={mergeFields.filter((field) =>
               isCampaignFormUrlToken(field.token),
             )}
           />
@@ -386,17 +388,19 @@ function LogoVariantField({
 function MergeChips({
   disabled,
   onInsert,
-  tokens = CAMPAIGN_MERGE_FIELDS,
+  tokens,
 }: {
   disabled?: boolean;
   onInsert: (token: string) => void;
   tokens?: readonly { token: string; label: string }[];
 }) {
-  if (tokens.length === 0) return null;
+  const allFields = useCampaignMergeFields();
+  const list = tokens ?? allFields;
+  if (list.length === 0) return null;
 
   return (
     <div className="flex flex-wrap gap-1">
-      {tokens.map((field) => (
+      {list.map((field) => (
         <Button
           key={field.token}
           type="button"

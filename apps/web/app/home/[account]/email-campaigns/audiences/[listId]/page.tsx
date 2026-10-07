@@ -1,9 +1,11 @@
 import { notFound } from 'next/navigation';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
 import { hasCampaignsGrowthFeatures } from '~/lib/billing/campaign-pricing';
 import { audienceListTypeLabel } from '~/lib/campaigns/campaign-audience-filters';
+import { listContactCustomFields } from '~/lib/contacts/custom-fields.service';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
@@ -41,6 +43,10 @@ async function AudienceListDetailPage({ params }: AudienceListDetailPageProps) {
   }
 
   const growth = hasCampaignsGrowthFeatures(data.snapshot.planTier);
+  const customFields = await listContactCustomFields(
+    getSupabaseServerClient(),
+    workspace.account.id,
+  );
 
   return (
     <>
@@ -60,6 +66,7 @@ async function AudienceListDetailPage({ params }: AudienceListDetailPageProps) {
           list={data.list}
           members={data.members}
           allowLogicFilters={growth}
+          customFields={customFields}
         />
       </PageBody>
     </>

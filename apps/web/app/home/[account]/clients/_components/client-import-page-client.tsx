@@ -19,9 +19,11 @@ import {
 export function ClientImportPageClient({
   accountId,
   accountSlug,
+  customFieldOptions = [],
 }: {
   accountId: string;
   accountSlug: string;
+  customFieldOptions?: Array<{ value: string; label: string }>;
 }) {
   const previewCache = useRef<{
     drafts: Awaited<ReturnType<typeof previewClientImportAction>>['drafts'];
@@ -133,7 +135,7 @@ export function ClientImportPageClient({
       title="Import clients"
       description="Upload a CSV, map columns, resolve duplicates, then import."
       backHref={backHref}
-      fieldOptions={CLIENT_CSV_FIELD_OPTIONS}
+      fieldOptions={[...CLIENT_CSV_FIELD_OPTIONS, ...customFieldOptions]}
       enableDuplicateReview
       template={{
         filename: 'ozer-clients-template.csv',

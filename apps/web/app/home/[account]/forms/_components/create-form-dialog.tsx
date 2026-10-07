@@ -52,6 +52,7 @@ type Props = {
   accountSlug: string;
   showListingDestination: boolean;
   formsMode: WorkspaceFormsMode;
+  scope?: 'all' | 'mailing_list';
 };
 
 export function CreateFormDialog({
@@ -59,11 +60,14 @@ export function CreateFormDialog({
   accountSlug,
   showListingDestination,
   formsMode,
+  scope = 'all',
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const audienceOnly = formsMode === 'audience';
-  const templates = listWorkspaceFormTemplates(formsMode);
+  const audienceOnly = formsMode === 'audience' || scope === 'mailing_list';
+  const templates = listWorkspaceFormTemplates(
+    audienceOnly ? 'audience' : formsMode,
+  );
   const defaultTemplate: WorkspaceFormTemplate = audienceOnly
     ? 'subscribe'
     : 'contact';
@@ -114,7 +118,10 @@ export function CreateFormDialog({
         toast.success('Form created');
         onOpenChange(false);
         router.push(
-          pathsConfig.app.accountFormDetail
+          (scope === 'mailing_list'
+            ? pathsConfig.app.accountEmailCampaignFormDetail
+            : pathsConfig.app.accountFormDetail
+          )
             .replace('[account]', accountSlug)
             .replace('[formId]', result.data.id),
         );

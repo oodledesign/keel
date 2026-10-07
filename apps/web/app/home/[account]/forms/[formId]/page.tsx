@@ -2,6 +2,8 @@ import { notFound, redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
 
+import pathsConfig from '~/config/paths.config';
+import { resolveBrandLogoForSurface } from '~/lib/brand/resolve-brand-logo';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { parseFormEditorTab } from '~/lib/workspace-forms/form-editor-tab';
 import {
@@ -14,6 +16,7 @@ import {
   getDefaultAccountPath,
   getTeamAccountAccess,
 } from '../../_lib/role-access';
+import { isCampaignsModuleEnabled } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import {
   FORMS_WORKSPACE_SPACE_TYPES,
@@ -55,11 +58,30 @@ async function FormDetailPage({ params, searchParams }: FormDetailPageProps) {
 
   const formsMode = resolveWorkspaceFormsMode(workspace.moduleSettings);
 
-  const { form, submissions, listings, members, audienceLists, brand } =
-    await loadWorkspaceFormDetail(workspace.account.id, formId, accountSlug);
+  const {
+    form,
+    submissions,
+    listings,
+    members,
+    audienceLists,
+    brand,
+    contactFields,
+  } = await loadWorkspaceFormDetail(workspace.account.id, formId, accountSlug);
 
   if (!form) {
     notFound();
+  }
+
+  if (
+    form.destination === 'mailing_list' &&
+    isCampaignsModuleEnabled(workspace.moduleSettings)
+  ) {
+    const tab = query.tab ? `?tab=${encodeURIComponent(query.tab)}` : '';
+    redirect(
+      `${pathsConfig.app.accountEmailCampaignFormDetail
+        .replace('[account]', accountSlug)
+        .replace('[formId]', formId)}${tab}`,
+    );
   }
 
   return (
@@ -75,6 +97,7 @@ async function FormDetailPage({ params, searchParams }: FormDetailPageProps) {
           form={form}
           listings={listings}
           audienceLists={audienceLists}
+          contactFields={contactFields}
           submissions={submissions}
           members={members}
           showListingDestination={isCommercialPropertyProfile(
@@ -85,6 +108,9 @@ async function FormDetailPage({ params, searchParams }: FormDetailPageProps) {
             primary: brand.primary_color,
             accent: brand.accent_color,
           }}
+          accountName={workspace.account.name ?? ''}
+          brandSecondaryColor={brand.secondary_color}
+          brandLogoUrl={resolveBrandLogoForSurface(brand, 'light')}
           initialTab={parseFormEditorTab(query.tab)}
         />
       </PageBody>

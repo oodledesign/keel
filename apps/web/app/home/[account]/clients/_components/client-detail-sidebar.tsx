@@ -97,6 +97,7 @@ import {
 } from './client-commercial-blocks';
 import { ClientCommunicationsBlock } from './client-communications-block';
 import { ClientContactsBlock } from './client-contacts-block';
+import { ClientCustomFieldsCard } from './client-custom-fields-card';
 import { ClientFinancePanel } from './client-finance-panel';
 import { ClientForm } from './client-form';
 import { ClientImageUploader } from './client-image-uploader';
@@ -753,7 +754,22 @@ export function ClientDetailSidebar({
     .filter(Boolean)
     .join(', ');
 
-  const renderTabContent = () => {
+  const renderTabContent = () => (
+    <>
+      {renderTabBody()}
+      {activeTab === 'overview' && !isContractorView ? (
+        <div className="mt-6">
+          <ClientCustomFieldsCard
+            accountId={accountId}
+            clientId={client.id}
+            canEdit={canEditClients}
+          />
+        </div>
+      ) : null}
+    </>
+  );
+
+  const renderTabBody = () => {
     if (isContractorView) {
       return (
         <ClientNotesBlock

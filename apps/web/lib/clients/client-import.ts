@@ -28,6 +28,8 @@ export type ClientImportDraft = {
     phone?: string;
     role?: string;
   } | null;
+  /** Custom contact field values keyed by field key (raw CSV text). */
+  customFields?: Record<string, string>;
   errors: string[];
 };
 

@@ -129,6 +129,12 @@ export function parseFormFields(raw: unknown): WorkspaceFormField[] {
     if (row.placeholder) field.placeholder = row.placeholder;
     if (row.helpText) field.helpText = row.helpText;
     if (Array.isArray(row.options)) field.options = row.options;
+    if (
+      typeof row.contactFieldKey === 'string' &&
+      /^[a-z][a-z0-9_]{0,59}$/.test(row.contactFieldKey)
+    ) {
+      field.contactFieldKey = row.contactFieldKey;
+    }
     if (row.stepBreakAfter === false) field.stepBreakAfter = false;
     if (row.stepBreakAfter === true) field.stepBreakAfter = true;
     const visibleWhen = parseVisibleWhen(row.visibleWhen);
@@ -447,10 +453,18 @@ export async function submitPublicWorkspaceForm(
       configured: form.audienceLists,
       pickedIds,
     });
+    const contactFieldValues: Record<string, unknown> = {};
+    for (const field of form.fields) {
+      if (!field.contactFieldKey) continue;
+      const answer = contact.extras[field.key];
+      if (answer !== undefined)
+        contactFieldValues[field.contactFieldKey] = answer;
+    }
     const mailing = await submitMailingListSignup({
       admin,
       accountId: form.accountId,
       contact,
+      contactFieldValues,
       spec,
       commercial: form.commercialProperty,
       formId: form.id,

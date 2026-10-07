@@ -102,6 +102,8 @@ type Props = {
   /** Wrap event info + form in a soft off-white shell. */
   contentShell?: boolean;
   pickableAudienceLists?: FormAudienceListOption[];
+  /** Editor preview: validates and shows the thank-you screen, never sends. */
+  preview?: boolean;
 };
 
 export function PublicWorkspaceForm({
@@ -130,6 +132,7 @@ export function PublicWorkspaceForm({
   chromeOnDark = false,
   contentShell = false,
   pickableAudienceLists = [],
+  preview = false,
 }: Props) {
   const [values, setValues] = useState<PublicFormValues>(() => {
     const restored = { ...(initialValues ?? {}) };
@@ -275,6 +278,7 @@ export function PublicWorkspaceForm({
   }
 
   function saveDraft() {
+    if (preview) return;
     setResume((current) => ({ ...current, error: null, copied: false }));
     startDraftTransition(async () => {
       try {
@@ -361,6 +365,11 @@ export function PublicWorkspaceForm({
     );
     setError(null);
 
+    if (preview) {
+      setSent(true);
+      return;
+    }
+
     startTransition(async () => {
       try {
         const response = await fetch('/api/workspace-forms/submit', {
@@ -399,13 +408,13 @@ export function PublicWorkspaceForm({
     return (
       <div
         className={cn(
-          'my-auto flex w-full flex-col items-center justify-center',
+          'ozer-form-root my-auto flex w-full flex-col items-center justify-center',
           !embed && 'min-h-[60dvh]',
         )}
         data-test="public-form-thank-you"
         role="status"
       >
-        <div className="mx-auto w-full max-w-lg rounded-2xl border border-black/5 bg-white p-8 text-center shadow-sm">
+        <div className="ozer-form-card mx-auto w-full max-w-lg rounded-2xl border border-black/5 bg-white p-8 text-center shadow-sm">
           <div
             className="mx-auto mb-5 flex size-16 items-center justify-center rounded-full bg-green-500 text-white"
             aria-hidden
@@ -443,7 +452,7 @@ export function PublicWorkspaceForm({
   return (
     <div
       className={cn(
-        'mx-auto w-full',
+        'ozer-form-root mx-auto w-full',
         embed ? 'max-w-xl' : eventLayout ? 'max-w-5xl' : 'max-w-lg',
       )}
       style={{ ['--form-accent' as string]: accentColor }}
@@ -471,7 +480,7 @@ export function PublicWorkspaceForm({
 
         <form
           className={cn(
-            'space-y-4 rounded-2xl border border-black/5 bg-white p-6 shadow-sm',
+            'ozer-form-card space-y-4 rounded-2xl border border-black/5 bg-white p-6 shadow-sm',
             stepsMode && 'min-h-[20rem] sm:min-h-[22rem]',
           )}
           onSubmit={onSubmit}
@@ -551,7 +560,7 @@ export function PublicWorkspaceForm({
               <Button
                 type="submit"
                 disabled={pending}
-                className="h-11 w-full rounded-full text-white"
+                className="ozer-form-submit h-11 w-full rounded-full text-white"
                 style={{ backgroundColor: accentColor }}
                 data-test="public-form-submit"
               >
@@ -760,7 +769,7 @@ function PublicFormSteps({
           <Button
             type="submit"
             disabled={pending}
-            className="h-11 min-w-[8.5rem] rounded-full text-white"
+            className="ozer-form-submit h-11 min-w-[8.5rem] rounded-full text-white"
             style={{ backgroundColor: accentColor }}
             data-test="public-form-submit"
           >
@@ -771,7 +780,7 @@ function PublicFormSteps({
             type="button"
             disabled={pending}
             onClick={onNext}
-            className="h-11 min-w-[8.5rem] rounded-full text-white"
+            className="ozer-form-submit h-11 min-w-[8.5rem] rounded-full text-white"
             style={{ backgroundColor: accentColor }}
             data-test="public-form-next"
           >
@@ -923,7 +932,7 @@ function PublicFormIntro({
         {accountName}
       </p>
       <h1
-        className="font-heading mt-2 text-2xl font-bold md:text-3xl"
+        className="ozer-form-title font-heading mt-2 text-2xl font-bold md:text-3xl"
         style={{ color: titleColor }}
       >
         {formName}

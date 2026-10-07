@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
 
+import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import {
   canAccessWorkspaceForms,
@@ -13,6 +14,7 @@ import {
   getDefaultAccountPath,
   getTeamAccountAccess,
 } from '../_lib/role-access';
+import { isCampaignsModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import {
   FORMS_WORKSPACE_SPACE_TYPES,
@@ -51,8 +53,24 @@ async function FormsPage({ params }: FormsPageProps) {
   }
 
   const formsMode = resolveWorkspaceFormsMode(workspace.moduleSettings);
+  const campaignsOn = isCampaignsModuleEnabled(workspace.moduleSettings);
 
-  const { forms } = await loadWorkspaceFormsPage(workspace.account.id);
+  // Campaign sign-up forms live under Campaigns › Sign-up forms.
+  if (formsMode === 'audience' && campaignsOn) {
+    redirect(
+      pathsConfig.app.accountEmailCampaignForms.replace(
+        '[account]',
+        accountSlug,
+      ),
+    );
+  }
+
+  const { forms: allForms } = await loadWorkspaceFormsPage(
+    workspace.account.id,
+  );
+  const forms = campaignsOn
+    ? allForms.filter((form) => form.destination !== 'mailing_list')
+    : allForms;
 
   return (
     <>
@@ -62,7 +80,7 @@ async function FormsPage({ params }: FormsPageProps) {
         description={
           formsMode === 'audience'
             ? 'Subscribe forms for mailing lists — share a link or embed on your site.'
-            : 'Public forms for enquiries, with share links and website embeds.'
+            : 'Public forms for enquiries, with share links and website embeds. Mailing-list sign-up forms live under Campaigns.'
         }
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">

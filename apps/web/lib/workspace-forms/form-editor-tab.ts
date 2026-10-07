@@ -2,6 +2,7 @@ export const FORM_EDITOR_TAB_IDS = [
   'submissions',
   'builder',
   'settings',
+  'design',
   'notifications',
   'share',
 ] as const;

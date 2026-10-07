@@ -1,7 +1,10 @@
 import { redirect } from 'next/navigation';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
+import { customCsvFieldOptions } from '~/lib/contacts/custom-fields-csv';
+import { listContactCustomFields } from '~/lib/contacts/custom-fields.service';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
@@ -48,6 +51,13 @@ async function ClientImportPage({ params }: PageProps) {
     redirect(getDefaultAccountPath(accountSlug, workspace.account));
   }
 
+  const customFieldOptions = customCsvFieldOptions(
+    await listContactCustomFields(
+      getSupabaseServerClient(),
+      workspace.account.id as string,
+    ),
+  );
+
   return (
     <>
       <TeamAccountLayoutPageHeader
@@ -59,6 +69,7 @@ async function ClientImportPage({ params }: PageProps) {
         <ClientImportPageClient
           accountId={workspace.account.id as string}
           accountSlug={accountSlug}
+          customFieldOptions={customFieldOptions}
         />
       </PageBody>
     </>

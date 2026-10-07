@@ -23,7 +23,9 @@ import {
   type AudienceListKind,
   type AudienceListSource,
   audienceListKind,
+  customFilterField,
   emptyAudienceFilterRule,
+  isCustomFilterField,
   parseAudienceListFilters,
 } from '~/lib/campaigns/campaign-audience-filters';
 import type {
@@ -32,6 +34,7 @@ import type {
   CampaignContactCategory,
   CampaignWorkspaceContact,
 } from '~/lib/campaigns/campaign.types';
+import type { ContactCustomFieldDefinition } from '~/lib/contacts/custom-fields';
 import {
   workspaceBtnPrimary,
   workspacePanelCard,
@@ -78,6 +81,7 @@ export function CampaignAudienceListEditor({
   list,
   members = [],
   allowLogicFilters = true,
+  customFields = [],
 }: {
   mode: 'create' | 'edit';
   accountId: string;
@@ -87,6 +91,7 @@ export function CampaignAudienceListEditor({
   list?: CampaignAudienceList;
   members?: CampaignAudienceListMember[];
   allowLogicFilters?: boolean;
+  customFields?: ContactCustomFieldDefinition[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -275,6 +280,7 @@ export function CampaignAudienceListEditor({
                   key={`audience-rule-${index}`}
                   rule={rule}
                   categories={categories}
+                  customFields={customFields}
                   onChange={(next) => {
                     const copy = [...rules];
                     copy[index] = next;
@@ -477,14 +483,30 @@ export function CampaignAudienceListEditor({
 function RuleRow({
   rule,
   categories,
+  customFields,
   onChange,
 }: {
   rule: AudienceFilterRule;
   categories: CampaignContactCategory[];
+  customFields: ContactCustomFieldDefinition[];
   onChange: (rule: AudienceFilterRule) => void;
 }) {
-  const ops: AudienceFilterOp[] =
-    rule.field === 'category'
+  const customDefinition = isCustomFilterField(rule.field)
+    ? customFields.find(
+        (definition) => customFilterField(definition.key) === rule.field,
+      )
+    : undefined;
+  const customType = customDefinition?.fieldType;
+
+  const ops: AudienceFilterOp[] = isCustomFilterField(rule.field)
+    ? customType === 'number' || customType === 'date'
+      ? ['eq', 'gte']
+      : customType === 'checkbox'
+        ? ['eq']
+        : customType === 'select'
+          ? ['eq', 'in']
+          : ['eq', 'contains', 'in']
+    : rule.field === 'category'
       ? ['eq', 'in']
       : rule.field === 'industry'
         ? ['contains', 'eq', 'in']
@@ -501,14 +523,18 @@ function RuleRow({
           const field = event.target.value as AudienceFilterRule['field'];
           onChange({
             field,
-            op:
-              field === 'category'
+            op: isCustomFilterField(field)
+              ? 'eq'
+              : field === 'category'
                 ? 'eq'
                 : field === 'industry'
                   ? 'contains'
                   : rule.op,
-            value:
-              field === 'category' ? (categories[0]?.id ?? '') : rule.value,
+            value: isCustomFilterField(field)
+              ? ''
+              : field === 'category'
+                ? (categories[0]?.id ?? '')
+                : rule.value,
           });
         }}
       >
@@ -521,6 +547,18 @@ function RuleRow({
             ))}
           </optgroup>
         ))}
+        {customFields.length > 0 ? (
+          <optgroup label="Custom fields">
+            {customFields.map((definition) => (
+              <option
+                key={definition.key}
+                value={customFilterField(definition.key)}
+              >
+                {definition.label}
+              </option>
+            ))}
+          </optgroup>
+        ) : null}
       </select>
       <select
         className="border-input bg-background h-9 rounded-md border px-2 text-sm"
@@ -542,8 +580,38 @@ function RuleRow({
           value={rule.value}
           onChange={(value) => onChange({ ...rule, value })}
         />
+      ) : customType === 'checkbox' ? (
+        <select
+          className="border-input bg-background h-9 rounded-md border px-2 text-sm"
+          value={rule.value}
+          onChange={(event) => onChange({ ...rule, value: event.target.value })}
+        >
+          <option value="">Choose…</option>
+          <option value="yes">Yes</option>
+          <option value="no">No</option>
+        </select>
+      ) : customType === 'select' && rule.op === 'eq' ? (
+        <select
+          className="border-input bg-background h-9 rounded-md border px-2 text-sm"
+          value={rule.value}
+          onChange={(event) => onChange({ ...rule, value: event.target.value })}
+        >
+          <option value="">Choose…</option>
+          {customDefinition?.options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
       ) : (
         <Input
+          type={
+            customType === 'date' && rule.op === 'gte'
+              ? 'date'
+              : customType === 'number'
+                ? 'number'
+                : 'text'
+          }
           value={rule.value}
           placeholder={
             rule.field === 'industry'

@@ -11,9 +11,10 @@ import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
 import { isSafeHttpUrl } from '~/lib/campaigns/campaign-document';
-import { CAMPAIGN_MERGE_FIELDS } from '~/lib/campaigns/merge-fields';
 import { RICH_TEXT_LIST_CLASS } from '~/lib/rich-text-html';
 import { workspaceText, workspaceTextMuted } from '~/lib/workspace-ui';
+
+import { useCampaignMergeFields } from './campaign-merge-fields-context';
 
 export function CampaignTextBlockEditor({
   html,
@@ -24,6 +25,7 @@ export function CampaignTextBlockEditor({
   disabled?: boolean;
   onChange: (html: string) => void;
 }) {
+  const mergeFields = useCampaignMergeFields();
   const onChangeRef = useRef(onChange);
 
   useEffect(() => {
@@ -115,7 +117,7 @@ export function CampaignTextBlockEditor({
         <span className={`mx-1 text-[10px] uppercase ${workspaceTextMuted}`}>
           Merge
         </span>
-        {CAMPAIGN_MERGE_FIELDS.map((field) => (
+        {mergeFields.map((field) => (
           <ToolbarButton
             key={field.token}
             label={field.label}

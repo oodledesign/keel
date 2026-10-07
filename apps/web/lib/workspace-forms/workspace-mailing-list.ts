@@ -15,6 +15,7 @@ import {
   type RequirementFormSubmission,
   upsertRequirementFromPublicForm,
 } from '~/lib/commercial/circulation/public-requirement-form';
+import { setContactCustomValues } from '~/lib/contacts/custom-fields.service';
 import { scheduleDynamicsMailingListSync } from '~/lib/dynamics/sync.service';
 
 import type { FormContactValues } from './form-fields';
@@ -481,6 +482,8 @@ export async function submitMailingListSignup(input: {
   admin: SupabaseClient;
   accountId: string;
   contact: FormContactValues;
+  /** Answers keyed by contact custom field key. */
+  contactFieldValues?: Record<string, unknown>;
   spec: MailingListSpec;
   commercial: boolean;
   formId?: string | null;
@@ -498,6 +501,21 @@ export async function submitMailingListSignup(input: {
     input.accountId,
     input.contact,
   );
+
+  if (
+    input.contactFieldValues &&
+    Object.keys(input.contactFieldValues).length > 0
+  ) {
+    try {
+      await setContactCustomValues(input.admin, {
+        accountId: input.accountId,
+        clientId,
+        values: input.contactFieldValues,
+      });
+    } catch {
+      // Custom field answers must not fail the public signup.
+    }
+  }
 
   const { preference, created } = await ensureWorkspaceMailingPreference({
     admin: input.admin,

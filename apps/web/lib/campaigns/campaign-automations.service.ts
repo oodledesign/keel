@@ -14,6 +14,7 @@ import {
 import { renderCampaignHtml } from '~/lib/campaigns/render-campaign-html';
 import { resolveCampaignReplyTo } from '~/lib/campaigns/resolve-campaign-reply-to';
 import { sendCampaignEmailViaSes } from '~/lib/campaigns/send-campaign-email';
+import { loadCustomValuesByEmail } from '~/lib/contacts/custom-fields.service';
 import {
   getPlatformSesFrom,
   loadAccountSendingDomain,
@@ -372,9 +373,15 @@ async function sendWelcomeAutomationEmail(input: {
     return;
   }
 
+  const customByEmail = await loadCustomValuesByEmail(
+    input.client,
+    input.accountId,
+    [email],
+  );
   const merge = mergeValuesForRecipient({
     displayName: input.displayName,
     email,
+    customFields: customByEmail.get(email.toLowerCase()),
     formUrl: formUrlForMerge({
       formLink: campaign.bodyDocument?.formLink,
       recipientEmail: email,

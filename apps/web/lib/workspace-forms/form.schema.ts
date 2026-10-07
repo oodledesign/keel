@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { validateFormCustomCss } from './form-custom-css';
 import {
   WORKSPACE_FORM_DESTINATIONS,
   WORKSPACE_FORM_FIELD_TYPES,
@@ -9,7 +10,11 @@ import { WORKSPACE_FORM_UPLOAD_MAX_BYTES } from './form-file';
 import { WORKSPACE_FORM_LOGIC_OPS } from './form-logic';
 import { WORKSPACE_FORM_TEMPLATES } from './form-templates';
 import {
+  WORKSPACE_FORM_CORNER_STYLES,
+  WORKSPACE_FORM_CUSTOM_CSS_MAX,
+  WORKSPACE_FORM_FONTS,
   WORKSPACE_FORM_LAYOUTS,
+  WORKSPACE_FORM_LOGO_MODES,
   WORKSPACE_FORM_PAGE_BACKGROUNDS,
   WORKSPACE_FORM_PRESENTATIONS,
 } from './form-theme';
@@ -38,6 +43,10 @@ export const WorkspaceFormFieldSchema = z.object({
   helpText: z.string().max(240).optional(),
   options: z.array(z.string().min(1).max(80)).max(40).optional(),
   stepBreakAfter: z.boolean().optional(),
+  contactFieldKey: z
+    .string()
+    .regex(/^[a-z][a-z0-9_]{0,59}$/)
+    .optional(),
   visibleWhen: WorkspaceFormLogicConditionSchema.optional(),
   jumpRules: z
     .array(
@@ -77,6 +86,29 @@ export const WorkspaceFormThemeSchema = z.object({
     .string()
     .regex(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/)
     .nullable()
+    .optional(),
+  backgroundColor: z
+    .string()
+    .regex(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/)
+    .nullable()
+    .optional(),
+  fontFamily: z.enum(WORKSPACE_FORM_FONTS).optional(),
+  cornerStyle: z.enum(WORKSPACE_FORM_CORNER_STYLES).optional(),
+  logoMode: z.enum(WORKSPACE_FORM_LOGO_MODES).optional(),
+  logoUrl: z
+    .string()
+    .url()
+    .max(500)
+    .startsWith('https://')
+    .nullable()
+    .optional(),
+  customCss: z
+    .string()
+    .max(WORKSPACE_FORM_CUSTOM_CSS_MAX)
+    .superRefine((value, ctx) => {
+      const error = validateFormCustomCss(value);
+      if (error) ctx.addIssue({ code: 'custom', message: error });
+    })
     .optional(),
 });
 

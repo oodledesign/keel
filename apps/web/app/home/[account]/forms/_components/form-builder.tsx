@@ -4,7 +4,15 @@ import { useState, useTransition } from 'react';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-import { Inbox, ListChecks, Mail, Plus, Settings2, Share2 } from 'lucide-react';
+import {
+  Inbox,
+  ListChecks,
+  Mail,
+  Palette,
+  Plus,
+  Settings2,
+  Share2,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
@@ -23,6 +31,8 @@ import { cn } from '@kit/ui/utils';
 
 import { WorkspaceRichTextEditor } from '~/components/workspace-rich-text';
 import type { CampaignAudienceList } from '~/lib/campaigns/campaign.types';
+import type { ContactCustomFieldDefinition } from '~/lib/contacts/custom-fields';
+import { validateFormCustomCss } from '~/lib/workspace-forms/form-custom-css';
 import {
   type FormEditorTab,
   formEditorTabHref,
@@ -72,9 +82,13 @@ import type {
   WorkspaceFormRecord,
   WorkspaceFormSubmissionRecord,
 } from '../_lib/server/workspace-forms.service';
-import { FormAppearancePanel } from './form-appearance-panel';
+import {
+  FormAppearancePanel,
+  type FormBrandingValues,
+} from './form-appearance-panel';
 import { FormEmailSettingsPanel } from './form-email-settings-panel';
 import { FormFieldTypePicker } from './form-field-type-picker';
+import { FormPreviewPanel } from './form-preview-panel';
 import { FormQuestionCard } from './form-question-card';
 import { FormSharePanel } from './form-share-panel';
 import { FormSubmissionsList } from './form-submissions-list';
@@ -83,6 +97,7 @@ const FORM_EDITOR_TABS = [
   { id: 'submissions', label: 'Submissions', icon: Inbox },
   { id: 'builder', label: 'Form builder', icon: ListChecks },
   { id: 'settings', label: 'Settings', icon: Settings2 },
+  { id: 'design', label: 'Design & preview', icon: Palette },
   { id: 'notifications', label: 'Notifications', icon: Mail },
   { id: 'share', label: 'Share and Embed', icon: Share2 },
 ] as const satisfies ReadonlyArray<{
@@ -103,11 +118,17 @@ type Props = {
   form: WorkspaceFormRecord;
   listings: ListingOption[];
   audienceLists: CampaignAudienceList[];
+  contactFields?: ContactCustomFieldDefinition[];
   members: FormNotifyMemberOption[];
   submissions: WorkspaceFormSubmissionRecord[];
   showListingDestination: boolean;
   formsMode: WorkspaceFormsMode;
   brandColors: { primary: string; accent: string };
+  accountName: string;
+  brandSecondaryColor?: string | null;
+  brandLogoUrl?: string | null;
+  /** Where the forms list lives (Forms or Campaigns › Sign-up forms). */
+  listPath?: string;
   initialTab?: FormEditorTab;
 };
 
@@ -116,11 +137,16 @@ export function FormBuilder({
   form,
   listings,
   audienceLists,
+  contactFields: initialContactFields = [],
   members,
   submissions,
   showListingDestination,
   formsMode,
   brandColors,
+  accountName,
+  brandSecondaryColor = null,
+  brandLogoUrl = null,
+  listPath,
   initialTab,
 }: Props) {
   const audienceOnly = formsMode === 'audience';
@@ -162,6 +188,15 @@ export function FormBuilder({
   const [accentColor, setAccentColor] = useState<string | null>(
     form.theme.accentColor,
   );
+  const [branding, setBranding] = useState<FormBrandingValues>({
+    backgroundColor: form.theme.backgroundColor,
+    fontFamily: form.theme.fontFamily,
+    cornerStyle: form.theme.cornerStyle,
+    logoMode: form.theme.logoMode,
+    logoUrl: form.theme.logoUrl,
+    customCss: form.theme.customCss,
+  });
+  const [contactFields, setContactFields] = useState(initialContactFields);
   const [emailSettings, setEmailSettings] =
     useState<WorkspaceFormEmailSettings>(form.emailSettings);
   const [activeFieldId, setActiveFieldId] = useState<string | null>(
@@ -201,6 +236,12 @@ export function FormBuilder({
   }
 
   function save() {
+    const cssError = validateFormCustomCss(branding.customCss);
+    if (cssError) {
+      toast.error(cssError);
+      setTab('design');
+      return;
+    }
     startTransition(async () => {
       try {
         await updateWorkspaceFormAction({
@@ -226,6 +267,7 @@ export function FormBuilder({
             presentation: audienceOnly ? 'classic' : presentation,
             primaryColor,
             accentColor,
+            ...branding,
           },
           emailSettings,
         });
@@ -268,7 +310,7 @@ export function FormBuilder({
           formId: form.id,
         });
         toast.success('Form deleted');
-        router.push(`/app/${accountSlug}/forms`);
+        router.push(listPath ?? `/app/${accountSlug}/forms`);
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : 'Could not delete form',
@@ -332,6 +374,14 @@ export function FormBuilder({
               <h2 className={`text-base font-semibold ${workspaceText}`}>
                 Questions
               </h2>
+              {destination === 'mailing_list' ? (
+                <p className={`text-xs ${workspaceTextMuted}`}>
+                  Add any custom questions (text, choices, dates…). Answers are
+                  saved with each sign-up under Submissions and included in
+                  exports. Name, email and the consent checkbox feed the contact
+                  and audience.
+                </p>
+              ) : null}
               {fullForms && presentation === 'steps' ? (
                 <p className={`text-xs ${workspaceTextMuted}`}>
                   New questions start on their own step. Use “Keep next question
@@ -367,6 +417,13 @@ export function FormBuilder({
               }
               logicEnabled={fullForms}
               formsMode={formsMode}
+              contactFields={
+                destination === 'mailing_list' ? contactFields : null
+              }
+              accountId={form.accountId}
+              onContactFieldCreated={(definition) =>
+                setContactFields((current) => [...current, definition])
+              }
               stepAction={
                 fullForms &&
                 presentation === 'steps' &&
@@ -687,6 +744,58 @@ export function FormBuilder({
           </section>
         </TabsContent>
 
+        <TabsContent value="design" className="mt-0">
+          <div className="grid gap-4 xl:grid-cols-2 xl:items-start">
+            <FormAppearancePanel
+              branding={branding}
+              onBranding={(patch) =>
+                setBranding((current) => ({ ...current, ...patch }))
+              }
+              formsMode={formsMode}
+              brandColors={brandColors}
+              pageBackground={pageBackground}
+              layout={layout}
+              presentation={presentation}
+              primaryColor={primaryColor}
+              accentColor={accentColor}
+              onPageBackground={setPageBackground}
+              onLayout={setLayout}
+              onPresentation={setPresentation}
+              onPrimaryColor={setPrimaryColor}
+              onAccentColor={setAccentColor}
+            />
+            <div className="xl:sticky xl:top-4">
+              <FormPreviewPanel
+                token={form.shareToken}
+                accountName={accountName}
+                brand={{
+                  primary: brandColors.primary,
+                  accent: brandColors.accent,
+                  secondary: brandSecondaryColor,
+                }}
+                brandLogoUrl={brandLogoUrl}
+                name={name}
+                description={description}
+                eventAddress={eventAddress}
+                eventDate={eventDate}
+                eventTime={eventTime}
+                submitLabel={submitLabel}
+                successMessage={successMessage}
+                fields={fields}
+                theme={{
+                  pageBackground,
+                  layout,
+                  layoutExplicit: true,
+                  presentation: audienceOnly ? 'classic' : presentation,
+                  primaryColor,
+                  accentColor,
+                  ...branding,
+                }}
+              />
+            </div>
+          </div>
+        </TabsContent>
+
         <TabsContent value="notifications" className="mt-0">
           <FormEmailSettingsPanel
             settings={emailSettings}
@@ -697,20 +806,6 @@ export function FormBuilder({
         </TabsContent>
 
         <TabsContent value="share" className="mt-0 space-y-4">
-          <FormAppearancePanel
-            formsMode={formsMode}
-            brandColors={brandColors}
-            pageBackground={pageBackground}
-            layout={layout}
-            presentation={presentation}
-            primaryColor={primaryColor}
-            accentColor={accentColor}
-            onPageBackground={setPageBackground}
-            onLayout={setLayout}
-            onPresentation={setPresentation}
-            onPrimaryColor={setPrimaryColor}
-            onAccentColor={setAccentColor}
-          />
           <FormSharePanel
             shareToken={form.shareToken}
             enabled={enabled}
