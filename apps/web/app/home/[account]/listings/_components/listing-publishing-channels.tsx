@@ -284,11 +284,9 @@ function ChannelStatusBanner({ status }: { status: ChannelPublishStatus }) {
       data-test={
         status.issue === 'website_broken'
           ? 'website-link-broken'
-          : status.issue === 'website_pending'
-            ? 'website-url-pending'
-            : unsynced
-              ? 'rightmove-live-unsynced'
-              : undefined
+          : unsynced
+            ? 'rightmove-live-unsynced'
+            : undefined
       }
     >
       <p className="flex items-start gap-1.5 font-medium">

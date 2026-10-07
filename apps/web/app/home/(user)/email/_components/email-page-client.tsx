@@ -464,6 +464,7 @@ export function EmailPageClient({ initialData }: Props) {
         filter: inboxFilter,
         searchQuery: debouncedSearch,
         mailboxKind,
+        accountId: initialData.preferredAccountId,
         labelId: labelFilter,
       }),
     )
@@ -490,7 +491,13 @@ export function EmailPageClient({ initialData }: Props) {
           setSearching(false);
         }
       });
-  }, [debouncedSearch, inboxFilter, mailboxKind, labelFilter]);
+  }, [
+    debouncedSearch,
+    inboxFilter,
+    mailboxKind,
+    labelFilter,
+    initialData.preferredAccountId,
+  ]);
 
   const selectThread = useCallback(
     (threadId: string) => {

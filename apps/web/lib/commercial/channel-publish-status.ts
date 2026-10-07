@@ -31,10 +31,10 @@ export type ChannelPublishStatus = {
   lastError: string | null;
   /**
    * Live channel needs attention: stale Rightmove push, broken public page,
-   * or public URL still pending after Website went live.
+   * (a missing public URL is no longer flagged).
    */
   outOfSync?: boolean;
-  issue?: 'rightmove_stale' | 'website_broken' | 'website_pending';
+  issue?: 'rightmove_stale' | 'website_broken';
 };
 
 type ListingInput = {
@@ -150,19 +150,18 @@ export function getWebsiteChannelStatus(input: {
     };
   }
 
-  // Only when the caller resolved a public URL (or confirmed there is none).
+  // A missing public page URL is informational only. The feed is live, so the
+  // channel stays green; the link is picked up once the site has imported it.
   if (input.publicPageUrl !== undefined && !input.publicPageUrl?.trim()) {
     return {
       state: 'live',
       switchOn: true,
       canEnable: true,
-      label: 'Live but public URL pending',
+      label: 'Live',
       detail:
-        'In the website feed — the public page URL is not stored yet (import may still be catching up)',
+        'In the website feed. The public page link has not been found yet and will appear once the site has imported it.',
       blockers: [],
       lastError: null,
-      outOfSync: true,
-      issue: 'website_pending',
     };
   }
 

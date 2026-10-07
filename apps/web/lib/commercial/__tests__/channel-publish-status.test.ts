@@ -69,14 +69,15 @@ describe('getWebsiteChannelStatus', () => {
     expect(status.blockers).toEqual([]);
   });
 
-  it('is Live but public URL pending when the feed is live and no page URL is stored', () => {
+  it('stays plain Live (no warning) when the feed is live but no page URL is stored', () => {
     const status = getWebsiteChannelStatus({
       listing: { status: 'marketing', externalId: '14e1a5eb' },
       publications: [{ portal: 'property_hive', status: 'published' }],
       publicPageUrl: null,
     });
-    expect(status.label).toBe('Live but public URL pending');
-    expect(status.issue).toBe('website_pending');
+    expect(status.label).toBe('Live');
+    expect(status.issue).toBeUndefined();
+    expect(status.outOfSync).toBeUndefined();
     expect(status.canEnable).toBe(true);
   });
 

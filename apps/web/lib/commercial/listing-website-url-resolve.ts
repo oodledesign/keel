@@ -99,6 +99,12 @@ export function listingWebsiteSearchTerms(
     listing.addressLine1?.trim(),
     listing.name?.trim(),
     [listing.addressLine1, listing.town].filter(Boolean).join(' ').trim(),
+    [listing.addressLine1, listing.addressLine2]
+      .filter(Boolean)
+      .join(' ')
+      .trim(),
+    listing.addressLine2?.trim(),
+    listing.postcode?.trim(),
   ].filter((value): value is string => Boolean(value && value.length >= 4));
   return [...new Set(terms)];
 }
@@ -130,7 +136,20 @@ export function scoreWordpressPropertyMatch(
   for (const token of tokens) {
     if (slug.includes(token) || title.includes(token)) hits += 1;
   }
-  return hits / tokens.length;
+
+  // Postcode tokens only ever help: many sites do not put them in the slug,
+  // so a miss must not drag a good address match below the threshold.
+  const postcodeTokens = listing.postcode
+    ? listing.postcode
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((token) => token.length > 2)
+    : [];
+  for (const token of postcodeTokens) {
+    if (slug.includes(token) || title.includes(token)) hits += 1;
+  }
+
+  return Math.min(1, hits / tokens.length);
 }
 
 export function pickConfidentWordpressMatch(
@@ -266,6 +285,61 @@ export async function lookupWordpressListingPageUrl(input: {
       if (confident) return confident.link;
     } catch {
       // try the next term
+    }
+  }
+
+  return lookupFromSitemaps({
+    origin,
+    listing: input.listing,
+    fetchImpl,
+    resolveHost,
+  });
+}
+
+const SITEMAP_PATHS = [
+  '/wp-sitemap-posts-property-1.xml',
+  '/property-sitemap.xml',
+  '/property-sitemap1.xml',
+];
+const LOC_RE = /<loc>\s*([^<\s]+)\s*<\/loc>/gi;
+
+/**
+ * Fallback when the REST API is blocked or cached: read the WordPress /
+ * Yoast property sitemap and match page slugs against the address.
+ */
+async function lookupFromSitemaps(input: {
+  origin: string;
+  listing: ListingWebsiteUrlFields;
+  fetchImpl: typeof fetch;
+  resolveHost?: (hostname: string) => Promise<string[]>;
+}): Promise<string | null> {
+  for (const path of SITEMAP_PATHS) {
+    const url = `${input.origin}${path}`;
+    try {
+      if (!(await assertHostResolvesPublicly(url, input.resolveHost))) {
+        return null;
+      }
+      const response = await input.fetchImpl(url, {
+        method: 'GET',
+        redirect: 'manual',
+        headers: { 'User-Agent': 'OzerPublishingHealth/1.0' },
+        signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS),
+        cache: 'no-store',
+      });
+      if (!response.ok) continue;
+      const xml = await response.text();
+      const matches: WordpressPropertyMatch[] = [];
+      for (const found of xml.matchAll(LOC_RE)) {
+        const link = found[1] ?? '';
+        if (!isSameOriginPublicLink(link, input.origin)) continue;
+        const slug =
+          new URL(link).pathname.split('/').filter(Boolean).at(-1) ?? '';
+        if (slug) matches.push({ id: matches.length, slug, link, title: '' });
+      }
+      const confident = pickConfidentWordpressMatch(matches, input.listing);
+      if (confident) return confident.link;
+    } catch {
+      // try the next sitemap path
     }
   }
 
