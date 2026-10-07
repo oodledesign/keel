@@ -187,13 +187,25 @@ export function defaultMailingListFormFields(options: {
   ];
 }
 
+/** Without these a signup cannot be processed or consented. */
+const REQUIRED_MAILING_LIST_KEYS = new Set(['email', 'marketing_opt_in']);
+
+/**
+ * Seeds a blank form with the defaults, otherwise only guarantees the fields a
+ * signup needs. Optional defaults (phone, company, notes, property spec) are
+ * never re-added, so deleting them in the builder sticks.
+ */
 export function ensureMailingListFields(
   fields: WorkspaceFormField[],
   options: { commercial: boolean },
 ): WorkspaceFormField[] {
   const defaults = defaultMailingListFormFields(options);
+  if (fields.length === 0) return defaults;
+
   const keys = new Set(fields.map((item) => item.key));
-  const missing = defaults.filter((item) => !keys.has(item.key));
+  const missing = defaults.filter(
+    (item) => REQUIRED_MAILING_LIST_KEYS.has(item.key) && !keys.has(item.key),
+  );
   return missing.length ? [...fields, ...missing] : fields;
 }
 

@@ -50,6 +50,31 @@ describe('mailing list form fields', () => {
     );
   });
 
+  it('does not bring back optional fields the user deleted', () => {
+    const trimmed = defaultMailingListFormFields({ commercial: true }).filter(
+      (field) => ['name', 'email', 'marketing_opt_in'].includes(field.key),
+    );
+    expect(
+      ensureMailingListFields(trimmed, { commercial: true }).map((f) => f.key),
+    ).toEqual(['name', 'email', 'marketing_opt_in']);
+  });
+
+  it('still guarantees email and opt-in', () => {
+    const keys = ensureMailingListFields(
+      [
+        {
+          id: 'name',
+          type: 'name',
+          key: 'name',
+          label: 'Name',
+          required: true,
+        },
+      ],
+      { commercial: false },
+    ).map((field) => field.key);
+    expect(keys).toEqual(['name', 'email', 'marketing_opt_in']);
+  });
+
   it('maps extras onto the existing requirement spec', () => {
     const fields = defaultMailingListFormFields({ commercial: true });
     const contact = extractContactFromValues(fields, {
