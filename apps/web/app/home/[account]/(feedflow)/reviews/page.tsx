@@ -17,6 +17,7 @@ import {
   redirectIfSpaceNotIn,
 } from '../../_lib/server/workspace-route-guard';
 import { workAccountPath, workPaths } from '../../_lib/work-account-path';
+import { FeedflowReviewsSyncSection } from '../_components/feedflow-reviews-sync-section';
 import { FeedflowOauthBanner } from '../_components/feedflow-oauth-banner';
 
 type FeedflowReviewsPageProps = {
@@ -118,6 +119,8 @@ export default async function FeedflowReviewsPage({
             </div>
           )}
         </ModuleDataSection>
+
+        <FeedflowReviewsSyncSection accountId={accountId} clientId={null} />
 
         <ModuleDataSection
           title="Widgets"

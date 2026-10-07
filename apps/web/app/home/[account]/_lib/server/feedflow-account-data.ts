@@ -130,3 +130,101 @@ export const loadFeedflowVideosForTeam = cache(
     return (data ?? []) as FeedflowVideoRow[];
   },
 );
+
+export type FeedflowReviewRow = {
+  id: string;
+  source: 'google' | 'manual' | 'csv';
+  reviewer_name: string;
+  rating: number;
+  comment: string | null;
+  reviewed_at: string | null;
+  hidden: boolean;
+};
+
+export type FeedflowWebflowConnectionRow = {
+  id: string;
+  site_name: string | null;
+  collection_name: string | null;
+  webflow_collection_id: string | null;
+  field_mapping: Record<string, string> | null;
+  sync_mode: string | null;
+  auto_publish: boolean | null;
+  min_rating: number | null;
+  min_character_count: number | null;
+  last_synced_at: string | null;
+  sync_status: string | null;
+  sync_error: string | null;
+};
+
+export type FeedflowWebflowSyncLogRow = {
+  id: string;
+  reviews_fetched: number | null;
+  reviews_synced: number | null;
+  reviews_skipped: number | null;
+  success: boolean | null;
+  error_message: string | null;
+  synced_at: string;
+};
+
+/** Reviews for the workspace (clientId null) or one CRM client. */
+export async function loadFeedflowReviews(
+  accountId: string,
+  clientId: string | null,
+): Promise<FeedflowReviewRow[]> {
+  const client = getSupabaseServerClient();
+  let query = supabaseCustomSchema(client, 'feedflow')
+    .from('reviews')
+    .select('id, source, reviewer_name, rating, comment, reviewed_at, hidden')
+    .eq('account_id', accountId)
+    .order('reviewed_at', { ascending: false, nullsFirst: false })
+    .limit(200);
+  query = clientId ? query.eq('client_id', clientId) : query.is('client_id', null);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('[feedflow] reviews', error.message);
+    return [];
+  }
+  return (data ?? []) as FeedflowReviewRow[];
+}
+
+/** The API token column is deliberately never selected here. */
+export async function loadFeedflowWebflowConnection(
+  accountId: string,
+  clientId: string | null,
+): Promise<{
+  connection: FeedflowWebflowConnectionRow | null;
+  log: FeedflowWebflowSyncLogRow[];
+}> {
+  const client = getSupabaseServerClient();
+  const feed = supabaseCustomSchema(client, 'feedflow');
+
+  let query = feed
+    .from('webflow_connections')
+    .select(
+      'id, site_name, collection_name, webflow_collection_id, field_mapping, sync_mode, auto_publish, min_rating, min_character_count, last_synced_at, sync_status, sync_error',
+    )
+    .eq('account_id', accountId);
+  query = clientId ? query.eq('client_id', clientId) : query.is('client_id', null);
+
+  const { data, error } = await query.maybeSingle();
+  if (error) {
+    console.error('[feedflow] webflow_connections', error.message);
+    return { connection: null, log: [] };
+  }
+  if (!data) return { connection: null, log: [] };
+
+  const { data: log } = await feed
+    .from('webflow_sync_log')
+    .select(
+      'id, reviews_fetched, reviews_synced, reviews_skipped, success, error_message, synced_at',
+    )
+    .eq('webflow_connection_id', data.id)
+    .order('synced_at', { ascending: false })
+    .limit(5);
+
+  return {
+    connection: data as FeedflowWebflowConnectionRow,
+    log: (log ?? []) as FeedflowWebflowSyncLogRow[],
+  };
+}

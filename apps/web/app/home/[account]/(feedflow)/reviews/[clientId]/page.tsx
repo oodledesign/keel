@@ -18,6 +18,7 @@ import {
   redirectIfSpaceNotIn,
 } from '../../../_lib/server/workspace-route-guard';
 import { workAccountPath, workPaths } from '../../../_lib/work-account-path';
+import { FeedflowReviewsSyncSection } from '../../_components/feedflow-reviews-sync-section';
 
 type FeedflowClientReviewsPageProps = {
   params: Promise<{
@@ -86,6 +87,8 @@ export default async function FeedflowClientReviewsPage({
             </div>
           )}
         </ModuleDataSection>
+
+        <FeedflowReviewsSyncSection accountId={accountId} clientId={clientId} />
 
         <div className="flex flex-wrap gap-3 text-sm">
           <Link
