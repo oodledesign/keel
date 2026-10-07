@@ -31,12 +31,16 @@ export async function renderAccountDeleteEmail(props: Props) {
     namespace,
   });
 
+  const purgeDate = props.purgeDate ?? '30 days from now';
+
   const previewText = t(`${namespace}:previewText`, {
     productName: props.productName,
+    purgeDate,
   });
 
   const subject = t(`${namespace}:subject`, {
     productName: props.productName,
+    purgeDate,
   });
 
   const html = await render(
@@ -67,7 +71,7 @@ export async function renderAccountDeleteEmail(props: Props) {
 
               <Text className="text-[16px] leading-[24px] text-[#5A4450]">
                 {t(`${namespace}:paragraph2`, {
-                  purgeDate: props.purgeDate ?? '30 days from now',
+                  purgeDate,
                 })}
               </Text>
 

@@ -19,3 +19,6 @@ CODE_SIGN_IDENTITY = Apple Development
 OZER_API_BASE = https:/$()/app.ozer.so
 OZER_SUPABASE_URL = https:/$()/igewpbdkvvhclfprteca.supabase.co
 OZER_SUPABASE_ANON_KEY =
+
+// Only this email sees the password field on sign-in (App Review demo account).
+OZER_REVIEW_EMAIL = appreview@ozer.so

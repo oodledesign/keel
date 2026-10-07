@@ -106,7 +106,17 @@
   "dangerZoneDescription": "Some actions cannot be undone. Please be careful.",
   "deleteAccount": "Delete your Account",
   "deletingAccount": "Deleting account. Please wait...",
-  "deleteAccountDescription": "This will delete your account and the accounts you own. Furthermore, we will immediately cancel any active subscriptions. This action cannot be undone.",
+  "deleteAccountDescription": "Your account is locked straight away and permanently deleted after 30 days. If you change your mind before then, email privacy@ozer.so and we'll restore it.",
+  "deleteAccountAlsoDeleted": "These workspaces only you use will be deleted too: {{workspaces}}.",
+  "deleteAccountBlockedHeading": "You can't delete your account yet",
+  "deleteAccountBlockers": {
+    "disabled": "Account deletion isn't available right now. Email privacy@ozer.so and we'll handle it for you.",
+    "protected": "This account is protected and can't be deleted. Email privacy@ozer.so if you need help.",
+    "already_scheduled": "Your account is already scheduled for deletion on {{date}}.",
+    "active_subscription": "You have an active paid subscription. Cancel it in Billing first.",
+    "owns_shared_workspace": "You own workspaces other people use: {{workspaces}}. Transfer ownership to another member first.",
+    "recent_sign_in_required": "For your security, sign in again before deleting your account."
+  },
   "deleteProfileConfirmationInputLabel": "Type DELETE to confirm",
   "deleteAccountErrorHeading": "Sorry, we couldn't delete your account",
   "needsReauthentication": "Reauthentication Required",

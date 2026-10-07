@@ -11,6 +11,7 @@
   "prettier": "@kit/prettier-config",
   "devDependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@kit/accounts": "workspace:*",
     "@kit/eslint-config": "workspace:*",
     "@kit/next": "workspace:*",
     "@kit/prettier-config": "workspace:*",

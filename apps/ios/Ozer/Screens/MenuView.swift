@@ -3,6 +3,7 @@ import SwiftUI
 struct MenuView: View {
     @Environment(AppSession.self) private var session
     @State private var showSwitcher = false
+    @State private var showDeleteAccount = false
     var onOpen: (AppScreen) -> Void
     var onClose: () -> Void
 
@@ -44,6 +45,13 @@ struct MenuView: View {
                         Text("Sign out")
                     }
                     .listRowBackground(OzerPalette.panel)
+
+                    Button(role: .destructive) {
+                        showDeleteAccount = true
+                    } label: {
+                        Text("Delete account")
+                    }
+                    .listRowBackground(OzerPalette.panel)
                 } footer: {
                     Text(session.userEmail ?? "Signed in")
                         .foregroundStyle(OzerPalette.plumSoft)
@@ -61,6 +69,9 @@ struct MenuView: View {
             .sheet(isPresented: $showSwitcher) {
                 WorkspaceSwitcherView()
                     .presentationDetents([.medium, .large])
+            }
+            .sheet(isPresented: $showDeleteAccount) {
+                DeleteAccountView()
             }
             .task {
                 if !session.workspacesLoaded {

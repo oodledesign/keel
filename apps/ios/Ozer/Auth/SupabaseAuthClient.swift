@@ -111,6 +111,15 @@ actor SupabaseAuthClient {
         return try decodeSession(data)
     }
 
+    func signInWithPassword(email: String, password: String) async throws -> AuthSession {
+        try requireAnonKey()
+        clearPendingPKCE()
+        return try await postToken(
+            grantType: "password",
+            body: ["email": email, "password": password]
+        )
+    }
+
     func handleRedirect(_ url: URL) async throws -> AuthSession {
         let items = url.queryItemsIncludingFragment
         if let error = items["error"] ?? items["error_description"] {

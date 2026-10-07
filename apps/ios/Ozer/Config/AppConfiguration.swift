@@ -19,6 +19,11 @@ enum AppConfiguration {
         !supabaseAnonKey.isEmpty
     }
 
+    /// App Review demo account. Only this email gets a password field on sign-in.
+    static var reviewEmail: String {
+        string(for: "OZER_REVIEW_EMAIL").lowercased()
+    }
+
     /// Custom scheme the HTTPS bounce page hops to, and Google OAuth returns to.
     static var authCallbackURL: URL {
         URL(string: "so.ozer.app://auth-callback")!

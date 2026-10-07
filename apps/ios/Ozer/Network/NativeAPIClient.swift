@@ -66,6 +66,36 @@ actor NativeAPIClient {
         }
     }
 
+    func accountDeletionPreview(accessToken: String) async throws -> AccountDeletionPreview {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/me/account",
+            queryItems: [],
+            body: nil,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(AccountDeletionPreview.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func deleteAccount(accessToken: String) async throws -> AccountDeletionScheduled {
+        let data = try await send(
+            method: "DELETE",
+            path: "api/native/v1/me/account",
+            queryItems: [],
+            body: ["confirm": AccountDeletionPreview.confirmationWord],
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(AccountDeletionScheduled.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
     func today(workspace: String, accessToken: String) async throws -> TodayPayload {
         let data = try await send(
             method: "GET",
@@ -1434,6 +1464,9 @@ actor NativeAPIClient {
             throw NativeAPIError.badRequest(message ?? "You don’t have access.")
         case 404:
             throw NativeAPIError.notFound
+        case 409:
+            let message = (try? JSONDecoder().decode(NativeErrorBody.self, from: data))?.error
+            throw NativeAPIError.badRequest(message ?? "That can’t be done right now.")
         default:
             throw NativeAPIError.http(http.statusCode)
         }

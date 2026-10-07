@@ -1,6 +1,7 @@
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { runAccountDeletionCompletionCron } from '~/lib/retention/account-deletion-completion';
 import { runAccountStoragePurgeCron } from '~/lib/retention/account-storage-purge';
 
 export const runtime = 'nodejs';
@@ -13,7 +14,8 @@ function authorizeCron(request: Request): boolean {
 }
 
 /**
- * Daily: warn owners 14 and 3 days before wipe, then purge storage at day 30.
+ * Daily: finish account deletions whose grace period has ended, then warn
+ * owners 14 and 3 days before the storage wipe and purge storage at day 30.
  */
 export async function GET(request: Request) {
   if (!authorizeCron(request)) {
@@ -22,8 +24,9 @@ export async function GET(request: Request) {
 
   try {
     const admin = getSupabaseServerAdminClient();
-    const result = await runAccountStoragePurgeCron(admin);
-    return jsonOk(result);
+    const deletions = await runAccountDeletionCompletionCron(admin);
+    const storage = await runAccountStoragePurgeCron(admin);
+    return jsonOk({ deletions, storage });
   } catch (err) {
     return jsonErr(
       'INTERNAL_ERROR',

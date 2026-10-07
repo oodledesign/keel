@@ -4,11 +4,14 @@ import { type SupabaseClient, createClient } from '@supabase/supabase-js';
 
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 
+import { lastSignInFromAmr } from './account-deletion-shared';
 import { nativeJsonError } from './http';
 
 export type NativeAuthContext = {
   userId: string;
   email: string | null;
+  /** Latest real sign-in from the token's `amr` claim (not token refresh). */
+  signedInAt: Date | null;
   accessToken: string;
   supabase: SupabaseClient;
 };
@@ -105,7 +108,7 @@ async function verifyAccessToken(token: string) {
 
   const email = typeof payload.email === 'string' ? payload.email : null;
 
-  return { sub, email };
+  return { sub, email, signedInAt: lastSignInFromAmr(payload.amr) };
 }
 
 /**
@@ -134,6 +137,7 @@ export async function authenticateNativeRequest(
       context: {
         userId: verified.sub,
         email: verified.email,
+        signedInAt: verified.signedInAt,
         accessToken: token,
         supabase: createNativeSupabaseClient(token),
       },

@@ -10,7 +10,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { DeletePersonalAccountSchema } from '../schema/delete-personal-account.schema';
-import { createDeletePersonalAccountService } from './services/delete-personal-account.service';
+import { createAccountDeletionService } from './services/account-deletion.service';
 
 const enableAccountDeletion =
   process.env.NEXT_PUBLIC_ENABLE_PERSONAL_ACCOUNT_DELETION === 'true';
@@ -23,11 +23,25 @@ export async function refreshAuthSession() {
   return {};
 }
 
+/**
+ * Blockers shown before the OTP step. The emailed code is the web's recent
+ * sign-in check, so it is not reported here.
+ */
+export const loadAccountDeletionEligibilityAction = enhanceAction(
+  async (_: void, user) => {
+    const eligibility = await createAccountDeletionService(
+      getSupabaseServerAdminClient(),
+    ).getEligibility({ userId: user.id, recentlyAuthenticated: true });
+
+    return { enabled: enableAccountDeletion, ...eligibility };
+  },
+  {},
+);
+
 export const deletePersonalAccountAction = enhanceAction(
   async (formData: FormData, user) => {
     const logger = await getLogger();
 
-    // validate the form data
     const { success } = DeletePersonalAccountSchema.safeParse(
       Object.fromEntries(formData.entries()),
     );
@@ -53,13 +67,8 @@ export const deletePersonalAccountAction = enhanceAction(
       throw new Error('Account deletion is not enabled');
     }
 
-    logger.info(ctx, `Deleting account...`);
-
-    // verify the OTP
     const client = getSupabaseServerClient();
-    const otpApi = createOtpApi(client);
-
-    const otpResult = await otpApi.verifyToken({
+    const otpResult = await createOtpApi(client).verifyToken({
       token: otp,
       userId: user.id,
       purpose: 'delete-personal-account',
@@ -69,7 +78,6 @@ export const deletePersonalAccountAction = enhanceAction(
       throw new Error('Invalid OTP');
     }
 
-    // validate the user ID matches the nonce's user ID
     if (otpResult.user_id !== user.id) {
       logger.error(
         ctx,
@@ -79,27 +87,20 @@ export const deletePersonalAccountAction = enhanceAction(
       throw new Error('Nonce mismatch');
     }
 
-    // create a new instance of the personal accounts service
-    const service = createDeletePersonalAccountService();
-
-    // delete the user's account and cancel all subscriptions
-    await service.deletePersonalAccount({
-      adminClient: getSupabaseServerAdminClient(),
-      account: {
-        id: user.id,
+    await createAccountDeletionService(getSupabaseServerAdminClient()).schedule(
+      {
+        userId: user.id,
         email: user.email ?? null,
+        source: 'web',
+        requestedBy: user.id,
+        recentlyAuthenticated: true,
       },
-    });
+    );
 
-    // sign out the user after deleting their account
     await client.auth.signOut();
 
-    logger.info(ctx, `Account request successfully sent`);
-
-    // clear the cache for all pages
     revalidatePath('/', 'layout');
 
-    // redirect to the home page
     redirect('/');
   },
   {},

@@ -25,6 +25,8 @@ final class AppSession {
     private(set) var pendingTaskReviewCount = 0
 
     var lastError: String?
+    /// Shown once on the sign-in screen, e.g. after scheduling account deletion.
+    var signedOutNotice: String?
 
     private let auth = SupabaseAuthClient()
     private let api = NativeAPIClient()
@@ -132,6 +134,16 @@ final class AppSession {
         }
     }
 
+    func signInWithPassword(email: String, password: String) async {
+        lastError = nil
+        do {
+            let next = try await auth.signInWithPassword(email: email, password: password)
+            try persist(next)
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
     func handleOpenURL(_ url: URL) async {
         guard url.scheme == AppConfiguration.authCallbackScheme else { return }
         if let invoiceId = Self.invoiceId(from: url) {
@@ -216,8 +228,8 @@ final class AppSession {
         await signOut()
     }
 
-    func signOut() async {
-        let token = session?.accessToken
+    func signOut(revokeRemoteSession: Bool = true) async {
+        let token = revokeRemoteSession ? session?.accessToken : nil
         session = nil
         workspaces = []
         workspacesLoaded = false
@@ -228,6 +240,29 @@ final class AppSession {
         if let token {
             await auth.signOut(accessToken: token)
         }
+    }
+
+    func accountDeletionPreview() async throws -> AccountDeletionPreview {
+        let token = try await validAccessToken()
+        return try await api.accountDeletionPreview(accessToken: token)
+    }
+
+    func deleteAccount() async throws {
+        let token = try await validAccessToken()
+        let scheduled = try await api.deleteAccount(accessToken: token)
+        await signOut(revokeRemoteSession: false)
+        signedOutNotice = Self.deletionNotice(scheduledFor: scheduled.scheduledFor)
+    }
+
+    private static func deletionNotice(scheduledFor: String) -> String {
+        let parser = ISO8601DateFormatter()
+        parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let date = parser.date(from: scheduledFor)
+            ?? ISO8601DateFormatter().date(from: scheduledFor)
+        let label = date.map {
+            $0.formatted(.dateTime.day().month(.wide).year().locale(Locale(identifier: "en_GB")))
+        } ?? "in 30 days"
+        return "Your account is locked and will be permanently deleted on \(label). Changed your mind? Email privacy@ozer.so before then."
     }
 
     func selectWorkspace(_ workspace: NativeWorkspace) {
@@ -297,6 +332,7 @@ final class AppSession {
         let data = try JSONEncoder().encode(next)
         try KeychainStore.set(data, account: Self.keychainAccount)
         session = next
+        signedOutNotice = nil
         phase = .signedIn
         if shouldLoadWorkspaces {
             Task {

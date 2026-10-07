@@ -5,6 +5,7 @@ struct SignInView: View {
     @Environment(AppSession.self) private var session
     @State private var email = ""
     @State private var otpCode = ""
+    @State private var reviewPassword = ""
     @State private var magicLinkSent = false
     @State private var magicLinkMessage: String?
     @State private var isWorking = false
@@ -14,6 +15,15 @@ struct SignInView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 header
+                if let notice = session.signedOutNotice {
+                    Text(notice)
+                        .font(.footnote)
+                        .foregroundStyle(OzerPalette.plum)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(OzerPalette.creamDeep, in: RoundedRectangle(cornerRadius: OzerRadius.button, style: .continuous))
+                }
                 if !AppConfiguration.isSupabaseConfigured {
                     configHint
                 }
@@ -84,7 +94,7 @@ struct SignInView: View {
             Button {
                 Task { await run { await session.signInWithGoogle() } }
             } label: {
-                labelRow(title: "Continue with Google", systemImage: "g.circle")
+                labelRow(title: "Continue with Google", image: Image("GoogleLogo"))
             }
             .buttonStyle(OzerSecondaryButtonStyle())
         }
@@ -109,26 +119,30 @@ struct SignInView: View {
                         .stroke(OzerPalette.border, lineWidth: 1)
                 }
 
-            Button {
-                Task {
-                    await run {
-                        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
-                        magicLinkMessage = await session.sendMagicLink(email: trimmed)
-                        if magicLinkMessage != nil {
-                            magicLinkSent = true
+            if isReviewEmail {
+                reviewPasswordFields
+            } else {
+                Button {
+                    Task {
+                        await run {
+                            let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+                            magicLinkMessage = await session.sendMagicLink(email: trimmed)
+                            if magicLinkMessage != nil {
+                                magicLinkSent = true
+                            }
                         }
                     }
+                } label: {
+                    Text("Email me a link")
+                        .font(.body.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
                 }
-            } label: {
-                Text("Email me a link")
-                    .font(.body.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
+                .buttonStyle(OzerPrimaryButtonStyle())
+                .disabled(trimmedEmail.isEmpty)
             }
-            .buttonStyle(OzerPrimaryButtonStyle())
-            .disabled(trimmedEmail.isEmpty)
 
-            if magicLinkSent {
+            if magicLinkSent && !isReviewEmail {
                 if let magicLinkMessage {
                     Text(magicLinkMessage)
                         .font(.footnote)
@@ -142,6 +156,40 @@ struct SignInView: View {
 
     private var trimmedEmail: String {
         email.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var isReviewEmail: Bool {
+        let review = AppConfiguration.reviewEmail
+        return !review.isEmpty && trimmedEmail.lowercased() == review
+    }
+
+    private var reviewPasswordFields: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SecureField("Password", text: $reviewPassword)
+                .textContentType(.password)
+                .padding(.horizontal, 14)
+                .frame(height: 52)
+                .background(OzerPalette.panel, in: RoundedRectangle(cornerRadius: OzerRadius.button, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: OzerRadius.button, style: .continuous)
+                        .stroke(OzerPalette.border, lineWidth: 1)
+                }
+
+            Button {
+                Task {
+                    await run {
+                        await session.signInWithPassword(email: trimmedEmail, password: reviewPassword)
+                    }
+                }
+            } label: {
+                Text("Sign in")
+                    .font(.body.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+            }
+            .buttonStyle(OzerPrimaryButtonStyle())
+            .disabled(reviewPassword.isEmpty)
+        }
     }
 
     private var sanitizedOTP: String {
@@ -189,9 +237,14 @@ struct SignInView: View {
         )
     }
 
-    private func labelRow(title: String, systemImage: String) -> some View {
+    private func labelRow(title: String, image: Image) -> some View {
         HStack(spacing: 10) {
-            Image(systemName: systemImage)
+            image
+                .renderingMode(.original)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 20, height: 20)
+                .accessibilityHidden(true)
             Text(title)
                 .font(.body.weight(.semibold))
         }

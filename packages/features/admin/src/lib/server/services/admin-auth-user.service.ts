@@ -4,6 +4,10 @@ import { SupabaseClient } from '@supabase/supabase-js';
 
 import { z } from 'zod';
 
+import {
+  AccountDeletionBlockedError,
+  createAccountDeletionService,
+} from '@kit/accounts/account-deletion';
 import { Database } from '@kit/supabase/database';
 
 export function createAdminAuthUserService(
@@ -25,17 +29,38 @@ class AdminAuthUserService {
   ) {}
 
   /**
-   * Delete a user by deleting the user record and auth record.
+   * Schedule a user's account for deletion. User rows are never deleted; the
+   * account is locked now and its data wiped after the grace period.
    * @param userId
    */
   async deleteUser(userId: string) {
     await this.assertUserIsNotCurrentSuperAdmin(userId);
 
-    const deleteUserResponse =
-      await this.adminClient.auth.admin.deleteUser(userId);
+    const [{ data: current }, { data: target, error }] = await Promise.all([
+      this.client.auth.getUser(),
+      this.adminClient.auth.admin.getUserById(userId),
+    ]);
 
-    if (deleteUserResponse.error) {
-      throw new Error(`Error deleting user record or auth record.`);
+    if (error || !target.user || !current.user) {
+      throw new Error(`Error fetching user`);
+    }
+
+    try {
+      await createAccountDeletionService(this.adminClient).schedule({
+        userId,
+        email: target.user.email ?? null,
+        source: 'admin',
+        requestedBy: current.user.id,
+        recentlyAuthenticated: true,
+      });
+    } catch (scheduleError) {
+      if (scheduleError instanceof AccountDeletionBlockedError) {
+        throw new Error(
+          `This account can't be deleted yet: ${scheduleError.blockers.join(', ')}`,
+        );
+      }
+
+      throw scheduleError;
     }
   }
 

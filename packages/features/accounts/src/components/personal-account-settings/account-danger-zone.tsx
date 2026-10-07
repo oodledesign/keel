@@ -4,6 +4,7 @@ import { useFormStatus } from 'react-dom';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
+import { useQuery } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
 
 import { ErrorBoundary } from '@kit/monitoring/components';
@@ -21,10 +22,15 @@ import {
 } from '@kit/ui/alert-dialog';
 import { Button } from '@kit/ui/button';
 import { Form } from '@kit/ui/form';
+import { Spinner } from '@kit/ui/spinner';
 import { Trans } from '@kit/ui/trans';
 
 import { DeletePersonalAccountSchema } from '../../schema/delete-personal-account.schema';
-import { deletePersonalAccountAction } from '../../server/personal-accounts-server-actions';
+import {
+  deletePersonalAccountAction,
+  loadAccountDeletionEligibilityAction,
+} from '../../server/personal-accounts-server-actions';
+import type { OwnedTeamWorkspace } from '../../server/services/account-deletion.shared';
 
 export function AccountDangerZone() {
   return (
@@ -69,14 +75,101 @@ function DeleteAccountModal() {
         </AlertDialogHeader>
 
         <ErrorBoundary fallback={<DeleteAccountErrorContainer />}>
-          <DeleteAccountForm email={user.email} />
+          <DeleteAccountGate email={user.email} />
         </ErrorBoundary>
       </AlertDialogContent>
     </AlertDialog>
   );
 }
 
-function DeleteAccountForm(props: { email: string }) {
+function DeleteAccountGate(props: { email: string }) {
+  const { data, isPending, isError } = useQuery({
+    queryKey: ['account-deletion-eligibility'],
+    queryFn: () => loadAccountDeletionEligibilityAction(),
+    staleTime: 0,
+  });
+
+  if (isPending) {
+    return (
+      <div className={'flex justify-center py-6'}>
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return <DeleteAccountErrorContainer />;
+  }
+
+  const blockers = data.blockers.filter(
+    (blocker) => blocker !== 'recent_sign_in_required',
+  );
+
+  if (!data.enabled || blockers.length > 0) {
+    const sharedWorkspaces = workspaceNames(
+      data.ownedTeamWorkspaces.filter((w) => w.otherMemberCount > 0),
+    );
+    const scheduledDate = data.scheduledFor
+      ? new Date(data.scheduledFor).toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })
+      : '';
+
+    return (
+      <div className="flex flex-col gap-y-4">
+        <Alert variant={'destructive'}>
+          <ExclamationTriangleIcon className={'h-4'} />
+
+          <AlertTitle>
+            <Trans i18nKey={'account:deleteAccountBlockedHeading'} />
+          </AlertTitle>
+
+          <AlertDescription>
+            <ul className={'list-disc space-y-1 pl-4'}>
+              {!data.enabled ? (
+                <li>
+                  <Trans i18nKey={'account:deleteAccountBlockers.disabled'} />
+                </li>
+              ) : null}
+              {blockers.map((blocker) => (
+                <li key={blocker}>
+                  <Trans
+                    i18nKey={`account:deleteAccountBlockers.${blocker}`}
+                    values={{
+                      date: scheduledDate,
+                      workspaces: sharedWorkspaces,
+                    }}
+                  />
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+
+        <div>
+          <AlertDialogCancel>
+            <Trans i18nKey={'common:cancel'} />
+          </AlertDialogCancel>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <DeleteAccountForm
+      email={props.email}
+      soloWorkspaces={workspaceNames(data.ownedTeamWorkspaces)}
+    />
+  );
+}
+
+function workspaceNames(workspaces: OwnedTeamWorkspace[]) {
+  return workspaces.map((workspace) => workspace.name).join(', ');
+}
+
+function DeleteAccountForm(props: { email: string; soloWorkspaces: string }) {
   const form = useForm({
     resolver: zodResolver(DeletePersonalAccountSchema),
     defaultValues: {
@@ -120,6 +213,15 @@ function DeleteAccountForm(props: { email: string }) {
               <div>
                 <Trans i18nKey={'account:deleteAccountDescription'} />
               </div>
+
+              {props.soloWorkspaces ? (
+                <div>
+                  <Trans
+                    i18nKey={'account:deleteAccountAlsoDeleted'}
+                    values={{ workspaces: props.soloWorkspaces }}
+                  />
+                </div>
+              ) : null}
 
               <div>
                 <Trans i18nKey={'common:modalConfirmationQuestion'} />
