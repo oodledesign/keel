@@ -24,6 +24,9 @@ const serverSchema = z.object({
   TIKTOK_CLIENT_KEY: z.string().optional(),
   TIKTOK_CLIENT_SECRET: z.string().optional(),
   TIKTOK_REDIRECT_URI: z.string().url().optional(),
+  WEBFLOW_CLIENT_ID: z.string().optional(),
+  WEBFLOW_CLIENT_SECRET: z.string().optional(),
+  WEBFLOW_REDIRECT_URI: z.string().url().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().url().optional(),
@@ -136,4 +139,20 @@ export function getOptionalGoogle() {
     clientSecret,
     redirectUri,
   };
+}
+
+export const FEEDFLOW_WEBFLOW_CALLBACK_PATH =
+  '/api/feedflow/auth/webflow/callback';
+
+/** Webflow OAuth app credentials; the redirect defaults to our callback. */
+export function getOptionalWebflow() {
+  const clientId = process.env.WEBFLOW_CLIENT_ID?.trim();
+  const clientSecret = process.env.WEBFLOW_CLIENT_SECRET?.trim();
+  const site = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, '');
+  const redirectUri =
+    process.env.WEBFLOW_REDIRECT_URI?.trim() ||
+    (site ? `${site}${FEEDFLOW_WEBFLOW_CALLBACK_PATH}` : '');
+  if (!clientId || !clientSecret || !redirectUri) return null;
+  if (!z.string().url().safeParse(redirectUri).success) return null;
+  return { clientId, clientSecret, redirectUri };
 }

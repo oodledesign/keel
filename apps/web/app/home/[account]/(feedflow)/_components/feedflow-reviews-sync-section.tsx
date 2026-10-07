@@ -1,3 +1,5 @@
+import { getOptionalWebflow } from '~/lib/feedflow/env';
+
 import {
   loadFeedflowReviews,
   loadFeedflowWebflowConnection,
@@ -38,6 +40,7 @@ export async function FeedflowReviewsSyncSection(props: {
           clientId={props.clientId}
           connection={webflow.connection}
           log={webflow.log}
+          oauthAvailable={Boolean(getOptionalWebflow())}
         />
       </ModuleDataSection>
     </>

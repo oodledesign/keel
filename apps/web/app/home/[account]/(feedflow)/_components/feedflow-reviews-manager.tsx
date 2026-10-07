@@ -21,6 +21,8 @@ import {
   setReviewHidden,
 } from '../_lib/server/feedflow-webflow-actions';
 
+const MAX_CSV_BYTES = 1_000_000;
+
 const CSV_HINT =
   'reviewer,rating,comment,date\n"Jo Smith",5,"Brilliant service",2026-01-14';
 
@@ -35,6 +37,7 @@ export function FeedflowReviewsManager(props: {
   const [rating, setRating] = useState('5');
   const [comment, setComment] = useState('');
   const [csv, setCsv] = useState('');
+  const [fileName, setFileName] = useState<string | null>(null);
 
   const run = (task: () => Promise<void>) =>
     startTransition(async () => {
@@ -116,6 +119,7 @@ export function FeedflowReviewsManager(props: {
                 csv,
               });
               setCsv('');
+              setFileName(null);
               toast.success(
                 `Imported ${result.imported} reviews` +
                   (result.errors.length
@@ -127,14 +131,38 @@ export function FeedflowReviewsManager(props: {
         >
           <p className="text-sm font-medium">Import CSV</p>
           <p className={`text-xs ${workspaceTextMuted}`}>
-            Paste a CSV with reviewer and rating columns (comment and date
+            Upload or paste a CSV with reviewer and rating columns (comment and date
             optional). Re-importing the same rows will not create duplicates.
+          </p>
+          <Input
+            type="file"
+            accept=".csv,text/csv"
+            disabled={pending}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = '';
+              if (!file) return;
+              if (file.size > MAX_CSV_BYTES) {
+                toast.error('CSV is too large (1 MB max)');
+                return;
+              }
+              void file.text().then((text) => {
+                setCsv(text);
+                setFileName(file.name);
+              });
+            }}
+          />
+          <p className={`text-xs ${workspaceTextMuted}`}>
+            {fileName ? `Loaded ${fileName}. ` : ''}Or paste rows below.
           </p>
           <Textarea
             rows={4}
             value={csv}
             placeholder={CSV_HINT}
-            onChange={(event) => setCsv(event.target.value)}
+            onChange={(event) => {
+              setCsv(event.target.value);
+              setFileName(null);
+            }}
             className="font-mono text-xs"
           />
           <Button type="submit" disabled={pending || !csv.trim()}>

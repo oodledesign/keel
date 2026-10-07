@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { getFeedflowServerEnv } from '~/lib/feedflow/env';
 
 export type FeedflowOAuthStatePayload = {
-  provider: 'instagram' | 'tiktok';
+  provider: 'instagram' | 'tiktok' | 'webflow';
   accountId: string;
   userId: string;
   exp: number;
@@ -61,7 +61,11 @@ export function verifyFeedflowOAuthState(
       return null;
     }
     if (Date.now() > parsed.exp) return null;
-    if (parsed.provider !== 'instagram' && parsed.provider !== 'tiktok') {
+    if (
+      parsed.provider !== 'instagram' &&
+      parsed.provider !== 'tiktok' &&
+      parsed.provider !== 'webflow'
+    ) {
       return null;
     }
     return {

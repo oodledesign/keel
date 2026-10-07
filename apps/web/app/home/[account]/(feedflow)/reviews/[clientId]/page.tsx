@@ -18,6 +18,7 @@ import {
   redirectIfSpaceNotIn,
 } from '../../../_lib/server/workspace-route-guard';
 import { workAccountPath, workPaths } from '../../../_lib/work-account-path';
+import { FeedflowOauthBanner } from '../../_components/feedflow-oauth-banner';
 import { FeedflowReviewsSyncSection } from '../../_components/feedflow-reviews-sync-section';
 
 type FeedflowClientReviewsPageProps = {
@@ -25,12 +26,18 @@ type FeedflowClientReviewsPageProps = {
     account: string;
     clientId: string;
   }>;
+  searchParams: Promise<{
+    feedflow_error?: string;
+    feedflow_connected?: string;
+  }>;
 };
 
 export default async function FeedflowClientReviewsPage({
   params,
+  searchParams,
 }: FeedflowClientReviewsPageProps) {
   const { account, clientId } = await params;
+  const sp = await searchParams;
   const workspace = await loadTeamWorkspace(account);
   redirectIfSpaceNotIn(workspace, account, ADDON_APPS_SPACE_TYPES);
 
@@ -88,6 +95,10 @@ export default async function FeedflowClientReviewsPage({
           )}
         </ModuleDataSection>
 
+        <FeedflowOauthBanner
+          error={sp.feedflow_error ?? null}
+          success={sp.feedflow_connected ?? null}
+        />
         <FeedflowReviewsSyncSection accountId={accountId} clientId={clientId} />
 
         <div className="flex flex-wrap gap-3 text-sm">

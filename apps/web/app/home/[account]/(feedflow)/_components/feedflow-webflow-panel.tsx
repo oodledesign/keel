@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -44,8 +44,10 @@ export function FeedflowWebflowPanel(props: {
   clientId: string | null;
   connection: FeedflowWebflowConnectionRow | null;
   log: FeedflowWebflowSyncLogRow[];
+  oauthAvailable: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [pending, startTransition] = useTransition();
   const connection = props.connection;
 
@@ -61,6 +63,16 @@ export function FeedflowWebflowPanel(props: {
     });
 
   const [token, setToken] = useState('');
+  const [showTokenForm, setShowTokenForm] = useState(!props.oauthAvailable);
+
+  const oauthStartHref = (() => {
+    const params = new URLSearchParams({
+      account_id: props.accountId,
+      return: pathname,
+    });
+    if (props.clientId) params.set('client_id', props.clientId);
+    return `/api/feedflow/auth/webflow/start?${params.toString()}`;
+  })();
 
   const [sites, setSites] = useState<Option[]>([]);
   const [collections, setCollections] = useState<Option[]>([]);
@@ -120,8 +132,32 @@ export function FeedflowWebflowPanel(props: {
 
   if (!connection) {
     return (
+      <div className="max-w-lg space-y-3">
+        {props.oauthAvailable ? (
+          <div
+            className={`space-y-3 rounded-lg border bg-[var(--workspace-shell-panel)] p-4 ${workspaceBorder}`}
+          >
+            <p className={`text-sm ${workspaceTextMuted}`}>
+              Sign in to Webflow and choose which sites Ozer can update. You
+              can disconnect at any time.
+            </p>
+            <Button asChild>
+              <a href={oauthStartHref}>Connect with Webflow</a>
+            </Button>
+            {!showTokenForm ? (
+              <button
+                type="button"
+                className={`block text-xs underline underline-offset-4 ${workspaceTextMuted}`}
+                onClick={() => setShowTokenForm(true)}
+              >
+                Use an API token instead
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        {showTokenForm ? (
       <form
-        className={`max-w-lg space-y-3 rounded-lg border bg-[var(--workspace-shell-panel)] p-4 ${workspaceBorder}`}
+        className={`space-y-3 rounded-lg border bg-[var(--workspace-shell-panel)] p-4 ${workspaceBorder}`}
         onSubmit={(event) => {
           event.preventDefault();
           run(async () => {
@@ -154,6 +190,8 @@ export function FeedflowWebflowPanel(props: {
           {pending ? 'Connecting…' : 'Connect Webflow'}
         </Button>
       </form>
+        ) : null}
+      </div>
     );
   }
 
@@ -185,6 +223,11 @@ export function FeedflowWebflowPanel(props: {
             </p>
           </div>
           <div className="flex gap-2">
+            {props.oauthAvailable ? (
+              <Button size="sm" variant="outline" asChild>
+                <a href={oauthStartHref}>Reconnect</a>
+              </Button>
+            ) : null}
             {hasTarget ? (
               <Button
                 size="sm"
