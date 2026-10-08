@@ -26,7 +26,8 @@ Categories:
 
 When a real person expects a personal reply soon, prefer reply_now over reply_later.
 When unsure between reply_now and reply_later, choose reply_later with lower confidence.
-When the owner already sent the latest message and is waiting on someone else, choose waiting.
+Judge the latest message. When the owner already sent the latest message and is waiting on someone else, choose waiting.
+When the latest message says someone else (not the owner) will follow up next, choose waiting.
 A warm human reply that does not ask anything of the owner (thanks, confirmation, update) is fyi — never noise.
 When unsure between fyi and noise, choose fyi for human senders and noise for automated senders.`;
 

@@ -10,21 +10,80 @@ import {
 } from '~/lib/email-assistant/auto-sync-category-to-gmail';
 import { resolveDraftOwnerContext } from '~/lib/email-assistant/draft-owner';
 import { ACTIONABLE_EMAIL_CATEGORIES } from '~/lib/email-assistant/email-thread-categories';
+import { categoryForGmailLabels } from '~/lib/email-assistant/gmail-label-category';
 import type { MailboxKind } from '~/lib/email-assistant/mailbox-kind';
 import { categoryForOwnerLatestMessage } from '~/lib/email-assistant/owner-latest-message-category';
+
+type ReconcileScope = {
+  userId?: string;
+  accountId?: string;
+  connectionId?: string;
+  threadIds?: string[];
+};
+
+/**
+ * Spam, trash and unsent-draft threads never need a reply. Bulk-cleared by
+ * label so they do not crowd out the per-thread checks below.
+ */
+async function clearLabelExcludedNeedsReplyThreads(
+  params: ReconcileScope,
+): Promise<number> {
+  const admin = getSupabaseServerAdminClient();
+  let query = admin
+    .from('email_threads')
+    .select('id, label_ids')
+    .in('assistant_category', [...ACTIONABLE_EMAIL_CATEGORIES])
+    .overlaps('label_ids', ['SPAM', 'TRASH', 'DRAFT']);
+
+  if (params.threadIds && params.threadIds.length > 0) {
+    query = query.in('id', params.threadIds);
+  } else if (params.connectionId) {
+    query = query.eq('connection_id', params.connectionId);
+  } else if (params.accountId) {
+    query = query.eq('account_id', params.accountId);
+  } else if (params.userId) {
+    query = query.eq('user_id', params.userId);
+  } else {
+    return 0;
+  }
+
+  const { data: rows, error } = await query.limit(500);
+  if (error || !rows?.length) return 0;
+
+  let cleared = 0;
+  for (const row of rows) {
+    const override = categoryForGmailLabels(
+      (row as { label_ids?: string[] | null }).label_ids,
+    );
+    if (!override) continue;
+
+    const { error: updateError } = await admin
+      .from('email_threads')
+      .update({
+        assistant_category: override.category,
+        assistant_category_reason: override.reason,
+        assistant_category_confidence: 1,
+        assistant_processed_message_id: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', row.id as string);
+
+    if (!updateError) cleared += 1;
+  }
+
+  return cleared;
+}
 
 /**
  * Clears actionable categories when the latest synced message is already from the mailbox owner
  * (e.g. they replied in Gmail outside Ozer). When sync_triage_to_gmail is enabled, mirrors the
  * new category to Gmail (archive Waiting/FYI/Noise) unless respect_existing_gmail_labels skips it.
  */
-export async function reconcileRepliedNeedsReplyThreads(params: {
-  userId?: string;
-  accountId?: string;
-  connectionId?: string;
-  threadIds?: string[];
-}): Promise<{ cleared: number }> {
+export async function reconcileRepliedNeedsReplyThreads(
+  params: ReconcileScope,
+): Promise<{ cleared: number }> {
   const admin = getSupabaseServerAdminClient();
+  const labelCleared = await clearLabelExcludedNeedsReplyThreads(params);
 
   let query = admin
     .from('email_threads')
@@ -43,16 +102,18 @@ export async function reconcileRepliedNeedsReplyThreads(params: {
     return { cleared: 0 };
   }
 
-  const { data: threads, error } = await query.limit(50);
+  const { data: threads, error } = await query
+    .order('last_message_at', { ascending: false, nullsFirst: false })
+    .limit(50);
 
   if (error || !threads?.length) {
-    return { cleared: 0 };
+    return { cleared: labelCleared };
   }
 
   const ownerByConnectionId = new Map<string, string>();
   const settingsByConnectionId = new Map<string, AutoSyncGmailSettings>();
   const mailboxKindByConnectionId = new Map<string, MailboxKind>();
-  let cleared = 0;
+  let cleared = labelCleared;
 
   for (const row of threads) {
     const threadId = row.id as string;

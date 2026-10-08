@@ -6,11 +6,18 @@ import { askTypeSafe, isTypeSafeConfigured } from '~/lib/ai/typesafe';
 
 import {
   type EmailThreadCategory,
+  isActionableEmailCategory,
   isEmailThreadCategory,
 } from './email-thread-categories';
 
 /** Below this Jev confidence the caller should fall back to the generative model. */
 export const JEV_MIN_CONFIDENCE = 0.55;
+
+/**
+ * A false "needs a reply" costs the owner more than a missed one is caught
+ * late, so reply_now / reply_later need a stronger Jev answer.
+ */
+export const JEV_MIN_ACTIONABLE_CONFIDENCE = 0.8;
 
 /** Jev loses accuracy on large state; the newest messages matter most. */
 const MAX_STATE_CHARS = 6_000;
@@ -62,12 +69,12 @@ export async function classifyThreadWithJev(input: {
           },
           criteria: {
             reply_later:
-              'A real person wants a personal reply from the mailbox owner, but it is not urgent',
+              'A real person asks the mailbox owner a question or for something in the latest message, but it is not urgent',
             reply_now:
-              'A real person is waiting on the mailbox owner right now: a direct ask, urgent decision or scheduling request',
+              'A real person is waiting on the mailbox owner right now: a direct ask, urgent decision or scheduling request in the latest message',
             waiting:
-              'The mailbox owner sent the latest message, or the thread is waiting on the other party to respond',
-            fyi: 'A human update, thanks or acknowledgement that does not need a reply',
+              'The mailbox owner sent the latest message, or the latest message says someone else (not the owner) will follow up next',
+            fyi: 'A human update, thanks or acknowledgement with no question or request for the mailbox owner',
             noise:
               'Newsletters, marketing, automated receipts or alerts, mailing lists, no-reply senders',
           },
@@ -81,7 +88,9 @@ export async function classifyThreadWithJev(input: {
       !answer ||
       answer.type !== 'choice' ||
       !isEmailThreadCategory(answer.choice) ||
-      answer.confidence < JEV_MIN_CONFIDENCE
+      answer.confidence < JEV_MIN_CONFIDENCE ||
+      (isActionableEmailCategory(answer.choice) &&
+        answer.confidence < JEV_MIN_ACTIONABLE_CONFIDENCE)
     ) {
       return null;
     }

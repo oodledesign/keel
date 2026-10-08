@@ -28,6 +28,7 @@ import {
   matchEmailTriageRule,
   normalizeEmailTriageRules,
 } from './email-triage-rules';
+import { categoryForGmailLabels } from './gmail-label-category';
 import { classifyThreadWithJev } from './jev-classify';
 import type { MailboxKind } from './mailbox-kind';
 import { createMeteredEmailGenerateText } from './metered-generate-text';
@@ -241,6 +242,31 @@ export async function runEmailAssistantPipeline(
       break;
     }
 
+    const labelOverride = categoryForGmailLabels(thread.label_ids);
+    if (labelOverride) {
+      if (thread.assistant_category !== labelOverride.category) {
+        // Clear the processed tip so the thread is reclassified if it leaves
+        // spam/trash or the draft is sent.
+        const { error: labelUpdateError } = await admin
+          .from('email_threads')
+          .update({
+            assistant_category: labelOverride.category,
+            assistant_category_reason: labelOverride.reason,
+            assistant_category_confidence: 1,
+            assistant_processed_message_id: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', thread.id)
+          .eq('user_id', userId);
+
+        if (labelUpdateError) {
+          result.errors.push(labelUpdateError.message);
+        }
+      }
+      result.skipped += 1;
+      continue;
+    }
+
     const { data: latestMessage, error: latestError } = await admin
       .from('email_messages')
       .select(
@@ -268,6 +294,7 @@ export async function runEmailAssistantPipeline(
       {
         fromAddress: latest.from_address,
         subject: latest.subject ?? thread.subject,
+        ownerEmail: owner.email,
       },
       settings.triageRules,
     );

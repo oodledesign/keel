@@ -84,12 +84,14 @@ export function normalizeEmailTriageRules(
 
 /**
  * Resolve the strongest triage rule for a message tip.
- * Ignore wins over priority when both match.
+ * Ignore wins over priority when both match. Priority never applies to the
+ * mailbox owner's own messages: the ball is with the other party.
  */
 export function matchEmailTriageRule(
   input: {
     fromAddress: string | null | undefined;
     subject: string | null | undefined;
+    ownerEmail?: string | null;
   },
   rules: EmailTriageRules,
 ): EmailTriageMatch | null {
@@ -130,6 +132,10 @@ export function matchEmailTriageRule(
   }
 
   const from = extractEmailAddress(input.fromAddress);
+  if (from && from === extractEmailAddress(input.ownerEmail)) {
+    return null;
+  }
+
   if (
     from &&
     rules.prioritySenders.some((s) => extractEmailAddress(s) === from)
@@ -343,6 +349,15 @@ async function applyRuleToMatchingThreads(
   const threadIds = (threads ?? []).map((row) => String(row.id));
   if (threadIds.length === 0) return 0;
 
+  const { data: connection } = await client
+    .from('google_connections')
+    .select('google_email')
+    .eq('id', connectionId)
+    .maybeSingle();
+  const ownerEmail =
+    (connection as { google_email?: string | null } | null)?.google_email ??
+    null;
+
   const tipByThread = new Map<
     string,
     { from_address: string | null; subject: string | null }
@@ -383,6 +398,7 @@ async function applyRuleToMatchingThreads(
       {
         fromAddress: tip.from_address,
         subject: tip.subject,
+        ownerEmail,
       },
       probeRules,
     );
