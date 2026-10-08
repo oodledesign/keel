@@ -81,6 +81,7 @@ export function VideoLibraryClient(props: {
   accountSlug: string;
   folders: VideoFolderRow[];
   videos: VideoRow[];
+  initialFolderId?: string | null;
 }) {
   const router = useRouter();
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -88,7 +89,9 @@ export function VideoLibraryClient(props: {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | VideoStatus>('all');
   const [sort, setSort] = useState<VideoSort>('newest');
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(
+    props.initialFolderId ?? null,
+  );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [previewVideo, setPreviewVideo] = useState<VideoRow | null>(null);
   const [moveVideoTarget, setMoveVideoTarget] = useState<VideoRow | null>(null);

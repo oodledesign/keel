@@ -32,11 +32,13 @@ export function PublicSharePanel(props: {
   initialToken: string | null;
   initialPublicUrl: string | null;
   videoReady: boolean;
+  onChange?: (state: { enabled: boolean; publicUrl: string | null }) => void;
 }) {
   const [enabled, setEnabled] = useState(props.initialEnabled);
   const [publicUrl, setPublicUrl] = useState(props.initialPublicUrl);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const onShareChange = props.onChange;
 
   const whatsAppUrl = useMemo(() => {
     if (!publicUrl) return null;
@@ -57,6 +59,10 @@ export function PublicSharePanel(props: {
 
         setEnabled(json.data.enabled);
         setPublicUrl(json.data.publicUrl);
+        onShareChange?.({
+          enabled: json.data.enabled,
+          publicUrl: json.data.publicUrl,
+        });
         toast.success(
           json.data.enabled ? 'Public link enabled' : 'Public link disabled',
         );
@@ -66,7 +72,7 @@ export function PublicSharePanel(props: {
         setSaving(false);
       }
     },
-    [props.videoId],
+    [props.videoId, onShareChange],
   );
 
   const copyLink = async () => {
@@ -86,7 +92,7 @@ export function PublicSharePanel(props: {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-medium">Public link</h3>
+          <h3 className="text-sm font-medium">Visibility</h3>
           <p className="text-muted-foreground mt-0.5 text-xs">
             Share a watch page on WhatsApp, email, or social media. Anyone with
             the link can view this video.

@@ -15,7 +15,7 @@ import {
 
 import { detectAspectRatio } from '../player-config-types';
 import { buildPublicVideoWatchUrl } from '../public-share';
-import type { VideoRow } from '../types';
+import type { VideoFolderRow, VideoRow } from '../types';
 import { normalizeVideoChapters } from './generate-video-chapters';
 import { normalizeVideoSummary } from './generate-video-summary';
 import {
@@ -79,11 +79,20 @@ export async function loadVideoPlayerConfigPage(
     engagement_score: video.engagement_score,
   });
 
-  const [configRow, presets, resolved] = await Promise.all([
+  const [configRow, presets, resolved, foldersResult] = await Promise.all([
     loadVideoPlayerConfig(access.client, videoId),
     loadAccountPresets(access.client, accountId),
     resolveEffectivePlayerConfig(access.client, accountId, videoId),
+    access.client
+      .from('video_folders')
+      .select('id, name, parent_folder_id')
+      .eq('account_id', accountId)
+      .order('name', { ascending: true }),
   ]);
+  const folders = (foldersResult.data ?? []) as Pick<
+    VideoFolderRow,
+    'id' | 'name' | 'parent_folder_id'
+  >[];
 
   const bunny = createBunnyStreamClient();
   const [captionsResult, bunnyVideoResult, transcriptResult] =
@@ -131,6 +140,10 @@ export async function loadVideoPlayerConfigPage(
     video: {
       id: video.id as string,
       title: video.title as string,
+      folderId: video.folder_id ?? null,
+      durationSeconds: video.duration_seconds ?? null,
+      createdAt: video.created_at,
+      originalFilename: video.original_filename ?? null,
       bunny_library_id: String(video.bunny_library_id),
       bunny_video_id: String(video.bunny_video_id),
       status: video.status as string,
@@ -153,6 +166,7 @@ export async function loadVideoPlayerConfigPage(
       chapters: normalizeVideoChapters(video.chapters),
       summary: normalizeVideoSummary(video.summary),
     },
+    folders,
     transcriptPlainText,
     config,
     detectedAspectRatio,

@@ -40,6 +40,8 @@ export const PlayerPreview = forwardRef<
     /** Bunny has finished encoding; until then the embed only shows its own error. */
     ready: boolean;
     config: VideoPlayerConfigValues;
+    /** Edge-to-edge inside a parent card: no heading, border or rounding. */
+    bare?: boolean;
   }
 >(function PlayerPreview(props, ref) {
   const router = useRouter();
@@ -79,16 +81,22 @@ export const PlayerPreview = forwardRef<
     : undefined;
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-medium">Live preview</h3>
-        <span className="text-muted-foreground text-xs">
-          {debouncedConfig.aspect_ratio}
-        </span>
-      </div>
+    <div className={props.bare ? undefined : 'space-y-3'}>
+      {props.bare ? null : (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-sm font-medium">Live preview</h3>
+          <span className="text-muted-foreground text-xs">
+            {debouncedConfig.aspect_ratio}
+          </span>
+        </div>
+      )}
 
       <div
-        className="mx-auto w-full overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/40"
+        className={
+          props.bare
+            ? 'mx-auto w-full overflow-hidden bg-black'
+            : 'mx-auto w-full overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/40'
+        }
         style={{ maxWidth }}
       >
         <div className="relative w-full" style={{ aspectRatio: ratio }}>

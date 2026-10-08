@@ -64,15 +64,15 @@ export function VideoCard(props: {
               className="object-cover transition group-hover:scale-[1.02]"
             />
             <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/30 group-hover:opacity-100">
-              <Settings2 className="h-10 w-10 text-[var(--workspace-shell-text)]" />
+              <Settings2 className="h-10 w-10 text-[var(--ozer-white)] drop-shadow" />
             </div>
-            <span className="absolute right-2 bottom-2 rounded bg-black/70 px-1.5 py-0.5 text-xs text-[var(--workspace-shell-text)]">
+            <span className="absolute right-2 bottom-2 rounded-md bg-black/80 px-1.5 py-0.5 text-xs font-medium text-[var(--ozer-white)] tabular-nums">
               {formatDuration(video.duration_seconds)}
             </span>
           </>
         )}
         {video.status === 'failed' ? (
-          <span className="absolute top-2 left-2 rounded bg-red-500/90 px-2 py-0.5 text-xs text-[var(--workspace-shell-text)]">
+          <span className="absolute top-2 left-2 rounded bg-red-500/90 px-2 py-0.5 text-xs text-[var(--ozer-white)]">
             Failed
           </span>
         ) : null}

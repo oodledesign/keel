@@ -21,12 +21,13 @@ async function VideoPlayerConfigPage({ params }: VideoPlayerConfigPageProps) {
       <TeamAccountLayoutPageHeader
         account={data.accountSlug}
         title={data.video.title}
-        description="Configure the embed player and copy embed code."
+        description="Video details"
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
         <PlayerConfigPageClient
           accountSlug={data.accountSlug}
           video={data.video}
+          folders={data.folders}
           transcriptPlainText={data.transcriptPlainText}
           initialConfig={data.config}
           initialPresets={data.presets}

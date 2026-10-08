@@ -17,12 +17,17 @@ import { VideoLibraryClient } from './_components/video-library-client';
 
 type VideosPageProps = {
   params: Promise<{ account: string }>;
+  searchParams: Promise<{ folder?: string }>;
 };
 
 export const generateMetadata = async () => ({ title: 'Videos' });
 
-export default async function VideosPage({ params }: VideosPageProps) {
+export default async function VideosPage({
+  params,
+  searchParams,
+}: VideosPageProps) {
   const { account } = await params;
+  const { folder } = await searchParams;
   const workspace = await loadTeamWorkspace(account);
   redirectIfSpaceNotIn(workspace, account, ADDON_APPS_SPACE_TYPES);
 
@@ -61,6 +66,9 @@ export default async function VideosPage({ params }: VideosPageProps) {
           accountSlug={account}
           folders={folders}
           videos={videos}
+          initialFolderId={
+            folders.some((row) => row.id === folder) ? folder : null
+          }
         />
       </PageBody>
     </>

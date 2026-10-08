@@ -22,6 +22,8 @@ export function VideoSummaryEditor(props: {
   videoId: string;
   initialSummary: string | null;
   transcriptPlainText: string | null;
+  /** Rendered as a field inside a parent card rather than its own card. */
+  embedded?: boolean;
 }) {
   const [summary, setSummary] = useState(props.initialSummary ?? '');
   const [saving, setSaving] = useState(false);
@@ -85,7 +87,13 @@ export function VideoSummaryEditor(props: {
   };
 
   return (
-    <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5">
+    <section
+      className={
+        props.embedded
+          ? undefined
+          : 'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5'
+      }
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
           Summary

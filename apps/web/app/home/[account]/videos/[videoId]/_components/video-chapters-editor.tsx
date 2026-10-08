@@ -48,6 +48,8 @@ export function VideoChaptersEditor(props: {
   transcriptPlainText: string | null;
   publishedAt: string | null;
   onSeek?: (ms: number) => void;
+  /** Summary and published date are rendered elsewhere on the page. */
+  chaptersOnly?: boolean;
 }) {
   const [chapters, setChapters] = useState<VideoChapter[]>(
     props.initialChapters,
@@ -120,7 +122,7 @@ export function VideoChaptersEditor(props: {
 
   return (
     <div className="space-y-4">
-      {publishedLabel ? (
+      {publishedLabel && !props.chaptersOnly ? (
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           <time dateTime={props.publishedAt ?? undefined}>
             {publishedLabel}
@@ -135,11 +137,13 @@ export function VideoChaptersEditor(props: {
         variant="workspace"
       />
 
-      <VideoSummaryEditor
-        videoId={props.videoId}
-        initialSummary={props.initialSummary}
-        transcriptPlainText={props.transcriptPlainText}
-      />
+      {props.chaptersOnly ? null : (
+        <VideoSummaryEditor
+          videoId={props.videoId}
+          initialSummary={props.initialSummary}
+          transcriptPlainText={props.transcriptPlainText}
+        />
+      )}
 
       <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">

@@ -36,6 +36,7 @@ import {
   type PlayerPreload,
   type VideoPlayerConfigValues,
 } from '~/lib/videos/player-config-types';
+import { workspacePanelCard } from '~/lib/workspace-ui';
 
 function ConfigRow(props: {
   label: string;
@@ -209,9 +210,14 @@ export function PlayerConfigEditor(props: {
   };
 
   return (
-    <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-        <p className="text-sm font-medium">Player settings</p>
+    <section className={workspacePanelCard}>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-5 py-4">
+        <div>
+          <h2 className="text-base font-semibold">Player settings</h2>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            How the player looks and behaves wherever this video is embedded.
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
@@ -233,8 +239,8 @@ export function PlayerConfigEditor(props: {
         </div>
       </div>
 
-      <Tabs defaultValue="playback" className="px-4 pb-4">
-        <TabsList className="mt-3 mb-2 flex h-auto flex-wrap gap-1 bg-black/30 p-1">
+      <Tabs defaultValue="playback" className="px-5 pb-5">
+        <TabsList className="mt-4 mb-2 flex h-auto flex-wrap gap-1 bg-[var(--workspace-shell-sidebar-accent)] p-1">
           <TabsTrigger value="playback" className="text-xs">
             Playback
           </TabsTrigger>
@@ -671,6 +677,6 @@ export function PlayerConfigEditor(props: {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </section>
   );
 }
