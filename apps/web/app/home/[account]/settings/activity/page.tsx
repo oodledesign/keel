@@ -13,7 +13,6 @@ import {
   getTeamAccountAccess,
 } from '../../_lib/role-access';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
-import { isBusinessLiteType } from '../../_lib/workspace-profile';
 import { ActivityPrivacySettingsForm } from './_components/ActivityPrivacySettingsForm';
 import { ActivityRulesPanel } from './_components/ActivityRulesPanel';
 import { getActivityPrivacySettings } from './actions';
@@ -45,7 +44,7 @@ async function ActivityPrivacySettingsPage({
     },
   );
 
-  if (isBusinessLiteType(workspace.businessType)) {
+  if (workspace.workspaceProfile !== 'work_design' || workspace.businessLite) {
     redirect(pathsConfig.app.accountSettings.replace('[account]', accountSlug));
   }
 

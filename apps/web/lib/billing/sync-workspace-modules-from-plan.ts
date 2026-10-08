@@ -2,6 +2,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { BUSINESS_FREE_MODULE_KEYS } from '~/home/[account]/_lib/business-free-access';
+
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
 
 const BUSINESS_CORE_MODULE_KEYS = [
@@ -23,19 +25,6 @@ const BUSINESS_CORE_MODULE_KEYS = [
   'messages',
   'finances',
   'settings',
-] as const;
-
-const BUSINESS_LITE_MODULE_KEYS = [
-  'dashboard',
-  'apps',
-  'settings',
-  'team',
-  'clients',
-  'tasks',
-  'invoices',
-  'client_portal',
-  'notes',
-  'pipeline',
 ] as const;
 
 const ADDON_MODULE_KEYS = [
@@ -86,15 +75,13 @@ export async function syncBusinessLiteModules(
   accountId: string,
 ): Promise<void> {
   for (const moduleKey of BUSINESS_CORE_MODULE_KEYS) {
-    if (
-      (BUSINESS_LITE_MODULE_KEYS as readonly string[]).includes(moduleKey)
-    ) {
+    if ((BUSINESS_FREE_MODULE_KEYS as readonly string[]).includes(moduleKey)) {
       continue;
     }
     await setModuleEnabled(admin, accountId, moduleKey, false);
   }
 
-  for (const moduleKey of BUSINESS_LITE_MODULE_KEYS) {
+  for (const moduleKey of BUSINESS_FREE_MODULE_KEYS) {
     await setModuleEnabled(admin, accountId, moduleKey, true);
   }
 

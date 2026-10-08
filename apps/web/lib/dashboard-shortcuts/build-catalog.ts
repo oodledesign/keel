@@ -23,6 +23,7 @@ import {
   buildWorkAppLinks,
   buildWorkSpaceNavChildren,
 } from '~/config/work-account-navigation.config';
+import { withoutNavPreferences } from '~/home/[account]/_lib/business-nav-preferences';
 import {
   type TeamAccountAccess,
   getTeamAccountAccess,
@@ -30,7 +31,6 @@ import {
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import {
   type WorkspaceProfile,
-  isBusinessLiteType,
   spaceTypeFromProfile,
 } from '~/home/[account]/_lib/workspace-profile';
 import { loadUserWorkspaceAccounts } from '~/home/_lib/server/workspace-scope';
@@ -82,7 +82,7 @@ function navItemsForWorkspace(
   const workItems = buildWorkSpaceNavChildren(
     slug,
     access,
-    moduleSettings,
+    withoutNavPreferences(moduleSettings),
     undefined,
     false,
     businessLite,
@@ -156,7 +156,7 @@ async function catalogForWorkspaceSlug(
       workspace.workspaceProfile,
       access,
       workspace.moduleSettings,
-      isBusinessLiteType(workspace.businessType),
+      workspace.businessLite,
     );
 
     const dynamicItems = await buildDynamicShortcutCatalog({

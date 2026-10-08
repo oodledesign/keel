@@ -275,6 +275,8 @@ function OverviewMetric({
   );
 }
 
+const NO_HIDDEN_TABS: readonly string[] = [];
+
 export function ClientDetailSidebar({
   accountSlug,
   accountId,
@@ -304,6 +306,7 @@ export function ClientDetailSidebar({
   initialClient = null,
   overviewSeed,
   supportEnabled = false,
+  hiddenTabs = NO_HIDDEN_TABS,
 }: {
   accountSlug: string;
   accountId: string;
@@ -333,6 +336,8 @@ export function ClientDetailSidebar({
   initialClient?: Client | null;
   overviewSeed?: ClientDetailOverviewSeed;
   supportEnabled?: boolean;
+  /** Tabs outside the workspace plan (Business Free hides paid ones). */
+  hiddenTabs?: readonly string[];
 }) {
   const isCommercial = variant === 'commercial';
   const workspaceCurrency = useWorkspaceCurrency();
@@ -595,12 +600,21 @@ export function ClientDetailSidebar({
         ['tasks', 'Tasks'],
         ...(supportEnabled ? [['support', 'Support']] : []),
       ] as Array<[DetailTab, string]>
-    ).map(([key, label]) => ({
-      key,
-      label,
-      meta: key === 'projects' ? String(jobsCount) : undefined,
-    }));
-  }, [client, isCommercial, isContractorView, jobsCount, supportEnabled]);
+    )
+      .filter(([key]) => !hiddenTabs.includes(key))
+      .map(([key, label]) => ({
+        key,
+        label,
+        meta: key === 'projects' ? String(jobsCount) : undefined,
+      }));
+  }, [
+    client,
+    hiddenTabs,
+    isCommercial,
+    isContractorView,
+    jobsCount,
+    supportEnabled,
+  ]);
 
   const handleArchive = async () => {
     setArchiving(true);
@@ -927,25 +941,31 @@ export function ClientDetailSidebar({
                     label={isCommercial ? 'Contact since' : 'Client since'}
                     value={formatCreatedDate(client.created_at)}
                   />
-                  <OverviewMetric
-                    icon={Building2}
-                    label="Active projects"
-                    value={String(activeJobsCount)}
-                  />
-                  <OverviewMetric
-                    icon={Building2}
-                    label="Total project value"
-                    value={formatMoney(totalValuePence)}
-                  />
+                  {hiddenTabs.includes('projects') ? null : (
+                    <>
+                      <OverviewMetric
+                        icon={Building2}
+                        label="Active projects"
+                        value={String(activeJobsCount)}
+                      />
+                      <OverviewMetric
+                        icon={Building2}
+                        label="Total project value"
+                        value={formatMoney(totalValuePence)}
+                      />
+                    </>
+                  )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('retainer')}
-                  className="mt-4 text-xs font-medium text-[var(--ozer-accent-pressed)] hover:underline"
-                >
-                  View retainers →
-                </button>
+                {hiddenTabs.includes('retainer') ? null : (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('retainer')}
+                    className="mt-4 text-xs font-medium text-[var(--ozer-accent-pressed)] hover:underline"
+                  >
+                    View retainers →
+                  </button>
+                )}
 
                 {client.email ? (
                   <p className="mt-4 text-sm text-[var(--workspace-shell-text-muted)]">

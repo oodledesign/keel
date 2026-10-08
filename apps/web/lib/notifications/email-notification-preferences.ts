@@ -43,6 +43,23 @@ export const EMAIL_NOTIFICATION_COPY: Record<
   },
 };
 
+/** Toggles that apply to a workspace; others are kept but not shown. */
+export function visibleEmailNotificationKeys(input: {
+  workspaceProfile: string;
+  businessLite: boolean;
+  emailAssistantAvailable: boolean;
+}): EmailNotificationKey[] {
+  const visible: Record<EmailNotificationKey, boolean> = {
+    commercial_match_digest: input.workspaceProfile === 'commercial_property',
+    email_stuck_thread_digest: input.emailAssistantAvailable,
+    email_follow_up_reminders: input.emailAssistantAvailable,
+    project_retainer_digest:
+      input.workspaceProfile === 'work_design' && !input.businessLite,
+  };
+
+  return EMAIL_NOTIFICATION_KEYS.filter((key) => visible[key]);
+}
+
 export function isEmailNotificationEnabled(
   prefs: unknown,
   key: EmailNotificationKey,

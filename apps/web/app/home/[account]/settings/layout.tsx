@@ -5,7 +5,6 @@ import { AppBreadcrumbs } from '@kit/ui/app-breadcrumbs';
 import { PageBody } from '@kit/ui/page';
 import { Trans } from '@kit/ui/trans';
 
-import { isBusinessLiteType } from '~/home/[account]/_lib/workspace-profile';
 import { canUseCustomSendingDomain } from '~/lib/billing/can-use-custom-sending-domain';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
@@ -53,7 +52,7 @@ async function WorkspaceSettingsLayout({
     moduleSettings: workspace.moduleSettings,
     access,
     canConfigureSendingDomain,
-    businessLite: isBusinessLiteType(workspace.businessType),
+    businessLite: workspace.businessLite,
   });
 
   return (

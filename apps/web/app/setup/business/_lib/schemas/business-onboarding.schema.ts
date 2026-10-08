@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { saveBusinessNavSchema } from '~/home/[account]/settings/_lib/schema/business-nav.schema';
+
 const optionalUrl = z
   .string()
   .trim()
@@ -43,6 +45,8 @@ export const SaveBusinessTaskSchema = z.object({
 export const SkipBusinessTaskSchema = z.object({
   accountId: z.string().uuid(),
 });
+
+export const SaveBusinessNavigationSchema = saveBusinessNavSchema;
 
 export const ContinueBusinessAssistantSchema = z.object({
   accountId: z.string().uuid(),

@@ -7,7 +7,6 @@ import { Switch } from '@kit/ui/switch';
 
 import {
   EMAIL_NOTIFICATION_COPY,
-  EMAIL_NOTIFICATION_KEYS,
   type EmailNotificationKey,
 } from '~/lib/notifications/email-notification-preferences';
 
@@ -15,8 +14,11 @@ import { saveEmailNotificationPreferences } from '../_lib/server/email-notificat
 
 export function EmailNotificationPreferencesForm({
   initialPreferences,
+  keys,
 }: {
   initialPreferences: Record<EmailNotificationKey, boolean>;
+  /** Saving always sends every key, so hidden preferences are preserved. */
+  keys: EmailNotificationKey[];
 }) {
   const [pending, startTransition] = useTransition();
   const [values, setValues] = useState(initialPreferences);
@@ -51,32 +53,38 @@ export function EmailNotificationPreferencesForm({
         </p>
       </div>
 
-      <ul className="divide-y divide-[color:var(--workspace-shell-border)] rounded-xl border border-[color:var(--workspace-shell-border)]">
-        {EMAIL_NOTIFICATION_KEYS.map((key) => {
-          const copy = EMAIL_NOTIFICATION_COPY[key];
-          return (
-            <li
-              key={key}
-              className="flex items-start justify-between gap-4 px-4 py-3"
-            >
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                  {copy.title}
-                </p>
-                <p className="mt-0.5 text-sm text-[var(--workspace-shell-text-muted)]">
-                  {copy.description}
-                </p>
-              </div>
-              <Switch
-                checked={values[key]}
-                disabled={pending}
-                onCheckedChange={(enabled) => toggle(key, enabled)}
-                aria-label={copy.title}
-              />
-            </li>
-          );
-        })}
-      </ul>
+      {keys.length === 0 ? (
+        <p className="rounded-xl border border-[color:var(--workspace-shell-border)] px-4 py-3 text-sm text-[var(--workspace-shell-text-muted)]">
+          There are no optional emails for this workspace.
+        </p>
+      ) : (
+        <ul className="divide-y divide-[color:var(--workspace-shell-border)] rounded-xl border border-[color:var(--workspace-shell-border)]">
+          {keys.map((key) => {
+            const copy = EMAIL_NOTIFICATION_COPY[key];
+            return (
+              <li
+                key={key}
+                className="flex items-start justify-between gap-4 px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                    {copy.title}
+                  </p>
+                  <p className="mt-0.5 text-sm text-[var(--workspace-shell-text-muted)]">
+                    {copy.description}
+                  </p>
+                </div>
+                <Switch
+                  checked={values[key]}
+                  disabled={pending}
+                  onCheckedChange={(enabled) => toggle(key, enabled)}
+                  aria-label={copy.title}
+                />
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

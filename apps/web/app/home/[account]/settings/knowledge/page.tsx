@@ -6,6 +6,7 @@ import pathsConfig from '~/config/paths.config';
 import { getBrainIndexStats } from '~/lib/brain/indexer';
 
 import { getTeamAccountAccess } from '../../_lib/role-access';
+import { redirectIfBusinessFreeBlocked } from '../../_lib/server/business-free-route-guard';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import {
   KNOWLEDGE_SETTINGS_PROFILES,
@@ -25,6 +26,11 @@ async function KnowledgeSettingsPage({ params }: KnowledgeSettingsPageProps) {
   const { account: accountSlug } = await params;
   const workspace = await loadTeamWorkspace(accountSlug);
   redirectIfProfileNotIn(workspace, accountSlug, KNOWLEDGE_SETTINGS_PROFILES);
+  await redirectIfBusinessFreeBlocked(
+    accountSlug,
+    'knowledge',
+    pathsConfig.app.accountSettings,
+  );
 
   const access = getTeamAccountAccess(
     workspace.account as {
@@ -35,9 +41,7 @@ async function KnowledgeSettingsPage({ params }: KnowledgeSettingsPageProps) {
   );
 
   if (!access.canViewDashboard) {
-    redirect(
-      pathsConfig.app.accountSettings.replace('[account]', accountSlug),
-    );
+    redirect(pathsConfig.app.accountSettings.replace('[account]', accountSlug));
   }
 
   const admin = getSupabaseServerAdminClient();

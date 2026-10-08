@@ -18,12 +18,18 @@ import { resolveTeamProductTourId } from '~/lib/product-tour/tour-steps';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
+import { businessFreePaidOnlyNavKeys } from '../_lib/business-free-access';
+import {
+  BUSINESS_NAV_CHOICE_KEYS,
+  readBusinessNavVisibility,
+} from '../_lib/business-nav-preferences';
 import {
   getDefaultAccountPath,
   getTeamAccountAccess,
 } from '../_lib/role-access';
-import { isBusinessProfile } from '../_lib/workspace-profile';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
+import { isBusinessProfile } from '../_lib/workspace-profile';
+import { BusinessNavSettingsForm } from './_components/business-nav-settings-form';
 import { CommercialNavModulesSettingsForm } from './_components/commercial-nav-modules-settings-form';
 import { WorkspaceContactSettingsForm } from './_components/workspace-contact-settings-form';
 import { WorkspaceCurrencySettingsForm } from './_components/workspace-currency-settings-form';
@@ -117,6 +123,18 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
         <CommercialNavModulesSettingsForm
           accountId={account.id}
           initialSettings={workspace.moduleSettings}
+          canEdit={canEditContact}
+        />
+      ) : null}
+      {!isClient && workspace.workspaceProfile === 'work_design' ? (
+        <BusinessNavSettingsForm
+          accountId={account.id}
+          initialVisible={readBusinessNavVisibility(workspace.moduleSettings)}
+          paidOnlyKeys={
+            workspace.businessLite
+              ? businessFreePaidOnlyNavKeys(BUSINESS_NAV_CHOICE_KEYS)
+              : []
+          }
           canEdit={canEditContact}
         />
       ) : null}

@@ -10,14 +10,46 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import pathsConfig from '~/config/paths.config';
-import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
 import { canCommercialMutateDisposals } from '~/lib/commercial/commercial-seat-access';
+import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import {
+  applyBusinessFreeModuleMask,
+  resolveBusinessFree,
+} from '../business-free-access';
+import {
   type WorkspaceProfile,
+  isBusinessLiteType,
   resolveWorkspaceProfile,
 } from './workspace-profile';
+
+const BUSINESS_PLAN_ENTITLEMENT_KEYS = [
+  'workspace_business_lite',
+  'workspace_business',
+  'workspace_business_starter',
+];
+
+async function loadBusinessPlanEntitlementKeys(
+  client: SupabaseClient,
+  accountId: string,
+): Promise<string[]> {
+  const { data, error } = await client
+    .from('account_entitlements')
+    .select('entitlement_key')
+    .eq('account_id', accountId)
+    .in('entitlement_key', BUSINESS_PLAN_ENTITLEMENT_KEYS)
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+
+  if (error) {
+    console.error('[team-workspace] account_entitlements:', error.message);
+    return [];
+  }
+
+  return (data ?? []).map(
+    (row) => (row as { entitlement_key: string }).entitlement_key,
+  );
+}
 
 export type TeamAccountWorkspace = Awaited<
   ReturnType<typeof loadTeamWorkspace>
@@ -61,17 +93,17 @@ async function workspaceLoader(accountSlug: string) {
   const accountId = (workspace.data.account as { id: string }).id;
   const [moduleSettingsResult, defaultCurrency, canMutateCommercial] =
     await Promise.all([
-    client
-      .from('account_module_settings')
-      .select('module_key, enabled')
-      .eq('account_id', accountId),
-    getWorkspaceCurrencyWithClient(client, accountId),
-    canCommercialMutateDisposals({
-      client,
-      accountId,
-      userId: user.id,
-    }),
-  ]);
+      client
+        .from('account_module_settings')
+        .select('module_key, enabled')
+        .eq('account_id', accountId),
+      getWorkspaceCurrencyWithClient(client, accountId),
+      canCommercialMutateDisposals({
+        client,
+        accountId,
+        userId: user.id,
+      }),
+    ]);
 
   const { data: moduleSettingsRows, error: moduleSettingsError } =
     moduleSettingsResult;
@@ -112,14 +144,27 @@ async function workspaceLoader(accountSlug: string) {
     business_type: businessType,
   });
 
+  const businessLite =
+    workspaceProfile === 'work_design' &&
+    resolveBusinessFree({
+      businessTypeIsLite: isBusinessLiteType(businessType),
+      entitlementKeys: isBusinessLiteType(businessType)
+        ? []
+        : await loadBusinessPlanEntitlementKeys(client, accountId),
+    });
+
   const data = workspace.data;
 
   return {
     ...data,
     account: accountRecord,
-    moduleSettings,
+    moduleSettings: businessLite
+      ? applyBusinessFreeModuleMask(moduleSettings)
+      : moduleSettings,
     workspaceProfile,
     businessType,
+    /** Business Free (Lite): restricted modules, see business-free-access.ts. */
+    businessLite,
     defaultCurrency,
     canMutateCommercial,
     user,

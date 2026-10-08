@@ -23,7 +23,6 @@ import {
   BUSINESS_WORKSPACE_SPACE_TYPES,
   redirectIfSpaceNotIn,
 } from '~/home/[account]/_lib/server/workspace-route-guard';
-import { isBusinessLiteType } from '~/home/[account]/_lib/workspace-profile';
 import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
 import { getGoogleCalendarConnectionStatus } from '~/lib/integrations/google-calendar/connection';
 import { loadPersonalIncludeWorkspaceTasks } from '~/lib/personal-preferences/load-unified-tasks-preference';
@@ -396,7 +395,7 @@ export async function assertWorkspacePlannerAccess(accountSlug: string) {
   const workspace = await loadTeamWorkspace(accountSlug);
   redirectIfSpaceNotIn(workspace, accountSlug, BUSINESS_WORKSPACE_SPACE_TYPES);
 
-  if (isBusinessLiteType(workspace.businessType)) {
+  if (workspace.businessLite) {
     throw new Error('Planner is not included on Business Lite.');
   }
 

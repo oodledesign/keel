@@ -9,7 +9,6 @@ import {
 } from '../../_lib/role-access';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
-import { isBusinessLiteType } from '../../_lib/workspace-profile';
 import { ActivityReportsContent } from '../_components/activity-reports-content';
 import { loadActivityReportsData } from '../_lib/server/activity-reports.loader';
 
@@ -43,7 +42,7 @@ async function ActivityReportsPage({
   const workspace = await loadTeamWorkspace(accountSlug);
   redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
 
-  if (isBusinessLiteType(workspace.businessType)) {
+  if (workspace.businessLite) {
     redirect(getDefaultAccountPath(accountSlug, workspace.account));
   }
 

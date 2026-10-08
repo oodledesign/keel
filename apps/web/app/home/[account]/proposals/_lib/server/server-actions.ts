@@ -3,6 +3,8 @@
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { assertBusinessPlanFeature } from '~/lib/billing/assert-business-plan-feature';
+
 import {
   AddProposalCommentByTokenSchema,
   AddProposalCommentSchema,
@@ -48,7 +50,14 @@ export const getProposal = enhanceAction(
 );
 
 export const createProposal = enhanceAction(
-  async (input) => getService().createProposal(input),
+  async (input) => {
+    await assertBusinessPlanFeature(
+      getSupabaseServerClient(),
+      input.accountId,
+      'proposals',
+    );
+    return getService().createProposal(input);
+  },
   { schema: CreateProposalSchema },
 );
 
@@ -88,7 +97,14 @@ export const addProposalComment = enhanceAction(
 );
 
 export const duplicateProposalAction = enhanceAction(
-  async (input) => duplicateProposal(input.accountId, input.proposalId),
+  async (input) => {
+    await assertBusinessPlanFeature(
+      getSupabaseServerClient(),
+      input.accountId,
+      'proposals',
+    );
+    return duplicateProposal(input.accountId, input.proposalId);
+  },
   { schema: DuplicateProposalSchema },
 );
 

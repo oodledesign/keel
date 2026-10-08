@@ -8,6 +8,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { businessNavPreferenceRows } from '~/home/[account]/_lib/business-nav-preferences';
 import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
 import { maybeFetchWorkspaceLogo } from '~/lib/brand/fetch-workspace-logo';
 import { createClientPortalInvite } from '~/lib/clients/client-portal-invites.service';
@@ -17,12 +18,13 @@ import { toPublicOnboardingError } from '~/lib/workspace/onboarding-public-error
 
 import { completeWorkspaceSetupForUser } from '../../../_lib/server/workspace-setup.service';
 import { businessPaidPlanBillingPath } from '../business-billing-redirect';
-import { type BusinessOnboardingStep } from '../business-onboarding-steps';
+import { type StoredBusinessOnboardingStep } from '../business-onboarding-steps';
 import {
   CompleteBusinessLiteSchema,
   ContinueBusinessAssistantSchema,
   SaveBusinessClientSchema,
   SaveBusinessCompanySchema,
+  SaveBusinessNavigationSchema,
   SaveBusinessTaskSchema,
   SkipBusinessTaskSchema,
   StartBusinessPaidPlanSchema,
@@ -67,7 +69,7 @@ async function assertOwnerAccount(accountId: string, userId: string) {
 async function setOnboardingStep(
   accountId: string,
   userId: string,
-  step: BusinessOnboardingStep | 'done',
+  step: StoredBusinessOnboardingStep | 'done',
 ) {
   const admin = getSupabaseServerAdminClient();
   const payload =
@@ -338,7 +340,7 @@ export const saveBusinessTaskAction = enhanceAction(
       if (step.error) {
         return { error: step.error };
       }
-      return { nextStep: 'assistant' as const, taskTitle: data.title };
+      return { nextStep: 'navigation' as const, taskTitle: data.title };
     } catch (error) {
       return {
         error: toPublicOnboardingError(error, 'Could not add the task.'),
@@ -363,7 +365,7 @@ export const skipBusinessTaskAction = enhanceAction(
       if (step.error) {
         return { error: step.error };
       }
-      return { nextStep: 'assistant' as const };
+      return { nextStep: 'navigation' as const };
     } catch (error) {
       return {
         error: toPublicOnboardingError(error, 'Could not skip this step.'),
@@ -371,6 +373,32 @@ export const skipBusinessTaskAction = enhanceAction(
     }
   },
   { auth: true, schema: SkipBusinessTaskSchema },
+);
+
+export const saveBusinessNavigationAction = enhanceAction(
+  async function (data, user) {
+    try {
+      const owner = await assertOwnerAccount(data.accountId, user.id);
+      if (owner.error) {
+        return { error: owner.error };
+      }
+
+      const { error } = await getSupabaseServerClient()
+        .from('account_module_settings')
+        .upsert(businessNavPreferenceRows(data.accountId, data.visible), {
+          onConflict: 'account_id,module_key',
+        });
+      if (error) {
+        return { error: toPublicOnboardingError(error.message) };
+      }
+      return { nextStep: 'assistant' as const };
+    } catch (error) {
+      return {
+        error: toPublicOnboardingError(error, 'Could not save navigation.'),
+      };
+    }
+  },
+  { auth: true, schema: SaveBusinessNavigationSchema },
 );
 
 export const continueBusinessAssistantAction = enhanceAction(

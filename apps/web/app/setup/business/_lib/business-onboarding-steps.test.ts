@@ -8,17 +8,19 @@ import {
 } from './business-onboarding-steps';
 
 describe('business onboarding steps', () => {
-  it('walks company → client → workspace reveal → assistant → plan → done', () => {
+  it('walks company → client → workspace reveal → navigation → assistant → plan → done', () => {
     expect(BUSINESS_ONBOARDING_STEPS).toEqual([
       'company',
       'client',
       'task',
+      'navigation',
       'assistant',
       'plan',
     ]);
     expect(nextBusinessOnboardingStep('company')).toBe('client');
     expect(nextBusinessOnboardingStep('client')).toBe('task');
-    expect(nextBusinessOnboardingStep('task')).toBe('assistant');
+    expect(nextBusinessOnboardingStep('task')).toBe('navigation');
+    expect(nextBusinessOnboardingStep('navigation')).toBe('assistant');
     expect(nextBusinessOnboardingStep('assistant')).toBe('plan');
     expect(nextBusinessOnboardingStep('plan')).toBe('done');
   });
@@ -26,6 +28,7 @@ describe('business onboarding steps', () => {
   it('accepts only known steps', () => {
     expect(isBusinessOnboardingStep('company')).toBe(true);
     expect(isBusinessOnboardingStep('done')).toBe(false);
+    expect(isBusinessOnboardingStep('navigation')).toBe(false);
     expect(isBusinessOnboardingStep(null)).toBe(false);
   });
 

@@ -14,6 +14,9 @@ import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import { AppLogo } from '~/components/app-logo';
+import { BusinessNavPicker } from '~/home/[account]/_components/business-nav-picker';
+import { businessFreePaidOnlyNavKeys } from '~/home/[account]/_lib/business-free-access';
+import { BUSINESS_NAV_CHOICE_KEYS } from '~/home/[account]/_lib/business-nav-preferences';
 import {
   clampBillableSeats,
   estimateMonthlyGbp,
@@ -40,6 +43,7 @@ import {
   continueBusinessAssistantAction,
   saveBusinessClientAction,
   saveBusinessCompanyAction,
+  saveBusinessNavigationAction,
   saveBusinessTaskAction,
   skipBusinessTaskAction,
   startBusinessPaidPlanAction,
@@ -111,6 +115,12 @@ export function BusinessOnboardingWizard(props: {
 
   const [taskTitle, setTaskTitle] = useState('');
   const [taskNotes, setTaskNotes] = useState('');
+
+  const [navVisible, setNavVisible] = useState<Record<string, boolean>>({});
+  const paidOnlyNavKeys = useMemo(
+    () => businessFreePaidOnlyNavKeys(BUSINESS_NAV_CHOICE_KEYS),
+    [],
+  );
 
   const [paidPlan, setPaidPlan] = useState<'lite' | 'starter' | 'pro'>('lite');
   const [seats, setSeats] = useState(2);
@@ -597,6 +607,67 @@ export function BusinessOnboardingWizard(props: {
                   </Button>
                 </>
               )}
+            </div>
+          </section>
+        ) : null}
+
+        {step === 'navigation' && account ? (
+          <section
+            className="space-y-6"
+            data-test="business-onboarding-navigation"
+          >
+            <header className="space-y-2">
+              <h1 className="font-heading text-2xl font-semibold">
+                Choose your sidebar
+              </h1>
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                Pick the links you want when you open {account.name}. Dashboard
+                is always there, and you can change this any time in Settings.
+              </p>
+            </header>
+
+            <BusinessNavPicker
+              values={navVisible}
+              disabled={pending}
+              paidOnlyKeys={paidOnlyNavKeys}
+              onChange={(key, visible) =>
+                setNavVisible((current) => ({ ...current, [key]: visible }))
+              }
+            />
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button
+                type="button"
+                disabled={pending}
+                className={cn(workspaceBtnPrimary, 'h-11 flex-1')}
+                data-test="business-navigation-continue"
+                onClick={() =>
+                  run(async () => {
+                    const result = await saveBusinessNavigationAction({
+                      accountId: account.id,
+                      visible: navVisible,
+                    });
+                    if (result.error || !result.nextStep) {
+                      setError(result.error ?? 'Could not save navigation.');
+                      return;
+                    }
+                    setStep(result.nextStep);
+                  })
+                }
+              >
+                Continue
+                <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pending}
+                className="h-11"
+                onClick={() => setStep('assistant')}
+              >
+                <SkipForward className="mr-1.5 h-4 w-4" />
+                Show everything
+              </Button>
             </div>
           </section>
         ) : null}

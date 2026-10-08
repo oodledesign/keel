@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import pathsConfig from '~/config/paths.config';
 import type { PlanTemplateRecord } from '~/lib/billing/plan-templates-types';
 import {
   type CreditTopupPack,
@@ -15,6 +16,7 @@ import {
   getDefaultAccountPath,
   getTeamAccountAccess,
 } from '../../_lib/role-access';
+import { redirectIfBusinessFreeBlocked } from '../../_lib/server/business-free-route-guard';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import {
   WORK_DESIGN_SETTINGS_PROFILES,
@@ -41,6 +43,11 @@ export default async function ServicesSettingsPage(
   const { account } = await props.params;
   const workspace = await loadTeamWorkspace(account);
   redirectIfProfileNotIn(workspace, account, WORK_DESIGN_SETTINGS_PROFILES);
+  await redirectIfBusinessFreeBlocked(
+    account,
+    'services',
+    pathsConfig.app.accountSettings,
+  );
 
   const access = getTeamAccountAccess(
     workspace.account as {

@@ -3,9 +3,11 @@ import { redirect } from 'next/navigation';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { canUseEmailAssistant } from '~/lib/billing/entitlements';
 import { loadAccountBranches } from '~/lib/brand/account-branches';
 import { loadCommercialBoardSettings } from '~/lib/commercial/board-company-settings.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { visibleEmailNotificationKeys } from '~/lib/notifications/email-notification-preferences';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import {
@@ -44,7 +46,15 @@ async function TeamNotificationsSettingsPage({
     redirect(getDefaultAccountPath(slug, workspace.account));
   }
 
-  const preferences = await loadEmailNotificationPreferences(user.id);
+  const [preferences, emailAssistantAvailable] = await Promise.all([
+    loadEmailNotificationPreferences(user.id),
+    canUseEmailAssistant(getSupabaseServerClient(), user.id).catch(() => false),
+  ]);
+  const visibleKeys = visibleEmailNotificationKeys({
+    workspaceProfile: workspace.workspaceProfile,
+    businessLite: workspace.businessLite,
+    emailAssistantAvailable,
+  });
 
   const accountId = workspace.account.id as string;
   const showBoardPrompt = isCommercialPropertyProfile(
@@ -59,7 +69,10 @@ async function TeamNotificationsSettingsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <EmailNotificationPreferencesForm initialPreferences={preferences} />
+      <EmailNotificationPreferencesForm
+        initialPreferences={preferences}
+        keys={visibleKeys}
+      />
       {boardSettings ? (
         <BoardPromptSettingsCard
           accountId={accountId}

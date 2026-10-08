@@ -2,11 +2,9 @@ import { Suspense } from 'react';
 
 import { redirect } from 'next/navigation';
 
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
 import { buildWorkAppLinks } from '~/config/work-account-navigation.config';
-import { isBusinessLiteWorkspace } from '~/lib/billing/is-business-lite-workspace';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { loadCompletedProductTours } from '~/lib/product-tour/product-tour.actions';
@@ -177,16 +175,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
   const spaceType = spaceTypeFromProfile(workspace.workspaceProfile);
   const accountLabel =
     (workspace.account as { name?: string | null }).name?.trim() || account;
-  const accountId = (workspace.account as { id: string }).id;
-
-  const billingClient = getSupabaseServerClient();
-  const isLiteWorkspace =
-    spaceType === 'work' &&
-    (await isBusinessLiteWorkspace(
-      billingClient,
-      accountId,
-      workspace.businessType,
-    ));
+  const isLiteWorkspace = workspace.businessLite;
 
   const userRecord = workspace.user as {
     user_metadata?: { first_name?: string };

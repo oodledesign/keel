@@ -41,6 +41,8 @@ import {
   WORK_BUSINESS_MODULE_ORDER,
   WORK_BUSINESS_NAV_SECTIONS,
 } from '~/config/workspace-module-order';
+import { isBusinessFreeFeatureBlocked } from '~/home/[account]/_lib/business-free-access';
+import { isNavItemHidden } from '~/home/[account]/_lib/business-nav-preferences';
 import type { TeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import {
   isCampaignsModuleEnabled,
@@ -428,14 +430,19 @@ function buildWorkNavItemsForKeys(
     }
     const factory = registry[key];
     if (!factory) continue;
-    const item = factory();
+    const item =
+      (businessLite && isBusinessFreeFeatureBlocked(key, ms)) ||
+      isNavItemHidden(ms, key)
+        ? null
+        : factory();
     if (item) items.push(item);
     // Email assistant is its own entitlement (Pro or a personal add-on).
     // Keep it when Activity itself is hidden on Business Lite.
     if (
       key === 'activity' &&
       emailAssistantAvailable &&
-      access.canViewDashboard
+      access.canViewDashboard &&
+      !isNavItemHidden(ms, 'emails')
     ) {
       const needsReplyCount = navCounts?.emailNeedsReplyCount ?? 0;
       items.push({
@@ -454,7 +461,7 @@ function buildWorkNavItemsForKeys(
           ) : undefined,
       });
     }
-    if (key === 'tasks' && !businessLite) {
+    if (key === 'tasks' && !businessLite && !isNavItemHidden(ms, 'planner')) {
       const plannerFactory = registry.planner;
       if (plannerFactory) {
         const planner = plannerFactory();

@@ -15,6 +15,7 @@ import {
 } from '~/lib/ai/proposal-generate';
 import { generateSurveyReportHtml } from '~/lib/ai/survey-report-generate';
 import { combineSurveyStyleGuidance } from '~/lib/ai/survey-style-distill';
+import { assertBusinessPlanFeature } from '~/lib/billing/assert-business-plan-feature';
 import { signSurveyPhotoUrls } from '~/lib/building-surveyor/survey-photo-urls';
 import { loadVoicePromptBlock } from '~/lib/voice/load-voice-prompt-block';
 
@@ -82,6 +83,11 @@ async function assertInvoicesEditPermission(accountId: string, userId: string) {
 export const generateProposalHtmlAction = enhanceAction(
   async (input, user) => {
     await assertInvoicesEditPermission(input.accountId, user.id);
+    await assertBusinessPlanFeature(
+      getSupabaseServerClient(),
+      input.accountId,
+      'proposals',
+    );
 
     const transcripts: ProposalTranscript[] = input.transcripts.map((t) => ({
       title: t.title.trim(),

@@ -1,3 +1,4 @@
+import { NAV_PREFERENCE_PREFIX } from '../business-nav-preferences';
 import {
   type WorkspaceSpaceType,
   normalizeSpaceType,
@@ -149,11 +150,20 @@ export function isAccountModuleEnabled(
     return true;
   }
 
-  if (Object.keys(moduleSettings).length === 0) {
+  if (!hasConfiguredModules(moduleSettings)) {
     return true;
   }
 
   return moduleSettings[key] === true;
+}
+
+/** Sidebar link choices (`nav:*`) don't count as module configuration. */
+export function hasConfiguredModules(
+  moduleSettings: Record<string, boolean>,
+): boolean {
+  return Object.keys(moduleSettings).some(
+    (key) => !key.startsWith(NAV_PREFERENCE_PREFIX),
+  );
 }
 
 export function isWorkModuleEnabled(

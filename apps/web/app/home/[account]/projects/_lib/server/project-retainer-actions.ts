@@ -6,6 +6,7 @@ import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { assertBusinessPlanFeature } from '~/lib/billing/assert-business-plan-feature';
 import { undoRetainerBurn } from '~/lib/retainers/apply-match';
 
 import {
@@ -32,6 +33,11 @@ export const loadProjectRetainerAction = enhanceAction(
 
 export const updateProjectRetainerSettingsAction = enhanceAction(
   async (input) => {
+    await assertBusinessPlanFeature(
+      getSupabaseServerClient(),
+      input.accountId,
+      'retainers',
+    );
     const result = await getService().updateSettings(input);
     revalidatePath('/home/[account]/projects/[id]', 'page');
     return result;

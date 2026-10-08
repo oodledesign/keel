@@ -17,7 +17,7 @@ const liteModules: Record<string, boolean> = {
   support_tickets: false,
   finances: false,
   sops: false,
-  messages: false,
+  messages: true,
   forms: false,
 };
 
@@ -35,7 +35,7 @@ function labels(businessLite: boolean) {
 }
 
 describe('Business Lite work nav', () => {
-  it('shows Pipeline and the capped Lite modules', () => {
+  it('shows Pipeline and the capped Free modules', () => {
     const nav = labels(true);
 
     expect(nav).toContain('Pipeline');
@@ -44,12 +44,10 @@ describe('Business Lite work nav', () => {
     expect(nav).toContain('Clients');
     expect(nav).toContain('Meetings');
     expect(nav).toContain('Invoices');
-    expect(nav).toContain('Proposals');
-    expect(nav).toContain('Contracts');
     expect(nav).toContain('Scheduling');
     expect(nav).toContain('Team');
     expect(nav).toContain('Notes and files');
-    expect(nav).toContain('Second brain');
+    expect(nav).toContain('Messages');
   });
 
   it('hides plan-excluded entries that would otherwise appear', () => {
@@ -63,8 +61,43 @@ describe('Business Lite work nav', () => {
     expect(nav).not.toContain('Support');
     expect(nav).not.toContain('Finances');
     expect(nav).not.toContain('SOPs');
-    expect(nav).not.toContain('Messages');
     expect(nav).not.toContain('Forms');
+    expect(nav).not.toContain('Proposals');
+    expect(nav).not.toContain('Contracts');
+    expect(nav).not.toContain('Retainers');
+    expect(nav).not.toContain('Second brain');
+  });
+
+  it('hides paid modules even when stored toggles have drifted on', () => {
+    const nav = buildWorkSpaceNavSections(
+      'lite-studio',
+      getTeamAccountAccess({ role: 'owner' }),
+      { ...liteModules, jobs: true, schedule: true, finances: true },
+      undefined,
+      false,
+      true,
+    )
+      .flatMap((section) => section.children)
+      .map((item) => item.label);
+
+    expect(nav).not.toContain('Projects');
+    expect(nav).not.toContain('Schedule');
+    expect(nav).not.toContain('Finances');
+  });
+
+  it('keeps audience forms for Free workspaces with Campaigns', () => {
+    const nav = buildWorkSpaceNavSections(
+      'lite-studio',
+      getTeamAccountAccess({ role: 'owner' }),
+      { ...liteModules, campaigns: true },
+      undefined,
+      false,
+      true,
+    )
+      .flatMap((section) => section.children)
+      .map((item) => item.label);
+
+    expect(nav).toContain('Forms');
   });
 
   it('keeps Planner and Activity for paid business workspaces', () => {
@@ -73,5 +106,50 @@ describe('Business Lite work nav', () => {
     expect(nav).toContain('Planner');
     expect(nav).toContain('Activity');
     expect(nav).toContain('Pipeline');
+    expect(nav).toContain('Retainers');
+    expect(nav).toContain('Proposals');
+  });
+});
+
+describe('Business sidebar choices', () => {
+  const paidModules = {
+    ...liteModules,
+    jobs: true,
+    schedule: true,
+    'nav:planner': false,
+    'nav:pipeline': false,
+    'nav:dashboard': false,
+    'nav:projects': true,
+  };
+
+  function paidLabels(moduleSettings: Record<string, boolean>) {
+    return buildWorkSpaceNavSections(
+      'studio',
+      getTeamAccountAccess({ role: 'owner' }),
+      moduleSettings,
+      undefined,
+      false,
+      false,
+    )
+      .flatMap((section) => section.children)
+      .map((item) => item.label);
+  }
+
+  it('hides links the workspace switched off, but never Dashboard', () => {
+    const nav = paidLabels(paidModules);
+
+    expect(nav).toContain('Dashboard');
+    expect(nav).toContain('Projects');
+    expect(nav).toContain('Tasks');
+    expect(nav).not.toContain('Planner');
+    expect(nav).not.toContain('Pipeline');
+  });
+
+  it('treats a workspace with only sidebar choices as unconfigured modules', () => {
+    const nav = paidLabels({ 'nav:messages': false });
+
+    expect(nav).toContain('Projects');
+    expect(nav).toContain('Retainers');
+    expect(nav).not.toContain('Messages');
   });
 });

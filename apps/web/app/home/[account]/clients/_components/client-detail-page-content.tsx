@@ -63,6 +63,7 @@ type Props = {
   initialClient?: ClientSeed | null;
   overviewSeed?: ClientDetailOverviewSeed;
   supportEnabled?: boolean;
+  hiddenTabs?: readonly string[];
 };
 
 export function ClientDetailPageContent({
@@ -91,6 +92,7 @@ export function ClientDetailPageContent({
   initialClient = null,
   overviewSeed,
   supportEnabled = false,
+  hiddenTabs,
 }: Props) {
   const router = useRouter();
 
@@ -129,6 +131,7 @@ export function ClientDetailPageContent({
       initialClient={initialClient}
       overviewSeed={overviewSeed}
       supportEnabled={supportEnabled}
+      hiddenTabs={hiddenTabs}
     />
   );
 }

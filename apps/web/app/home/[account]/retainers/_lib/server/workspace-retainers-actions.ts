@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { assertBusinessPlanFeature } from '~/lib/billing/assert-business-plan-feature';
+
 import {
   LinkWorkspaceRetainerToProjectSchema,
   ListWorkspaceRetainersSchema,
@@ -21,6 +23,11 @@ export const listWorkspaceRetainersAction = enhanceAction(
 
 export const linkWorkspaceRetainerToProjectAction = enhanceAction(
   async (input) => {
+    await assertBusinessPlanFeature(
+      getSupabaseServerClient(),
+      input.accountId,
+      'retainers',
+    );
     const result = await createWorkspaceRetainersService(
       getSupabaseServerClient(),
     ).linkToProject(input);

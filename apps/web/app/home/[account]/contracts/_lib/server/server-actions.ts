@@ -3,6 +3,8 @@
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { assertBusinessPlanFeature } from '~/lib/billing/assert-business-plan-feature';
+
 import {
   ArchiveContractSchema,
   CreateContractSchema,
@@ -54,7 +56,14 @@ export const getContract = enhanceAction(
 );
 
 export const createContract = enhanceAction(
-  async (input) => getService().createContract(input),
+  async (input) => {
+    await assertBusinessPlanFeature(
+      getSupabaseServerClient(),
+      input.accountId,
+      'contracts',
+    );
+    return getService().createContract(input);
+  },
   { schema: CreateContractSchema },
 );
 
@@ -69,7 +78,14 @@ export const archiveContract = enhanceAction(
 );
 
 export const duplicateContract = enhanceAction(
-  async (input) => getService().duplicateContract(input),
+  async (input) => {
+    await assertBusinessPlanFeature(
+      getSupabaseServerClient(),
+      input.accountId,
+      'contracts',
+    );
+    return getService().duplicateContract(input);
+  },
   { schema: DuplicateContractSchema },
 );
 

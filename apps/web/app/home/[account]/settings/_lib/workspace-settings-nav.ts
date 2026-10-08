@@ -10,6 +10,7 @@ import {
   type WorkspaceProfile,
   isGroupProfile,
 } from '~/home/[account]/_lib/workspace-profile';
+import { canAccessWorkspaceForms } from '~/lib/workspace-forms/forms-mode';
 
 export type WorkspaceSettingsNavIcon = 'calendar-off';
 
@@ -24,6 +25,23 @@ export type WorkspaceSettingsNavItem = {
 
 function settingsPath(template: string, accountSlug: string): string {
   return template.replace('[account]', accountSlug);
+}
+
+const INTEGRATIONS_PROFILES: WorkspaceProfile[] = [
+  'work_design',
+  'commercial_property',
+  'building_surveyor',
+];
+
+/** Dynamics syncs mailing-list signups, which only exist where forms do. */
+export function canUseWorkspaceIntegrations(
+  workspaceProfile: WorkspaceProfile,
+  moduleSettings: Record<string, boolean> | null | undefined,
+): boolean {
+  return (
+    INTEGRATIONS_PROFILES.includes(workspaceProfile) &&
+    canAccessWorkspaceForms(moduleSettings)
+  );
 }
 
 function appendBillingNavItem(
@@ -110,7 +128,7 @@ export function buildWorkspaceSettingsNav(input: {
     },
   ];
 
-  if (!businessLite) {
+  if (workspaceProfile === 'work_design' && !businessLite) {
     items.push({
       id: 'activity',
       label: 'Activity tracking',
@@ -121,14 +139,16 @@ export function buildWorkspaceSettingsNav(input: {
     });
   }
 
-  items.push({
-    id: 'integrations',
-    label: 'Integrations',
-    href: settingsPath(
-      pathsConfig.app.accountIntegrationsSettings,
-      accountSlug,
-    ),
-  });
+  if (canUseWorkspaceIntegrations(workspaceProfile, moduleSettings)) {
+    items.push({
+      id: 'integrations',
+      label: 'Integrations',
+      href: settingsPath(
+        pathsConfig.app.accountIntegrationsSettings,
+        accountSlug,
+      ),
+    });
+  }
 
   if (access.canViewSettings) {
     items.push({
@@ -163,21 +183,22 @@ export function buildWorkspaceSettingsNav(input: {
   }
 
   if (workspaceProfile === 'work_design') {
-    items.push(
-      {
-        id: 'payments',
-        label: 'Payments',
-        href: settingsPath(pathsConfig.app.accountPaymentSettings, accountSlug),
-      },
-      {
+    items.push({
+      id: 'payments',
+      label: 'Payments',
+      href: settingsPath(pathsConfig.app.accountPaymentSettings, accountSlug),
+    });
+
+    if (!businessLite) {
+      items.push({
         id: 'services',
         label: 'Services',
         href: settingsPath(
           pathsConfig.app.accountServicesSettings,
           accountSlug,
         ),
-      },
-    );
+      });
+    }
 
     if (isWorkModuleEnabled(moduleSettings, 'jobs')) {
       items.push({
@@ -223,11 +244,13 @@ export function buildWorkspaceSettingsNav(input: {
       });
     }
 
-    items.push({
-      id: 'knowledge',
-      label: 'Knowledge base',
-      href: settingsPath(pathsConfig.app.accountBrainKnowledge, accountSlug),
-    });
+    if (!businessLite) {
+      items.push({
+        id: 'knowledge',
+        label: 'Knowledge base',
+        href: settingsPath(pathsConfig.app.accountBrainKnowledge, accountSlug),
+      });
+    }
 
     appendBillingNavItem(items, accountSlug, access);
     return items;

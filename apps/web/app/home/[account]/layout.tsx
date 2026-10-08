@@ -51,10 +51,7 @@ import {
   loadTeamWorkspaceShellAdornments,
 } from './_lib/server/team-workspace-shell-adornments.loader';
 import { enforceWorkspaceBilling } from './_lib/server/workspace-billing-guard';
-import {
-  isBusinessLiteType,
-  spaceTypeFromProfile,
-} from './_lib/workspace-profile';
+import { spaceTypeFromProfile } from './_lib/workspace-profile';
 import { SopTrackerHost } from './sops/_components/sop-tracker-host';
 
 const EMPTY_SHELL_ADORNMENTS: TeamWorkspaceShellAdornments = {
@@ -199,7 +196,7 @@ async function SidebarLayout({
     ).values(),
   );
 
-  const businessLite = isBusinessLiteType(data.businessType);
+  const businessLite = data.businessLite;
   const shellProps = {
     account,
     accountId,
@@ -537,7 +534,7 @@ function HeaderLayoutShell({
       {
         emailAssistantAvailable: adornments.emailAssistantAvailable,
         pipelineBoardName: adornments.pipelineBoardName,
-        businessLite: isBusinessLiteType(data.businessType),
+        businessLite: data.businessLite,
       },
     ),
   );

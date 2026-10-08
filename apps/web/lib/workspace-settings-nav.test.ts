@@ -13,7 +13,7 @@ describe('buildWorkspaceSettingsNav', () => {
     const items = buildWorkspaceSettingsNav({
       accountSlug: 'oodle',
       workspaceProfile: 'work_design',
-      moduleSettings: { finances: true, tasks: true, jobs: true },
+      moduleSettings: { finances: true, tasks: true, jobs: true, forms: true },
       access: ownerAccess,
     });
 
@@ -43,8 +43,8 @@ describe('buildWorkspaceSettingsNav', () => {
       'general',
       'notifications',
       'focus',
-      'activity',
       'integrations',
+      'audit',
       'brand',
       'sending-domain',
       'brand-voice',
@@ -54,6 +54,7 @@ describe('buildWorkspaceSettingsNav', () => {
     expect(ids).not.toContain('templates');
     expect(ids).not.toContain('knowledge');
     expect(ids).not.toContain('finances');
+    expect(ids).not.toContain('activity');
   });
 
   it('includes sending domain for commercial property when access is granted', () => {
@@ -68,7 +69,7 @@ describe('buildWorkspaceSettingsNav', () => {
     expect(items.map((item) => item.id)).toContain('sending-domain');
   });
 
-  it('omits activity tracking and project statuses on Business Lite', () => {
+  it('limits Business Free to the settings its plan includes', () => {
     const items = buildWorkspaceSettingsNav({
       accountSlug: 'lite-studio',
       workspaceProfile: 'work_design',
@@ -81,8 +82,25 @@ describe('buildWorkspaceSettingsNav', () => {
     const ids = items.map((item) => item.id);
     expect(ids).not.toContain('activity');
     expect(ids).not.toContain('project-statuses');
-    expect(ids).toContain('integrations');
+    expect(ids).not.toContain('finances');
+    expect(ids).not.toContain('services');
+    expect(ids).not.toContain('knowledge');
+    expect(ids).not.toContain('integrations');
     expect(ids).toContain('payments');
+    expect(ids).toContain('templates');
+    expect(ids).toContain('task-automation');
+  });
+
+  it('shows Integrations on Business Free when Campaigns adds mailing lists', () => {
+    const items = buildWorkspaceSettingsNav({
+      accountSlug: 'lite-studio',
+      workspaceProfile: 'work_design',
+      moduleSettings: { tasks: true, forms: false, campaigns: true },
+      access: ownerAccess,
+      businessLite: true,
+    });
+
+    expect(items.map((item) => item.id)).toContain('integrations');
   });
 
   it('omits sending domain when the workspace cannot configure one', () => {
@@ -153,13 +171,11 @@ describe('buildWorkspaceSettingsNav', () => {
     expect(work.map((item) => item.id)).not.toContain('survey-phrases');
   });
 
-  it('includes Integrations for every workspace profile', () => {
+  it('includes Integrations only where mailing-list forms exist', () => {
     const profiles = [
       'work_design',
-      'work_property',
       'commercial_property',
       'building_surveyor',
-      'family',
     ] as const;
 
     for (const workspaceProfile of profiles) {
@@ -174,6 +190,22 @@ describe('buildWorkspaceSettingsNav', () => {
       expect(items.find((item) => item.id === 'integrations')?.href).toBe(
         '/app/oodle/settings/integrations',
       );
+    }
+
+    for (const workspaceProfile of [
+      'work_property',
+      'family',
+      'community',
+    ] as const) {
+      const items = buildWorkspaceSettingsNav({
+        accountSlug: 'oodle',
+        workspaceProfile,
+        moduleSettings: {},
+        access: ownerAccess,
+      });
+
+      expect(items.map((item) => item.id)).not.toContain('integrations');
+      expect(items.map((item) => item.id)).not.toContain('activity');
     }
   });
 

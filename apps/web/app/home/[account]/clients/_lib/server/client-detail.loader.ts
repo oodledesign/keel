@@ -11,6 +11,7 @@ import pathsConfig from '~/config/paths.config';
 import { buildClientPortalPath } from '~/lib/clients/client-portal-invites.service';
 
 import type { LinkValue } from '../../../_components/workspace-content/link-to-select';
+import { BUSINESS_FREE_HIDDEN_CLIENT_TABS } from '../../../_lib/business-free-access';
 import { getTeamAccountAccess } from '../../../_lib/role-access';
 import { isWorkModuleEnabled } from '../../../_lib/server/account-modules';
 import { createMeetingTranscriptsService } from '../../../_lib/server/meeting-transcripts.service';
@@ -301,5 +302,6 @@ async function loadClientDetailPageDataImpl(
       variant === 'commercial' ? [] : ranklyClientImportOptions,
     overviewSeed,
     supportEnabled: variant === 'commercial' ? false : supportEnabled,
+    hiddenTabs: workspace.businessLite ? BUSINESS_FREE_HIDDEN_CLIENT_TABS : [],
   };
 }

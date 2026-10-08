@@ -47,6 +47,7 @@ export default async function ClientDetailPage({ params }: Props) {
           initialClient={data.client}
           overviewSeed={data.overviewSeed}
           supportEnabled={data.supportEnabled}
+          hiddenTabs={data.hiddenTabs}
         />
       </div>
     </PageBody>
