@@ -26,8 +26,7 @@ export async function listRecorderMessageThreads(input: {
   const admin = getSupabaseServerAdminClient();
   const workspaces = await loadNativeWorkspaces(admin, input.userId);
   const ref = input.workspaceRef?.trim() || input.fallbackAccountId;
-  const workspace =
-    findNativeWorkspace(workspaces, ref) ?? workspaces[0] ?? null;
+  const workspace = findNativeWorkspace(workspaces, ref);
 
   if (!workspace) {
     return { items: [] };

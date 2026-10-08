@@ -26,7 +26,7 @@ export function organizationJsonLd(): JsonLd {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'Ozer',
-    legalName: 'Oodle Designs Ltd',
+    legalName: 'Daniel Potter trading as Oodle Designs',
     url: absoluteUrl('/'),
     logo: absoluteUrl(brandAssets.icon),
     description:

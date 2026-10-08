@@ -184,7 +184,7 @@ struct SurveysListView: View {
             Text("No surveys yet")
                 .font(.body.weight(.medium))
                 .foregroundStyle(OzerPalette.plum)
-            Text("Create a survey for the property, then record as you walk. Dictation stays on this iPhone until you are back online.")
+            Text("Create a survey for the property, then record as you walk. Dictation stays on this \(OzerDevice.name) until you are back online.")
                 .font(.subheadline)
                 .foregroundStyle(OzerPalette.plumMuted)
         }

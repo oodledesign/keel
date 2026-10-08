@@ -1,8 +1,8 @@
 # Terms of Service
 
-**Last updated:** 3 September 2026
+**Last updated:** 8 October 2026
 
-These Terms govern use of Ozer, operated by Oodle Designs Ltd. By creating an account and accepting these Terms you agree to be bound by them.
+These Terms govern use of Ozer, operated by Daniel Potter, a sole trader trading as Oodle Designs ("Oodle Designs", "we", "us"). By creating an account and accepting these Terms you agree to be bound by them.
 
 ## Service
 
@@ -23,6 +23,9 @@ Without limiting the above, you must not:
 - **Public booking links:** collect invitee data without a lawful basis, or use booking forms for phishing or unlawful surveillance.
 - **Commercial listings:** publish false or misleading particulars, or send listing data to portals or feeds you are not authorised to use.
 - **Sending domain / email:** use workspace sending domains or mailouts to spam, impersonate others, or send unlawful marketing.
+- **Messages:** send content that is abusive, harassing, hateful, sexually explicit, threatening, or otherwise objectionable, or keep contacting someone who has blocked you.
+
+There is no tolerance for objectionable content or abusive users. In the iPhone and iPad app you can report a message or conversation and block the sender; you can also email hi@ozer.so. We review reports within 24 hours and may remove content and suspend or close the accounts responsible.
 
 ## Customer responsibilities as controller
 
@@ -38,7 +41,7 @@ If you use meeting recording or transcription, you must inform attendees as requ
 
 ## Your content
 
-You retain all intellectual property rights in content you and your users create or upload in Ozer, including notes, files, listing photographs and particulars, contract wording, signatures, and templates. You grant Oodle Designs Ltd a worldwide, non-exclusive licence to host, store, display, transmit, and otherwise process that content solely to provide, maintain, secure, and support the service — including backups, AI features you enable, public portals and share links you enable, and property feeds or brochures you publish. We do not claim ownership of your content. You represent that you have the rights needed to upload and instruct us to process it.
+You retain all intellectual property rights in content you and your users create or upload in Ozer, including notes, files, listing photographs and particulars, contract wording, signatures, and templates. You grant Oodle Designs a worldwide, non-exclusive licence to host, store, display, transmit, and otherwise process that content solely to provide, maintain, secure, and support the service — including backups, AI features you enable, public portals and share links you enable, and property feeds or brochures you publish. We do not claim ownership of your content. You represent that you have the rights needed to upload and instruct us to process it.
 
 ## Electronic signatures
 
@@ -72,7 +75,7 @@ You may cancel your subscription via the billing portal or by contacting us. Can
 
 ## Customer indemnity
 
-You will indemnify Oodle Designs Ltd against claims, losses, damages, and reasonable legal costs arising from: (a) content you or your users upload or instruct us to process; (b) your use of Ozer in breach of these Terms or applicable law, including recording or transcribing without required notices, unlawful marketing, or publishing listing data you are not authorised to use; and (c) any claim that your content infringes a third party's rights. This does not require you to indemnify us for our own negligence, wilful misconduct, or a personal data breach caused by our failure to implement the security measures described in the DPA.
+You will indemnify Oodle Designs against claims, losses, damages, and reasonable legal costs arising from: (a) content you or your users upload or instruct us to process; (b) your use of Ozer in breach of these Terms or applicable law, including recording or transcribing without required notices, unlawful marketing, or publishing listing data you are not authorised to use; and (c) any claim that your content infringes a third party's rights. This does not require you to indemnify us for our own negligence, wilful misconduct, or a personal data breach caused by our failure to implement the security measures described in the DPA.
 
 ## Liability
 
@@ -81,3 +84,7 @@ To the fullest extent permitted by law, our liability is limited to fees paid in
 ## Governing law
 
 These Terms are governed by the laws of England and Wales. Courts of England and Wales have exclusive jurisdiction, without prejudice to mandatory consumer rights in your country of residence.
+
+## Contact
+
+Daniel Potter, trading as Oodle Designs, 2 Long Mead Way, Tonbridge, Kent, TN10 3TG, United Kingdom. Email: [hi@ozer.so](mailto:hi@ozer.so). For privacy matters: [privacy@ozer.so](mailto:privacy@ozer.so).

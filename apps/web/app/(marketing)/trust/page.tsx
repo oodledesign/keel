@@ -132,12 +132,11 @@ function TrustCenterPage() {
                 </div>
 
                 <div>
-                  <h3 className={h3Class}>UK ICO Registration</h3>
+                  <h3 className={h3Class}>Who operates {appConfig.name}</h3>
                   <p className={pClass}>
-                    {appConfig.name} is operated by Oodle Designs Ltd, a UK
-                    registered company. We are registered with the UK
-                    Information Commissioner&apos;s Office (ICO) as a data
-                    controller.
+                    {appConfig.name} is operated by Daniel Potter, a UK sole
+                    trader trading as Oodle Designs, 2 Long Mead Way, Tonbridge,
+                    Kent, TN10 3TG, United Kingdom.
                   </p>
                 </div>
 
@@ -273,17 +272,16 @@ function TrustCenterPage() {
                         Amazon Web Services (AWS)
                       </td>
                       <td className="py-2.5 pr-3 align-top">
-                        Amazon SES for workspace sending domains and
-                        circulation email; cloud infrastructure underlying EU
-                        hosting
+                        Amazon SES for workspace sending domains and circulation
+                        email; cloud infrastructure underlying EU hosting
                       </td>
                       <td className="py-2.5 pr-3 align-top">
                         Sender/recipient addresses, subject, and body for SES
                         mail; infrastructure for hosted data
                       </td>
                       <td className="py-2.5 align-top">
-                        EU (Ireland and other AWS EU regions we configure) —
-                        no restricted transfer
+                        EU (Ireland and other AWS EU regions we configure) — no
+                        restricted transfer
                       </td>
                     </tr>
                     <tr className="border-border/60 border-b">
@@ -388,6 +386,22 @@ function TrustCenterPage() {
                       <td className="py-2.5 align-top">
                         Slovenia (EU) — EU-headquartered; DPA in place; EU
                         storage region
+                      </td>
+                    </tr>
+                    <tr className="border-border/60 border-b">
+                      <td className="py-2.5 pr-3 align-top">Apple</td>
+                      <td className="py-2.5 pr-3 align-top">
+                        Push notification delivery and Sign in with Apple for
+                        the iPhone and iPad app
+                      </td>
+                      <td className="py-2.5 pr-3 align-top">
+                        Device push token and notification text; Apple ID relay
+                        email when you sign in with Apple
+                      </td>
+                      <td className="py-2.5 align-top">
+                        US/global — Apple Developer Program License Agreement
+                        (EU Standard Contractual Clauses and UK Addendum
+                        incorporated)
                       </td>
                     </tr>
                     <tr className="border-border/60 border-b">

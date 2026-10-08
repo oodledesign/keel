@@ -43,6 +43,7 @@ import {
 } from '../_lib/server/server-actions';
 import { CommercialPublishingSectionNav } from './commercial-publishing-section-nav';
 import { PortalSyncIssuesCard } from './portal-sync-issues-card';
+import { RightmoveBranchAuditCard } from './rightmove-branch-audit-card';
 import { RightmoveBulkPublishPanel } from './rightmove-bulk-publish-panel';
 
 interface CommercialPublishingSettingsProps {
@@ -732,6 +733,14 @@ export function CommercialPublishingSettings({
                           branchConfigured={settings.rightmove.branchConfigured}
                           initialJob={settings.rightmove.bulkJob}
                         />
+                        {portalPublishingUnlocked &&
+                        settings.rightmove.oauthConfigured &&
+                        settings.rightmove.branchConfigured ? (
+                          <RightmoveBranchAuditCard
+                            accountId={accountId}
+                            accountSlug={accountSlug}
+                          />
+                        ) : null}
                       </div>
                     </div>
                   )}

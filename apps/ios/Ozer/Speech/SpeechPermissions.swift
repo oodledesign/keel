@@ -17,17 +17,17 @@ enum SpeechPermissionError: LocalizedError {
         case .microphoneDenied:
             return "Ozer needs the microphone to dictate notes and record meetings. Enable it in Settings → Ozer."
         case .speechDenied:
-            return "Ozer transcribes on this iPhone. Enable Speech Recognition in Settings → Ozer."
+            return "Ozer transcribes on this \(OzerDevice.name). Enable Speech Recognition in Settings → Ozer."
         case .localeUnavailable:
-            return "British English speech isn’t available on this iPhone."
+            return "British English speech isn’t available on this \(OzerDevice.name)."
         case .onDeviceUnavailable:
-            return "On-device transcription isn’t available on this iPhone. Ozer won’t send speech to the cloud."
+            return "On-device transcription isn’t available on this \(OzerDevice.name). Ozer won’t send speech to the cloud."
         case .simulatorUnsupported:
-            return "Live captions and meetings need a real iPhone. The Simulator can’t run on-device speech without slowing the Mac."
+            return "Live captions and meetings need a real iPhone or iPad. The Simulator can’t run on-device speech without slowing the Mac."
         case .timedOut:
-            return "Microphone or speech permission didn’t finish. Try again, or use a real iPhone."
+            return "Microphone or speech permission didn’t finish. Try again, or use a real iPhone or iPad."
         case .audioEngineUnavailable:
-            return "Ozer couldn’t start the microphone. Try again on this iPhone."
+            return "Ozer couldn’t start the microphone. Try again on this \(OzerDevice.name)."
         case .diarizationUnavailable:
             return "Speaker models couldn’t be downloaded. This meeting is saved as Me only."
         }

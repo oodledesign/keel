@@ -11,7 +11,7 @@ export async function generateMetadata() {
   return buildMarketingMetadata({
     title: 'Privacy policy — Ozer',
     description:
-      'How Oodle Designs Ltd processes personal data for Ozer under UK GDPR, including AI features, Stripe payments, and EU transfers.',
+      'How Ozer (Daniel Potter, trading as Oodle Designs) processes personal data for Ozer under UK GDPR, including AI features, Stripe payments, and EU transfers.',
     path: '/privacy-policy',
     ogType: 'legal',
   });

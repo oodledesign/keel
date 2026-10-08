@@ -16,8 +16,10 @@ import { useSearchParams } from 'next/navigation';
 
 import {
   Archive,
+  Ban,
   Copy,
   FileText,
+  Flag,
   ImagePlus,
   Link2,
   MoreHorizontal,
@@ -79,7 +81,14 @@ import {
   renameMessageThread,
   sendThreadMessage,
   setMessageThreadJob,
+  unblockChatUserAction,
 } from '../_lib/server/server-actions';
+import {
+  BlockChatPersonDialog,
+  type ChatPerson,
+  type ChatReportTarget,
+  ReportChatDialog,
+} from './message-safety-dialogs';
 import { NewChatDialog } from './new-chat-dialog';
 
 const FAV_STORAGE_KEY = 'ozer:favourite-chat-ids';
@@ -465,6 +474,28 @@ export function MessagesPageContent(props: Props) {
     [threads, selectedThreadId],
   );
 
+  const [reportTarget, setReportTarget] = useState<ChatReportTarget | null>(
+    null,
+  );
+  const [blockCandidate, setBlockCandidate] = useState<ChatPerson | null>(null);
+
+  const otherPeople = useMemo(() => {
+    const seen = new Set<string>();
+    return (selectedThread?.participants ?? []).filter((participant) => {
+      const id = participant.user_id;
+      if (!id || id === props.userId || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }, [selectedThread, props.userId]);
+
+  const directPerson: ChatPerson | null =
+    selectedThread?.type === 'direct' &&
+    otherPeople.length === 1 &&
+    otherPeople[0]?.user_id
+      ? { userId: otherPeople[0].user_id, name: otherPeople[0].display_name }
+      : null;
+
   const sortedThreads = useMemo(() => {
     const favSet = new Set(favouriteThreadIds);
     return [...threads].sort((a, b) => {
@@ -794,6 +825,37 @@ export function MessagesPageContent(props: Props) {
     }
   }
 
+  /** A blocked one-to-one chat leaves the inbox; group chats just lose that person's messages. */
+  async function onPersonBlocked(userId: string) {
+    const closesThread = directPerson?.userId === userId;
+    setMessages((prev) => prev.filter((m) => m.sender_user_id !== userId));
+    const latest = await refreshThreads();
+    if (closesThread) {
+      setSelectedThreadId(latest[0]?.id ?? null);
+      setMessages([]);
+    }
+  }
+
+  async function onUnblockPerson(person: ChatPerson) {
+    const result = await unblockChatUserAction({ userId: person.userId });
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(`Unblocked ${person.name}`);
+    await refreshThreads();
+    if (selectedThreadId) {
+      const next = await listThreadMessages({
+        accountId: props.accountId,
+        userId: props.userId,
+        threadId: selectedThreadId,
+        accountSlug: props.accountSlug,
+        limit: 50,
+      });
+      setMessages(next ?? []);
+    }
+  }
+
   async function onCopyMessage(content: string) {
     try {
       await navigator.clipboard.writeText(content);
@@ -1120,6 +1182,41 @@ export function MessagesPageContent(props: Props) {
                     <Archive className="mr-2 h-4 w-4" />
                     Archive chat
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      setReportTarget({
+                        threadId: selectedThread.id,
+                        person: directPerson,
+                      })
+                    }
+                  >
+                    <Flag className="mr-2 h-4 w-4" />
+                    Report conversation
+                  </DropdownMenuItem>
+                  {otherPeople.map((participant) => {
+                    const person = {
+                      userId: participant.user_id!,
+                      name: participant.display_name,
+                    };
+                    return participant.is_blocked ? (
+                      <DropdownMenuItem
+                        key={person.userId}
+                        onClick={() => void onUnblockPerson(person)}
+                      >
+                        <Ban className="mr-2 h-4 w-4" />
+                        Unblock {person.name}
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem
+                        key={person.userId}
+                        onClick={() => setBlockCandidate(person)}
+                        className="text-red-500"
+                      >
+                        <Ban className="mr-2 h-4 w-4" />
+                        Block {person.name}
+                      </DropdownMenuItem>
+                    );
+                  })}
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
@@ -1342,7 +1439,37 @@ export function MessagesPageContent(props: Props) {
                                       <Trash2 className="mr-2 h-4 w-4" />
                                       Delete
                                     </DropdownMenuItem>
-                                  ) : null}
+                                  ) : (
+                                    <>
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          setReportTarget({
+                                            threadId: message.thread_id,
+                                            messageId: message.id,
+                                            person: {
+                                              userId: message.sender_user_id,
+                                              name: label,
+                                            },
+                                          })
+                                        }
+                                      >
+                                        <Flag className="mr-2 h-4 w-4" />
+                                        Report
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          setBlockCandidate({
+                                            userId: message.sender_user_id,
+                                            name: label,
+                                          })
+                                        }
+                                        className="text-red-500"
+                                      >
+                                        <Ban className="mr-2 h-4 w-4" />
+                                        Block {label}
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
@@ -1551,6 +1678,22 @@ export function MessagesPageContent(props: Props) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ReportChatDialog
+        accountId={props.accountId}
+        target={reportTarget}
+        onOpenChange={(open) => {
+          if (!open) setReportTarget(null);
+        }}
+        onBlocked={(userId) => void onPersonBlocked(userId)}
+      />
+      <BlockChatPersonDialog
+        person={blockCandidate}
+        onOpenChange={(open) => {
+          if (!open) setBlockCandidate(null);
+        }}
+        onBlocked={(userId) => void onPersonBlocked(userId)}
+      />
 
       <NewChatDialog
         open={newChatOpen}

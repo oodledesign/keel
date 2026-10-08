@@ -91,6 +91,18 @@ export const RightmoveBulkJobStatusSchema = AccountIdSchema.extend({
 
 export const ListRightmoveDisposalStatusesSchema = AccountIdSchema;
 
+export const AuditRightmoveBranchesSchema = AccountIdSchema;
+
+export const RemoveRightmoveBranchPropertySchema = AccountIdSchema.extend({
+  rightmoveBranchId: z.number().int().positive(),
+  reference: z
+    .string()
+    .trim()
+    .min(1)
+    .max(100)
+    .regex(/^[a-zA-Z0-9-_]+$/, 'Invalid Rightmove reference'),
+});
+
 export const EnsureWebsiteFeedReadySchema = z.object({
   accountId: z.string().uuid(),
   listingId: z.string().uuid(),

@@ -5,6 +5,7 @@ import UIKit
 struct MessageThreadView: View {
     @Environment(AppSession.self) private var session
     @Environment(WorkspaceTabBarState.self) private var tabBar
+    @Environment(\.dismiss) private var dismiss
 
     let threadId: String
     var thread: MessageThreadItem?
@@ -18,11 +19,31 @@ struct MessageThreadView: View {
     @State private var isSending = false
     @State private var loadError: NativeAPIError?
     @State private var sendError: String?
+    @State private var reportTarget: MessageReportTarget?
+    @State private var blockCandidate: MessagePerson?
+    @State private var safetyError: String?
 
     private let client = NativeAPIClient()
 
     private var title: String {
         header?.title ?? thread?.title ?? "Chat"
+    }
+
+    private var otherPeople: [MessageThreadParticipant] {
+        (header?.participants ?? []).filter { participant in
+            guard let userId = participant.userId else { return false }
+            return userId != session.userId
+        }
+    }
+
+    /// The other person in a one-to-one chat; reports and blocks for the whole conversation target them.
+    private var directPerson: MessagePerson? {
+        guard header?.type == "direct",
+              otherPeople.count == 1,
+              let person = otherPeople.first,
+              let userId = person.userId
+        else { return nil }
+        return MessagePerson(userId: userId, name: person.displayName)
     }
 
     var body: some View {
@@ -66,6 +87,44 @@ struct MessageThreadView: View {
         .background(OzerPalette.cream.ignoresSafeArea())
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                safetyMenu
+            }
+        }
+        .sheet(item: $reportTarget) { target in
+            MessageReportSheet(target: target) { result in
+                guard result.blocked, let userId = result.blockedUserId else { return }
+                Task { await afterBlocking(userId) }
+            }
+        }
+        .confirmationDialog(
+            "Block \(blockCandidate?.name ?? "this person")?",
+            isPresented: Binding(
+                get: { blockCandidate != nil },
+                set: { if !$0 { blockCandidate = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: blockCandidate
+        ) { person in
+            Button("Block", role: .destructive) {
+                Task { await block(person) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { _ in
+            Text("You won’t see their messages or get notifications from them. They aren’t told. You can unblock them in Personal settings.")
+        }
+        .alert(
+            "Something went wrong",
+            isPresented: Binding(
+                get: { safetyError != nil },
+                set: { if !$0 { safetyError = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(safetyError ?? "")
+        }
         .onAppear {
             tabBar.isHidden = true
         }
@@ -128,6 +187,90 @@ struct MessageThreadView: View {
             }
             if !message.isMine { Spacer(minLength: 48) }
         }
+        .contextMenu {
+            if !message.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Button("Copy", systemImage: "doc.on.doc") {
+                    UIPasteboard.general.string = message.body
+                }
+            }
+            if !message.isMine {
+                Button("Report message…", systemImage: "exclamationmark.bubble") {
+                    reportTarget = MessageReportTarget(
+                        threadId: threadId,
+                        messageId: message.id,
+                        person: MessagePerson(userId: message.senderUserId, name: message.senderLabel)
+                    )
+                }
+                Button("Block \(message.senderLabel)", systemImage: "hand.raised", role: .destructive) {
+                    blockCandidate = MessagePerson(userId: message.senderUserId, name: message.senderLabel)
+                }
+            }
+        }
+    }
+
+    private var safetyMenu: some View {
+        Menu {
+            Button("Report conversation…", systemImage: "exclamationmark.bubble") {
+                reportTarget = MessageReportTarget(threadId: threadId, messageId: nil, person: directPerson)
+            }
+            ForEach(otherPeople) { participant in
+                if let userId = participant.userId {
+                    if participant.isBlocked == true {
+                        Button("Unblock \(participant.displayName)", systemImage: "hand.raised.slash") {
+                            Task { await unblock(userId) }
+                        }
+                    } else {
+                        Button("Block \(participant.displayName)", systemImage: "hand.raised", role: .destructive) {
+                            blockCandidate = MessagePerson(userId: userId, name: participant.displayName)
+                        }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+                .foregroundStyle(OzerPalette.plumMuted)
+        }
+        .accessibilityLabel("Conversation options")
+    }
+
+    private func block(_ person: MessagePerson) async {
+        do {
+            let token = try await session.validAccessToken()
+            try await client.blockUser(userId: person.userId, accessToken: token)
+            await afterBlocking(person.userId)
+        } catch let error as NativeAPIError {
+            if error == .unauthorized {
+                await session.handleUnauthorized()
+            }
+            safetyError = error.localizedDescription
+        } catch {
+            safetyError = error.localizedDescription
+        }
+    }
+
+    private func unblock(_ userId: String) async {
+        do {
+            let token = try await session.validAccessToken()
+            try await client.unblockUser(userId: userId, accessToken: token)
+            await load()
+        } catch let error as NativeAPIError {
+            if error == .unauthorized {
+                await session.handleUnauthorized()
+            }
+            safetyError = error.localizedDescription
+        } catch {
+            safetyError = error.localizedDescription
+        }
+    }
+
+    /// A blocked one-to-one chat leaves the inbox, so close it; group chats reload without their messages.
+    private func afterBlocking(_ userId: String) async {
+        if directPerson?.userId == userId {
+            dismiss()
+            return
+        }
+        messages.removeAll { $0.senderUserId == userId }
+        await load()
     }
 
     private var composer: some View {

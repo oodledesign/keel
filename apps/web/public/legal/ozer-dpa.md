@@ -2,7 +2,7 @@
 
 UK GDPR Article 28 terms for customers who use Ozer as a processor.
 
-**Version:** 3 September 2026. Operated by Oodle Designs Ltd ("Processor" / "Ozer"). This DPA is incorporated by reference into the Terms of Service for business accounts. A countersigned copy is available on request via privacy@ozer.so.
+**Version:** 8 October 2026. Operated by Daniel Potter, a sole trader trading as Oodle Designs, of 2 Long Mead Way, Tonbridge, Kent, TN10 3TG, United Kingdom ("Processor" / "Ozer"). This DPA is incorporated by reference into the Terms of Service for business accounts. A countersigned copy is available on request via privacy@ozer.so.
 
 ## 1. Roles and subject matter
 
@@ -133,7 +133,7 @@ Date: ____________________________
 
 Signature: ____________________________
 
-**For Oodle Designs Ltd (Processor):**
+**For Daniel Potter, trading as Oodle Designs (Processor):**
 
 Name: ____________________________
 

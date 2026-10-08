@@ -6,6 +6,10 @@ struct OzerApp: App {
     @State private var session = AppSession()
     @Environment(\.scenePhase) private var scenePhase
 
+    init() {
+        _ = OzerDevice.name
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

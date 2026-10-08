@@ -22,7 +22,7 @@ enum SurveyPhotoSyncPreference: String, Equatable {
     var settingsDetail: String {
         switch self {
         case .waitForWifi:
-            return "Large survey photos stay on this iPhone until you are on Wi-Fi. Recordings still upload on mobile data."
+            return "Large survey photos stay on this \(OzerDevice.name) until you are on Wi-Fi. Recordings still upload on mobile data."
         case .useMobileData:
             return "Survey photos may upload over mobile data when you reconnect."
         }
@@ -45,7 +45,7 @@ enum SurveyPhotoSync {
     static let uploadJpegQuality: Double = 0.72
 
     static let archiveRetentionNote =
-        "The iPhone keeps the higher-resolution original in the on-device archive. The copy uploaded to Ozer is compressed for the report library."
+        "This \(OzerDevice.name) keeps the higher-resolution original in the on-device archive. The copy uploaded to Ozer is compressed for the report library."
 
     static func shouldUploadPhotos(
         isOnline: Bool,

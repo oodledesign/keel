@@ -11,7 +11,7 @@ export async function generateMetadata() {
   return buildMarketingMetadata({
     title: 'Terms of service — Ozer',
     description:
-      'Terms for using Ozer, operated by Oodle Designs Ltd, including subscriptions, AI features, and liability under English law.',
+      'Terms for using Ozer, operated by Daniel Potter trading as Oodle Designs, including subscriptions, AI features, and liability under English law.',
     path: '/terms-of-service',
     ogType: 'legal',
   });
@@ -26,7 +26,8 @@ async function TermsOfServicePage() {
         data={schemaGraph([
           webPageJsonLd({
             name: 'Terms of service — Ozer',
-            description: 'Terms for using Ozer, operated by Oodle Designs Ltd.',
+            description:
+              'Terms for using Ozer, operated by Daniel Potter trading as Oodle Designs.',
             path: '/terms-of-service',
           }),
           breadcrumbJsonLd([

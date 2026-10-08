@@ -120,14 +120,24 @@ struct PersonalSettingsView: View {
                     Text(pushStatusLabel)
                         .foregroundStyle(OzerPalette.plumMuted)
                 }
-                Button("Open iPhone Settings") {
+                Button("Open Settings") {
                     if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
                         openURL(url)
                     }
                 }
                 .foregroundStyle(OzerPalette.coral)
             } header: {
-                Text("On this iPhone")
+                Text("On this \(OzerDevice.name)")
+            }
+            .listRowBackground(OzerPalette.panel)
+
+            Section("Messages") {
+                NavigationLink {
+                    BlockedPeopleView()
+                } label: {
+                    Label("Blocked people", systemImage: "hand.raised")
+                        .foregroundStyle(OzerPalette.plum)
+                }
             }
             .listRowBackground(OzerPalette.panel)
 
@@ -146,11 +156,20 @@ struct PersonalSettingsView: View {
                 Button("Sign out", role: .destructive) {
                     Task { await session.signOut() }
                 }
+            } footer: {
+                Text(settings.email ?? "Signed in")
+                    .foregroundStyle(OzerPalette.plumSoft)
+            }
+            .listRowBackground(OzerPalette.panel)
+
+            Section {
                 Button("Delete account", role: .destructive) {
                     showDeleteAccount = true
                 }
+            } header: {
+                Text("Danger zone")
             } footer: {
-                Text(settings.email ?? "Signed in")
+                Text("Locks your account straight away and permanently deletes your data after 30 days.")
                     .foregroundStyle(OzerPalette.plumSoft)
             }
             .listRowBackground(OzerPalette.panel)

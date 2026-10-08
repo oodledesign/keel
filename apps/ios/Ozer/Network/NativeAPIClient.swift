@@ -457,6 +457,70 @@ actor NativeAPIClient {
         }
     }
 
+    func disposals(
+        workspace: String,
+        filter: DisposalListFilter,
+        search: String,
+        accessToken: String
+    ) async throws -> DisposalsPayload {
+        var queryItems = [
+            URLQueryItem(name: "workspace", value: workspace),
+            URLQueryItem(name: "status", value: filter.rawValue),
+        ]
+        let trimmed = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            queryItems.append(URLQueryItem(name: "q", value: trimmed))
+        }
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/disposals",
+            queryItems: queryItems,
+            body: nil,
+            accessToken: accessToken
+        )
+        do {
+            return try DisposalItem.decoder.decode(DisposalsPayload.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func disposal(id: String, workspace: String, accessToken: String) async throws -> DisposalItem {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/disposals/\(id)",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: nil,
+            accessToken: accessToken
+        )
+        do {
+            return try DisposalItem.decoder.decode(DisposalItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    /// `changes` uses the API's snake_case keys. Only changed fields are sent.
+    func updateDisposal(
+        id: String,
+        workspace: String,
+        changes: [String: DisposalPatchValue],
+        accessToken: String
+    ) async throws -> DisposalItem {
+        let data = try await send(
+            method: "PATCH",
+            path: "api/native/v1/disposals/\(id)",
+            queryItems: [URLQueryItem(name: "workspace", value: workspace)],
+            body: changes.mapValues(\.jsonValue),
+            accessToken: accessToken
+        )
+        do {
+            return try DisposalItem.decoder.decode(DisposalItem.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
     func createNote(
         title: String,
         body: String,
@@ -1064,6 +1128,77 @@ actor NativeAPIClient {
         )
     }
 
+    func reportMessage(
+        workspace: String,
+        threadId: String,
+        messageId: String?,
+        reason: MessageReportReason,
+        details: String,
+        block: Bool,
+        accessToken: String
+    ) async throws -> MessageReportResult {
+        var body: [String: Any] = [
+            "workspace": workspace,
+            "thread_id": threadId,
+            "reason": reason.rawValue,
+            "block": block,
+        ]
+        if let messageId {
+            body["message_id"] = messageId
+        }
+        let trimmed = details.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            body["details"] = trimmed
+        }
+        let data = try await send(
+            method: "POST",
+            path: "api/native/v1/messages/reports",
+            queryItems: [],
+            body: body,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(MessageReportResult.self, from: data)
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func blockedPeople(accessToken: String) async throws -> [BlockedPerson] {
+        let data = try await send(
+            method: "GET",
+            path: "api/native/v1/messages/blocks",
+            queryItems: [],
+            body: nil,
+            accessToken: accessToken
+        )
+        do {
+            return try JSONDecoder().decode(BlockedPeoplePayload.self, from: data).items
+        } catch {
+            throw NativeAPIError.decoding
+        }
+    }
+
+    func blockUser(userId: String, accessToken: String) async throws {
+        _ = try await send(
+            method: "POST",
+            path: "api/native/v1/messages/blocks",
+            queryItems: [],
+            body: ["user_id": userId],
+            accessToken: accessToken
+        )
+    }
+
+    func unblockUser(userId: String, accessToken: String) async throws {
+        _ = try await send(
+            method: "DELETE",
+            path: "api/native/v1/messages/blocks/\(userId)",
+            queryItems: [],
+            body: nil,
+            accessToken: accessToken
+        )
+    }
+
     func messageCompose(workspace: String, query: String, accessToken: String) async throws -> MessageComposePayload {
         var items = [URLQueryItem(name: "workspace", value: workspace)]
         if !query.isEmpty {
@@ -1622,6 +1757,9 @@ actor NativeAPIClient {
         case 409:
             let message = (try? JSONDecoder().decode(NativeErrorBody.self, from: data))?.error
             throw NativeAPIError.badRequest(message ?? "That can’t be done right now.")
+        case 429:
+            let message = (try? JSONDecoder().decode(NativeErrorBody.self, from: data))?.error
+            throw NativeAPIError.badRequest(message ?? "Too many requests. Try again later.")
         default:
             throw NativeAPIError.http(http.statusCode)
         }

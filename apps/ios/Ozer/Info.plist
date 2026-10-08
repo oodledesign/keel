@@ -20,6 +20,14 @@
 	<string>Ozer uses the camera so you can add site photos to a building survey. Photos stay on this iPhone until they upload to that survey.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Ozer lets you add photos, video, and voice notes from this iPhone to family memories and building surveys.</string>
+	<key>NSMicrophoneUsageDescription~ipad</key>
+	<string>Ozer uses the microphone so you can dictate family memories, survey notes, and in-room meetings. Audio stays on this iPad unless you choose to keep a recording with the memory or survey.</string>
+	<key>NSSpeechRecognitionUsageDescription~ipad</key>
+	<string>Ozer transcribes dictation and meetings on this iPad in British English, so notes still work offline. Speech is not sent to a cloud service.</string>
+	<key>NSCameraUsageDescription~ipad</key>
+	<string>Ozer uses the camera so you can add site photos to a building survey. Photos stay on this iPad until they upload to that survey.</string>
+	<key>NSPhotoLibraryUsageDescription~ipad</key>
+	<string>Ozer lets you add photos, video, and voice notes from this iPad to family memories and building surveys.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

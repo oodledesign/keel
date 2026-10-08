@@ -104,6 +104,11 @@ enum WorkspaceNavigation {
             self == .buildingSurveyor
         }
 
+        /// Disposals (commercial listings) — commercial property only.
+        var showsDisposals: Bool {
+            self == .commercialProperty
+        }
+
         /// Native inbox exists for every workspace even when web omits Messages.
         /// Surveyor web has no Messages item; the app shell still keeps inbox.
         var showsMessages: Bool { true }
@@ -127,6 +132,9 @@ enum WorkspaceNavigation {
         screens.append(.notes)
         if kind.showsMessages {
             screens.append(.messages)
+        }
+        if kind.showsDisposals {
+            screens.append(.disposals)
         }
         if kind.showsMeetings {
             screens.append(.meetings)
@@ -169,8 +177,10 @@ enum WorkspaceNavigation {
             return [.tasks, .shopping, .mealPlan]
         case .workDesign:
             return [.tasks, .notes, .messages]
-        case .workProperty, .commercialProperty:
+        case .workProperty:
             return [.tasks, .notes, .clients]
+        case .commercialProperty:
+            return [.tasks, .disposals, .clients]
         case .buildingSurveyor:
             return [.tasks, .surveys, .meetings]
         case .community, .unknown:

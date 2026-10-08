@@ -425,6 +425,41 @@ export async function putCommercialProperty(input: {
 }
 
 /**
+ * One page of what Rightmove currently holds for a branch. The response
+ * shape is loosely documented, so the parsed JSON is returned as-is.
+ */
+export async function listCommercialPropertiesForBranch(input: {
+  branchId: number;
+  page: number;
+  size: number;
+}): Promise<{ json: unknown; raw: string }> {
+  const query = new URLSearchParams({
+    id: String(input.branchId),
+    page: String(input.page),
+    size: String(input.size),
+  });
+  const response = await rightmoveFetch(
+    `/v2/property/commercial/branch?${query.toString()}`,
+    { method: 'GET' },
+  );
+  const raw = await response.text();
+  if (!response.ok) {
+    throw new RightmoveApiError(
+      `Rightmove branch listing failed (${response.status}): ${parseProblemDetail(raw)}`,
+      response.status,
+      raw,
+    );
+  }
+  let json: unknown = null;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    json = null;
+  }
+  return { json, raw };
+}
+
+/**
  * Permanently remove a commercial property from Rightmove.
  */
 export async function deleteCommercialProperty(input: {

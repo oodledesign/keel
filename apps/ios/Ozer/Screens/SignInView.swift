@@ -10,37 +10,47 @@ struct SignInView: View {
     @State private var magicLinkMessage: String?
     @State private var isWorking = false
     @State private var appleNonce = ""
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                header
-                if let notice = session.signedOutNotice {
-                    Text(notice)
-                        .font(.footnote)
-                        .foregroundStyle(OzerPalette.plum)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(OzerPalette.creamDeep, in: RoundedRectangle(cornerRadius: OzerRadius.button, style: .continuous))
-                }
-                if !AppConfiguration.isSupabaseConfigured {
-                    configHint
-                }
-                providerButtons
-                magicLink
-                if let error = session.lastError {
-                    Text(error)
-                        .font(.footnote)
-                        .foregroundStyle(OzerPalette.coral)
-                }
+        GeometryReader { proxy in
+            ScrollView {
+                form
+                    .frame(
+                        maxWidth: .infinity,
+                        minHeight: horizontalSizeClass == .regular ? proxy.size.height : nil
+                    )
             }
-            .padding(28)
-            .frame(maxWidth: 480)
-            .frame(maxWidth: .infinity)
         }
         .background(OzerPalette.cream.ignoresSafeArea())
         .disabled(isWorking)
+    }
+
+    private var form: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            header
+            if let notice = session.signedOutNotice {
+                Text(notice)
+                    .font(.footnote)
+                    .foregroundStyle(OzerPalette.plum)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(OzerPalette.creamDeep, in: RoundedRectangle(cornerRadius: OzerRadius.button, style: .continuous))
+            }
+            if !AppConfiguration.isSupabaseConfigured {
+                configHint
+            }
+            providerButtons
+            magicLink
+            if let error = session.lastError {
+                Text(error)
+                    .font(.footnote)
+                    .foregroundStyle(OzerPalette.coral)
+            }
+        }
+        .padding(28)
+        .frame(maxWidth: 480)
     }
 
     private var header: some View {

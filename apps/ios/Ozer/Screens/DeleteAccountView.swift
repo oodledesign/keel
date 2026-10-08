@@ -43,7 +43,7 @@ struct DeleteAccountView: View {
                 Text("Your account is locked straight away and permanently deleted after \(preview.graceDays) days — your Personal workspace, tasks, notes, meetings, memories, and files.")
                     .foregroundStyle(OzerPalette.plum)
                     .fixedSize(horizontal: false, vertical: true)
-                Text("Changed your mind? Email privacy@ozer.so before then and we’ll restore it. Recordings and photos still waiting on this iPhone are removed when you delete the app.")
+                Text("Changed your mind? Email privacy@ozer.so before then and we’ll restore it. Recordings and photos still waiting on this \(OzerDevice.name) are removed when you delete the app.")
                     .font(.footnote)
                     .foregroundStyle(OzerPalette.plumMuted)
                     .fixedSize(horizontal: false, vertical: true)

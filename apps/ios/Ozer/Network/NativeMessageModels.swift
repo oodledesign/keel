@@ -13,6 +13,7 @@ struct MessageThreadParticipant: Decodable, Equatable, Hashable, Identifiable {
     var contactId: String?
     var displayName: String
     var email: String?
+    var isBlocked: Bool?
 
     var id: String {
         userId ?? contactId ?? clientId ?? displayName
@@ -24,7 +25,55 @@ struct MessageThreadParticipant: Decodable, Equatable, Hashable, Identifiable {
         case clientId = "client_id"
         case contactId = "contact_id"
         case displayName = "display_name"
+        case isBlocked = "is_blocked"
     }
+}
+
+enum MessageReportReason: String, CaseIterable, Identifiable {
+    case spam
+    case harassment
+    case inappropriate
+    case other
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .spam: "Spam"
+        case .harassment: "Harassment or abuse"
+        case .inappropriate: "Inappropriate content"
+        case .other: "Something else"
+        }
+    }
+}
+
+struct MessageReportResult: Decodable, Equatable {
+    var id: String
+    var blocked: Bool
+    var blockedUserId: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, blocked
+        case blockedUserId = "blocked_user_id"
+    }
+}
+
+struct BlockedPerson: Decodable, Equatable, Identifiable {
+    var userId: String
+    var displayName: String
+    var createdAt: String?
+
+    var id: String { userId }
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case displayName = "display_name"
+        case createdAt = "created_at"
+    }
+}
+
+struct BlockedPeoplePayload: Decodable, Equatable {
+    var items: [BlockedPerson]
 }
 
 struct MessageThreadItem: Decodable, Identifiable, Equatable, Hashable {

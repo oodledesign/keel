@@ -5,6 +5,9 @@ import { after } from 'next/server';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { loadBlockedUserIds } from '~/lib/messages/chat-user-blocks';
+import { isDirectThreadWithBlockedUser } from '~/lib/messages/message-safety-shared';
+
 import { createMessagesAccessService } from './messages-access.service';
 import {
   type MessageAttachmentInput,
@@ -47,6 +50,8 @@ export type MessageThreadListItem = {
     contact_id: string | null;
     display_name: string;
     email: string | null;
+    /** The viewer has blocked this person. */
+    is_blocked: boolean;
   }>;
 };
 
@@ -67,6 +72,15 @@ export function createMessagesService() {
   return new MessagesService();
 }
 
+/** Exclude messages from people the viewer has blocked (never the viewer's own). */
+function withoutBlockedSenderRows<Q extends { not: (...args: any[]) => Q }>(
+  query: Q,
+  blocked: ReadonlySet<string>,
+): Q {
+  if (blocked.size === 0) return query;
+  return query.not('sender_user_id', 'in', `(${[...blocked].join(',')})`);
+}
+
 function isJobIdForeignKeyError(message: string | undefined) {
   const text = (message ?? '').toLowerCase();
   return (
@@ -83,7 +97,10 @@ class MessagesService {
     this.admin,
   );
 
-  private async loadThreadParticipants(threadIds: string[]) {
+  private async loadThreadParticipants(
+    threadIds: string[],
+    blocked: ReadonlySet<string> = new Set(),
+  ) {
     if (threadIds.length === 0)
       return new Map<string, MessageThreadListItem['participants']>();
 
@@ -135,6 +152,7 @@ class MessagesService {
           display_name:
             userMap.get(row.participant_user_id)?.email ?? 'Team member',
           email: userMap.get(row.participant_user_id)?.email ?? null,
+          is_blocked: blocked.has(row.participant_user_id),
         });
       } else if (row.participant_kind === 'contact') {
         const contact = contactMap.get(row.participant_contact_id);
@@ -145,6 +163,9 @@ class MessagesService {
           contact_id: row.participant_contact_id,
           display_name: contact?.name ?? 'Contact',
           email: contact?.email ?? null,
+          is_blocked: Boolean(
+            row.participant_user_id && blocked.has(row.participant_user_id),
+          ),
         });
       } else {
         const client = clientMap.get(row.participant_client_id);
@@ -155,6 +176,7 @@ class MessagesService {
           contact_id: null,
           display_name: client?.name ?? 'Client',
           email: client?.email ?? null,
+          is_blocked: false,
         });
       }
       out.set(row.thread_id, list);
@@ -218,18 +240,26 @@ class MessagesService {
       query = query.eq('client_id', params.clientId);
     }
 
-    const { data: threads } = await query;
+    const [{ data: threads }, blocked] = await Promise.all([
+      query,
+      loadBlockedUserIds(this.admin, params.userId),
+    ]);
 
     const readMap = new Map<string, string | null>();
     for (const row of participantRows ?? []) {
       readMap.set(row.thread_id, row.last_read_at ?? null);
     }
 
-    return this.hydrateThreads({
+    const hydrated = await this.hydrateThreads({
       threads: threads ?? [],
       userId: params.userId,
       lastReadByThreadId: readMap,
+      blocked,
     });
+    return hydrated.filter(
+      (thread) =>
+        !isDirectThreadWithBlockedUser(thread, blocked, params.userId),
+    );
   }
 
   async getThread(params: {
@@ -283,6 +313,7 @@ class MessagesService {
       threads: [thread],
       userId: params.userId,
       lastReadByThreadId: new Map([[params.threadId, lastReadAt]]),
+      blocked: await loadBlockedUserIds(this.admin, params.userId),
     });
 
     if (!item) {
@@ -308,18 +339,24 @@ class MessagesService {
     }>;
     userId: string;
     lastReadByThreadId: Map<string, string | null>;
+    blocked?: ReadonlySet<string>;
   }) {
+    const blocked = params.blocked ?? new Set<string>();
     const participantsMap = await this.loadThreadParticipants(
       params.threads.map((thread) => thread.id),
+      blocked,
     );
 
     const out: MessageThreadListItem[] = [];
     for (const thread of params.threads) {
-      const { data: latestMessage } = await this.admin
-        .from('chat_messages')
-        .select('id, body, image_url, created_at')
-        .eq('thread_id', thread.id)
-        .is('deleted_at', null)
+      const { data: latestMessage } = await withoutBlockedSenderRows(
+        this.admin
+          .from('chat_messages')
+          .select('id, body, image_url, created_at')
+          .eq('thread_id', thread.id)
+          .is('deleted_at', null),
+        blocked,
+      )
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -341,12 +378,15 @@ class MessagesService {
       }
 
       const lastReadAt = params.lastReadByThreadId.get(thread.id);
-      const unreadQuery = this.admin
-        .from('chat_messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('thread_id', thread.id)
-        .is('deleted_at', null)
-        .neq('sender_user_id', params.userId);
+      const unreadQuery = withoutBlockedSenderRows(
+        this.admin
+          .from('chat_messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('thread_id', thread.id)
+          .is('deleted_at', null)
+          .neq('sender_user_id', params.userId),
+        blocked,
+      );
 
       const unread =
         lastReadAt != null
@@ -464,11 +504,15 @@ class MessagesService {
     await this.access.assertAccountMember(params.accountId, params.userId);
     await this.access.assertThreadParticipant(params.threadId, params.userId);
 
-    let query = this.admin
-      .from('chat_messages')
-      .select('id, thread_id, sender_user_id, body, image_url, created_at')
-      .eq('thread_id', params.threadId)
-      .is('deleted_at', null)
+    const blocked = await loadBlockedUserIds(this.admin, params.userId);
+    let query = withoutBlockedSenderRows(
+      this.admin
+        .from('chat_messages')
+        .select('id, thread_id, sender_user_id, body, image_url, created_at')
+        .eq('thread_id', params.threadId)
+        .is('deleted_at', null),
+      blocked,
+    )
       .order('created_at', { ascending: false })
       .limit(params.limit ?? 50);
 

@@ -1,8 +1,10 @@
 # Privacy Policy
 
-**Last updated:** 3 September 2026
+**Last updated:** 8 October 2026
 
-Oodle Designs Ltd ("Ozer", "we", "us") is the data controller for personal data we process for our own purposes (account and authentication data, product analytics and security logs, and SaaS billing records). Where you use Ozer to store or process your clients', staff, or invitees' personal data, we typically act as a **processor** on your instructions. See our [Data Processing Agreement](/dpa) for that relationship. We comply with the UK GDPR, EU GDPR, and the Data Protection Act 2018.
+Daniel Potter, a sole trader trading as Oodle Designs ("Ozer", "we", "us"), is the data controller for personal data we process for our own purposes (account and authentication data, product analytics and security logs, and SaaS billing records). Where you use Ozer to store or process your clients', staff, or invitees' personal data, we typically act as a **processor** on your instructions. See our [Data Processing Agreement](/dpa) for that relationship. We comply with the UK GDPR, EU GDPR, and the Data Protection Act 2018.
+
+**Contact:** [privacy@ozer.so](mailto:privacy@ozer.so), or by post to Daniel Potter (Oodle Designs), 2 Long Mead Way, Tonbridge, Kent, TN10 3TG, United Kingdom.
 
 ## What we collect
 
@@ -12,6 +14,7 @@ Oodle Designs Ltd ("Ozer", "we", "us") is the data controller for personal data 
 - Usage, device, and security logs; product analytics events; optional analytics cookies / similar technologies with consent (see Product analytics and [Cookie Policy](/cookie-policy)).
 - AI feature inputs and outputs where you use Ozer AI features.
 - Optional integration data described in the feature sections below (email, calendar, transcription, activity tracking, signatures, bookings, video).
+- If you use the Ozer app for iPhone or iPad: the photos, videos, voice notes, and transcripts you choose to add, and a push notification token for your device (see Ozer for iPhone and iPad).
 
 ## Lawful bases
 
@@ -85,7 +88,7 @@ We process data to perform our contract with you, for legitimate interests (secu
 
 **Data:** transcript text, speaker segments and mappings, attendee emails, summaries, and action items.
 
-**How transcription works:** audio is transcribed on your device by the Ozer Assistant for Mac. Audio is not retained as part of the product model; transcript text is uploaded to your Ozer workspace.
+**How transcription works:** audio is transcribed on your device, either by the Ozer Assistant for Mac or by the Ozer app for iPhone and iPad. Audio is not retained as part of the product model; transcript text is uploaded to your Ozer workspace.
 
 **Consent:** meeting recording and transcription require explicit enablement in the product. You remain responsible for informing meeting attendees as required by law — in-product consent does not replace your attendee notice duties.
 
@@ -94,6 +97,28 @@ We process data to perform our contract with you, for legitimate interests (secu
 **Sub-processors:** Supabase; Anthropic (summaries and action-item extraction where enabled).
 
 **Retention:** transcripts, summaries, and action items are retained until you delete them or your account closes (then deleted within 30 days).
+
+## Ozer for iPhone and iPad
+
+**Data:** the content you create in the app (tasks, notes, messages, meeting transcripts, survey notes, and family memories); photos, videos, and voice notes you choose to add; your profile name and photo; workspace logos you upload; and a push notification token for your device.
+
+**Microphone and speech recognition:** used only when you start dictation, a meeting, or a survey recording. Speech is transcribed on your device using Apple's on-device speech recognition. Audio is not sent to Ozer, Apple, or any other cloud service for transcription; only the transcript text is uploaded. Audio stays on your device unless you choose to keep a voice note with a memory or survey, in which case that file uploads to your workspace. A recording you start keeps running while the screen is locked until you stop it.
+
+**Camera and photos:** used only when you take or choose a photo or video, for example survey site photos, family memories, message images, your profile photo, or a workspace logo. Ozer only receives the items you pick and does not scan your photo library. Survey photos waiting to upload are kept in the app on your device until they upload.
+
+**Push notifications:** if you allow notifications, Apple issues a token for your device, which we store against your account so we can send alerts such as new messages and invoice updates. Notification text is delivered through Apple Push Notification service. You can turn notifications off at any time in iOS Settings.
+
+**Sign-in:** you can sign in with Apple, Google, or your email address. If you use Sign in with Apple and choose to hide your email, we only receive Apple's relay address.
+
+**What the app does not do:** it does not collect your location, contacts, or health data, it contains no advertising or third-party analytics SDKs, and it does not track you across other companies' apps or websites.
+
+**Permissions:** the microphone, speech recognition, camera, photos, and notifications are each requested only when first needed. You can withdraw any of them in iOS Settings → Ozer.
+
+**UK GDPR basis:** contract performance. Meeting transcripts are also covered by the Meeting transcripts and recording section above.
+
+**Sub-processors:** Supabase (database and file storage); Apple (push notification delivery and Sign in with Apple); Google (Sign in with Google); Mapbox (survey address search, called from our servers).
+
+**Retention:** app content follows the retention of the workspace it belongs to. Device push tokens are deleted when your account deletion completes. Recordings and photos still waiting to upload on your device are removed if you delete the app.
 
 ## Activity tracking (Mac Assistant)
 
@@ -237,6 +262,7 @@ We use the following sub-processors to operate Ozer. A matching register is publ
 | Microsoft | Signatures directory sync | Staff profile and photo data | US/global — Microsoft Products and Services Data Protection Addendum (SCCs and UK Addendum incorporated) |
 | ZeptoMail (Zoho) | Transactional email | Recipient, subject, message body | EU data centre — Zoho DPA with standard contractual clauses |
 | Bunny.net (BunnyWay d.o.o.) | Video hosting and streaming | Media files and video metadata | Slovenia (EU) — EU-headquartered; DPA in place; EU storage region |
+| Apple | Push notification delivery and Sign in with Apple for the iPhone and iPad app | Device push token and notification text; Apple ID relay email when you sign in with Apple | US/global — Apple Developer Program License Agreement (EU Standard Contractual Clauses and UK Addendum incorporated) |
 | Mapbox | Commercial listing maps and address geocoding | Addresses and map coordinates | US/global — Mapbox Data Processing Agreement (SCCs / UK Addendum as applicable) |
 | Voyage AI | Semantic search embeddings | Text excerpts and search queries | US — Voyage AI DPA with EU SCCs and UK ICO Addendum (incorporated in commercial terms) |
 | PostHog, Inc. | Product analytics, feature flags, error/session diagnostics, and session replay | Usage events, device/browser data, user/account identifiers; UI session recordings (inputs masked; 30-day recording retention) | EU (PostHog EU Cloud) — PostHog DPA with EU SCCs and UK Addendum |
@@ -247,7 +273,9 @@ Primary customer data storage is in AWS EU West (Ireland). Where a sub-processor
 
 ## Retention & rights
 
-Feature-specific retention periods are stated in the sections above. Ending a subscription does not delete your workspace. On account deletion we remove customer data across our systems within 30 days (database rows are removed immediately; a scheduled job deletes remaining Storage objects at the end of that window). We email the account owner before remaining files are permanently deleted and cannot be recovered, except records we must keep for legal reasons (for example, billing records retained for 6 years for tax purposes).
+Feature-specific retention periods are stated in the sections above. Ending a subscription does not delete your workspace.
+
+You can delete your account on the web (Personal settings → Delete account) or in the iPhone and iPad app (Menu → Personal settings → Delete account). When you do, we sign you out of every device, lock the account straight away, and email you the date your data will be removed. Thirty days later we permanently delete your account's customer data and files and remove your name, email address, and sign-in methods. During those 30 days you can email privacy@ozer.so to restore the account. Afterwards we keep only a minimal record that the deletion took place (dates, internal identifiers, and the limited details needed to show the request was honoured), plus records we must keep for legal reasons, for example billing records retained for 6 years for tax purposes. If you have an active paid plan, or you own a team workspace that other people still use, we ask you to cancel the plan or hand the workspace over first.
 
 You may access, rectify, erase, restrict, object, or port your data, and lodge a complaint with the ICO (UK) or your local supervisory authority. Contact: privacy@ozer.so. Step-by-step instructions for deleting your account, disconnecting Instagram / TikTok / Google, and Meta’s data-deletion callback are on our [Data deletion](/data-deletion) page.
 

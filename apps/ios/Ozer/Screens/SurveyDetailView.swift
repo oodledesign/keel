@@ -106,6 +106,7 @@ struct SurveyDetailView: View {
             SurveyRecordView(survey: survey, section: section, catalogue: catalogue) {
                 await load()
             }
+            .ozerReadableWidth()
         }
         .sheet(isPresented: $showAddressEditor) {
             EditSurveyAddressSheet(survey: survey) { updated in

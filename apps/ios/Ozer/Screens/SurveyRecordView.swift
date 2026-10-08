@@ -112,13 +112,14 @@ struct SurveyRecordView: View {
             .onChange(of: pickerItems) { _, items in
                 Task { await importPickerItems(items) }
             }
-            .sheet(isPresented: $showCamera) {
+            .fullScreenCover(isPresented: $showCamera) {
                 SurveyCameraPicker { data in
                     if let data {
                         enqueuePhoto(data: data)
                     }
                     showCamera = false
                 }
+                .ignoresSafeArea()
             }
             .confirmationDialog(
                 "Upload photos on mobile data?",
@@ -164,7 +165,7 @@ struct SurveyRecordView: View {
                         .monospacedDigit()
                 }
             }
-            Text(network.isOnline ? "Online · will upload when you stop" : "Offline · queued on this iPhone")
+            Text(network.isOnline ? "Online · will upload when you stop" : "Offline · queued on this \(OzerDevice.name)")
                 .font(.caption)
                 .foregroundStyle(OzerPalette.plumMuted)
             if capture.isPaused {

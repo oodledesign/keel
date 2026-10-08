@@ -96,7 +96,7 @@ struct MeetingDetailView: View {
                     Button(role: .destructive) {
                         confirmDelete = true
                     } label: {
-                        Text("Delete from this iPhone")
+                        Text("Delete from this \(OzerDevice.name)")
                             .font(.body.weight(.medium))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)

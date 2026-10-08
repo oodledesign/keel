@@ -57,7 +57,7 @@ enum SurveyQueueStatus: Equatable {
                 : "Online · \(count) items waiting to upload"
         case .offlinePending(let count):
             return count == 0
-                ? "Offline · recordings stay on this iPhone"
+                ? "Offline · recordings stay on this \(OzerDevice.name)"
                 : count == 1
                     ? "Offline · 1 item queued until you reconnect"
                     : "Offline · \(count) items queued until you reconnect"

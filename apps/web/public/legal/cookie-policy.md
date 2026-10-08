@@ -1,6 +1,6 @@
 # Cookie Policy
 
-**Last updated:** 18 August 2026. Oodle Designs Ltd ("Ozer") uses cookies and similar technologies on ozer.so and related services. This policy explains what we use and how you can control them.
+**Last updated:** 8 October 2026. Daniel Potter, trading as Oodle Designs ("Ozer"), uses cookies and similar technologies on ozer.so and related services. This policy explains what we use and how you can control them.
 
 ## Essential cookies
 

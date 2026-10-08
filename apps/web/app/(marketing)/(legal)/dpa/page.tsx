@@ -11,7 +11,7 @@ export async function generateMetadata() {
   return buildMarketingMetadata({
     title: 'Data Processing Agreement — Ozer',
     description:
-      'UK GDPR Article 28 Data Processing Agreement for Ozer (Oodle Designs Ltd), including sub-processors and dual controller/processor roles.',
+      'UK GDPR Article 28 Data Processing Agreement for Ozer (Daniel Potter, trading as Oodle Designs), including sub-processors and dual controller/processor roles.',
     path: '/dpa',
     ogType: 'legal',
   });

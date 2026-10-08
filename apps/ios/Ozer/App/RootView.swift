@@ -17,6 +17,7 @@ struct RootView: View {
                 MainTabView()
             }
         }
+        .ozerReadableWidth()
         .tint(OzerPalette.coral)
     }
 }

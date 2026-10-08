@@ -55,7 +55,7 @@ struct DictationSheet: View {
         if speech.isListening {
             return tapLocked ? "Listening. Tap the mic to save." : "Release to save, or keep holding."
         }
-        return "Hold or tap the mic. Ozer transcribes on this iPhone — it works offline."
+        return "Hold or tap the mic. Ozer transcribes on this \(OzerDevice.name) — it works offline."
     }
 
     private var liveCard: some View {

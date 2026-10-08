@@ -174,6 +174,46 @@ GET /api/native/v1/projects/{id}?workspace=<slug-or-uuid>
 
 `default_board_mode` is `phase` when `is_phased` (web Phase / Progress switcher), otherwise `progress` (To do / In progress / Review / Done). Phases are omitted when the project is progress-only. Task `status` matches `/tasks` (`pending`, `in_progress`, `client_review`, `completed`). There is no create / edit / kanban persist on this API — complete or edit a task through `/tasks/{id}`.
 
+## Disposals
+
+`commercial_property` workspaces only; anything else returns 404. Reads and writes run under the caller's RLS through the web listings service, so status changes still record the timeline event and trigger portal sync / circulation exactly like the web edit form. Media, units, parties, brochures, and portal publishing stay on the web.
+
+```
+GET /api/native/v1/disposals?workspace=<slug-or-uuid>&status=live|marketing|under_offer|completed|withdrawn|all&q=<search>
+→ {
+  "items": [{
+    "id", "name", "address", "postcode",
+    "status", "status_label", "disposal_type", "disposal_type_label",
+    "sector", "size_label", "rent_label", "price_label",
+    "cover_url", "agents": ["Name"], "updated_at"
+  }],
+  "total", "can_edit"
+}
+```
+
+`status` defaults to `live` (draft, instructed, marketing, under offer); `completed` is let + sold. First 100 rows, most recently updated first. `q` matches name, address, town, postcode, county, sector, and external id.
+
+```
+GET /api/native/v1/disposals/{id}?workspace=<slug-or-uuid>
+→ list fields plus
+  "address_line_1", "address_line_2", "town", "county",
+  "tenure", "use_class_label", "available_from", "epc_band", "epc_rating",
+  "service_charge_per_sqft", "rates_payable_per_sqft",
+  "size_min_sqft", "size_max_sqft",
+  "asking_rent_pence", "asking_rent_to_pence", "rent_frequency",
+  "asking_price_pence", "asking_price_qualifier",
+  "summary", "description", "notes", "key_points", "on_market_at", "can_edit"
+
+PATCH /api/native/v1/disposals/{id}?workspace=<slug-or-uuid>
+{ "name"?, "status"?, "asking_rent_pence"?, "asking_rent_to_pence"?,
+  "rent_frequency"?: "per_annum"|"per_month"|"per_sqft"|null,
+  "asking_price_pence"?, "asking_price_qualifier"?, "size_min_sqft"?, "size_max_sqft"?,
+  "available_from"?: "YYYY-MM-DD"|null, "summary"? (≤140), "description"?, "notes"? }
+→ the updated detail
+```
+
+Omitted keys are left alone; `null` clears. `can_edit` is false for Commercial support seats, and PATCH returns 403 for them.
+
 ## Today
 
 `GET /today` is a pocket dashboard, not the Mac Assistant recorder dump. It returns:
@@ -350,6 +390,19 @@ POST /messages/images  (multipart: workspace, threadId, file)
 ```
 
 `GET /compose` returns teammates, contacts, clients, and projects for New chat search. Image uploads must already be a thread participant.
+
+Report and block (App Store Guideline 1.2):
+
+```
+POST /messages/reports
+{ "workspace", "thread_id", "message_id?", "reason": "spam|harassment|inappropriate|other", "details?", "block?": false }
+GET /messages/blocks
+POST /messages/blocks
+{ "user_id" }
+DELETE /messages/blocks/{userId}
+```
+
+A report requires the caller to be in the thread and the message to belong to it; you can't report your own message. It's saved to `chat_message_reports` with a copy of the message text and emailed to hi@ozer.so. With `block: true` it also blocks the sender, or the other person in a one-to-one chat. Blocks are one-way and only affect the blocker. Thread messages hide blocked senders, the inbox drops one-to-one threads with a blocked person, participants carry `is_blocked`, and people who blocked the sender get no push, in-app or email notification.
 
 Env (do **not** commit a `.p8`):
 

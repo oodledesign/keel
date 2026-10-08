@@ -8,6 +8,7 @@ import {
   Building2,
   CreditCard,
   FileText,
+  Flag,
   Gift,
   Inbox,
   LayoutDashboard,
@@ -187,6 +188,19 @@ export function AdminSidebar() {
                 <Link className={'flex gap-2.5'} href={'/admin/support'}>
                   <LifeBuoy className={'h-4'} />
                   <span>Support</span>
+                </Link>
+              </SidebarMenuButton>
+
+              <SidebarMenuButton
+                isActive={path.includes('/admin/message-reports')}
+                asChild
+              >
+                <Link
+                  className={'flex gap-2.5'}
+                  href={'/admin/message-reports'}
+                >
+                  <Flag className={'h-4'} />
+                  <span>Message reports</span>
                 </Link>
               </SidebarMenuButton>
 

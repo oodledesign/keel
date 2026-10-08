@@ -23,6 +23,8 @@ struct MainTabView: View {
                 PeopleListView()
             case .clients:
                 ClientsListView()
+            case .disposals:
+                DisposalsListView()
             case .projects:
                 ProjectsListView()
             case .invoices:
@@ -58,6 +60,7 @@ struct MainTabView: View {
                 },
                 onClose: { menuOpen = false }
             )
+            .ozerReadableWidth(OzerLayout.menuWidth)
         }
         .onChange(of: session.pendingScreen) { _, next in
             if let next {

@@ -2,18 +2,27 @@
 
 This page explains how to delete your Ozer account and any Instagram, TikTok, or Google connections we store. It is also the public instructions page for Meta app review (Feedflow Instagram and Auto-Reply).
 
-Ozer is operated by Oodle Designs Ltd. Questions: [privacy@ozer.so](mailto:privacy@ozer.so).
+Ozer is operated by Daniel Potter, trading as Oodle Designs. Questions: [privacy@ozer.so](mailto:privacy@ozer.so).
 
 ## Delete your Ozer account
 
 You can delete your personal Ozer account yourself. We do not use an “email us and wait” path for this.
+
+On the web:
 
 1. Sign in to Ozer.
 2. Open **Personal settings** at [/app/settings](/app/settings).
 3. Scroll to **Danger zone**.
 4. Choose **Delete account**, confirm with the email code we send, and confirm again.
 
-That permanently deletes your personal account and the customer data tied to it. Workspace files in storage are removed within 30 days. Records we must keep by law (for example billing records for tax) are retained as described in our [Privacy Policy](/privacy-policy).
+In the iPhone or iPad app:
+
+1. Open **Menu → Personal settings**.
+2. Choose **Delete account** and confirm. If you last signed in a while ago, the app asks you to sign in again first.
+
+Either way, we sign you out of every device and lock the account straight away, then permanently delete your personal account data and files 30 days later. To change your mind, email [privacy@ozer.so](mailto:privacy@ozer.so) within those 30 days and we will restore the account. Records we must keep by law (for example billing records for tax) are retained as described in our [Privacy Policy](/privacy-policy).
+
+If you have an active paid plan, or you own a team workspace other people still use, cancel the plan or hand the workspace over first.
 
 Team workspaces are separate. An owner can remove members or close a workspace from that workspace’s **Settings**. Closing a team workspace is not the same as deleting your personal login.
 

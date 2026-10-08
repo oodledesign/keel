@@ -40,7 +40,7 @@ enum WorkspaceNavigationTests {
                 profile: "commercial_property",
                 isPersonal: false
             )
-            containsAll(screens, [.home, .tasks, .notes, .projects, .clients, .invoices, .meetings])
+            containsAll(screens, [.home, .tasks, .notes, .disposals, .projects, .clients, .invoices, .meetings])
                 && !screens.contains(.shopping)
                 && !screens.contains(.recipes)
                 && !screens.contains(.mealPlan)
@@ -126,11 +126,20 @@ enum WorkspaceNavigationTests {
                 == [.tasks, .notes, .messages]
         }
 
-        check("commercial and property pin clients") {
+        check("commercial pins disposals and property pins clients") {
             WorkspaceNavigation.tabPins(profile: "commercial_property", isPersonal: false)
-                == [.tasks, .notes, .clients]
+                == [.tasks, .disposals, .clients]
                 && WorkspaceNavigation.tabPins(profile: "work_property", isPersonal: false)
                 == [.tasks, .notes, .clients]
+        }
+
+        check("only commercial property shows disposals") {
+            ["personal", "family", "work_design", "work_property", "building_surveyor", "community", ""]
+                .allSatisfy { profile in
+                    !WorkspaceNavigation.menuScreens(profile: profile, isPersonal: profile == "personal")
+                        .contains(.disposals)
+                }
+                && WorkspaceNavigation.kind(profile: "commercial_property", isPersonal: false).showsDisposals
         }
 
         check("surveyor pins surveys") {

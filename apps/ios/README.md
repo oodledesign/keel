@@ -4,7 +4,7 @@ Native SwiftUI shell for Ozer. This is a real Xcode project — not Next.js, not
 
 - **App name:** Ozer
 - **Bundle ID:** `so.ozer.app`
-- **Platform:** iOS 17+, iPhone first
+- **Platform:** iOS 17+, iPhone and iPad. On iPad, screens sit in a centred column (`ozerReadableWidth`) and copy names the device via `OzerDevice.name`.
 - **Project:** `apps/ios/Ozer.xcodeproj`
 
 `pnpm`, Turbo, and Vercel ignore this folder. Do not add a `package.json` here.

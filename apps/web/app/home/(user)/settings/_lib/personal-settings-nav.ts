@@ -32,6 +32,11 @@ export function buildPersonalSettingsNav(): PersonalSettingsNavItem[] {
       href: pathsConfig.app.personalAccountNotificationsSettings,
     },
     {
+      id: 'blocked-people',
+      label: 'Blocked people',
+      href: pathsConfig.app.personalAccountBlockedPeopleSettings,
+    },
+    {
       id: 'preferences',
       label: 'How you use Ozer',
       href: pathsConfig.app.personalAccountPreferencesSettings,

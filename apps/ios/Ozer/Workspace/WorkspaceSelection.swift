@@ -143,6 +143,9 @@ extension NativeWorkspace {
     /// Site surveys on building-surveyor workspaces only.
     var showsSurveys: Bool { navigationKind.showsSurveys }
 
+    /// Disposals on commercial property workspaces only.
+    var showsDisposals: Bool { navigationKind.showsDisposals }
+
     /// Family Memories + Children — family team workspace only.
     var showsMemories: Bool { navigationKind.showsMemories }
 

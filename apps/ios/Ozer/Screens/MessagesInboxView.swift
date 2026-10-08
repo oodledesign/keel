@@ -94,6 +94,11 @@ struct MessagesInboxView: View {
             .onChange(of: session.pendingThreadId) { _, id in
                 openPendingThread(id)
             }
+            .onChange(of: path) { previous, current in
+                if current.count < previous.count {
+                    Task { await load() }
+                }
+            }
             .task {
                 openPendingThread(session.pendingThreadId)
             }

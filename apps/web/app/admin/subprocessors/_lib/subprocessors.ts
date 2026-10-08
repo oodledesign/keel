@@ -135,6 +135,15 @@ export const ADMIN_SUBPROCESSORS: AdminSubprocessor[] = [
     isSubprocessor: true,
   },
   {
+    id: 'apple',
+    name: 'Apple',
+    purpose: 'Push notifications (APNs) and Sign in with Apple for the iOS app',
+    category: 'Communications',
+    href: 'https://developer.apple.com',
+    logoDomain: 'apple.com',
+    isSubprocessor: true,
+  },
+  {
     id: 'mapbox',
     name: 'Mapbox',
     purpose: 'Geocoding and maps for commercial listings and brochures',

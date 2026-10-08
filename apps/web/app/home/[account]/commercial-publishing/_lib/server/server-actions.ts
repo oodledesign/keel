@@ -49,12 +49,14 @@ import {
 import { listRightmoveDisposalStatuses } from '~/lib/commercial/rightmove-disposal-status';
 
 import {
+  AuditRightmoveBranchesSchema,
   BulkPublishRightmoveSchema,
   DisconnectLinkedInOrgSchema,
   EnsureEachFeedSchema,
   EnsurePropertyHiveFeedSchema,
   EnsureWebsiteFeedReadySchema,
   ListRightmoveDisposalStatusesSchema,
+  RemoveRightmoveBranchPropertySchema,
   RepublishRightmoveListingSchema,
   RightmoveBulkJobStatusSchema,
   RotateEachFeedSchema,
@@ -502,6 +504,60 @@ export const listRightmoveDisposalStatusesAction = enhanceAction(
     return { rows };
   },
   { schema: ListRightmoveDisposalStatusesSchema },
+);
+
+async function assertRightmoveAuditAllowed(accountId: string, action: string) {
+  const client = getSupabaseServerClient();
+  const { data: visible } = await client
+    .from('accounts')
+    .select('id')
+    .eq('id', accountId)
+    .maybeSingle();
+  if (!visible) throw new Error('Workspace not found');
+
+  const { requireCommercialBillableActor } =
+    await import('~/lib/commercial/require-commercial-billable-actor');
+  await requireCommercialBillableActor(accountId, action);
+
+  const { assertCommercialPortalPublishingAllowed } =
+    await import('~/lib/commercial/commercial-seat-access');
+  await assertCommercialPortalPublishingAllowed({ client, accountId });
+  return client;
+}
+
+/** What Rightmove holds per branch, compared with what Ozer publishes. */
+export const auditRightmoveBranchesAction = enhanceAction(
+  async (input) => {
+    const client = await assertRightmoveAuditAllowed(
+      input.accountId,
+      'check Rightmove branches',
+    );
+    const { auditRightmoveBranches } =
+      await import('~/lib/commercial/rightmove-branch-audit');
+    return {
+      branches: await auditRightmoveBranches(client as never, input.accountId),
+    };
+  },
+  { schema: AuditRightmoveBranchesSchema },
+);
+
+export const removeRightmoveBranchPropertyAction = enhanceAction(
+  async (input, user) => {
+    const client = await assertRightmoveAuditAllowed(
+      input.accountId,
+      'remove Rightmove properties',
+    );
+    const { removeRightmoveBranchProperty } =
+      await import('~/lib/commercial/rightmove-branch-audit');
+    return removeRightmoveBranchProperty({
+      client: client as never,
+      accountId: input.accountId,
+      rightmoveBranchId: input.rightmoveBranchId,
+      reference: input.reference,
+      actorUserId: user.id,
+    });
+  },
+  { schema: RemoveRightmoveBranchPropertySchema },
 );
 
 export const ensurePropertyHiveFeedAction = enhanceAction(

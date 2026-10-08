@@ -34,6 +34,11 @@ const links = [
   },
   { href: '/admin/support', label: 'Support', description: 'Platform tickets' },
   {
+    href: '/admin/message-reports',
+    label: 'Message reports',
+    description: 'Reported messages & blocks',
+  },
+  {
     href: '/admin/email-marketing',
     label: 'Email marketing',
     description: 'Campaigns, contacts & lists',

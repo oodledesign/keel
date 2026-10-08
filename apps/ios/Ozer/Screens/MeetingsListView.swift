@@ -85,6 +85,7 @@ struct MeetingsListView: View {
                     selectedMeeting = meeting
                     await load()
                 }
+                .ozerReadableWidth()
             }
             .navigationDestination(item: $selectedMeeting) { meeting in
                 MeetingDetailView(meeting: meeting)
@@ -218,7 +219,7 @@ struct MeetingsListView: View {
                     Text("No recent meetings yet")
                         .font(.body.weight(.medium))
                         .foregroundStyle(OzerPalette.plum)
-                    Text("Record in this room. Captions stay on this iPhone, and the transcript syncs to Ozer when you’re online.")
+                    Text("Record in this room. Captions stay on this \(OzerDevice.name), and the transcript syncs to Ozer when you’re online.")
                         .font(.subheadline)
                         .foregroundStyle(OzerPalette.plumMuted)
                 }

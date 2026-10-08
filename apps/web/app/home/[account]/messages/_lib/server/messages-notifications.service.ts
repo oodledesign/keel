@@ -8,6 +8,8 @@ import { createNotificationsApi } from '@kit/notifications/api';
 import pathsConfig from '~/config/paths.config';
 import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
 import { formatUkDateTime } from '~/lib/format/uk-datetime';
+import { loadUsersWhoBlocked } from '~/lib/messages/chat-user-blocks';
+import { recipientsAfterBlocks } from '~/lib/messages/message-safety-shared';
 import { collectMessageNotifyRecipients } from '~/lib/messages/messages-notify-recipients';
 import { sendNativeMessagePush } from '~/lib/native/apns';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
@@ -270,8 +272,30 @@ class MessagesNotificationsService {
       clients: clientRecipients,
     });
 
-    const recipientUserIds = collected.inAppUserIds;
-    const recipientEmails = collected.emails;
+    const recipientCandidateIds = [
+      ...new Set(
+        [...memberRecipients, ...contactRecipients, ...clientRecipients]
+          .map((recipient) => recipient.userId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const blockerUserIds = await loadUsersWhoBlocked(
+      this.client,
+      params.senderUserId,
+      recipientCandidateIds,
+    );
+    const { userIds: recipientUserIds, emails: recipientEmails } =
+      recipientsAfterBlocks({
+        userIds: collected.inAppUserIds,
+        emails: collected.emails,
+        blockerUserIds,
+        emailByUserId: new Map(
+          [...blockerUserIds].map((id) => [
+            id,
+            (userById.get(id)?.email as string | null) ?? null,
+          ]),
+        ),
+      });
 
     const senderUser = userById.get(params.senderUserId);
     const senderMeta = (senderUser?.user_metadata ?? {}) as Record<

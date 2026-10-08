@@ -14,16 +14,16 @@ import {
   type MessageThreadListItem,
   createMessagesService,
 } from '~/home/[account]/messages/_lib/server/messages.service';
-
+import { loadBlockedUserIds } from '~/lib/messages/chat-user-blocks';
 import { uploadChatImage } from '~/lib/messages/upload-chat-image';
 
 import { NativeHttpError } from './http';
 import {
+  type NativeComposeThreadType,
   NativeComposeTypeSchema,
   NativeCreateThreadBodySchema,
   NativeIsoDateTimeSchema,
   NativeSendMessageBodySchema,
-  type NativeComposeThreadType,
   isAllowedChatImageUrl,
   matchesComposeQuery,
   nativeThreadTitle,
@@ -44,6 +44,7 @@ export type NativeMessageParticipant = {
   contact_id: string | null;
   display_name: string;
   email: string | null;
+  is_blocked: boolean;
 };
 
 export type NativeMessageThread = {
@@ -88,7 +89,7 @@ export type NativeComposeOption = {
   email: string | null;
 };
 
-function mapMessagesError(error: unknown): never {
+export function mapMessagesError(error: unknown): never {
   if (error instanceof NativeHttpError) {
     throw error;
   }
@@ -106,7 +107,7 @@ function mapMessagesError(error: unknown): never {
   throw new NativeHttpError(400, message);
 }
 
-async function loadUserDisplayNames(userIds: string[]) {
+export async function loadUserDisplayNames(userIds: string[]) {
   const unique = Array.from(new Set(userIds.filter(Boolean)));
   const names = new Map<string, string>();
   if (unique.length === 0) return names;
@@ -198,6 +199,7 @@ function mapThread(
       contact_id: participant.contact_id,
       display_name: displayName,
       email: null,
+      is_blocked: participant.is_blocked,
     };
   });
 
@@ -401,17 +403,36 @@ export async function markNativeThreadRead(params: {
   }
 }
 
-export async function listNativeMessageCompose(params: {
+export type NativeMessageDirectory = {
+  can_message_clients: boolean;
+  members: Array<{
+    user_id: string;
+    name: string;
+    email: string | null;
+    role: string | null;
+  }>;
+  clients: Array<{ id: string; name: string; email: string | null }>;
+  contacts: Array<{
+    contact_id: string;
+    client_id: string;
+    client_name: string;
+    name: string;
+    email: string | null;
+    portal_enabled: boolean;
+  }>;
+  jobs: Array<{ id: string; title: string }>;
+};
+
+/** Everyone the viewer can start a chat with; people they blocked are left out. */
+export async function loadNativeMessageDirectory(params: {
   userId: string;
   workspace: NativeWorkspace;
-  query?: string;
-}) {
+}): Promise<NativeMessageDirectory> {
   const admin = getSupabaseServerAdminClient() as any;
   const role = await loadMembershipRole(params.workspace.id, params.userId);
   const access = getTeamAccountAccess({ role });
-  const query = params.query ?? '';
 
-  const [membersRes, jobsRes] = await Promise.all([
+  const [membersRes, jobsRes, blocked] = await Promise.all([
     admin
       .from('accounts_memberships')
       .select('user_id, account_role')
@@ -422,20 +443,23 @@ export async function listNativeMessageCompose(params: {
       .eq('account_id', params.workspace.id)
       .order('updated_at', { ascending: false })
       .limit(300),
+    loadBlockedUserIds(admin, params.userId),
   ]);
 
-  const memberships = (membersRes.data ?? []) as Array<{
-    user_id: string;
-    account_role: string | null;
-  }>;
-  const memberIds = memberships
+  const memberships = (
+    (membersRes.data ?? []) as Array<{
+      user_id: string;
+      account_role: string | null;
+    }>
+  )
     .filter((membership) => membership.user_id !== params.userId)
+    .filter((membership) => !blocked.has(membership.user_id))
     .filter((membership) =>
       access.canMessageClients
         ? true
         : isInternalTeamMessageRole(membership.account_role),
-    )
-    .map((membership) => membership.user_id);
+    );
+  const memberIds = memberships.map((membership) => membership.user_id);
 
   const names = await loadUserDisplayNames(memberIds);
   const users: Array<{ id: string; email?: string | null }> = memberIds.length
@@ -451,18 +475,6 @@ export async function listNativeMessageCompose(params: {
   const emailById = new Map<string, string>(
     users.map((user) => [user.id, user.email ?? '']),
   );
-
-  const people: NativeComposeOption[] = memberIds
-    .map((id) => ({
-      kind: 'person' as const,
-      id,
-      name: names.get(id) ?? emailById.get(id) ?? 'Teammate',
-      subtitle: emailById.get(id) || 'Teammate',
-      email: emailById.get(id) || null,
-    }))
-    .filter((option) =>
-      matchesComposeQuery(query, option.name, option.subtitle, option.email),
-    );
 
   type ClientOption = Awaited<
     ReturnType<typeof loadMessageClientOptions>
@@ -481,10 +493,62 @@ export async function listNativeMessageCompose(params: {
       ])
     : [[] as ClientOption[], [] as ContactOption[]];
 
-  const clientOptions: NativeComposeOption[] = clients
+  return {
+    can_message_clients: access.canMessageClients,
+    members: memberships.map((membership) => ({
+      user_id: membership.user_id,
+      name:
+        names.get(membership.user_id) ??
+        (emailById.get(membership.user_id) || 'Teammate'),
+      email: emailById.get(membership.user_id) || null,
+      role: membership.account_role,
+    })),
+    clients: clients.map((client) => ({
+      id: client.clientId,
+      name: client.name,
+      email: client.email,
+    })),
+    contacts: contacts.map((contact) => ({
+      contact_id: contact.contactId,
+      client_id: contact.clientId,
+      client_name: contact.clientName,
+      name: contact.name,
+      email: contact.email,
+      portal_enabled: contact.portalEnabled,
+    })),
+    jobs: (
+      (jobsRes.data ?? []) as Array<{ id: string; title: string | null }>
+    ).map((job) => ({
+      id: job.id,
+      title: job.title?.trim() || 'Untitled project',
+    })),
+  };
+}
+
+export async function listNativeMessageCompose(params: {
+  userId: string;
+  workspace: NativeWorkspace;
+  query?: string;
+}) {
+  const directory = await loadNativeMessageDirectory(params);
+  const query = params.query ?? '';
+
+  const people: NativeComposeOption[] = directory.members
+    .map((member) => ({
+      kind: 'person' as const,
+      id: member.user_id,
+      name: member.name,
+      subtitle: member.email || 'Teammate',
+      email: member.email,
+    }))
+    .filter((option) =>
+      matchesComposeQuery(query, option.name, option.subtitle, option.email),
+    );
+
+  const clientOptions: NativeComposeOption[] = directory.clients
     .map((client) => ({
       kind: 'client' as const,
-      id: client.clientId,
+      id: client.id,
       name: client.name,
       subtitle: client.email ?? 'Client',
       email: client.email,
@@ -493,31 +557,23 @@ export async function listNativeMessageCompose(params: {
       matchesComposeQuery(query, option.name, option.subtitle, option.email),
     );
 
-  const contactOptions: NativeComposeOption[] = contacts
+  const contactOptions: NativeComposeOption[] = directory.contacts
     .map((contact) => ({
       kind: 'contact' as const,
-      id: contact.contactId,
+      id: contact.contact_id,
       name: contact.name,
-      subtitle: contact.clientName,
+      subtitle: contact.client_name,
       email: contact.email,
     }))
     .filter((option) =>
-      matchesComposeQuery(
-        query,
-        option.name,
-        option.subtitle,
-        option.email,
-        contacts.find((contact) => contact.contactId === option.id)?.clientName,
-      ),
+      matchesComposeQuery(query, option.name, option.subtitle, option.email),
     );
 
-  const jobOptions: NativeComposeOption[] = (
-    (jobsRes.data ?? []) as Array<{ id: string; title: string | null }>
-  )
+  const jobOptions: NativeComposeOption[] = directory.jobs
     .map((job) => ({
       kind: 'job' as const,
       id: job.id,
-      name: job.title?.trim() || 'Untitled project',
+      name: job.title,
       subtitle: 'Project',
       email: null,
     }))
@@ -526,7 +582,7 @@ export async function listNativeMessageCompose(params: {
     );
 
   return {
-    can_message_clients: access.canMessageClients,
+    can_message_clients: directory.can_message_clients,
     items: [
       ...people,
       ...contactOptions,
