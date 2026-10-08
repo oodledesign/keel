@@ -9,6 +9,11 @@ export async function assertWorkspaceMember(
   accountId: string,
   userId: string,
 ) {
+  // Personal accounts share the user's id and have no membership row.
+  if (accountId === userId) {
+    return { account_role: 'owner' };
+  }
+
   const { data: membership, error } = await client
     .from('accounts_memberships')
     .select('account_role')
