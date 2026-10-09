@@ -1,6 +1,7 @@
 import 'server-only';
 
 import {
+  countCampaignContactsUsed,
   getCampaignUsage,
   listCampaignCreditBatches,
 } from '~/lib/campaign-credits/ledger';
@@ -11,14 +12,16 @@ import {
 
 export async function loadCampaignUsageSnapshot(input: {
   accountId: string;
-  contactsUsed: number;
 }): Promise<CampaignUsageSnapshot> {
-  const [{ pool }, batches] = await Promise.all([
+  const [{ pool }, batches, contactsUsed] = await Promise.all([
     getCampaignUsage(input.accountId),
-    listCampaignCreditBatches(input.accountId).catch(() => []),
+    listCampaignCreditBatches(input.accountId).catch(() => null),
+    countCampaignContactsUsed(input.accountId).catch(() => 0),
   ]);
 
-  const packBalance = batches
+  const liveBatches = batches ?? [];
+
+  const packBalance = liveBatches
     .filter(
       (batch) =>
         batch.source_type === 'topup_purchase' ||
@@ -26,7 +29,7 @@ export async function loadCampaignUsageSnapshot(input: {
     )
     .reduce((sum, batch) => sum + batch.units_remaining, 0);
 
-  const monthlyRemaining = batches
+  const monthlyRemaining = liveBatches
     .filter(
       (batch) =>
         batch.source_type === 'monthly_grant' ||
@@ -34,15 +37,19 @@ export async function loadCampaignUsageSnapshot(input: {
     )
     .reduce((sum, batch) => sum + batch.units_remaining, 0);
 
+  // The pool balance is a cache that still counts expired batches until the
+  // daily sweep runs; live batches are what a send can actually spend.
+  const balance = batches ? packBalance + monthlyRemaining : pool.balance;
+
   return buildCampaignUsageSnapshot({
     planTier: pool.plan_tier,
     monthlyAllowance: pool.monthly_allowance,
     maxContacts: pool.max_contacts,
     contactBonus: pool.contact_bonus ?? 0,
-    balance: pool.balance,
+    balance,
     packBalance,
     monthlyRemaining,
-    contactsUsed: input.contactsUsed,
+    contactsUsed,
     cycleStart: pool.cycle_start,
     cycleEnd: pool.cycle_end,
   });

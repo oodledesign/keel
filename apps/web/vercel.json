@@ -118,6 +118,10 @@
       "schedule": "30 3 * * *"
     },
     {
+      "path": "/api/cron/plan-credits-renew",
+      "schedule": "5 * * * *"
+    },
+    {
       "path": "/api/cron/media-video-poll",
       "schedule": "*/2 * * * *"
     },

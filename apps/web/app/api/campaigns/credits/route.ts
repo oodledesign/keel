@@ -3,16 +3,11 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { enhanceRouteHandler } from '@kit/next/routes';
-import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import {
-  getCampaignUsage,
-  listCampaignCreditTransactions,
-} from '~/lib/campaign-credits/ledger';
+import { listCampaignCreditTransactions } from '~/lib/campaign-credits/ledger';
 import { loadCampaignUsageSnapshot } from '~/lib/campaigns/load-campaign-usage-snapshot';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
-import { listWorkspaceMailingListSubscribers } from '~/lib/workspace-forms/workspace-mailing-list';
 
 export const runtime = 'nodejs';
 
@@ -44,22 +39,13 @@ export const GET = enhanceRouteHandler(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const admin = getSupabaseServerAdminClient();
-    const subscribers = await listWorkspaceMailingListSubscribers(
-      admin,
-      accountId,
-    ).catch(() => []);
-    const [{ pool }, snapshot, transactions] = await Promise.all([
-      getCampaignUsage(accountId),
-      loadCampaignUsageSnapshot({
-        accountId,
-        contactsUsed: subscribers.length,
-      }),
+    const [snapshot, transactions] = await Promise.all([
+      loadCampaignUsageSnapshot({ accountId }),
       listCampaignCreditTransactions(accountId).catch(() => []),
     ]);
 
     return NextResponse.json({
-      balance: pool.balance,
+      balance: snapshot.balance,
       monthlyAllowance: snapshot.monthlyAllowance,
       maxContacts: snapshot.maxContacts,
       contactBonus: snapshot.contactBonus,

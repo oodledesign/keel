@@ -98,7 +98,7 @@ export function CampaignUsageCard({
                 ? 'Approaching this plan’s contact cap.'
                 : snapshot.contactBonus > 0
                   ? `Includes +${snapshot.contactBonus.toLocaleString()} from contact bumps.`
-                  : 'Subscribed mailing-list contacts (unsubscribes excluded).'
+                  : 'People you’ve emailed plus mailing-list subscribers (unsubscribes excluded).'
           }
         />
         <Meter

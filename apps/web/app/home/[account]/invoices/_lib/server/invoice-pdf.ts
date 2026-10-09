@@ -51,6 +51,7 @@ export type InvoiceForPdf = {
   show_payment_link?: boolean;
   items: Array<{
     description: string;
+    description_detail?: string | null;
     line_type?: string | null;
     quantity: number;
     unit_price_pence: number;
@@ -406,6 +407,10 @@ export async function buildInvoicePdf(
   const itemLineHeight = 15;
   const itemRowPadTop = 4;
   const itemRowPadBottom = 10;
+  const itemDetailFontSize = 8.5;
+  const itemDetailLineHeight = 12;
+  /** Baseline to baseline: last description line to first detail line. */
+  const itemDetailGap = 13;
   const itemRowGapAfterDivider = 10;
 
   const clientLines: string[] = [];
@@ -727,10 +732,23 @@ export async function buildInvoicePdf(
       itemFontSize,
       itemColWidth,
     );
+    // Wrap each paragraph on its own so line breaks the user typed survive.
+    const detailLines = (row.description_detail ?? '')
+      .split(/\r?\n/)
+      .map((paragraph) => paragraph.trim())
+      .filter(Boolean)
+      .flatMap((paragraph) =>
+        wrapText(paragraph, font, itemDetailFontSize, itemColWidth),
+      );
     const rowLineCount = Math.max(descriptionLines.length, 1);
+    const detailHeight =
+      detailLines.length > 0
+        ? itemDetailGap + detailLines.length * itemDetailLineHeight
+        : 0;
     const rowHeight =
       itemRowPadTop +
       rowLineCount * itemLineHeight +
+      detailHeight +
       itemRowPadBottom +
       itemRowGapAfterDivider;
 
@@ -746,7 +764,12 @@ export async function buildInvoicePdf(
     }
 
     const rowTopY = y - itemRowPadTop;
-    const lastLineBaselineY = rowTopY - (rowLineCount - 1) * itemLineHeight;
+    const detailTopY =
+      rowTopY - (rowLineCount - 1) * itemLineHeight - itemDetailGap;
+    const lastLineBaselineY =
+      detailLines.length > 0
+        ? detailTopY - (detailLines.length - 1) * itemDetailLineHeight
+        : rowTopY - (rowLineCount - 1) * itemLineHeight;
     const dividerY = lastLineBaselineY - itemRowPadBottom;
 
     drawLines(
@@ -759,6 +782,18 @@ export async function buildInvoicePdf(
       itemLineHeight,
       COLORS.ink,
     );
+    if (detailLines.length > 0) {
+      drawLines(
+        page,
+        detailLines,
+        tableX + 10,
+        detailTopY,
+        itemDetailFontSize,
+        font,
+        itemDetailLineHeight,
+        COLORS.muted,
+      );
+    }
     page.drawText(formatInvoiceQuantity(Number(row.quantity)), {
       x: colQty,
       y: rowTopY,

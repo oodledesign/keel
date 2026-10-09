@@ -21,7 +21,7 @@ function addMonths(date: Date, months: number): Date {
   return next;
 }
 
-function mediaTierForPlan(planId: string): {
+export function mediaTierForPlan(planId: string): {
   units: number;
   planTier: string;
 } | null {

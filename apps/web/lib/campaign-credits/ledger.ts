@@ -232,6 +232,30 @@ export async function grantCampaignCredits(
   return data as CampaignCreditBatch;
 }
 
+export async function expireStaleCampaignCreditBatches(): Promise<number> {
+  const { data, error } = await rpc('expire_stale_campaign_credit_batches', {});
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return typeof data === 'number' ? data : Number(data ?? 0);
+}
+
+export async function countCampaignContactsUsed(
+  accountId: string,
+): Promise<number> {
+  const { data, error } = await rpc('count_campaign_contacts_used', {
+    p_account_id: accountId,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return typeof data === 'number' ? data : Number(data ?? 0);
+}
+
 export async function updateCampaignCreditPoolMetadata(
   accountId: string,
   values: {

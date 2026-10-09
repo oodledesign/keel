@@ -38,17 +38,13 @@ export async function loadCampaignsPage(accountId: string) {
   const service = createCampaignsService(client);
 
   const seriesService = createCampaignSeriesService(client);
-  const [campaigns, series, subscribers, brand] = await Promise.all([
+  const [campaigns, series, subscribers, brand, snapshot] = await Promise.all([
     service.list(accountId),
     seriesService.list(accountId).catch(() => []),
     listWorkspaceMailingListSubscribers(admin, accountId),
     loadAccountBrandResolved(accountId),
+    loadCampaignUsageSnapshot({ accountId }),
   ]);
-
-  const snapshot = await loadCampaignUsageSnapshot({
-    accountId,
-    contactsUsed: subscribers.length,
-  });
 
   return {
     campaigns,
@@ -148,10 +144,7 @@ export const loadCampaignDetail = cache(async function loadCampaignDetail(
       );
       return 0;
     }),
-    loadCampaignUsageSnapshot({
-      accountId,
-      contactsUsed: audienceOptions.subscriberCount,
-    }),
+    loadCampaignUsageSnapshot({ accountId }),
     loadCampaignAnalyticsBundle(admin, campaign),
   ]);
 
@@ -262,8 +255,7 @@ async function listMailingListFormsForAutomations(accountId: string) {
 
 export async function loadCampaignsGrowthHub(accountId: string) {
   const client = getSupabaseServerClient();
-  const admin = getSupabaseServerAdminClient();
-  const [lists, automations, campaigns, subscribers, mailingForms] =
+  const [lists, automations, campaigns, mailingForms, snapshot] =
     await Promise.all([
       createAudienceListsService(client)
         .list(accountId)
@@ -272,29 +264,20 @@ export async function loadCampaignsGrowthHub(accountId: string) {
         .list(accountId)
         .catch(() => []),
       createCampaignsService(client).list(accountId),
-      listWorkspaceMailingListSubscribers(admin, accountId),
       listMailingListFormsForAutomations(accountId).catch(() => []),
+      loadCampaignUsageSnapshot({ accountId }),
     ]);
-  const snapshot = await loadCampaignUsageSnapshot({
-    accountId,
-    contactsUsed: subscribers.length,
-  });
   return { lists, automations, campaigns, snapshot, mailingForms };
 }
 
 export async function loadCampaignAudienceEditor(accountId: string) {
   const client = getSupabaseServerClient();
-  const admin = getSupabaseServerAdminClient();
   const contacts = createCampaignContactsService(client);
-  const [categories, workspaceContacts, subscribers] = await Promise.all([
+  const [categories, workspaceContacts, snapshot] = await Promise.all([
     contacts.listCategories(accountId).catch(() => []),
     listAudiencePickerPeople(client, accountId, 'contacts').catch(() => []),
-    listWorkspaceMailingListSubscribers(admin, accountId),
+    loadCampaignUsageSnapshot({ accountId }),
   ]);
-  const snapshot = await loadCampaignUsageSnapshot({
-    accountId,
-    contactsUsed: subscribers.length,
-  });
 
   return {
     snapshot,

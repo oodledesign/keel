@@ -5,11 +5,11 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import type { Database } from '~/lib/database.types';
 
-import { computeInvoiceTotals } from '../invoice-totals';
 import {
   PASS_TO_CLIENT_FEE_NOTE_LONG,
   normalizeStripeCardFeeMode,
 } from '../invoice-stripe-fee';
+import { computeInvoiceTotals } from '../invoice-totals';
 import { loadPaymentSettingsForPortal } from './invoice-payment-settings.service';
 import type { InvoiceForPdf } from './invoice-pdf';
 
@@ -90,7 +90,9 @@ export async function buildInvoicePdfPayload(
   ] = await Promise.all([
     client
       .from('invoice_items')
-      .select('description, line_type, quantity, unit_price_pence, total_pence')
+      .select(
+        'description, description_detail, line_type, quantity, unit_price_pence, total_pence',
+      )
       .eq('invoice_id', invoice.id)
       .order('sort_order', { ascending: true }),
     invoice.client_id
