@@ -85,8 +85,10 @@ import { cn } from '@kit/ui/utils';
 import pathsConfig from '~/config/paths.config';
 import type { CanvasAiItem } from '~/lib/projects/canvas/canvas-ai';
 import {
+  type BoardLayoutInput,
   CANVAS_BOARD_VIEWS,
   type CanvasBoardView,
+  boardDropPositions,
   boardStatusColumn,
   layoutCanvasBoard,
   moveManyInOrder,
@@ -618,8 +620,8 @@ function ProjectCanvasInner({
   focusItemId = null,
   guest,
 }: JobProjectCanvasProps) {
-  const { screenToFlowPosition, fitView, zoomIn, zoomOut, zoomTo } =
-    useReactFlow();
+  const { screenToFlowPosition, fitView, zoomIn, zoomOut, zoomTo, getNode } =
+    useReactFlow<FlowNode, FlowEdge>();
   const { resolvedTheme } = useTheme();
   const { data: user } = useUser();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -715,8 +717,10 @@ function ProjectCanvasInner({
   const pendingCounts = useRef(new Map<string, number>());
   const versions = useRef(new Map<string, number>());
   const interactingIds = useRef(new Set<string>());
+  /** On-screen positions at drag start; board views show some cards away from their saved spot. */
   const dragRef = useRef<{
     start: { x: number; y: number };
+    starts: Map<string, { x: number; y: number }>;
     children: Map<string, { x: number; y: number }>;
     exclude: Set<string>;
   } | null>(null);
@@ -739,6 +743,7 @@ function ProjectCanvasInner({
   const lastResyncAt = useRef(0);
   const resync = useCallback(async () => {
     lastResyncAt.current = Date.now();
+    const startVersions = new Map(versions.current);
     try {
       const snapshot = await loadProjectCanvas({ accountId, jobId });
       setAvailable(snapshot.available);
@@ -748,13 +753,18 @@ function ProjectCanvasInner({
       setDocs(snapshot.docs);
       setComments(snapshot.comments);
       setPeople(snapshot.people);
+      // Edits made while the snapshot loaded may have saved after it was
+      // read, so it would put them back where they were.
+      const changedLocally = (id: string) =>
+        isPending(pendingCounts.current, id) ||
+        (versions.current.get(id) ?? 0) !== (startVersions.get(id) ?? 0);
       updateItems((prev) => {
-        const local = prev.filter((item) =>
-          isPending(pendingCounts.current, item.id),
-        );
+        const local = prev.filter((item) => changedLocally(item.id));
         const localIds = new Set(local.map((item) => item.id));
         return [
-          ...snapshot.items.filter((item) => !localIds.has(item.id)),
+          ...snapshot.items.filter(
+            (item) => !localIds.has(item.id) && !changedLocally(item.id),
+          ),
           ...local,
         ];
       });
@@ -1129,9 +1139,9 @@ function ProjectCanvasInner({
 
   // Board views place phases and tasks in columns without touching their saved
   // positions, so switching to the free layout brings the old arrangement back.
-  const boardLayout = useMemo(() => {
+  const boardLayoutInput = useMemo<BoardLayoutInput | null>(() => {
     if (boardView === 'free' || !available) return null;
-    return layoutCanvasBoard({
+    return {
       mode: boardView,
       projectId: jobId,
       phases: board.phases.map((phase) => ({
@@ -1147,7 +1157,7 @@ function ProjectCanvasInner({
         })),
       notes: notes.map((note) => ({ id: note.id, phaseId: note.phaseId })),
       items: baseDisplayItems,
-    });
+    };
   }, [
     allTasks,
     available,
@@ -1157,6 +1167,10 @@ function ProjectCanvasInner({
     jobId,
     notes,
   ]);
+  const boardLayout = useMemo(
+    () => (boardLayoutInput ? layoutCanvasBoard(boardLayoutInput) : null),
+    [boardLayoutInput],
+  );
 
   const displayItems = boardLayout?.items ?? baseDisplayItems;
   const boardItemsById = useMemo(
@@ -1568,15 +1582,28 @@ function ProjectCanvasInner({
         if (!item || !isContainerCanvasKind(item.kind)) continue;
         for (const child of itemsInsideContainer(item, current)) {
           if (!draggedIds.has(child.id)) {
-            children.set(child.id, { x: child.x, y: child.y });
+            const shown = getNode(child.id)?.position;
+            children.set(child.id, {
+              x: shown?.x ?? child.x,
+              y: shown?.y ?? child.y,
+            });
           }
         }
       }
+      const starts = new Map([
+        ...dragged.map((n) => [n.id, { ...n.position }] as const),
+        ...children,
+      ]);
       const exclude = new Set([...draggedIds, ...children.keys()]);
-      dragRef.current = { start: { ...node.position }, children, exclude };
+      dragRef.current = {
+        start: { ...node.position },
+        starts,
+        children,
+        exclude,
+      };
       for (const id of exclude) interactingIds.current.add(id);
     },
-    [],
+    [getNode],
   );
 
   const containerUnder = useCallback(
@@ -1591,11 +1618,11 @@ function ProjectCanvasInner({
       const size = canvasItemSize(item);
       return containerAt(
         { x: position.x + size.w / 2, y: position.y + size.h / 2 },
-        itemsRef.current,
+        displayItems,
         { exclude, kinds },
       );
     },
-    [itemById],
+    [displayItems, itemById],
   );
 
   const onNodeDrag: OnNodeDrag<FlowNode> = useCallback(
@@ -1606,9 +1633,9 @@ function ProjectCanvasInner({
         showBoardDrop(node, dragged);
         return;
       }
-      const start = itemById(node.id);
+      const start = drag.starts.get(node.id) ?? drag.start;
       const target = containerUnder(node.id, node.position, drag.exclude);
-      const origin = start && containerUnder(node.id, start, drag.exclude)?.id;
+      const origin = containerUnder(node.id, start, drag.exclude)?.id;
       setDropTargetId(target && target.id !== origin ? target.id : null);
       const dx = node.position.x - drag.start.x;
       const dy = node.position.y - drag.start.y;
@@ -1631,7 +1658,7 @@ function ProjectCanvasInner({
         })),
       ]);
     },
-    [boardLayout, broadcastDrag, containerUnder, itemById, showBoardDrop],
+    [boardLayout, broadcastDrag, containerUnder, showBoardDrop],
   );
 
   const reassignTaskPhases = useCallback(
@@ -1717,8 +1744,21 @@ function ProjectCanvasInner({
           positions.set(id, { x: start.x + dx, y: start.y + dy });
         }
       }
+      const saved =
+        drag && boardLayoutInput && positions.size > 0
+          ? boardDropPositions(
+              boardLayoutInput,
+              new Map(
+                [...positions].flatMap(([id, to]) => {
+                  const from = drag.starts.get(id);
+                  return from ? [[id, { from, to }] as const] : [];
+                }),
+              ),
+            )
+          : null;
       const changes: CanvasChange[] = [];
-      for (const [id, position] of positions) {
+      for (const [id, shown] of positions) {
+        const position = saved?.get(id) ?? shown;
         const before = itemById(id);
         if (!before || (before.x === position.x && before.y === position.y)) {
           continue;
@@ -1736,6 +1776,7 @@ function ProjectCanvasInner({
     [
       applyBoardDrop,
       boardLayout,
+      boardLayoutInput,
       broadcastDragEnd,
       commit,
       containerUnder,

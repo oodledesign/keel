@@ -338,6 +338,7 @@ export function layoutCanvasBoard(input: BoardLayoutInput): BoardLayoutResult {
     new Set([...arranged, ...carriedIds, ...hidden]),
     'right',
     out,
+    { stable: true },
   );
 
   const shown = items
@@ -355,6 +356,72 @@ export function layoutCanvasBoard(input: BoardLayoutInput): BoardLayoutResult {
   for (const item of extras) positioned.add(item.id);
 
   return { items: [...shown, ...extras], columns, positioned };
+}
+
+type Point = { x: number; y: number };
+
+/**
+ * Board views show some free cards away from their saved spot (carried with
+ * their phase column, or pushed clear of the board). Picks the saved position
+ * for each dropped card so it shows where it was let go, as near as the board
+ * allows. `drops` maps item id to where it showed at drag start and drop.
+ */
+export function boardDropPositions(
+  input: BoardLayoutInput,
+  drops: ReadonlyMap<string, { from: Point; to: Point }>,
+): Map<string, Point> {
+  const stored = new Map(input.items.map((item) => [item.id, item]));
+  const shownAt = (saved: Map<string, Point>) => {
+    const items = input.items.map((item) => {
+      const at = saved.get(item.id);
+      return at ? { ...item, x: at.x, y: at.y } : item;
+    });
+    const shown = layoutCanvasBoard({ ...input, items }).items;
+    return new Map(shown.map((item) => [item.id, { x: item.x, y: item.y }]));
+  };
+  const miss = (id: string, shown: Map<string, Point>) => {
+    const at = shown.get(id);
+    const to = drops.get(id)!.to;
+    return at ? Math.hypot(at.x - to.x, at.y - to.y) : Infinity;
+  };
+
+  // Keep each card's offset from the board, then fall back to the raw spot
+  // for cards whose drop changed it (e.g. dragged out of a phase).
+  const shifted = new Map<string, Point>();
+  for (const [id, { from, to }] of drops) {
+    const item = stored.get(id);
+    if (!item) continue;
+    shifted.set(id, {
+      x: item.x + to.x - from.x,
+      y: item.y + to.y - from.y,
+    });
+  }
+  const shiftedShown = shownAt(shifted);
+  const misses = [...shifted.keys()].filter(
+    (id) => miss(id, shiftedShown) > 0.5,
+  );
+  if (misses.length === 0) return shifted;
+
+  const raw = new Map(shifted);
+  for (const id of misses) raw.set(id, drops.get(id)!.to);
+  const rawShown = shownAt(raw);
+  const mixed = new Map(shifted);
+  for (const id of misses) {
+    if (miss(id, rawShown) < miss(id, shiftedShown)) {
+      mixed.set(id, raw.get(id)!);
+    }
+  }
+  // Cards dragged together can push each other, so judge each set as a whole.
+  const total = (shown: Map<string, Point>) =>
+    misses.reduce((sum, id) => sum + miss(id, shown), 0);
+  const options = [
+    { saved: shifted, cost: total(shiftedShown) },
+    { saved: raw, cost: total(rawShown) },
+    { saved: mixed, cost: total(shownAt(mixed)) },
+  ];
+  return options.reduce((best, option) =>
+    option.cost < best.cost ? option : best,
+  ).saved;
 }
 
 /** Which column a dragged card was dropped on, and where in its stack. */

@@ -499,6 +499,10 @@ export function arrangeCanvasByPhase(
 /**
  * Moves items overlapping `region` (with any container's contents) just past
  * it. Containers wrapping arranged items are left alone.
+ *
+ * `stable` pushes by the region's full size instead, so how far an item moves
+ * doesn't depend on what else overlaps — needed when the push is recomputed
+ * on every render rather than saved.
  */
 export function clearRegion(
   items: CanvasItem[],
@@ -506,6 +510,7 @@ export function clearRegion(
   arranged: Set<string>,
   direction: 'right' | 'down',
   out: Map<string, CanvasItem>,
+  options: { stable?: boolean } = {},
 ) {
   const wrapsArranged = (item: CanvasItem) =>
     isContainerCanvasKind(item.kind) &&
@@ -527,10 +532,16 @@ export function clearRegion(
     }
   }
   const moved = [...group.values()];
-  const shift =
+  const start =
     direction === 'right'
-      ? region.x + region.w + GAP - Math.min(...moved.map((item) => item.x))
-      : region.y + region.h + GAP - Math.min(...moved.map((item) => item.y));
+      ? Math.min(...moved.map((item) => item.x))
+      : Math.min(...moved.map((item) => item.y));
+  const edge = direction === 'right' ? region.x : region.y;
+  const from = options.stable ? Math.min(edge, start) : start;
+  const shift =
+    (direction === 'right' ? region.x + region.w : region.y + region.h) +
+    GAP -
+    from;
   if (shift <= 0) return;
   for (const item of moved) {
     out.set(

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildCanvasAiPrompt, parseCanvasAiResponse } from './canvas-ai';
 import {
+  boardDropPositions,
   layoutCanvasBoard,
   moveInOrder,
   planBoardDrop,
@@ -721,6 +722,90 @@ describe('board layout', () => {
     expect(
       planBoardDrop(layout.columns, placed, 'other', { x: -9999, y: 0 }),
     ).toBeNull();
+  });
+
+  describe('free cards on the board', () => {
+    const sticky = (id: string, x: number, y: number): CanvasItem => ({
+      id,
+      kind: 'sticky',
+      refId: null,
+      x,
+      y,
+      w: 100,
+      h: 100,
+      zIndex: 0,
+      data: {},
+      updatedAt: '2026-09-29T10:00:00.000Z',
+      updatedBy: null,
+    });
+    // The board starts at the left-most phase, so "Plan" shows 900 left of
+    // where it was saved and carries whatever sits inside it.
+    const withItems = (extra: CanvasItem[]) => ({
+      ...input('phase'),
+      items: [
+        buildLinkedCanvasItem(
+          'proj',
+          { kind: 'phase', refId: 'p1' },
+          { x: 900, y: 40 },
+        ),
+        buildLinkedCanvasItem(
+          'proj',
+          { kind: 'phase', refId: 'p2' },
+          { x: 0, y: 0 },
+        ),
+        ...extra,
+      ],
+    });
+    const shownAt = (layoutInput: ReturnType<typeof withItems>, id: string) => {
+      const item = layoutCanvasBoard(layoutInput).items.find(
+        (i) => i.id === id,
+      )!;
+      return { x: item.x, y: item.y };
+    };
+
+    it('saves a card carried by a phase so it shows where it was dropped', () => {
+      const source = withItems([sticky('s1', 950, 80)]);
+      const from = shownAt(source, 's1');
+      expect(from).not.toEqual({ x: 950, y: 80 });
+      const to = { x: from.x + 10, y: from.y + 5 };
+      const saved = boardDropPositions(source, new Map([['s1', { from, to }]]));
+      expect(saved.get('s1')).toEqual({ x: 960, y: 85 });
+      const next = withItems([sticky('s1', 960, 85)]);
+      expect(shownAt(next, 's1')).toEqual(to);
+    });
+
+    it('keeps cards dragged together where they were dropped', () => {
+      const source = withItems([sticky('s1', 950, 80), sticky('s2', 7000, 0)]);
+      const fromA = shownAt(source, 's1');
+      const fromB = shownAt(source, 's2');
+      const drops = new Map([
+        ['s1', { from: fromA, to: { x: fromA.x + 20, y: fromA.y } }],
+        ['s2', { from: fromB, to: { x: fromB.x + 20, y: fromB.y } }],
+      ]);
+      const saved = boardDropPositions(source, drops);
+      const next = withItems([
+        sticky('s1', saved.get('s1')!.x, saved.get('s1')!.y),
+        sticky('s2', saved.get('s2')!.x, saved.get('s2')!.y),
+      ]);
+      expect(shownAt(next, 's1')).toEqual(drops.get('s1')!.to);
+      expect(shownAt(next, 's2')).toEqual(drops.get('s2')!.to);
+    });
+
+    it('saves a card dragged off the board at the drop point', () => {
+      const source = withItems([sticky('s1', 950, 80)]);
+      const from = shownAt(source, 's1');
+      const to = { x: 6000, y: 6000 };
+      const saved = boardDropPositions(source, new Map([['s1', { from, to }]]));
+      expect(saved.get('s1')).toEqual(to);
+    });
+
+    it('pushes covered cards aside without one move shifting the rest', () => {
+      const before = withItems([sticky('a', 400, 100), sticky('b', 500, 100)]);
+      const after = withItems([sticky('a', 6000, 6000), sticky('b', 500, 100)]);
+      const b = shownAt(before, 'b');
+      expect(b.x).toBeGreaterThan(500);
+      expect(shownAt(after, 'b')).toEqual(b);
+    });
   });
 
   it('reorders ids around the moved one', () => {
