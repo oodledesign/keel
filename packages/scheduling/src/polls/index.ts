@@ -10,6 +10,14 @@ export type { PollVote, RankedPollSlot } from './rank-poll-slots';
 
 export { slotConflictsWithBusy } from './slot-conflict';
 
+export { buildPollResultsView } from './poll-results-view';
+export type {
+  PollResultsParticipant,
+  PollResultsSlot,
+  PollResultsSource,
+  PollResultsView,
+} from './poll-results-view';
+
 export { buildPublicPollView, isPollInviteToken } from './public-poll-view';
 export type {
   PublicPollParticipant,

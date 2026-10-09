@@ -28,6 +28,7 @@ import {
 } from '../_lib/server/meeting-poll-actions';
 import type { MeetingPollDetail } from '../_lib/server/meeting-polls.service';
 import { PollAddMore } from './poll-add-more';
+import { PollShareResults } from './poll-share-results';
 
 type PollVote = 'yes' | 'if_need_be' | 'no';
 
@@ -74,12 +75,14 @@ export function PollOrganiserView({
   canEdit,
   contacts = [],
   poll,
+  resultsUrl,
 }: {
   accountId: string;
   accountSlug: string;
   canEdit: boolean;
   contacts?: Array<{ id: string; fullName: string; email: string }>;
   poll: MeetingPollDetail;
+  resultsUrl: string | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -371,6 +374,15 @@ export function PollOrganiserView({
             ))}
           </ol>
         </section>
+      ) : null}
+
+      {canEdit && (poll.status === 'open' || poll.status === 'closed') ? (
+        <PollShareResults
+          accountId={accountId}
+          accountSlug={accountSlug}
+          pollId={poll.id}
+          resultsUrl={resultsUrl}
+        />
       ) : null}
 
       <section className="space-y-2">

@@ -26,6 +26,7 @@ import {
   sendPollConfirmationEmails,
   sendPollInviteEmails,
   sendPollReminderEmails,
+  sendPollResultsLinkEmail,
 } from '~/lib/scheduling/meeting-polls/emails';
 
 import type {
@@ -129,6 +130,7 @@ type PollRow = {
   calendar_provider: 'google' | 'ozer' | null;
   calendar_event_id: string | null;
   confirmed_at: string | null;
+  results_token: string | null;
 };
 
 type SlotRow = {
@@ -840,6 +842,107 @@ class MeetingPollsService {
     });
   }
 
+  /** Secret for the view-only availability page; null when not shared. */
+  async getResultsToken(accountId: string, pollId: string) {
+    const poll = await this.requirePoll(accountId, pollId);
+    return poll.results_token ?? null;
+  }
+
+  async enableResultsLink(accountId: string, pollId: string, userId: string) {
+    await this.assertCanEditScheduling(accountId, userId);
+    const poll = await this.requirePoll(accountId, pollId);
+    if (poll.status !== 'open' && poll.status !== 'closed') {
+      throw new Error('Only sent polls can share their availability');
+    }
+    if (poll.results_token) {
+      return poll.results_token;
+    }
+
+    const token = randomBytes(32).toString('hex');
+    const { data, error } = await table(this.client, 'meeting_polls')
+      .update({ results_token: token })
+      .eq('id', poll.id)
+      .eq('account_id', accountId)
+      .is('results_token', null)
+      .select('results_token')
+      .maybeSingle();
+    throwIfError(error, 'Could not create the availability link');
+
+    if (data) {
+      return (data as { results_token: string }).results_token;
+    }
+
+    // Another request created the link first.
+    const latest = await this.requirePoll(accountId, pollId);
+    if (!latest.results_token) {
+      throw new Error('Could not create the availability link');
+    }
+    return latest.results_token;
+  }
+
+  async disableResultsLink(accountId: string, pollId: string, userId: string) {
+    await this.assertCanEditScheduling(accountId, userId);
+    const poll = await this.requirePoll(accountId, pollId);
+    const { data, error } = await table(this.client, 'meeting_polls')
+      .update({ results_token: null })
+      .eq('id', poll.id)
+      .eq('account_id', accountId)
+      .select('id')
+      .maybeSingle();
+    throwIfError(error, 'Could not turn off the availability link');
+    if (!data) {
+      throw new Error('Could not turn off the availability link');
+    }
+  }
+
+  async emailResultsLink(
+    input: {
+      accountId: string;
+      pollId: string;
+      email: string;
+      name?: string | null;
+    },
+    userId: string,
+  ) {
+    const token = await this.enableResultsLink(
+      input.accountId,
+      input.pollId,
+      userId,
+    );
+    const poll = await this.requirePoll(input.accountId, input.pollId);
+    const [host, invitees, responses, slots] = await Promise.all([
+      loadHostIdentity(poll.host_user_id),
+      this.listInvitees(poll.id),
+      this.listResponses(poll.id),
+      this.listSlots(poll.id),
+    ]);
+
+    const answeredBy = new Map<string, number>();
+    for (const response of responses) {
+      answeredBy.set(
+        response.inviteeId,
+        (answeredBy.get(response.inviteeId) ?? 0) + 1,
+      );
+    }
+    const respondedCount = invitees.filter(
+      (invitee) =>
+        slots.length > 0 && (answeredBy.get(invitee.id) ?? 0) >= slots.length,
+    ).length;
+
+    await sendPollResultsLinkEmail({
+      accountId: input.accountId,
+      pollId: poll.id,
+      title: poll.title,
+      organiserName: host.name,
+      replyTo: host.email,
+      to: input.email.trim(),
+      name: input.name?.trim() || null,
+      resultsToken: token,
+      respondedCount,
+      totalInvitees: invitees.length,
+    });
+  }
+
   async cancelPoll(accountId: string, pollId: string) {
     const poll = await this.requirePoll(accountId, pollId);
     if (poll.status === 'closed') {
@@ -850,7 +953,7 @@ class MeetingPollsService {
     }
 
     const { error } = await table(this.client, 'meeting_polls')
-      .update({ status: 'cancelled' })
+      .update({ status: 'cancelled', results_token: null })
       .eq('id', poll.id)
       .eq('account_id', accountId)
       .in('status', ['draft', 'open']);
@@ -1176,6 +1279,17 @@ class MeetingPollsService {
       })),
     );
     throwIfError(inviteeError, 'Could not save invitees');
+  }
+
+  private async assertCanEditScheduling(accountId: string, userId: string) {
+    const { data, error } = await this.client.rpc('has_permission', {
+      user_id: userId,
+      account_id: accountId,
+      permission_name: 'scheduling.edit',
+    });
+    if (error || data !== true) {
+      throw new Error('You do not have permission to change this poll');
+    }
   }
 
   private async requirePoll(accountId: string, pollId: string) {

@@ -11,6 +11,7 @@ import {
   AddMeetingPollInviteesSchema,
   AddMeetingPollSlotsSchema,
   ConfirmMeetingPollSchema,
+  EmailMeetingPollResultsSchema,
   MeetingPollIdSchema,
   PreviewMeetingPollSlotSchema,
   ResolveManualPollSlotSchema,
@@ -158,6 +159,48 @@ export const addMeetingPollSlotsAction = enhanceAction(
     }
   },
   { schema: AddMeetingPollSlotsSchema },
+);
+
+export const enableMeetingPollResultsLinkAction = enhanceAction(
+  async (input, user) => {
+    const service = createMeetingPollsService(getSupabaseServerClient());
+    try {
+      await service.enableResultsLink(input.accountId, input.pollId, user.id);
+      revalidatePolls(input.accountSlug, input.pollId);
+      return { ok: true as const };
+    } catch (error) {
+      return failure(error, 'Could not create the availability link');
+    }
+  },
+  { schema: MeetingPollIdSchema },
+);
+
+export const disableMeetingPollResultsLinkAction = enhanceAction(
+  async (input, user) => {
+    const service = createMeetingPollsService(getSupabaseServerClient());
+    try {
+      await service.disableResultsLink(input.accountId, input.pollId, user.id);
+      revalidatePolls(input.accountSlug, input.pollId);
+      return { ok: true as const };
+    } catch (error) {
+      return failure(error, 'Could not turn off the availability link');
+    }
+  },
+  { schema: MeetingPollIdSchema },
+);
+
+export const emailMeetingPollResultsLinkAction = enhanceAction(
+  async (input, user) => {
+    const service = createMeetingPollsService(getSupabaseServerClient());
+    try {
+      await service.emailResultsLink(input, user.id);
+      revalidatePolls(input.accountSlug, input.pollId);
+      return { ok: true as const };
+    } catch (error) {
+      return failure(error, 'Could not email the availability link');
+    }
+  },
+  { schema: EmailMeetingPollResultsSchema },
 );
 
 export const addMeetingPollInviteesAction = enhanceAction(

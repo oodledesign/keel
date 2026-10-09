@@ -96,6 +96,11 @@ export const AddMeetingPollSlotsSchema = MeetingPollIdSchema.extend({
   notify: z.boolean().default(true),
 });
 
+export const EmailMeetingPollResultsSchema = MeetingPollIdSchema.extend({
+  email: z.string().trim().email('Enter a valid email').max(320),
+  name: z.string().trim().max(120).optional().nullable(),
+});
+
 export const AddMeetingPollInviteesSchema = MeetingPollIdSchema.extend({
   invitees: z
     .array(inviteeInputSchema)

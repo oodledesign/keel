@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { pollResultsHref } from '~/lib/scheduling/meeting-polls/emails';
 
 import { CreatePollForm } from '../../_components/create-poll-form';
 import { PollOrganiserView } from '../../_components/poll-organiser-view';
@@ -83,6 +84,9 @@ async function MeetingPollPage({ params }: Props) {
     poll.status === 'open' && canEditScheduling
       ? (await service.listFormOptions(accountId)).contacts
       : [];
+  const resultsToken = canEditScheduling
+    ? await service.getResultsToken(accountId, poll.id)
+    : null;
 
   return (
     <PollOrganiserView
@@ -91,6 +95,7 @@ async function MeetingPollPage({ params }: Props) {
       accountSlug={accountSlug}
       canEdit={canEditScheduling}
       poll={poll}
+      resultsUrl={resultsToken ? pollResultsHref(resultsToken) : null}
     />
   );
 }

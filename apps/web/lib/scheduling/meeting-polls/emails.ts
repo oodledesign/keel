@@ -459,6 +459,47 @@ export async function sendPollConfirmationEmails(input: {
   );
 }
 
+export function pollResultsHref(token: string) {
+  return `${siteUrl()}/poll/results/${token}`;
+}
+
+export async function sendPollResultsLinkEmail(input: {
+  accountId: string;
+  pollId: string;
+  title: string;
+  organiserName: string;
+  replyTo: string | null;
+  to: string;
+  name: string | null;
+  resultsToken: string;
+  respondedCount: number;
+  totalInvitees: number;
+}): Promise<void> {
+  const { workspaceName, brand } = await workspaceIdentity(input.accountId);
+  const who = input.organiserName.trim() || workspaceName;
+  const href = pollResultsHref(input.resultsToken);
+
+  const inner = `
+    ${eyebrow('Availability')}
+    ${heading(input.title)}
+    ${greeting(input.name)}
+    <p style="margin:0 0 14px;font-size:15px;color:${INK};"><strong>${escapeHtml(who)}</strong> has shared everyone's availability for this meeting so you can choose the final time. <strong>${input.respondedCount} of ${input.totalInvitees}</strong> ${input.totalInvitees === 1 ? 'person has' : 'people have'} answered so far, and the page updates as more replies come in.</p>
+    <p style="margin:0;font-size:15px;color:${INK};">When you have decided, reply to this email to let ${escapeHtml(who)} know.</p>
+    ${button(href, 'View availability', brand.accent_color)}
+    <p style="margin:12px 0 0;font-size:12px;color:${MUTED};word-break:break-all;">Or open: ${escapeHtml(href)}<br />Anyone with this link can see everyone's answers. Please do not forward it.</p>
+  `;
+
+  await sendOne({
+    accountId: input.accountId,
+    workspaceName,
+    to: input.to,
+    subject: `${who} shared availability for ${input.title}`,
+    html: branded(brand, inner),
+    replyTo: input.replyTo,
+    metadata: { pollId: input.pollId, kind: 'meeting_poll_results_link' },
+  });
+}
+
 export async function sendPollResponseNotificationEmail(input: {
   accountId: string;
   pollId: string;
