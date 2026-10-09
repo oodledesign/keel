@@ -6,8 +6,11 @@ import { useRouter } from 'next/navigation';
 
 import {
   Archive,
+  CheckCircle2,
   Copy,
   Download,
+  FileText,
+  HandCoins,
   Link2,
   Loader2,
   MoreVertical,
@@ -32,6 +35,7 @@ import { uniqueEmails } from '~/lib/email/unique-emails';
 
 import { getErrorMessage } from '../_lib/error-message';
 import { DEFAULT_INVOICE_EMAIL_SUBJECT } from '../_lib/invoice-smart-fields';
+import { formatPence } from '../_lib/invoice-totals';
 import {
   archiveInvoiceAction,
   deleteInvoice,
@@ -40,6 +44,7 @@ import {
   setInvoiceStatus,
   voidInvoiceAction,
 } from '../_lib/server/server-actions';
+import { RecordInvoicePaymentDialog } from './record-invoice-payment-dialog';
 
 export function InvoiceRowMenu({
   accountId,
@@ -61,6 +66,9 @@ export function InvoiceRowMenu({
     preferred_send_email?: string | null;
     public_token?: string | null;
     paymentUrl?: string | null;
+    total_pence?: number | null;
+    amount_paid_pence?: number | null;
+    currency?: string | null;
   };
   canEditInvoices: boolean;
   canManageInvoiceStatus: boolean;
@@ -69,6 +77,17 @@ export function InvoiceRowMenu({
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [resendOpen, setResendOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+
+  const currency = invoice.currency || 'GBP';
+  const totalPence = invoice.total_pence ?? null;
+  const amountPaidPence = invoice.amount_paid_pence ?? 0;
+  const remainingPence =
+    totalPence === null ? null : Math.max(0, totalPence - amountPaidPence);
+  const markPaidLabel =
+    remainingPence !== null && remainingPence > 0 && amountPaidPence > 0
+      ? `Mark as paid (${formatPence(remainingPence, currency)} left)`
+      : 'Mark as paid in full';
 
   const resendRecipients = uniqueEmails(
     invoice.sent_to_emails,
@@ -148,6 +167,7 @@ export function InvoiceRowMenu({
           className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]"
         >
           <DropdownMenuItem onClick={() => router.push(editPath)}>
+            <FileText className="mr-2 h-4 w-4" />
             Open
           </DropdownMenuItem>
           {canEditInvoices ? (
@@ -196,6 +216,15 @@ export function InvoiceRowMenu({
           {canManageInvoiceStatus &&
           ['sent', 'read'].includes(invoice.status) ? (
             <>
+              {remainingPence !== null && remainingPence > 0 ? (
+                <DropdownMenuItem
+                  data-test="record-invoice-payment"
+                  onClick={() => setPaymentOpen(true)}
+                >
+                  <HandCoins className="mr-2 h-4 w-4" />
+                  Record a payment
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem
                 onClick={() =>
                   run(
@@ -211,7 +240,8 @@ export function InvoiceRowMenu({
                   )
                 }
               >
-                Mark as paid in full
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                {markPaidLabel}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() =>
@@ -297,6 +327,23 @@ export function InvoiceRowMenu({
           })();
         }}
       />
+
+      {totalPence !== null ? (
+        <RecordInvoicePaymentDialog
+          open={paymentOpen}
+          onOpenChange={setPaymentOpen}
+          accountId={accountId}
+          invoiceId={invoice.id}
+          invoiceNumber={invoice.invoice_number}
+          totalPence={totalPence}
+          amountPaidPence={amountPaidPence}
+          currency={currency}
+          onRecorded={() => {
+            onChanged?.();
+            router.refresh();
+          }}
+        />
+      ) : null}
     </>
   );
 }

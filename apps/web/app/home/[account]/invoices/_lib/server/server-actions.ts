@@ -18,6 +18,7 @@ import {
   ListInvoicesSchema,
   ListRecurringSeriesSchema,
   MarkInvoiceSentManuallySchema,
+  RecordInvoicePaymentSchema,
   ResendInvoiceSchema,
   SavePaymentSettingsSchema,
   ScheduleInvoiceSendSchema,
@@ -93,6 +94,25 @@ export const upsertInvoiceItems = enhanceAction(
 export const setInvoiceStatus = enhanceAction(
   async (input) => getService().setInvoiceStatus(input),
   { schema: SetInvoiceStatusSchema },
+);
+
+export const recordInvoicePaymentAction = enhanceAction(
+  async (input) => {
+    try {
+      const result = await getService().recordManualPayment(input);
+      return { ok: true as const, ...result };
+    } catch (error) {
+      console.error('[invoice] record manual payment failed', error);
+      return {
+        ok: false as const,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Could not record the payment',
+      };
+    }
+  },
+  { schema: RecordInvoicePaymentSchema },
 );
 
 export const sendInvoice = enhanceAction(

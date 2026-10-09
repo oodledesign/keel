@@ -134,6 +134,7 @@ type InvoiceData = {
   issued_at: string | null;
   subtotal_pence: number;
   total_pence: number;
+  amount_paid_pence?: number | null;
   currency: string;
   notes: string | null;
   title: string | null;
@@ -1172,6 +1173,9 @@ export function InvoiceEditIndyContent({
                 preferred_send_email: invoice.preferred_send_email,
                 public_token: invoice.public_token,
                 paymentUrl,
+                total_pence: invoice.total_pence,
+                amount_paid_pence: invoice.amount_paid_pence,
+                currency: invoice.currency,
               }}
               canEditInvoices={canEditInvoices}
               canManageInvoiceStatus={canManageInvoiceStatus}

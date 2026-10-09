@@ -457,6 +457,8 @@ export async function recordInvoicePayment(input: {
   stripe_checkout_session_id?: string | null;
   stripe_payment_intent_id?: string | null;
   actorId?: string | null;
+  paid_at?: string | null;
+  note?: string | null;
 }) {
   const admin = adminDb();
   const { data: invoice, error } = await admin
@@ -469,7 +471,35 @@ export async function recordInvoicePayment(input: {
     .single();
   if (error || !invoice) throw new Error('Invoice not found');
 
-  await admin.from('invoice_payments').insert({
+  const previousPaid = invoice.amount_paid_pence ?? 0;
+  const amountPaid = previousPaid + input.amount_pence;
+  const fullyPaid = amountPaid >= (invoice.total_pence ?? 0);
+  const patch: Record<string, unknown> = { amount_paid_pence: amountPaid };
+  if (fullyPaid) {
+    patch.status = 'paid';
+    patch.paid_at = input.paid_at ?? new Date().toISOString();
+  }
+
+  // Compare-and-set on amount_paid_pence so concurrent payments cannot both
+  // apply against the same balance (or both flip the invoice to paid).
+  let claim = admin
+    .from('invoices')
+    .update(patch)
+    .eq('id', input.invoiceId)
+    .eq('account_id', input.accountId);
+  claim =
+    invoice.amount_paid_pence === null
+      ? claim.is('amount_paid_pence', null)
+      : claim.eq('amount_paid_pence', previousPaid);
+  const { data: claimed, error: claimError } = await claim.select('id');
+  if (claimError) throw new Error(claimError.message);
+  if (!claimed?.length) {
+    throw new Error(
+      'This invoice was updated by another payment. Refresh and try again.',
+    );
+  }
+
+  const { error: insertError } = await admin.from('invoice_payments').insert({
     account_id: input.accountId,
     invoice_id: input.invoiceId,
     amount_pence: input.amount_pence,
@@ -477,17 +507,21 @@ export async function recordInvoicePayment(input: {
     stripe_checkout_session_id: input.stripe_checkout_session_id ?? null,
     stripe_payment_intent_id: input.stripe_payment_intent_id ?? null,
     created_by: input.actorId ?? null,
+    ...(input.paid_at ? { paid_at: input.paid_at } : {}),
+    ...(input.note?.trim() ? { note: input.note.trim() } : {}),
   });
-
-  const amountPaid = (invoice.amount_paid_pence ?? 0) + input.amount_pence;
-  const fullyPaid = amountPaid >= (invoice.total_pence ?? 0);
-  const patch: Record<string, unknown> = { amount_paid_pence: amountPaid };
-  if (fullyPaid) {
-    patch.status = 'paid';
-    patch.paid_at = new Date().toISOString();
+  if (insertError) {
+    await admin
+      .from('invoices')
+      .update({
+        amount_paid_pence: invoice.amount_paid_pence,
+        status: invoice.status,
+        ...(fullyPaid ? { paid_at: null } : {}),
+      })
+      .eq('id', input.invoiceId)
+      .eq('amount_paid_pence', amountPaid);
+    throw new Error(insertError.message);
   }
-
-  await admin.from('invoices').update(patch).eq('id', input.invoiceId);
 
   if (fullyPaid) {
     try {

@@ -115,6 +115,26 @@ export const SetInvoiceStatusSchema = z.object({
   payment_method: z.enum(['stripe', 'cash', 'bank_transfer']).optional(),
 });
 
+export const RecordInvoicePaymentSchema = z.object({
+  accountId: z.string().uuid(),
+  invoiceId: z.string().uuid(),
+  amount_pence: z.number().int().positive('Enter an amount above zero'),
+  payment_method: z.enum(['bank_transfer', 'cash']),
+  paid_on: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date')
+    .refine((value) => {
+      const date = new Date(`${value}T12:00:00.000Z`);
+      return (
+        !Number.isNaN(date.getTime()) &&
+        date.toISOString().startsWith(value) &&
+        date.getTime() <= Date.now() + 36 * 60 * 60 * 1000
+      );
+    }, 'Choose a valid date that is not in the future')
+    .optional(),
+  note: z.string().trim().max(500).optional(),
+});
+
 export const GetInvoicePortalLinkSchema = z.object({
   accountId: z.string().uuid(),
   invoiceId: z.string().uuid(),
@@ -279,6 +299,9 @@ export type DeleteInvoiceInput = z.infer<typeof DeleteInvoiceSchema>;
 export type InvoiceItemInput = z.infer<typeof InvoiceItemSchema>;
 export type UpsertInvoiceItemsInput = z.infer<typeof UpsertInvoiceItemsSchema>;
 export type SetInvoiceStatusInput = z.infer<typeof SetInvoiceStatusSchema>;
+export type RecordInvoicePaymentInput = z.infer<
+  typeof RecordInvoicePaymentSchema
+>;
 export type GetInvoiceForPortalInput = z.infer<
   typeof GetInvoiceForPortalSchema
 >;

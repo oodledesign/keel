@@ -25,7 +25,7 @@ import {
   DEFAULT_INVOICE_EMAIL_SUBJECT,
   DEFAULT_INVOICE_FOOTER_MESSAGE,
 } from '../invoice-smart-fields';
-import { computeInvoiceTotals } from '../invoice-totals';
+import { computeInvoiceTotals, formatPence } from '../invoice-totals';
 import type {
   CreateInvoiceInput,
   DeleteInvoiceInput,
@@ -33,6 +33,7 @@ import type {
   GetInvoiceInput,
   GetInvoicePortalLinkInput,
   ListInvoicesInput,
+  RecordInvoicePaymentInput,
   SendInvoiceInput,
   SetInvoiceStatusInput,
   UpdateInvoiceInput,
@@ -435,9 +436,8 @@ class InvoicesService {
       .eq('account_id', input.accountId)
       .gte('created_at', monthStart.toISOString());
 
-    const { assertInvoiceCreateAllowed } = await import(
-      '~/lib/billing/entitlements'
-    );
+    const { assertInvoiceCreateAllowed } =
+      await import('~/lib/billing/entitlements');
     const invoiceCap = await assertInvoiceCreateAllowed(
       this.db,
       input.accountId,
@@ -830,6 +830,87 @@ class InvoicesService {
     }
 
     return data;
+  }
+
+  /** Record a payment received outside Stripe (part or all of the balance). */
+  async recordManualPayment(input: RecordInvoicePaymentInput) {
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
+    await this.ensureOwnerOrAdmin(input.accountId);
+
+    const { data: invoice, error } = await this.db
+      .from('invoices')
+      .select('status, total_pence, amount_paid_pence, currency')
+      .eq('id', input.invoiceId)
+      .eq('account_id', input.accountId)
+      .single();
+    if (error) this.throwErr(error);
+
+    if (!['sent', 'read'].includes(invoice?.status ?? '')) {
+      throw new Error('Payments can only be recorded on sent invoices');
+    }
+
+    const remaining =
+      (invoice?.total_pence ?? 0) - (invoice?.amount_paid_pence ?? 0);
+    if (remaining <= 0) {
+      throw new Error('This invoice has nothing left to pay');
+    }
+    if (input.amount_pence > remaining) {
+      throw new Error(
+        `That is more than the ${formatPence(remaining, invoice?.currency ?? 'GBP')} still owed`,
+      );
+    }
+
+    const paidAt = input.paid_on
+      ? new Date(`${input.paid_on}T12:00:00.000Z`).toISOString()
+      : null;
+
+    const result = await recordInvoicePayment({
+      accountId: input.accountId,
+      invoiceId: input.invoiceId,
+      amount_pence: input.amount_pence,
+      payment_method: input.payment_method,
+      actorId: user.id,
+      paid_at: paidAt,
+      note: input.note ?? null,
+    });
+
+    // The payment is already saved; side effects must not report failure.
+    try {
+      await this.logEvent({
+        accountId: input.accountId,
+        invoiceId: input.invoiceId,
+        eventType: result.fullyPaid ? 'paid' : 'payment_recorded',
+        payload: {
+          amount_pence: input.amount_pence,
+          amount_paid_pence: result.amountPaid,
+          payment_method: input.payment_method,
+          source: 'manual_payment',
+        },
+        actorId: user.id,
+      });
+
+      if (result.fullyPaid) {
+        await sendInvoicePaidNotifications({
+          accountId: input.accountId,
+          invoiceId: input.invoiceId,
+          paymentMethod: input.payment_method,
+        });
+      }
+    } catch (sideEffectError) {
+      console.error(
+        '[invoice] post-payment event/notification failed',
+        sideEffectError,
+      );
+    }
+
+    return {
+      amountPaid: result.amountPaid,
+      remaining: Math.max(0, remaining - input.amount_pence),
+      fullyPaid: result.fullyPaid,
+    };
   }
 
   /** Send invoice: set public_token (if missing), status sent, issued_at, sent_at, sent_to_email; log event; email client. */
