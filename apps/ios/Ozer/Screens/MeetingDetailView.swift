@@ -249,22 +249,16 @@ struct MeetingDetailView: View {
         }
     }
 
-    @ViewBuilder
     private func notesMarkdown(_ text: String) -> some View {
-        if let attributed = try? AttributedString(
-            markdown: text,
-            options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        ) {
-            Text(attributed)
-                .font(.body)
-                .foregroundStyle(OzerPalette.plum)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        } else {
-            Text(text)
-                .font(.body)
-                .foregroundStyle(OzerPalette.plum)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
+        // Summaries can use `###`; the note renderer only knows `#` and `##`.
+        let normalized = text
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { line in
+                line.hasPrefix("### ") ? "## " + line.dropFirst(4) : String(line)
+            }
+            .joined(separator: "\n")
+        return NoteMarkdownView(markdown: normalized)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var transcriptCard: some View {
@@ -398,7 +392,7 @@ struct MeetingDetailView: View {
     }
 
     private func applyLoadedTab() {
-        guard !userPickedTab, notesText != nil, selectedTab == .transcript else {
+        guard !userPickedTab, notesText != nil, selectedTab != .notes else {
             return
         }
         selectedTab = .notes

@@ -26,4 +26,10 @@ struct NoteMarkdownView: UIViewRepresentable {
     func updateUIView(_ view: UITextView, context: Context) {
         view.attributedText = NoteAttributedMarkdown.attributedString(from: markdown)
     }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+        guard let width = proposal.width, width > 0, width.isFinite else { return nil }
+        let fitted = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: width, height: ceil(fitted.height))
+    }
 }

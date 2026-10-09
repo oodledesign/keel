@@ -181,7 +181,8 @@ Guideline 1.2 (user-generated content) asks for a way to report objectionable me
 ## Before you submit
 
 - [x] Create `appreview@ozer.so` in Supabase (Authentication → Users → Add user, auto-confirm, set a password). Make sure the Email provider allows password sign-in.
-- [ ] Give the demo account a Personal, Commercial Property (`commercial_property`), Surveyor (`building_surveyor`) and Studio (`work_design`) workspace with realistic sample data — no real client data. The commercial workspace needs clients/contacts, a project, an invoice and a recorded meeting so every claim in the description can be seen.
+- [x] Give the demo account a Personal, Commercial Property (`commercial_property`), Surveyor (`building_surveyor`) and Studio (`work_design`) workspace with realistic sample data — no real client data. Seeded by `apps/web/scripts/seed-app-review-demo.mts --production --write` (Harland Reed Property, Calloway Building Surveyors, Northfold Studio, plus a demo teammate `hi+demo-sam@ozer.so` for Messages). Re-run it to reset the data after a review.
+- [x] Screenshots: iPhone 6.9" (1320×2868) and iPad 13" (2064×2752), seven each, captured from the demo account.
 - [x] Account deletion API is live in production (`NEXT_PUBLIC_ENABLE_PERSONAL_ACCOUNT_DELETION=true` comes from `apps/web/.env`).
 - [ ] Set `APNS_KEY_ID`, `APNS_P8` and `APNS_PRODUCTION=true` in production Vercel and redeploy. TestFlight and App Store builds use Apple's production push server.
 - [x] Privacy policy covers the iPhone and iPad app (on-device speech, microphone, camera, photos, push) and in-app account deletion.
