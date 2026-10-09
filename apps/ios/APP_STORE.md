@@ -184,6 +184,6 @@ Guideline 1.2 (user-generated content) asks for a way to report objectionable me
 - [x] Give the demo account a Personal, Commercial Property (`commercial_property`), Surveyor (`building_surveyor`) and Studio (`work_design`) workspace with realistic sample data — no real client data. Seeded by `apps/web/scripts/seed-app-review-demo.mts --production --write` (Harland Reed Property, Calloway Building Surveyors, Northfold Studio, plus a demo teammate `hi+demo-sam@ozer.so` for Messages). Re-run it to reset the data after a review.
 - [x] Screenshots: iPhone 6.9" (1320×2868) and iPad 13" (2064×2752), seven each, captured from the demo account.
 - [x] Account deletion API is live in production (`NEXT_PUBLIC_ENABLE_PERSONAL_ACCOUNT_DELETION=true` comes from `apps/web/.env`).
-- [ ] Set `APNS_KEY_ID`, `APNS_P8` and `APNS_PRODUCTION=true` in production Vercel and redeploy. TestFlight and App Store builds use Apple's production push server.
+- [x] Set `APNS_KEY_ID`, `APNS_P8` and `APNS_PRODUCTION=true` in production Vercel and redeploy. TestFlight and App Store builds use Apple's production push server.
 - [x] Privacy policy covers the iPhone and iPad app (on-device speech, microphone, camera, photos, push) and in-app account deletion.
-- [ ] Bump `CURRENT_PROJECT_VERSION` in `Config/Shared.xcconfig` for each upload.
+- [ ] Bump `CURRENT_PROJECT_VERSION` in `Config/Shared.xcconfig` for each upload. Don't change it in Xcode's Build Settings: that writes an override into `project.pbxproj` and later xcconfig bumps are ignored.
