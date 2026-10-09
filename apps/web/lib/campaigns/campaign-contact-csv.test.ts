@@ -3,12 +3,31 @@ import { describe, expect, it } from 'vitest';
 import { CSV_SKIP_FIELD } from '~/lib/csv/rows-to-records';
 
 import {
+  composeCampaignContactName,
   heuristicCampaignContactMapping,
   parseCampaignContactCsvRows,
   summarizeCampaignContactCsvDrafts,
 } from './campaign-contact-csv';
 
 describe('campaign contact csv', () => {
+  it('does not treat an email-only name as a first name', () => {
+    expect(
+      composeCampaignContactName({
+        fullName: 'paul.stevens@atomos.co.uk',
+        email: 'paul.stevens@atomos.co.uk',
+      }),
+    ).toEqual({
+      firstName: null,
+      lastName: null,
+      fullName: 'paul.stevens@atomos.co.uk',
+    });
+    expect(composeCampaignContactName({ fullName: 'Paul Stevens' })).toEqual({
+      firstName: 'Paul',
+      lastName: 'Stevens',
+      fullName: 'Paul Stevens',
+    });
+  });
+
   it('maps email and name columns heuristically', () => {
     const { mapping } = heuristicCampaignContactMapping([
       'Email Address',

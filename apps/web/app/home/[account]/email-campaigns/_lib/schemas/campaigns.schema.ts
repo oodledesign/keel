@@ -81,6 +81,12 @@ export const SaveCampaignContactSchema = z.object({
   categoryIds: z.array(z.string().uuid()).max(40).optional(),
 });
 
+export const SearchAudiencePeopleSchema = z.object({
+  accountId: z.string().uuid(),
+  kind: z.enum(['clients', 'contacts']),
+  query: z.string().trim().min(1).max(200),
+});
+
 export const SaveContactCategorySchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1),

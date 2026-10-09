@@ -143,6 +143,12 @@ export function composeCampaignContactName(input: {
     return { firstName, lastName, fullName };
   }
 
+  // A contact saved with only an email gets that email as its full name; it
+  // is not a first name.
+  if (explicit && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(explicit)) {
+    return { firstName, lastName, fullName };
+  }
+
   if (explicit) {
     const space = explicit.indexOf(' ');
     if (space <= 0) {

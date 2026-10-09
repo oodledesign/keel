@@ -56,6 +56,20 @@ function mapContact(
 const CONTACT_SELECT =
   'id, account_id, email, first_name, last_name, full_name, phone, company_name, industry, created_at';
 
+const META_BATCH = 200;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    out.push(items.slice(i, i + size));
+  }
+  return out;
+}
+
+function contactIds(contacts: CampaignWorkspaceContact[]) {
+  return contacts.map((contact) => contact.id);
+}
+
 export function createCampaignContactsService(client: SupabaseClient) {
   return new CampaignContactsService(client);
 }
@@ -532,20 +546,26 @@ class CampaignContactsService {
   ): Promise<CampaignWorkspaceContact[]> {
     if (contacts.length === 0) return contacts;
 
-    const contactIds = contacts.map((contact) => contact.id);
-    const emails = [
-      ...new Set(
-        contacts
-          .map((contact) => contact.email?.trim().toLowerCase())
-          .filter((email): email is string => Boolean(email)),
-      ),
-    ];
-
-    const [assignments, memberships, preferences] = await Promise.all([
-      this.listAssignments(accountId, contactIds),
-      this.listListMemberships(accountId, contactIds),
-      this.listSubscriberPreferences(accountId, emails),
-    ]);
+    // Ids and emails go in the request URL, which has a size cap.
+    const batches = await Promise.all(
+      chunk(contacts, META_BATCH).map((batch) => {
+        const emails = [
+          ...new Set(
+            batch
+              .map((contact) => contact.email?.trim().toLowerCase())
+              .filter((email): email is string => Boolean(email)),
+          ),
+        ];
+        return Promise.all([
+          this.listAssignments(accountId, contactIds(batch)),
+          this.listListMemberships(accountId, contactIds(batch)),
+          this.listSubscriberPreferences(accountId, emails),
+        ]);
+      }),
+    );
+    const assignments = batches.flatMap(([rows]) => rows);
+    const memberships = batches.flatMap(([, rows]) => rows);
+    const preferences = batches.flatMap(([, , rows]) => rows);
 
     const categoryByContact = new Map<string, string[]>();
     for (const row of assignments) {

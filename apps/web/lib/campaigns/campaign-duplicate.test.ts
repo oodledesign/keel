@@ -92,6 +92,25 @@ describe('filterAdditionalRecipients', () => {
     });
   });
 
+  it('keeps ids the browser has not loaded when asked to', () => {
+    expect(
+      filterAdditionalRecipients({
+        emails: [],
+        selectedClientIds: [],
+        selectedContactIds: ['just-created'],
+        clients,
+        contacts,
+        alreadySentEmails: ['ada@example.com'],
+        keepUnknown: true,
+      }),
+    ).toEqual({
+      emails: [],
+      clientIds: [],
+      contactIds: ['just-created'],
+      skippedAlreadySent: 0,
+    });
+  });
+
   it('does not count an unknown id as already sent', () => {
     expect(
       filterAdditionalRecipients({

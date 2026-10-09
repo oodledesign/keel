@@ -17,6 +17,7 @@ import {
   saveCampaignContactAction,
 } from '../_lib/server/server-actions';
 import type { AudiencePickerOption } from './campaign-audience-picker';
+import { useAudiencePeopleSearch } from './use-audience-people-search';
 
 export function CampaignAudienceAddContact({
   accountId,
@@ -38,7 +39,7 @@ export function CampaignAudienceAddContact({
   contacts: AudiencePickerOption[];
   selectedIds?: ReadonlySet<string>;
   disabled?: boolean;
-  onAddToAudience?: (contactId: string) => void;
+  onAddToAudience?: (contact: AudiencePickerOption) => void;
   onContactCreated: (contact: AudiencePickerOption) => void;
 }) {
   const router = useRouter();
@@ -51,28 +52,27 @@ export function CampaignAudienceAddContact({
     const parsed = parseAudienceEmailInput(query);
     return parsed.length === 1 ? parsed[0] : null;
   }, [query]);
+  const { results, searching } = useAudiencePeopleSearch({
+    accountId,
+    kind: 'contacts',
+    query,
+    loaded: contacts,
+  });
   const emailTaken = Boolean(
     createEmail &&
-    contacts.some((row) => row.email.toLowerCase() === createEmail),
+    results.some((row) => row.email.toLowerCase() === createEmail),
   );
+  const matches = results.slice(0, 8);
 
-  const matches = useMemo(() => {
-    if (!normalized) return [];
-    return contacts
-      .filter(
-        (row) =>
-          row.email.toLowerCase().includes(normalized) ||
-          row.displayName.toLowerCase().includes(normalized),
-      )
-      .slice(0, 8);
-  }, [contacts, normalized]);
-
-  const showCreate = Boolean(accountId && createEmail && !emailTaken);
+  // Wait for the search so an existing contact is offered, not re-created.
+  const showCreate = Boolean(
+    accountId && createEmail && !emailTaken && !searching,
+  );
 
   const addExisting = (contact: AudiencePickerOption) => {
     if (mode === 'custom') {
       if (selectedIds?.has(contact.id) || !onAddToAudience) return;
-      onAddToAudience(contact.id);
+      onAddToAudience(contact);
       toast.success('Added to audience');
       setQuery('');
       return;
@@ -122,7 +122,7 @@ export function CampaignAudienceAddContact({
         onContactCreated(created);
 
         if (mode === 'custom') {
-          onAddToAudience?.(saved.contactId);
+          onAddToAudience?.(created);
           toast.success('Contact created and added to the audience');
           setQuery('');
           router.refresh();
@@ -220,7 +220,7 @@ export function CampaignAudienceAddContact({
           ) : null}
           {matches.length === 0 && !showCreate ? (
             <li className={`text-sm ${workspaceTextMuted}`}>
-              No matching contacts.
+              {searching ? 'Searching…' : 'No matching contacts.'}
             </li>
           ) : null}
         </ul>

@@ -11,6 +11,7 @@ import { hasCampaignsGrowthFeatures } from '~/lib/billing/campaign-pricing';
 import { canUseAddon } from '~/lib/billing/entitlements';
 import { getCampaignUsage } from '~/lib/campaign-credits/ledger';
 import { createAudienceListsService } from '~/lib/campaigns/audience-lists.service';
+import { searchAudiencePickerPeople } from '~/lib/campaigns/audience-picker-people';
 import { createCampaignAutomationsService } from '~/lib/campaigns/campaign-automations.service';
 import { createCampaignContactsService } from '~/lib/campaigns/campaign-contacts.service';
 import { isCampaignQuotaError } from '~/lib/campaigns/campaign-quota-error';
@@ -34,6 +35,7 @@ import {
   SaveCampaignContactSchema,
   SaveContactCategorySchema,
   ScheduleCampaignSchema,
+  SearchAudiencePeopleSchema,
   SendCampaignSchema,
   SendCampaignTestSchema,
   SendCampaignToAdditionalRecipientsSchema,
@@ -589,6 +591,19 @@ export const saveCampaignContactAction = enhanceAction(
     return { success: true as const, contactId: contact.id };
   },
   { auth: true, schema: SaveCampaignContactSchema },
+);
+
+export const searchAudiencePeopleAction = enhanceAction(
+  async function (data, user) {
+    const client = await requireCampaignsAddon(user.id, data.accountId);
+    return searchAudiencePickerPeople(
+      client,
+      data.accountId,
+      data.kind,
+      data.query,
+    );
+  },
+  { auth: true, schema: SearchAudiencePeopleSchema },
 );
 
 export const saveContactCategoryAction = enhanceAction(

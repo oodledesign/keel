@@ -2,7 +2,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { PageBody } from '@kit/ui/page';
 
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
-import { listAudiencePickerOptions } from '~/lib/campaigns/resolve-campaign-audience';
+import { listAudiencePickerOptions } from '~/lib/campaigns/audience-picker-people';
 import { campaignTemplateWorkspaceFromProfile } from '~/lib/campaigns/templates';
 import { withI18n } from '~/lib/i18n/with-i18n';
 

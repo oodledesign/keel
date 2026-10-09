@@ -9,6 +9,10 @@ import { createWorkspaceFormsService } from '~/home/[account]/forms/_lib/server/
 import { hasCampaignsProFeatures } from '~/lib/billing/campaign-pricing';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { createAudienceListsService } from '~/lib/campaigns/audience-lists.service';
+import {
+  listAudiencePickerOptions,
+  listAudiencePickerPeople,
+} from '~/lib/campaigns/audience-picker-people';
 import { createCampaignAutomationsService } from '~/lib/campaigns/campaign-automations.service';
 import { createCampaignContactsService } from '~/lib/campaigns/campaign-contacts.service';
 import { campaignHasSendHistory } from '~/lib/campaigns/campaign-delete';
@@ -20,10 +24,7 @@ import {
   loadComparativeCampaignReports,
 } from '~/lib/campaigns/load-campaign-analytics';
 import { loadCampaignUsageSnapshot } from '~/lib/campaigns/load-campaign-usage-snapshot';
-import {
-  estimateCampaignAudienceCount,
-  listAudiencePickerOptions,
-} from '~/lib/campaigns/resolve-campaign-audience';
+import { estimateCampaignAudienceCount } from '~/lib/campaigns/resolve-campaign-audience';
 import {
   isSendingDomainVerified,
   loadAccountSendingDomain,
@@ -79,11 +80,14 @@ export async function loadCampaignSeriesDetail(
   const client = getSupabaseServerClient();
   const admin = getSupabaseServerAdminClient();
   const seriesService = createCampaignSeriesService(client);
+  const seriesPromise = seriesService.get(accountId, seriesId);
   const [series, instances, brand, audienceOptions, lists] = await Promise.all([
-    seriesService.get(accountId, seriesId),
+    seriesPromise,
     seriesService.listInstances(accountId, seriesId),
     loadAccountBrandResolved(accountId),
-    listAudiencePickerOptions(admin, accountId),
+    seriesPromise.then((row) =>
+      listAudiencePickerOptions(admin, accountId, row.audienceConfig),
+    ),
     createAudienceListsService(client)
       .list(accountId)
       .catch(() => []),
@@ -105,6 +109,7 @@ export const loadCampaignDetail = cache(async function loadCampaignDetail(
   const client = getSupabaseServerClient();
   const admin = getSupabaseServerAdminClient();
   const service = createCampaignsService(client);
+  const campaignPromise = service.get(accountId, campaignId);
 
   const [
     campaign,
@@ -116,13 +121,15 @@ export const loadCampaignDetail = cache(async function loadCampaignDetail(
     audienceOptions,
     lists,
   ] = await Promise.all([
-    service.get(accountId, campaignId),
+    campaignPromise,
     service.listRecipients(accountId, campaignId),
     service.countRecipients(accountId, campaignId),
     loadAccountBrandResolved(accountId),
     loadAccountSendingDomain(admin, accountId),
     listPublishedFormsForCampaigns(accountId),
-    listAudiencePickerOptions(admin, accountId),
+    campaignPromise.then((row) =>
+      listAudiencePickerOptions(admin, accountId, row.audienceConfig),
+    ),
     createAudienceListsService(client)
       .list(accountId)
       .catch(() => []),
@@ -281,7 +288,7 @@ export async function loadCampaignAudienceEditor(accountId: string) {
   const contacts = createCampaignContactsService(client);
   const [categories, workspaceContacts, subscribers] = await Promise.all([
     contacts.listCategories(accountId).catch(() => []),
-    contacts.listContacts(accountId, { limit: 400 }).catch(() => []),
+    listAudiencePickerPeople(client, accountId, 'contacts').catch(() => []),
     listWorkspaceMailingListSubscribers(admin, accountId),
   ]);
   const snapshot = await loadCampaignUsageSnapshot({
@@ -345,7 +352,7 @@ export async function loadCampaignContactsPage(
         query: options?.query,
         categoryId: options?.categoryId,
         industry: options?.industry,
-        limit: 500,
+        limit: 2000,
       })
       .catch(() => []),
   ]);

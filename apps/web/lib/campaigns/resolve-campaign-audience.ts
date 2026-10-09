@@ -602,39 +602,6 @@ export async function estimateCampaignAudienceCount(
   return recipients.length;
 }
 
-export async function listAudiencePickerOptions(
-  client: SupabaseClient,
-  accountId: string,
-): Promise<{
-  clients: Array<{ id: string; email: string; displayName: string }>;
-  contacts: Array<{ id: string; email: string; displayName: string }>;
-  subscriberCount: number;
-  clientCount: number;
-  contactCount: number;
-}> {
-  const [clients, contacts, subscribers] = await Promise.all([
-    listClientsWithEmail(client, accountId),
-    listContactsWithEmail(client, accountId),
-    listWorkspaceMailingListSubscribers(client, accountId),
-  ]);
-
-  return {
-    clients: clients.slice(0, 200).map((row) => ({
-      id: row.id,
-      email: row.email,
-      displayName: row.displayName || row.email,
-    })),
-    contacts: contacts.slice(0, 200).map((row) => ({
-      id: row.id,
-      email: row.email,
-      displayName: row.displayName || row.email,
-    })),
-    subscriberCount: subscribers.length,
-    clientCount: clients.length,
-    contactCount: contacts.length,
-  };
-}
-
 async function findCampaignRecipientByToken(
   client: SupabaseClient,
   token: string,

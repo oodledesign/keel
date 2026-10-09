@@ -31,6 +31,10 @@ import {
 } from '~/lib/workspace-ui';
 
 import { CampaignAudienceAddContact } from './campaign-audience-add-contact';
+import { useAudiencePeopleSearch } from './use-audience-people-search';
+
+/** Rows shown in a picker list before searching. */
+const PICKER_ROWS = 40;
 
 export type AudiencePickerOption = {
   id: string;
@@ -91,15 +95,21 @@ export function CampaignAudiencePicker({
   const [manualText, setManualText] = useState(
     (audienceConfig.emails ?? []).join(', '),
   );
-  const [createdContacts, setCreatedContacts] = useState<
-    AudiencePickerOption[]
-  >([]);
-
-  const contactOptions = useMemo(() => {
-    const known = new Set(contacts.map((row) => row.id));
-    const extras = createdContacts.filter((row) => !known.has(row.id));
-    return [...extras, ...contacts];
-  }, [contacts, createdContacts]);
+  // People found by search or just created, so they still show once picked.
+  const [seenContacts, setSeenContacts] = useState<AudiencePickerOption[]>([]);
+  const [seenClients, setSeenClients] = useState<AudiencePickerOption[]>([]);
+  const contactOptions = useMemo(
+    () => withSeen(contacts, seenContacts),
+    [contacts, seenContacts],
+  );
+  const clientOptions = useMemo(
+    () => withSeen(clients, seenClients),
+    [clients, seenClients],
+  );
+  const rememberContact = (row: AudiencePickerOption) =>
+    setSeenContacts((current) => rememberPerson(current, row));
+  const rememberClient = (row: AudiencePickerOption) =>
+    setSeenClients((current) => rememberPerson(current, row));
 
   const selectedClientIds = useMemo(
     () => new Set(audienceConfig.clientIds ?? []),
@@ -115,10 +125,11 @@ export function CampaignAudiencePicker({
     audienceConfigRef.current = audienceConfig;
   }, [audienceConfig]);
 
-  const addContactToCustomAudience = (contactId: string) => {
+  const addContactToCustomAudience = (contact: AudiencePickerOption) => {
+    rememberContact(contact);
     const current = audienceConfigRef.current;
     const next = new Set(current.contactIds ?? []);
-    next.add(contactId);
+    next.add(contact.id);
     const nextConfig = {
       ...current,
       contactIds: [...next],
@@ -301,9 +312,7 @@ export function CampaignAudiencePicker({
               listName={selectedList.name}
               contacts={contactOptions}
               disabled={disabled}
-              onContactCreated={(contact) =>
-                setCreatedContacts((current) => [contact, ...current])
-              }
+              onContactCreated={rememberContact}
             />
           ) : selectedList ? (
             <p
@@ -333,9 +342,7 @@ export function CampaignAudiencePicker({
             selectedIds={selectedContactIds}
             disabled={disabled}
             onAddToAudience={addContactToCustomAudience}
-            onContactCreated={(contact) =>
-              setCreatedContacts((current) => [contact, ...current])
-            }
+            onContactCreated={rememberContact}
           />
 
           <div className="space-y-2">
@@ -369,14 +376,17 @@ export function CampaignAudiencePicker({
           <div className="grid gap-4 lg:grid-cols-2">
             <PickerList
               title="Clients"
+              kind="clients"
+              accountId={accountId}
               empty="No clients with email."
-              options={clients}
+              options={clientOptions}
               selected={selectedClientIds}
               disabled={disabled}
-              onToggle={(id, checked) => {
+              onToggle={(row, checked) => {
+                rememberClient(row);
                 const next = new Set(selectedClientIds);
-                if (checked) next.add(id);
-                else next.delete(id);
+                if (checked) next.add(row.id);
+                else next.delete(row.id);
                 onChange({
                   audienceType: 'custom',
                   audienceConfig: {
@@ -388,14 +398,17 @@ export function CampaignAudiencePicker({
             />
             <PickerList
               title="Contacts"
+              kind="contacts"
+              accountId={accountId}
               empty="No contacts with email."
               options={contactOptions}
               selected={selectedContactIds}
               disabled={disabled}
-              onToggle={(id, checked) => {
+              onToggle={(row, checked) => {
+                rememberContact(row);
                 const next = new Set(selectedContactIds);
-                if (checked) next.add(id);
-                else next.delete(id);
+                if (checked) next.add(row.id);
+                else next.delete(row.id);
                 onChange({
                   audienceType: 'custom',
                   audienceConfig: {
@@ -424,6 +437,8 @@ export function CampaignAudiencePicker({
 
 function PickerList({
   title,
+  kind,
+  accountId,
   empty,
   options,
   selected,
@@ -431,23 +446,28 @@ function PickerList({
   onToggle,
 }: {
   title: string;
+  kind: 'clients' | 'contacts';
+  accountId?: string;
   empty: string;
   options: AudiencePickerOption[];
   selected: Set<string>;
   disabled?: boolean;
-  onToggle: (id: string, checked: boolean) => void;
+  onToggle: (row: AudiencePickerOption, checked: boolean) => void;
 }) {
   const [query, setQuery] = useState('');
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return options.slice(0, 40);
-    return options
-      .filter(
-        (row) =>
-          row.email.includes(q) || row.displayName.toLowerCase().includes(q),
-      )
-      .slice(0, 40);
-  }, [options, query]);
+  const { results, searching } = useAudiencePeopleSearch({
+    accountId,
+    kind,
+    query,
+    loaded: options,
+  });
+  const rows = useMemo(() => {
+    if (query.trim()) return results.slice(0, PICKER_ROWS);
+    // Picked people first, so they stay visible after a search is cleared.
+    const picked = options.filter((row) => selected.has(row.id));
+    const rest = options.filter((row) => !selected.has(row.id));
+    return [...picked, ...rest.slice(0, PICKER_ROWS)];
+  }, [options, query, results, selected]);
 
   return (
     <div className="space-y-2">
@@ -458,11 +478,15 @@ function PickerList({
         disabled={disabled}
         onChange={(event) => setQuery(event.target.value)}
       />
-      {options.length === 0 ? (
+      {options.length === 0 && !query.trim() ? (
         <p className={`text-sm ${workspaceTextMuted}`}>{empty}</p>
+      ) : rows.length === 0 ? (
+        <p className={`text-sm ${workspaceTextMuted}`}>
+          {searching ? 'Searching…' : 'No matches.'}
+        </p>
       ) : (
         <ul className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-[color:var(--workspace-shell-border)] p-2">
-          {filtered.map((row) => {
+          {rows.map((row) => {
             const id = `audience-pick-${title}-${row.id}`;
             return (
               <li key={row.id} className="flex items-start gap-2">
@@ -470,7 +494,7 @@ function PickerList({
                   id={id}
                   checked={selected.has(row.id)}
                   disabled={disabled}
-                  onCheckedChange={(value) => onToggle(row.id, value === true)}
+                  onCheckedChange={(value) => onToggle(row, value === true)}
                 />
                 <label htmlFor={id} className="min-w-0 cursor-pointer text-sm">
                   <span
@@ -491,4 +515,21 @@ function PickerList({
       )}
     </div>
   );
+}
+
+function withSeen(
+  loaded: AudiencePickerOption[],
+  seen: AudiencePickerOption[],
+): AudiencePickerOption[] {
+  const known = new Set(loaded.map((row) => row.id));
+  return [...seen.filter((row) => !known.has(row.id)), ...loaded];
+}
+
+function rememberPerson(
+  current: AudiencePickerOption[],
+  row: AudiencePickerOption,
+): AudiencePickerOption[] {
+  return current.some((item) => item.id === row.id)
+    ? current
+    : [row, ...current];
 }

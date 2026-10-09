@@ -104,6 +104,7 @@ function AdditionalRecipientsForm({
     clients,
     contacts,
     alreadySentEmails,
+    keepUnknown: true,
   });
   const picked =
     (audienceConfig.emails?.length ?? 0) +
@@ -172,7 +173,7 @@ function AdditionalRecipientsForm({
         onChange={(next) => setAudienceConfig(next.audienceConfig)}
       />
 
-      {picked > 0 && remaining === 0 ? (
+      {picked > 0 && remaining === 0 && preview.skippedAlreadySent > 0 ? (
         <p
           className={`text-sm ${workspaceText}`}
           data-test="campaign-additional-all-sent"

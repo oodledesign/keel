@@ -60,6 +60,7 @@ import {
 import { CampaignSubscriberStatusBadge } from './campaign-status-badge';
 import { CampaignUpgradeCta } from './campaign-upgrade-cta';
 
+const ROWS_PAGE = 100;
 export function CampaignContactsPage({
   accountId,
   accountSlug,
@@ -129,9 +130,16 @@ export function CampaignContactsPage({
     });
   }, [contacts, query, categoryFilter, industryFilter]);
 
+  // Drawing every row is the slow part on big workspaces; show a page at a time.
+  const filterKey = `${query}|${categoryFilter}|${industryFilter}`;
+  const [paging, setPaging] = useState({ key: filterKey, limit: ROWS_PAGE });
+  const rowLimit = paging.key === filterKey ? paging.limit : ROWS_PAGE;
+  const visibleRows = filtered.slice(0, rowLimit);
+
   const selectedSet = new Set(selected);
   const allVisibleSelected =
-    filtered.length > 0 && filtered.every((row) => selectedSet.has(row.id));
+    visibleRows.length > 0 &&
+    visibleRows.every((row) => selectedSet.has(row.id));
   const applySearch = useCallback(() => {
     const params = new URLSearchParams();
     if (query.trim()) params.set('q', query.trim());
@@ -318,11 +326,12 @@ export function CampaignContactsPage({
                   <Checkbox
                     checked={allVisibleSelected}
                     onCheckedChange={(value) => {
-                      if (value === true) {
-                        setSelected(filtered.map((row) => row.id));
-                      } else {
-                        setSelected([]);
-                      }
+                      const ids = visibleRows.map((row) => row.id);
+                      setSelected((current) =>
+                        value === true
+                          ? [...new Set([...current, ...ids])]
+                          : current.filter((id) => !ids.includes(id)),
+                      );
                     }}
                     aria-label="Select all visible contacts"
                   />
@@ -354,7 +363,7 @@ export function CampaignContactsPage({
                   </td>
                 </tr>
               ) : (
-                filtered.map((contact) => (
+                visibleRows.map((contact) => (
                   <tr
                     key={contact.id}
                     className="border-t border-[color:var(--workspace-shell-border)]"
@@ -429,6 +438,25 @@ export function CampaignContactsPage({
             </tbody>
           </table>
         </div>
+        {filtered.length > rowLimit ? (
+          <div className="flex items-center justify-between gap-2">
+            <p className={`text-xs ${workspaceTextMuted}`}>
+              Showing {rowLimit.toLocaleString()} of{' '}
+              {filtered.length.toLocaleString()}
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              data-test="campaign-contacts-show-more"
+              onClick={() =>
+                setPaging({ key: filterKey, limit: rowLimit + ROWS_PAGE })
+              }
+            >
+              Show more
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <div className="space-y-4">

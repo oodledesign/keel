@@ -39,6 +39,12 @@ export function filterAdditionalRecipients(input: {
   clients: AdditionalRecipientPerson[];
   contacts: AdditionalRecipientPerson[];
   alreadySentEmails: string[];
+  /**
+   * Keep picked ids missing from `clients` / `contacts` (e.g. a contact just
+   * created in the picker). The browser preview only has some people loaded;
+   * the server looks every id up, so it leaves this off.
+   */
+  keepUnknown?: boolean;
 }): {
   emails: string[];
   clientIds: string[];
@@ -61,12 +67,14 @@ export function filterAdditionalRecipients(input: {
     people: input.clients,
     sent,
     skipped,
+    keepUnknown: input.keepUnknown,
   });
   const contactIds = keepNewPeople({
     selectedIds: input.selectedContactIds,
     people: input.contacts,
     sent,
     skipped,
+    keepUnknown: input.keepUnknown,
   });
 
   return {
@@ -82,6 +90,7 @@ function keepNewPeople(input: {
   people: AdditionalRecipientPerson[];
   sent: Set<string>;
   skipped: Set<string>;
+  keepUnknown?: boolean;
 }): string[] {
   const byId = new Map(
     input.people.map((person) => [
@@ -96,7 +105,10 @@ function keepNewPeople(input: {
     if (seen.has(id)) continue;
     seen.add(id);
     const email = byId.get(id);
-    if (!email) continue;
+    if (!email) {
+      if (input.keepUnknown) kept.push(id);
+      continue;
+    }
     if (input.sent.has(email)) {
       input.skipped.add(email);
       continue;

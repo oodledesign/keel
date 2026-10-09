@@ -32,7 +32,6 @@ import type {
   CampaignAudienceList,
   CampaignAudienceListMember,
   CampaignContactCategory,
-  CampaignWorkspaceContact,
 } from '~/lib/campaigns/campaign.types';
 import type { ContactCustomFieldDefinition } from '~/lib/contacts/custom-fields';
 import {
@@ -48,6 +47,8 @@ import {
   removeAudienceListMembersAction,
   saveAudienceListAction,
 } from '../_lib/server/server-actions';
+import type { AudiencePickerOption } from './campaign-audience-picker';
+import { useAudiencePeopleSearch } from './use-audience-people-search';
 
 function audiencesHref(accountSlug: string) {
   return pathsConfig.app.accountEmailCampaignAudiences.replace(
@@ -87,7 +88,8 @@ export function CampaignAudienceListEditor({
   accountId: string;
   accountSlug: string;
   categories: CampaignContactCategory[];
-  contacts: CampaignWorkspaceContact[];
+  /** A short starting list; the member picker searches for everyone else. */
+  contacts: AudiencePickerOption[];
   list?: CampaignAudienceList;
   members?: CampaignAudienceListMember[];
   allowLogicFilters?: boolean;
@@ -140,21 +142,15 @@ export function CampaignAudienceListEditor({
     [kind, source, matchMode, rules],
   );
 
-  const selectableContacts = useMemo(() => {
-    const q = memberSearch.trim().toLowerCase();
-    return contacts
-      .filter((contact) => contact.email)
-      .filter((contact) => {
-        if (!q) return true;
-        return (
-          contact.fullName.toLowerCase().includes(q) ||
-          (contact.email ?? '').toLowerCase().includes(q) ||
-          (contact.companyName ?? '').toLowerCase().includes(q) ||
-          (contact.industry ?? '').toLowerCase().includes(q)
-        );
-      })
-      .slice(0, 40);
-  }, [contacts, memberSearch]);
+  const memberMatches = useAudiencePeopleSearch({
+    accountId,
+    kind: 'contacts',
+    query: memberSearch,
+    loaded: contacts,
+  });
+  const selectableContacts = (
+    memberSearch.trim() ? memberMatches.results : contacts
+  ).slice(0, 40);
 
   const hubHref = audiencesHref(accountSlug);
   const importHref = csvImportHref(accountSlug, list?.id);
@@ -301,6 +297,7 @@ export function CampaignAudienceListEditor({
         ) : (
           <ManualMembersEditor
             contacts={selectableContacts}
+            searching={memberMatches.searching}
             selectedIds={selectedContactIds}
             search={memberSearch}
             onSearchChange={setMemberSearch}
@@ -696,13 +693,15 @@ function CategoryValueInput({
 
 function ManualMembersEditor({
   contacts,
+  searching,
   selectedIds,
   search,
   onSearchChange,
   onToggle,
   existingMembers,
 }: {
-  contacts: CampaignWorkspaceContact[];
+  contacts: AudiencePickerOption[];
+  searching: boolean;
   selectedIds: string[];
   search: string;
   onSearchChange: (value: string) => void;
@@ -726,7 +725,11 @@ function ManualMembersEditor({
         {' · showing up to 40 — search to refine'}
       </p>
       <ul className="max-h-52 space-y-2 overflow-y-auto rounded-md border border-[color:var(--workspace-shell-border)] p-2">
-        {contacts.length === 0 ? (
+        {contacts.length === 0 && search.trim() ? (
+          <li className={`text-sm ${workspaceTextMuted}`}>
+            {searching ? 'Searching…' : 'No matching contacts.'}
+          </li>
+        ) : contacts.length === 0 ? (
           <li className={`text-sm ${workspaceTextMuted}`}>
             No contacts with email. Add them on the Contacts tab or upload a
             CSV.
@@ -747,7 +750,7 @@ function ManualMembersEditor({
                   <span
                     className={`block truncate font-medium ${workspaceText}`}
                   >
-                    {contact.fullName}
+                    {contact.displayName}
                   </span>
                   <span
                     className={`block truncate text-xs ${workspaceTextMuted}`}
