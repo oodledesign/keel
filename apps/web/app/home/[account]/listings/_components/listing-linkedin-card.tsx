@@ -30,6 +30,7 @@ import type {
   LinkedInOrgConnectionPublic,
   ListingLinkedInPostPublic,
 } from '~/lib/commercial/linkedin-publishing/types';
+import { LISTING_LINKEDIN_POST_CREDITS } from '~/lib/commercial/listing-ai-credits.shared';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import {
@@ -413,6 +414,10 @@ export function ListingLinkedInCard({
               Use listing description
             </Button>
           </div>
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Generate with AI uses {LISTING_LINKEDIN_POST_CREDITS} AI credits per
+            draft. Writing your own or using the description is free.
+          </p>
           <Textarea
             value={body}
             disabled={readOnly}

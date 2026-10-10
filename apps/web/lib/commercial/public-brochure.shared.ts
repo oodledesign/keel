@@ -4,6 +4,7 @@ import {
   resolveBrandLogoForSurface,
 } from '~/lib/brand/resolve-brand-logo';
 import { formatAskingPrice } from '~/lib/commercial/asking-price';
+import type { BrochureLocalArea } from '~/lib/commercial/brochure-pdf/local-area.shared';
 import {
   type AskingPriceQualifier,
   DISPOSAL_TYPE_LABELS,
@@ -82,6 +83,8 @@ export function resolveBrochureBranch(input: {
 export type BrochureAmenity = {
   label: string;
   index: number;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 export type BrochureListing = {
@@ -117,6 +120,21 @@ export type BrochureListing = {
   description: string | null;
   locationCopy: string | null;
   keyPoints: string[];
+  /** PDF-brochure extras; optional so other brochure loaders can omit them. */
+  sector?: string | null;
+  measurementStandard?: string | null;
+  possession?: string | null;
+  parkingAvailable?: boolean;
+  parkingSpaces?: number | null;
+  /** Specification tick-list from the marketing editor. */
+  amenities?: string[];
+  marketingSections?: BrochureMarketingSection[];
+};
+
+export type BrochureMarketingSection = {
+  kind: 'promo' | 'specifications' | 'viewings' | 'terms' | 'custom';
+  title: string;
+  body: string;
 };
 
 export type PublicBrochureData = {
@@ -136,8 +154,10 @@ export type PublicBrochureData = {
   floorplans: BrochureMediaItem[];
   /** Workspace office used on the contact page (listing branch, else default). */
   branch?: BrochureBranch | null;
-  /** Real nearby places from Mapbox; omit or empty to fall back to town centre. */
+  /** Real nearby places (datasets + Mapbox); omit or empty to fall back to town centre. */
   nearbyAmenities?: BrochureAmenity[];
+  /** Automated location paragraph used when the listing has no location copy. */
+  localArea?: BrochureLocalArea | null;
   /** Render-time reduced sash; also baked into the cover `reducedBadge` slot. */
   showReducedPrice?: boolean;
   /** Public website listing URL (hidden when empty). */
@@ -214,6 +234,27 @@ export function formatBrochureSize(listing: BrochureListing): string | null {
     return `${fmt(min)} – ${fmt(max)} sq ft`;
   }
   return `${fmt(min ?? max!)} sq ft`;
+}
+
+const SQM_PER_SQFT = 0.09290304;
+
+/** Metric companion to `formatBrochureSize`, e.g. "6.7 – 106.5 sq m". */
+export function formatBrochureSizeSqm(listing: BrochureListing): string | null {
+  const min = listing.sizeMinSqft;
+  const max = listing.sizeMaxSqft;
+  if (min == null && max == null) return null;
+
+  const fmt = (sqft: number) => {
+    const sqm = sqft * SQM_PER_SQFT;
+    return new Intl.NumberFormat('en-GB', {
+      maximumFractionDigits: sqm < 1000 ? 1 : 0,
+    }).format(sqm);
+  };
+
+  if (min != null && max != null && min !== max) {
+    return `${fmt(min)} – ${fmt(max)} sq m`;
+  }
+  return `${fmt(min ?? max!)} sq m`;
 }
 
 export function formatDisposalLabel(type: DisposalType): string {

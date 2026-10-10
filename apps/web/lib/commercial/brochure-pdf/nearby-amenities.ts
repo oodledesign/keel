@@ -27,6 +27,7 @@ export {
   isDummyLocalAreaAmenity,
   isThinNearbyAmenityList,
   isTownCentreAmenity,
+  mergeBrochureAmenities,
   sanitizeBrochureAmenities,
 } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 

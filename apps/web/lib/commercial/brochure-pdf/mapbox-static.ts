@@ -17,8 +17,8 @@ import {
 export type BrochureMapAmenity = {
   label: string;
   index: number;
-  longitude?: number;
-  latitude?: number;
+  longitude?: number | null;
+  latitude?: number | null;
 };
 
 export type FetchBrochureMapImageInput = {
@@ -29,13 +29,20 @@ export type FetchBrochureMapImageInput = {
   /** Pixel height. */
   height: number;
   zoom?: number;
+  /** Amenities with coordinates get numbered pins; the map then auto-fits. */
   amenities?: BrochureMapAmenity[];
   /** Workspace brand pin (`#RRGGBB` or `RRGGBB`). Overlay is `pin-l+RRGGBB`. */
   pinColor?: string;
+  /** Numbered amenity pin colour; defaults to the property pin colour. */
+  amenityPinColor?: string;
 };
 
 const MAP_STYLES = ['mapbox/streets-v12', 'mapbox/light-v11'] as const;
 const PIN_HEX_FALLBACK = '351E28';
+/** Further places (airports, distant junctions) stay list-only. */
+const AMENITY_PIN_MAX_KM = 6;
+/** Space kept between the outermost pin and the map edge (CSS px). */
+const PIN_FRAME_PADDING = 40;
 
 /**
  * Property pin uses workspace brand primary (navy), not the coral accent.
@@ -72,6 +79,100 @@ function clampSize(n: number): number {
   return Math.min(1280, Math.max(200, Math.round(n)));
 }
 
+function roughKm(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number },
+): number {
+  const dLat = (b.latitude - a.latitude) * 111;
+  const dLng =
+    (b.longitude - a.longitude) * 111 * Math.cos((a.latitude * Math.PI) / 180);
+  return Math.hypot(dLat, dLng);
+}
+
+const coord = (n: number) => Number(n.toFixed(5));
+
+type PinnedAmenity = { index: number; latitude: number; longitude: number };
+
+function pinnedAmenities(
+  input: Pick<
+    FetchBrochureMapImageInput,
+    'latitude' | 'longitude' | 'amenities'
+  >,
+): PinnedAmenity[] {
+  const origin = { latitude: input.latitude, longitude: input.longitude };
+  const pinned: PinnedAmenity[] = [];
+  for (const { latitude, longitude, index } of input.amenities ?? []) {
+    if (
+      typeof latitude !== 'number' ||
+      typeof longitude !== 'number' ||
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      !Number.isInteger(index) ||
+      index < 0 ||
+      index > 99
+    ) {
+      continue;
+    }
+    if (roughKm(origin, { latitude, longitude }) > AMENITY_PIN_MAX_KM) continue;
+    pinned.push({ index, latitude, longitude });
+  }
+  return pinned;
+}
+
+/** `pin-s-3+HEX(lng,lat)` overlays for amenities close enough to map. */
+export function brochureAmenityPinOverlays(
+  input: Pick<
+    FetchBrochureMapImageInput,
+    'latitude' | 'longitude' | 'amenities' | 'amenityPinColor' | 'pinColor'
+  >,
+): string[] {
+  const hex = toMapboxPinHex(input.amenityPinColor ?? input.pinColor);
+  return pinnedAmenities(input).map(
+    ({ index, latitude, longitude }) =>
+      `pin-s-${index}+${hex}(${coord(longitude)},${coord(latitude)})`,
+  );
+}
+
+const EARTH_CIRCUMFERENCE_M = 40_075_016.686;
+const MAPBOX_TILE_PX = 512;
+const PIN_ZOOM_MIN = 11;
+const PIN_ZOOM_MAX = 15;
+
+/**
+ * Zoom that keeps every amenity pin in frame around the centred property
+ * (Mapbox auto-fit would zoom to street level for a single close pin).
+ */
+export function brochureMapZoomForPins(
+  input: Pick<
+    FetchBrochureMapImageInput,
+    'latitude' | 'longitude' | 'amenities' | 'width' | 'height'
+  >,
+): number | null {
+  const pins = pinnedAmenities(input);
+  if (pins.length === 0) return null;
+
+  const cosLat = Math.cos((input.latitude * Math.PI) / 180);
+  const halfW = Math.max(40, clampSize(input.width) / 2 - PIN_FRAME_PADDING);
+  const halfH = Math.max(40, clampSize(input.height) / 2 - PIN_FRAME_PADDING);
+  let zoom = PIN_ZOOM_MAX;
+  for (const pin of pins) {
+    const dxM = Math.abs(pin.longitude - input.longitude) * 111_320 * cosLat;
+    const dyM = Math.abs(pin.latitude - input.latitude) * 110_574;
+    for (const [meters, halfPx] of [
+      [dxM, halfW],
+      [dyM, halfH],
+    ] as const) {
+      if (meters < 1) continue;
+      // Metres per CSS px at zoom z: C·cos(lat) / (512·2^z).
+      const fit = Math.log2(
+        (EARTH_CIRCUMFERENCE_M * cosLat * halfPx) / (MAPBOX_TILE_PX * meters),
+      );
+      zoom = Math.min(zoom, fit);
+    }
+  }
+  return Math.max(PIN_ZOOM_MIN, Math.floor(zoom * 4) / 4);
+}
+
 /**
  * Build Static Images API URLs. Returns several variants so callers can retry
  * if a restricted token or overlay format fails.
@@ -87,8 +188,21 @@ export function buildBrochureMapStaticUrls(
   const tokenQs = `access_token=${encodeURIComponent(token)}`;
   const pinHex = toMapboxPinHex(input.pinColor);
   const pin = `pin-l+${pinHex}(${lng},${lat})`;
+  const amenityPins = brochureAmenityPinOverlays(input);
+  const pinZoom = brochureMapZoomForPins(input);
 
   const urls: string[] = [];
+  if (amenityPins.length > 0 && pinZoom != null) {
+    // Property pin last so it draws on top of nearby amenity pins.
+    const overlays = [...amenityPins, pin].join(',');
+    for (const style of MAP_STYLES) {
+      const base = `https://api.mapbox.com/styles/v1/${style}/static`;
+      urls.push(
+        `${base}/${overlays}/${lng},${lat},${pinZoom},0/${width}x${height}@2x?${tokenQs}`,
+      );
+    }
+  }
+
   for (const style of MAP_STYLES) {
     const base = `https://api.mapbox.com/styles/v1/${style}/static`;
     urls.push(

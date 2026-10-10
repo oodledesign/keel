@@ -199,8 +199,8 @@ export const WORKSPACE_FEATURE_ROWS: WorkspaceFeatureRow[] = [
   },
   {
     id: 'brochures',
-    feature: 'Online brochures',
-    hint: 'Shareable branded slideshows for disposals.',
+    feature: 'PDF & online brochures',
+    hint: 'Branded PDF particulars and shareable slideshows, with local area facts filled in.',
     values: { business: false, commercial: true },
   },
   {

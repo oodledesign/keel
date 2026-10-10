@@ -8,6 +8,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { INSUFFICIENT_AI_CREDITS_CODE } from '~/lib/ai/ai-credits-exhausted';
 import { isInsufficientCreditsError } from '~/lib/ai/router';
 import { generateListingMarketingCopy } from '~/lib/commercial/ai-listing-marketing';
+import { lookupLocalAreaFacts } from '~/lib/commercial/brochure-pdf/local-area';
+import { localAreaFactLines } from '~/lib/commercial/brochure-pdf/local-area.shared';
 
 import { createListingsService } from './listings.service';
 
@@ -26,6 +28,15 @@ export const generateListingMarketingCopyAction = enhanceAction(
     if (!listing) {
       throw new Error('Listing not found');
     }
+
+    const localFacts =
+      listing.latitude != null && listing.longitude != null
+        ? await lookupLocalAreaFacts({
+            latitude: listing.latitude,
+            longitude: listing.longitude,
+            town: listing.town,
+          })
+        : null;
 
     try {
       return await generateListingMarketingCopy({
@@ -53,6 +64,9 @@ export const generateListingMarketingCopyAction = enhanceAction(
             listing.epcRating != null ? String(listing.epcRating) : null,
           existingSummary: listing.summary,
           existingDescription: listing.description,
+          verifiedLocalFacts: localFacts
+            ? localAreaFactLines(localFacts)
+            : undefined,
         },
       });
     } catch (error) {

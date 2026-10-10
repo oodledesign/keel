@@ -335,7 +335,7 @@ export default createBillingSchema({
       features: [
         'Listings, pipeline & requirements',
         'Portal publishing (Rightmove, EACH, Property Hive)',
-        'Online brochures & branded presentations',
+        'PDF & online brochures',
       ],
     },
     {

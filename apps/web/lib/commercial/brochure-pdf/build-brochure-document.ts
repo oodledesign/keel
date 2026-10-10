@@ -11,15 +11,24 @@ import {
 } from '~/lib/commercial/brochure-pdf/brochure-document';
 import { buildCoverPriceLines } from '~/lib/commercial/brochure-pdf/cover-prices';
 import {
+  type BrochureAmenityItem,
   buildFallbackNearbyAmenities,
   sanitizeBrochureAmenities,
 } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
-import type { PublicBrochureData } from '~/lib/commercial/public-brochure.shared';
+import {
+  disposalIncludesForSale,
+  disposalIncludesToLet,
+} from '~/lib/commercial/commercial-constants';
+import type {
+  BrochureListing,
+  PublicBrochureData,
+} from '~/lib/commercial/public-brochure.shared';
 import {
   formatBrochureAddress,
   formatBrochurePrice,
   formatBrochureRent,
   formatBrochureSize,
+  formatBrochureSizeSqm,
   formatDisposalLabel,
 } from '~/lib/commercial/public-brochure.shared';
 
@@ -69,6 +78,70 @@ function textSlot(text: string): BrochureSlotValue {
   return { type: 'text', text };
 }
 
+const ON_APPLICATION = 'On application';
+
+/**
+ * Rent line for the brochure. A to-let pack with no visible rent still says
+ * "On application" — agents never leave the rent out entirely.
+ */
+export function brochureRentValue(
+  listing: BrochureListing,
+  display: BrochureDisplayOptions,
+): string | null {
+  if (!disposalIncludesToLet(listing.disposalType)) return null;
+  if (!display.showRent) return ON_APPLICATION;
+  const rent = formatBrochureRent({ ...listing, hideRentFromMarketing: false });
+  return !rent || rent === 'POA' ? ON_APPLICATION : rent;
+}
+
+export function brochurePriceValue(
+  listing: BrochureListing,
+  display: BrochureDisplayOptions,
+): string | null {
+  if (!disposalIncludesForSale(listing.disposalType)) return null;
+  if (!display.showPrice) return ON_APPLICATION;
+  const price = formatBrochurePrice({
+    ...listing,
+    hidePriceFromMarketing: false,
+  });
+  return !price || price === 'POA' ? ON_APPLICATION : price;
+}
+
+const MEASUREMENT_LABELS: Record<string, string> = {
+  gia: 'GIA',
+  nia: 'NIA',
+  gea: 'GEA',
+  ipms: 'IPMS',
+};
+
+/** "72 – 1,146 sq ft (6.7 – 106.5 sq m) GIA" */
+export function brochureSizeValue(listing: BrochureListing): string | null {
+  const sqft = formatBrochureSize(listing);
+  if (!sqft) return null;
+  const sqm = formatBrochureSizeSqm(listing);
+  const basisKey = listing.measurementStandard?.trim().toLowerCase() ?? '';
+  const basis = MEASUREMENT_LABELS[basisKey] ?? '';
+  return [sqft, sqm ? `(${sqm})` : '', basis].filter(Boolean).join(' ');
+}
+
+function formatEpc(listing: BrochureListing): string | null {
+  const band = listing.epcBand?.trim().toUpperCase() || null;
+  const rating =
+    listing.epcRating != null && Number.isFinite(listing.epcRating)
+      ? String(listing.epcRating)
+      : null;
+  if (band && rating) return `${band} (${rating})`;
+  return band ?? rating;
+}
+
+function formatParking(listing: BrochureListing): string | null {
+  const spaces = listing.parkingSpaces;
+  if (spaces != null && spaces > 0) {
+    return `${spaces} ${spaces === 1 ? 'space' : 'spaces'}`;
+  }
+  return listing.parkingAvailable ? 'Available' : null;
+}
+
 function buildFactsRows(
   data: PublicBrochureData,
   display: BrochureDisplayOptions,
@@ -81,30 +154,28 @@ function buildFactsRows(
     value: formatDisposalLabel(listing.disposalType),
   });
 
-  if (listing.tenure?.trim()) {
-    rows.push({ label: 'Tenure', value: listing.tenure.trim() });
+  if (listing.sector?.trim()) {
+    rows.push({ label: 'Property type', value: listing.sector.trim() });
+  }
+
+  const tenure = listing.tenure?.trim().replace(/_/g, ' ');
+  if (tenure) {
+    rows.push({
+      label: 'Tenure',
+      value: tenure[0]!.toUpperCase() + tenure.slice(1),
+    });
   }
 
   if (display.showSize) {
-    const size = formatBrochureSize(listing);
+    const size = brochureSizeValue(listing);
     if (size) rows.push({ label: 'Size', value: size });
   }
 
-  if (display.showRent) {
-    const rent = formatBrochureRent({
-      ...listing,
-      hideRentFromMarketing: false,
-    });
-    if (rent) rows.push({ label: 'Rent', value: rent });
-  }
+  const rent = brochureRentValue(listing, display);
+  if (rent) rows.push({ label: 'Rent', value: rent });
 
-  if (display.showPrice) {
-    const price = formatBrochurePrice({
-      ...listing,
-      hidePriceFromMarketing: false,
-    });
-    if (price) rows.push({ label: 'Price', value: price });
-  }
+  const price = brochurePriceValue(listing, display);
+  if (price) rows.push({ label: 'Price', value: price });
 
   if (display.showRates) {
     const rates = formatPerSqft(listing.ratesPayablePerSqft);
@@ -125,11 +196,14 @@ function buildFactsRows(
     rows.push({ label: 'Use class', value: listing.useClass.trim() });
   }
 
-  const epcParts = [listing.epcBand, listing.epcRating]
-    .filter((v) => v != null && String(v).trim() !== '')
-    .map(String);
-  if (epcParts.length > 0) {
-    rows.push({ label: 'EPC', value: epcParts.join(' / ') });
+  const epc = formatEpc(listing);
+  if (epc) rows.push({ label: 'EPC', value: epc });
+
+  const parking = formatParking(listing);
+  if (parking) rows.push({ label: 'Parking', value: parking });
+
+  if (listing.possession?.trim()) {
+    rows.push({ label: 'Possession', value: listing.possession.trim() });
   }
 
   if (listing.availableFrom?.trim()) {
@@ -139,15 +213,14 @@ function buildFactsRows(
   return rows;
 }
 
-export function buildAmenities(data: PublicBrochureData): Array<{
-  label: string;
-  index: number;
-}> {
+export function buildAmenities(
+  data: PublicBrochureData,
+): BrochureAmenityItem[] {
   if (data.nearbyAmenities && data.nearbyAmenities.length > 0) {
     return sanitizeBrochureAmenities(data.nearbyAmenities, data.listing.town);
   }
 
-  const amenities: Array<{ label: string; index: number }> = [
+  const amenities: BrochureAmenityItem[] = [
     ...buildFallbackNearbyAmenities(data.listing.town),
   ];
 
@@ -173,18 +246,8 @@ export function coverSlots(
   const cover = data.images.find((i) => i.isCover) ?? data.images[0] ?? null;
   const address = formatBrochureAddress(data.listing);
   const size = display.showSize ? formatBrochureSize(data.listing) : null;
-  const rent = display.showRent
-    ? formatBrochureRent({
-        ...data.listing,
-        hideRentFromMarketing: false,
-      })
-    : null;
-  const price = display.showPrice
-    ? formatBrochurePrice({
-        ...data.listing,
-        hidePriceFromMarketing: false,
-      })
-    : null;
+  const rent = brochureRentValue(data.listing, display);
+  const price = brochurePriceValue(data.listing, display);
   const priceLines = buildCoverPriceLines(data.listing, display);
   const showReduced =
     display.showReducedPrice || Boolean(data.showReducedPrice);
@@ -236,18 +299,54 @@ function contactSlots(
   };
 }
 
-function photoPages(
-  data: PublicBrochureData,
-  templateId: BrochureTemplateId,
-  orientation: BrochureOrientation,
-): BrochurePage[] {
+function galleryPool(data: PublicBrochureData) {
   // Prefer non-cover for gallery; fall back to remaining images after cover
   const gallery =
     data.images.length > 1
       ? data.images.filter((img) => !img.isCover)
       : data.images.slice(1);
+  return gallery.length > 0 ? gallery : data.images.slice(1);
+}
 
-  const pool = gallery.length > 0 ? gallery : data.images.slice(1);
+/**
+ * Photos that sit beside the facts table. A small set moves there entirely
+ * (no near-empty gallery page); a larger set lends one frame.
+ */
+function factsPagePhotos(data: PublicBrochureData) {
+  const pool = galleryPool(data);
+  return pool.slice(0, pool.length <= 2 ? pool.length : 1);
+}
+
+/**
+ * Portrait facts pages stack table, copy and photos in one column. Estimate
+ * the height left for photos using the renderer's A4 metrics (~32pt rows,
+ * ~100 chars per 14.5pt line, ~650pt of content) so a photo is only moved
+ * there when the renderer will have room to draw it.
+ */
+function portraitFactsPhotoRoom(
+  rowCount: number,
+  copy: Record<string, BrochureSlotValue> | null,
+): number {
+  const body = copy?.body?.type === 'text' ? copy.body.text.trim() : '';
+  const highlights =
+    copy?.highlights?.type === 'text'
+      ? copy.highlights.text.split('\n').filter((line) => line.trim()).length
+      : 0;
+  const tableH = rowCount * 32 + 26;
+  const bodyH = body ? Math.ceil(body.length / 100) * 14.5 + 12 : 0;
+  const listH = highlights > 0 ? 22 + highlights * 20 : 0;
+  return 650 - tableH - bodyH - listH;
+}
+
+const PORTRAIT_FACTS_PHOTO_MIN = 220;
+
+function photoPages(
+  data: PublicBrochureData,
+  templateId: BrochureTemplateId,
+  orientation: BrochureOrientation,
+  excludeIds: ReadonlySet<string> = new Set(),
+): BrochurePage[] {
+  const pool = galleryPool(data).filter((img) => !excludeIds.has(img.id));
   if (pool.length === 0) return [];
 
   const pages: BrochurePage[] = [];
@@ -339,6 +438,67 @@ function descriptionSlots(
   };
 }
 
+/** Listing location copy, else the automated local-area paragraph. */
+export function brochureLocationBody(data: PublicBrochureData): string {
+  return (
+    data.listing.locationCopy?.trim() || data.localArea?.summary?.trim() || ''
+  );
+}
+
+/**
+ * Body for the "Specification & terms" page. Light markup the renderer
+ * understands: "## " starts a section, "- " a bullet, blank lines split
+ * paragraphs.
+ */
+export function buildDetailsBody(data: PublicBrochureData): string {
+  const { listing } = data;
+  const blocks: string[] = [];
+  const amenities = (listing.amenities ?? [])
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const bullets = amenities.map((item) => `- ${item}`);
+  const sections = listing.marketingSections ?? [];
+  const hasSpecSection = sections.some(
+    (section) => section.kind === 'specifications',
+  );
+  if (bullets.length > 0 && !hasSpecSection) {
+    blocks.push(['## Specification', ...bullets].join('\n'));
+  }
+
+  let bulletsPlaced = !hasSpecSection;
+  for (const section of sections) {
+    const lines = [`## ${section.title.trim()}`, section.body.trim()];
+    if (section.kind === 'specifications' && !bulletsPlaced) {
+      lines.push(...bullets);
+      bulletsPlaced = true;
+    }
+    blocks.push(lines.filter(Boolean).join('\n'));
+  }
+
+  if (blocks.length === 0) return '';
+
+  const agency = data.accountName?.trim();
+  if (agency && !sections.some((section) => section.kind === 'viewings')) {
+    blocks.push(`## Viewing\nStrictly by appointment through ${agency}.`);
+  }
+
+  return blocks.join('\n\n');
+}
+
+/** Only when there is real spec / terms copy; an EPC alone stays in the facts table. */
+function detailsSlots(
+  data: PublicBrochureData,
+): Record<string, BrochureSlotValue> | null {
+  const body = buildDetailsBody(data);
+  if (!body) return null;
+  const epc = formatEpc(data.listing) ?? '';
+  return {
+    title: textSlot('Specification & terms'),
+    body: textSlot(body),
+    epc: textSlot(epc),
+  };
+}
+
 function floorplanPages(data: PublicBrochureData): BrochurePage[] {
   return data.floorplans.slice(0, 2).map((fp, index) =>
     page(
@@ -364,7 +524,7 @@ export function buildBrochureDocument(
   const facts = buildFactsRows(data, display);
   const amenities = buildAmenities(data);
   const descSlots = descriptionSlots(data, templateId);
-  const locationCopy = data.listing.locationCopy?.trim() ?? '';
+  const locationCopy = brochureLocationBody(data);
 
   const pages: BrochurePage[] = [];
 
@@ -379,9 +539,25 @@ export function buildBrochureDocument(
     ),
   );
 
+  // Editorial keeps the description on its own page; classic/compact fold
+  // brief copy into the facts page.
+  const combineCopy =
+    templateId !== 'editorial' && isShortBrochureCopy(descSlots);
+  const factsPhotosFit =
+    orientation === 'landscape' ||
+    portraitFactsPhotoRoom(facts.length, combineCopy ? descSlots : null) >=
+      PORTRAIT_FACTS_PHOTO_MIN;
+  const factsPhotos =
+    templateId !== 'editorial' && facts.length > 0 && factsPhotosFit
+      ? factsPagePhotos(data)
+      : [];
+  const factsPhotoIds = new Set(factsPhotos.map((img) => img.id));
+  const factsPhotoSlots: Record<string, BrochureSlotValue> = Object.fromEntries(
+    factsPhotos.map((img, i) => [`photo${i + 1}`, imageSlot(img.id, img.url)]),
+  );
+
   if (templateId === 'compact') {
     // Short pack: cover, facts (+ copy when brief), one photo, map, contact
-    const combineCopy = isShortBrochureCopy(descSlots);
     if (facts.length > 0) {
       pages.push(
         page('facts_table', {
@@ -390,6 +566,7 @@ export function buildBrochureDocument(
           ...(combineCopy && descSlots
             ? { body: descSlots.body, highlights: descSlots.highlights }
             : {}),
+          ...factsPhotoSlots,
         }),
       );
     }
@@ -398,7 +575,9 @@ export function buildBrochureDocument(
       pages.push(page('description_highlights', descSlots));
     }
 
-    pages.push(...photoPages(data, templateId, orientation).slice(0, 1));
+    pages.push(
+      ...photoPages(data, templateId, orientation, factsPhotoIds).slice(0, 1),
+    );
 
     if (data.listing.latitude != null && data.listing.longitude != null) {
       pages.push(
@@ -436,8 +615,6 @@ export function buildBrochureDocument(
   }
 
   // Classic + Editorial fuller packs
-  const combineCopy =
-    templateId === 'classic' && isShortBrochureCopy(descSlots);
   if (facts.length > 0) {
     pages.push(
       page(
@@ -450,6 +627,7 @@ export function buildBrochureDocument(
           ...(combineCopy && descSlots
             ? { body: descSlots.body, highlights: descSlots.highlights }
             : {}),
+          ...factsPhotoSlots,
         },
         templateId === 'editorial'
           ? { sectionNumber: '02', sectionLabel: 'The offering' }
@@ -470,10 +648,26 @@ export function buildBrochureDocument(
     );
   }
 
+  const details = detailsSlots(data);
+  if (details) {
+    pages.push(
+      page(
+        'details_columns',
+        details,
+        templateId === 'editorial'
+          ? { sectionNumber: '03', sectionLabel: 'Specification' }
+          : undefined,
+      ),
+    );
+  }
+
   const galleryLimit =
     templateId === 'editorial' ? 6 : orientation === 'landscape' ? 5 : 4;
   pages.push(
-    ...photoPages(data, templateId, orientation).slice(0, galleryLimit),
+    ...photoPages(data, templateId, orientation, factsPhotoIds).slice(
+      0,
+      galleryLimit,
+    ),
   );
 
   if (templateId === 'classic') {
@@ -517,6 +711,14 @@ export function buildBrochureDocument(
     ),
   );
 
+  if (templateId === 'editorial') {
+    // Optional pages shift the order; number tabs in reading order.
+    let section = 1;
+    for (const p of pages) {
+      if (p.sectionLabel) p.sectionNumber = String(section++).padStart(2, '0');
+    }
+  }
+
   return {
     listingId: data.listing.id,
     templateId,
@@ -546,6 +748,11 @@ export const BROCHURE_LAYOUT_OPTIONS: Array<{
     id: 'description_highlights',
     label: 'Description',
     description: 'Copy and key points',
+  },
+  {
+    id: 'details_columns',
+    label: 'Specification & terms',
+    description: 'Spec list, terms and EPC in columns',
   },
   {
     id: 'photo_full',
@@ -607,6 +814,12 @@ export function createBlankBrochurePage(
         title: textSlot('About the property'),
         body: textSlot(''),
         highlights: textSlot(''),
+      });
+    case 'details_columns':
+      return page(layoutId, {
+        title: textSlot('Specification & terms'),
+        body: textSlot('## Specification\n- \n\n## Terms\n'),
+        epc: textSlot(''),
       });
     case 'photo_full':
       return page(layoutId, { photo: emptyImage });

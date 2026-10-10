@@ -1,6 +1,9 @@
 export type BrochureAmenityItem = {
   label: string;
   index: number;
+  /** When set, the map page drops a numbered pin here. */
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 const DUMMY_LOCAL_AREA_RE = /^local area\s*\(/i;
@@ -89,19 +92,58 @@ export function buildFallbackNearbyAmenities(
   return items;
 }
 
+function finiteOrNull(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 export function sanitizeBrochureAmenities(
-  amenities: Array<{ label: string; index: number }>,
+  amenities: BrochureAmenityItem[],
   town?: string | null,
 ): BrochureAmenityItem[] {
   const cleaned = amenities
-    .map((item) => ({
-      label: item.label.trim(),
-      index: item.index,
-    }))
+    .map((item) => ({ ...item, label: item.label.trim() }))
     .filter((item) => item.label && !isDummyLocalAreaAmenity(item.label))
     .slice(0, MAX_AMENITIES)
-    .map((item, index) => ({ label: item.label, index: index + 1 }));
+    .map((item, index) => {
+      const latitude = finiteOrNull(item.latitude);
+      const longitude = finiteOrNull(item.longitude);
+      return latitude != null && longitude != null
+        ? { label: item.label, index: index + 1, latitude, longitude }
+        : { label: item.label, index: index + 1 };
+    });
 
   if (cleaned.length > 0) return cleaned;
   return buildFallbackNearbyAmenities(town);
+}
+
+/**
+ * Dataset places first (they carry map coordinates), then Mapbox POIs that
+ * add something new. Mapbox's town-centre fallback and stations are dropped
+ * when the dataset already covers them.
+ */
+export function mergeBrochureAmenities(
+  primary: BrochureAmenityItem[],
+  secondary: BrochureAmenityItem[],
+  max = MAX_AMENITIES,
+): BrochureAmenityItem[] {
+  const seen = new Set(primary.map((item) => amenityDedupeKey(item.label)));
+  const hasStation = primary.some((item) => /\bstation\b/i.test(item.label));
+  const hasTown = primary.some((item) =>
+    / (town|city) centre\b/i.test(item.label),
+  );
+  const merged = [...primary];
+
+  for (const item of secondary) {
+    if (merged.length >= max) break;
+    const key = amenityDedupeKey(item.label);
+    if (!key || seen.has(key)) continue;
+    if (hasStation && /\bstation\b/i.test(item.label)) continue;
+    if (hasTown && isTownCentreAmenity(item.label)) continue;
+    seen.add(key);
+    merged.push(item);
+  }
+
+  return merged
+    .slice(0, max)
+    .map((item, index) => ({ ...item, index: index + 1 }));
 }

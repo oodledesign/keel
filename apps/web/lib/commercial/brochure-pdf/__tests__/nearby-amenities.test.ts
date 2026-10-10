@@ -8,6 +8,7 @@ import {
   formatNearbyAmenityLabel,
   isDummyLocalAreaAmenity,
   isThinNearbyAmenityList,
+  mergeBrochureAmenities,
   sanitizeBrochureAmenities,
 } from '../nearby-amenities.shared';
 
@@ -438,5 +439,47 @@ describe('fetchNearbyBrochureAmenities', () => {
       ),
     ).toBe(true);
     errorSpy.mockRestore();
+  });
+});
+
+describe('mergeBrochureAmenities', () => {
+  it('keeps dataset places first and adds only new Mapbox POIs', () => {
+    const merged = mergeBrochureAmenities(
+      [
+        {
+          label: 'Otford station · 0.3 mi',
+          index: 1,
+          latitude: 51.31,
+          longitude: 0.19,
+        },
+        {
+          label: 'Sevenoaks town centre · 2.8 mi',
+          index: 2,
+          latitude: 51.27,
+          longitude: 0.19,
+        },
+      ],
+      [
+        { label: 'Shoreham station · 1.3 mi', index: 1 },
+        { label: 'Otford town centre', index: 2 },
+        { label: 'Otford station · 0.3 mi', index: 3 },
+        { label: 'Co-op · 0.1 mi', index: 4 },
+      ],
+    );
+    expect(merged.map((item) => [item.index, item.label])).toEqual([
+      [1, 'Otford station · 0.3 mi'],
+      [2, 'Sevenoaks town centre · 2.8 mi'],
+      [3, 'Co-op · 0.1 mi'],
+    ]);
+  });
+
+  it('caps the merged list', () => {
+    const many = Array.from({ length: 10 }, (_, i) => ({
+      label: `Place ${i}`,
+      index: i + 1,
+    }));
+    expect(
+      mergeBrochureAmenities(many.slice(0, 5), many.slice(5), 6),
+    ).toHaveLength(6);
   });
 });

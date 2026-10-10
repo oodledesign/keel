@@ -13,7 +13,15 @@ import {
   DEFAULT_BRAND_SECONDARY,
   loadAccountBrandResolved,
 } from '~/lib/brand/account-brand';
-import { fetchNearbyBrochureAmenities } from '~/lib/commercial/brochure-pdf/nearby-amenities';
+import { lookupLocalAreaFacts } from '~/lib/commercial/brochure-pdf/local-area';
+import {
+  buildBrochureLocalArea,
+  localAreaAmenities,
+} from '~/lib/commercial/brochure-pdf/local-area.shared';
+import {
+  fetchNearbyBrochureAmenities,
+  mergeBrochureAmenities,
+} from '~/lib/commercial/brochure-pdf/nearby-amenities';
 import type { DisposalType } from '~/lib/commercial/commercial-constants';
 import { sortListingMedia } from '~/lib/commercial/listing-media-order';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
@@ -21,6 +29,7 @@ import {
   type BrochureAgent,
   type BrochureBranch,
   type BrochureListing,
+  type BrochureMarketingSection,
   type BrochureMediaItem,
   type PublicBrochureData,
   resolveBrochureBranch,
@@ -32,6 +41,29 @@ function mapKeyPoints(value: unknown): string[] {
   return value
     .map((item) => (typeof item === 'string' ? item.trim() : ''))
     .filter(Boolean);
+}
+
+const MARKETING_SECTION_KINDS = new Set<BrochureMarketingSection['kind']>([
+  'promo',
+  'specifications',
+  'viewings',
+  'terms',
+  'custom',
+]);
+
+function mapMarketingSections(value: unknown): BrochureMarketingSection[] {
+  if (!Array.isArray(value)) return [];
+  const sections: BrochureMarketingSection[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    const kind = row.kind as BrochureMarketingSection['kind'];
+    const title = typeof row.title === 'string' ? row.title.trim() : '';
+    const body = typeof row.body === 'string' ? row.body.trim() : '';
+    if (!MARKETING_SECTION_KINDS.has(kind) || !title || !body) continue;
+    sections.push({ kind, title, body });
+  }
+  return sections;
 }
 
 function asNum(value: unknown): number | null {
@@ -110,6 +142,14 @@ function mapListingRow(listingRow: Record<string, unknown>): BrochureListing {
     description: (listingRow.description as string | null) ?? null,
     locationCopy: (listingRow.location_copy as string | null) ?? null,
     keyPoints: mapKeyPoints(listingRow.key_points),
+    sector: (listingRow.sector as string | null) ?? null,
+    measurementStandard:
+      (listingRow.measurement_standard as string | null) ?? null,
+    possession: (listingRow.possession as string | null) ?? null,
+    parkingAvailable: Boolean(listingRow.parking_available),
+    parkingSpaces: asNum(listingRow.parking_spaces),
+    amenities: mapKeyPoints(listingRow.amenities),
+    marketingSections: mapMarketingSections(listingRow.marketing_sections),
   };
 }
 
@@ -153,6 +193,13 @@ const LISTING_SELECT = [
   'description',
   'location_copy',
   'key_points',
+  'sector',
+  'measurement_standard',
+  'possession',
+  'parking_available',
+  'parking_spaces',
+  'amenities',
+  'marketing_sections',
   'account_branch_id',
   'website_url',
   'brochure_share_token',
@@ -193,12 +240,21 @@ export async function loadListingBrochureData(
       | null
       | undefined) ?? null;
 
+  const localFacts =
+    listing.latitude != null && listing.longitude != null
+      ? await lookupLocalAreaFacts({
+          latitude: listing.latitude,
+          longitude: listing.longitude,
+          town: listing.town,
+        })
+      : null;
+
   const [
     { data: accountRow, error: accountErr },
     { data: agentRows, error: agentErr },
     { data: mediaRows, error: mediaErr },
     branches,
-    nearbyAmenities,
+    mapboxAmenities,
   ] = await Promise.all([
     client
       .from('accounts')
@@ -239,6 +295,13 @@ export async function loadListingBrochureData(
         })
       : Promise.resolve([]),
   ]);
+
+  const nearbyAmenities = localFacts
+    ? mergeBrochureAmenities(localAreaAmenities(localFacts, 6), mapboxAmenities)
+    : mapboxAmenities;
+  const localArea = localFacts
+    ? buildBrochureLocalArea(localFacts, listing.town)
+    : null;
 
   if (accountErr) {
     console.error('[brochure-pdf] account load error:', accountErr.message);
@@ -451,6 +514,7 @@ export async function loadListingBrochureData(
     floorplans: media.filter((m) => m.mediaType === 'floorplan'),
     branch,
     nearbyAmenities,
+    localArea,
     websiteListingUrl,
     slideshowBrochureUrl,
   };

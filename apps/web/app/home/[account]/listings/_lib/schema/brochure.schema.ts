@@ -11,6 +11,7 @@ export const BrochureLayoutIdSchema = z.enum([
   'cover_hero_band',
   'facts_table',
   'description_highlights',
+  'details_columns',
   'photo_full',
   'photo_grid_2',
   'photo_grid_3',
@@ -72,6 +73,8 @@ const BrochureSlotValueSchema = z.discriminatedUnion('type', [
         z.object({
           label: z.string().max(200),
           index: z.number().int().min(1).max(99),
+          latitude: z.number().min(-90).max(90).nullable().optional(),
+          longitude: z.number().min(-180).max(180).nullable().optional(),
         }),
       )
       .max(20),
@@ -103,7 +106,7 @@ export const BrochurePageSchema = z.object({
 export const GetListingBrochureDocumentSchema = z.object({
   listingId: z.string().uuid(),
   accountId: z.string().uuid(),
-  orientation: BrochureOrientationSchema.default('portrait'),
+  orientation: BrochureOrientationSchema.default('landscape'),
 });
 
 export const SaveListingBrochureDocumentSchema = z.object({
@@ -136,7 +139,7 @@ export const BrochureDisplayOptionsSchema = z.object({
 export const BrochurePdfQuerySchema = z.object({
   listingId: z.string().uuid(),
   accountId: z.string().uuid(),
-  orientation: BrochureOrientationSchema.default('portrait'),
+  orientation: BrochureOrientationSchema.default('landscape'),
   template: BrochureTemplateIdSchema.default('classic'),
   useSaved: z
     .enum(['0', '1'])
@@ -183,7 +186,7 @@ export const BrochurePdfQuerySchema = z.object({
 export const PublishListingBrochurePdfSchema = z.object({
   listingId: z.string().uuid(),
   accountId: z.string().uuid(),
-  orientation: BrochureOrientationSchema.default('portrait'),
+  orientation: BrochureOrientationSchema.default('landscape'),
   templateId: BrochureTemplateIdSchema.default('classic'),
   useSaved: z.boolean().optional(),
   display: BrochureDisplayOptionsSchema.optional(),

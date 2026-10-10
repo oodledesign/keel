@@ -7,8 +7,11 @@ import type {
 
 import { DEFAULT_BROCHURE_DISPLAY_OPTIONS } from '../brochure-document';
 import {
+  brochureRentValue,
+  brochureSizeValue,
   buildAmenities,
   buildBrochureDocument,
+  buildDetailsBody,
   coverSlots,
 } from '../build-brochure-document';
 import { brochureSashHex, buildCoverPriceLines } from '../cover-prices';
@@ -269,5 +272,191 @@ describe('buildBrochureDocument', () => {
     expect(
       photoLayouts.filter((id) => id === 'photo_full').length,
     ).toBeLessThan(5);
+  });
+
+  function imageIds(doc: ReturnType<typeof buildBrochureDocument>) {
+    return doc.pages.flatMap((page) =>
+      Object.values(page.slots).flatMap((slot) =>
+        slot.type === 'image' && slot.mediaId ? [slot.mediaId] : [],
+      ),
+    );
+  }
+
+  it('moves a small photo set onto the facts page with no gallery page', () => {
+    const data = brochureData({
+      images: brochureData().images.slice(0, 3),
+    });
+    const doc = buildBrochureDocument(data, {
+      orientation: 'landscape',
+      templateId: 'classic',
+    });
+    const facts = doc.pages.find((page) => page.layoutId === 'facts_table');
+    expect(facts?.slots.photo1).toMatchObject({ mediaId: 'img-1' });
+    expect(facts?.slots.photo2).toMatchObject({ mediaId: 'img-2' });
+    expect(doc.pages.some((page) => page.layoutId.startsWith('photo_'))).toBe(
+      false,
+    );
+  });
+
+  it('keeps portrait photos in the gallery when the facts page is full', () => {
+    const data = brochureData({
+      images: brochureData().images.slice(0, 3),
+      listing: listing({
+        serviceChargePerSqft: 2,
+        ratesPayablePerSqft: 5,
+        estateChargePerSqft: 1,
+        epcBand: 'C',
+        epcRating: 51,
+        availableFrom: 'Immediately',
+        possession: 'On completion',
+        parkingSpaces: 4,
+        description: 'Prime retail unit. '.repeat(24),
+        keyPoints: ['One', 'Two', 'Three', 'Four', 'Five'],
+      }),
+    });
+    const doc = buildBrochureDocument(data, {
+      orientation: 'portrait',
+      templateId: 'classic',
+    });
+    const facts = doc.pages.find((page) => page.layoutId === 'facts_table');
+    expect(facts?.slots.photo1).toBeUndefined();
+    expect(imageIds(doc)).toEqual(expect.arrayContaining(['img-1', 'img-2']));
+  });
+
+  it('never places the same photo twice', () => {
+    for (const templateId of ['classic', 'compact', 'editorial'] as const) {
+      const doc = buildBrochureDocument(brochureData(), {
+        orientation: 'portrait',
+        templateId,
+      });
+      const ids = imageIds(doc);
+      expect(new Set(ids).size).toBe(ids.length);
+    }
+  });
+
+  it('keeps editorial facts pages text-only', () => {
+    const doc = buildBrochureDocument(brochureData(), {
+      orientation: 'landscape',
+      templateId: 'editorial',
+    });
+    const facts = doc.pages.find((page) => page.layoutId === 'facts_table');
+    expect(facts?.slots.photo1).toBeUndefined();
+  });
+
+  it('adds a details page only when there is spec or terms copy', () => {
+    const plain = buildBrochureDocument(brochureData(), {
+      orientation: 'landscape',
+      templateId: 'classic',
+    });
+    expect(
+      plain.pages.some((page) => page.layoutId === 'details_columns'),
+    ).toBe(false);
+
+    const rich = buildBrochureDocument(
+      brochureData({
+        listing: listing({ amenities: ['Air conditioning'], epcBand: 'C' }),
+      }),
+      { orientation: 'landscape', templateId: 'classic' },
+    );
+    const details = rich.pages.find(
+      (page) => page.layoutId === 'details_columns',
+    );
+    expect(text(details!.slots, 'epc')).toBe('C');
+  });
+});
+
+describe('brochure facts values', () => {
+  it('says "On application" for a hidden or missing rent on a to-let', () => {
+    expect(
+      brochureRentValue(listing({ hideRentFromMarketing: true }), {
+        ...DEFAULT_BROCHURE_DISPLAY_OPTIONS,
+        showRent: false,
+      }),
+    ).toBe('On application');
+    expect(
+      brochureRentValue(
+        listing({ askingRentPence: null }),
+        DEFAULT_BROCHURE_DISPLAY_OPTIONS,
+      ),
+    ).toBe('On application');
+    expect(
+      brochureRentValue(
+        listing({ disposalType: 'for_sale' }),
+        DEFAULT_BROCHURE_DISPLAY_OPTIONS,
+      ),
+    ).toBeNull();
+  });
+
+  it('adds sq m and the measurement basis to sizes', () => {
+    expect(
+      brochureSizeValue(
+        listing({
+          sizeMinSqft: 72,
+          sizeMaxSqft: 1146,
+          measurementStandard: 'nia',
+        }),
+      ),
+    ).toBe('72 – 1,146 sq ft (6.7 – 106.5 sq m) NIA');
+    expect(
+      brochureSizeValue(listing({ sizeMinSqft: null, sizeMaxSqft: null })),
+    ).toBeNull();
+  });
+});
+
+describe('buildDetailsBody', () => {
+  it('is empty without spec or marketing sections', () => {
+    expect(buildDetailsBody(brochureData())).toBe('');
+  });
+
+  it('lists the spec, marketing sections and a default viewing line', () => {
+    const body = buildDetailsBody(
+      brochureData({
+        listing: listing({
+          amenities: ['Air conditioning', ' ', 'Kitchen'],
+          marketingSections: [
+            { kind: 'terms', title: 'Terms', body: 'New FRI lease.' },
+          ],
+        }),
+      }),
+    );
+    expect(body).toBe(
+      [
+        '## Specification\n- Air conditioning\n- Kitchen',
+        '## Terms\nNew FRI lease.',
+        '## Viewing\nStrictly by appointment through Bracketts.',
+      ].join('\n\n'),
+    );
+  });
+
+  it('folds amenities into an existing specification section', () => {
+    const body = buildDetailsBody(
+      brochureData({
+        listing: listing({
+          amenities: ['Kitchen'],
+          marketingSections: [
+            {
+              kind: 'specifications',
+              title: 'Specification',
+              body: 'Refurbished throughout.',
+            },
+          ],
+        }),
+      }),
+    );
+    expect(body.match(/## Specification/g)).toHaveLength(1);
+    expect(body).toContain('Refurbished throughout.\n- Kitchen');
+  });
+
+  it("keeps the agent's own viewing section", () => {
+    const body = buildDetailsBody(
+      brochureData({
+        listing: listing({
+          marketingSections: [
+            { kind: 'viewings', title: 'Viewings', body: 'Call the office.' },
+          ],
+        }),
+      }),
+    );
+    expect(body).toBe('## Viewings\nCall the office.');
   });
 });

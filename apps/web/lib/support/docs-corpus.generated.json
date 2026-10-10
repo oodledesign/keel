@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-09T22:25:55.279Z",
-  "chunkCount": 140,
+  "generatedAt": "2026-10-10T00:49:40.529Z",
+  "chunkCount": 142,
   "chunks": [
     {
       "id": "42c411100896",
@@ -117,10 +117,10 @@
       "text": "Disposals\n\nDisposals are your commercial listings — to let, for sale, or investment. Open the list at /app/[account]/listings.\n\nYou need a billable seat to create or edit disposals. Support seats can view.\n\nDisposal types\n\n| Type | Typical use |\n| --- | --- |\n| To let | Occupational letting |\n| For sale | Occupational / freehold sale |\n| Investment | Investment disposal |\n\nStatus lifecycle\n\nStatuses move a disposal from draft through marketing to let, sold, or withdrawn:\n\n1. Draft — capture address and basics before instruction is confirmed\n2. Instructed — terms of engagement in place; not yet on the market\n3. Marketing — live for marketing / portals (when publishing is configured)\n4. Under offer — negotiation in progress\n5. Let or Sold — completed outcome\n6. Withdrawn — off the market without a deal\n\nCreate a disposal\n\n1. Go to /app/[account]/listings.\n2. Choose New disposal (or the create action shown on the page).\n3."
     },
     {
-      "id": "179a069f8a93",
+      "id": "0ebfaf17ca6d",
       "path": "/commercial-property/disposals/listing-detail",
       "title": "Listing detail",
-      "text": "3. Toggle Website to include or exclude this disposal from the website XML feed (included by default when on-market).\n4. Toggle EACH to include or exclude this disposal from the EACH XML feed.\n5. Rightmove is visible but not live yet.\n6. Share the online brochure or generate a PDF, and post to LinkedIn from this tab.\n7. Workspace feed URLs and credentials stay under Website & portals.\n\nMedia\n\n1. Open Media.\n2. Upload public images and documents intended for brochures and portals.\n3. Set a primary image so list views and feeds look correct.\n4. Keep sensitive files (keys, reports, solicitor packs) on Management → private media, not here.\n\nInterest\n\n1. Open Interest.\n2. Review suggested fits, then Circulate to email matching applicants via SES (workspace brand).\n3. Add or attach interest from contacts and requirements.\n4. Progress each row through the interest schedule (for example new → viewing arranged → viewed → offer → under offer → agreed).\n5."
+      "text": "iator / team ownership.\n4. Add co-agents when jointly instructed.\n5. Attach landlord and other parties from Contacts.\n6. Capture advanced attributes (for example BREEAM) when required for marketing or portals.\n7. Upload private media that must not publish.\n8. Share a landlord-only interest schedule when needed. Channel go-live lives on Publishing.\n\nYou need a billable seat to mutate management fields. Support seats remain view / notes limited — see Seats & billing."
     },
     {
       "id": "1c7d46bd916f",
@@ -132,19 +132,31 @@
       "id": "1d5607e0c489",
       "path": "/commercial-property/disposals/listing-detail",
       "title": "Listing detail",
-      "text": "private media |\n\nOverview\n\n1. Open the disposal from Disposals.\n2. Confirm address, disposal type, and status badge.\n3. Use the summary widgets (for example upcoming viewings) as a jump-off point into other tabs.\n4. Switch tabs from the listing nav — do not create a second disposal for the same instruction.\n\nMarketing\n\n1. Open Marketing.\n2. Complete headline particulars, description, amenities, and any AI-assisted draft fields you use.\n3. Hide rent or price as POA when figures should not appear on particulars.\n4. Align marketing text with the physical Availability schedule before going live.\n5. Team, co-agents, and channel toggles are not on this tab — use Management and Publishing.\n\nPublishing\n\n1. Open Publishing.\n2. Check marketing readiness (missing EPC warns before enabling a live channel; it does not hard-block).\n3. Toggle Website to include or exclude this disposal from the website XML feed (included by default when on-market).\n4."
+      "text": "private media |\n\nOverview\n\n1. Open the disposal from Disposals.\n2. Confirm address, disposal type, and status badge.\n3. Use the summary widgets (for example upcoming viewings) as a jump-off point into other tabs.\n4. Switch tabs from the listing nav — do not create a second disposal for the same instruction.\n\nMarketing\n\n1. Open Marketing.\n2. Complete headline particulars, description, amenities, and any AI-assisted draft fields you use.\n - Generate with AI drafts the summary, description, location paragraph and key points. The location paragraph only uses measured distances to nearby stations, motorway junctions and towns. Each generation uses 3 AI credits from the workspace pool, and nothing is saved until you save.\n3. Hide rent or price as POA when figures should not appear on particulars.\n4. Align marketing text with the physical Availability schedule before going live.\n5. Team, co-agents, and channel toggles are not on this tab — use Management and Publishing.\n\nPublishing\n\n1."
     },
     {
-      "id": "8e5928135cd1",
+      "id": "54a88df23dcc",
       "path": "/commercial-property/disposals/listing-detail",
       "title": "Listing detail",
-      "text": "each row through the interest schedule (for example new → viewing arranged → viewed → offer → under offer → agreed).\n5. Cross-check with Viewings so diary and interest stay aligned.\n6. When interest becomes a serious negotiation, also update WIP / HoTs as appropriate.\n\nAvailability\n\n1. Open Availability.\n2. Record total size or break down floor-by-floor / unit-by-unit.\n3. Mark units available, under offer, or let/sold so marketing matches stock.\n4. Revisit after each letting or sales completion.\n\nManagement\n\n1. Open Management.\n2. Complete instruction fields (terms of engagement, control, sizing accuracy, and related attributes).\n3. Assign internal negotiator / team ownership.\n4. Add co-agents when jointly instructed.\n5. Attach landlord and other parties from Contacts.\n6. Capture advanced attributes (for example BREEAM) when required for marketing or portals.\n7. Upload private media that must not publish.\n8. Share a landlord-only interest schedule when needed."
+      "text": "wns with distances, and a map with numbered pins for each nearby place. Distances are straight-line, for guidance only.\n - Contact: office details, shopfront photo, agents and the important notice.\n4. Use the Details to include toggles to hide rent, price, size, rates, service or estate charges, or to add a reduced-price badge and website or online brochure buttons.\n5. Agency logo and colours come from workspace brand settings. Office details and the shopfront photo come from the disposal's branch.\n\nMedia\n\n1. Open Media.\n2. Upload public images and documents intended for brochures and portals.\n3. Set a primary image so list views and feeds look correct.\n4. Keep sensitive files (keys, reports, solicitor packs) on Management → private media, not here.\n\nInterest\n\n1. Open Interest.\n2. Review suggested fits, then Circulate to email matching applicants via SES (workspace brand).\n3. Add or attach interest from contacts and requirements.\n4."
     },
     {
-      "id": "91516178cad6",
+      "id": "92c4a15e1de4",
       "path": "/commercial-property/disposals/listing-detail",
       "title": "Listing detail",
-      "text": "eting or portals.\n7. Upload private media that must not publish.\n8. Share a landlord-only interest schedule when needed. Channel go-live lives on Publishing.\n\nYou need a billable seat to mutate management fields. Support seats remain view / notes limited — see Seats & billing."
+      "text": "going live.\n5. Team, co-agents, and channel toggles are not on this tab — use Management and Publishing.\n\nPublishing\n\n1. Open Publishing.\n2. Check marketing readiness (missing EPC warns before enabling a live channel; it does not hard-block).\n3. Toggle Website to include or exclude this disposal from the website XML feed (included by default when on-market).\n4. Toggle EACH to include or exclude this disposal from the EACH XML feed.\n5. Rightmove is visible but not live yet.\n6. Share the online brochure or generate a PDF, and post to LinkedIn from this tab. Generate with AI for a LinkedIn post uses 3 AI credits per draft; writing your own or using the listing description is free.\n7. Workspace feed URLs and credentials stay under Website & portals.\n\nBrochure\n\nThe PDF brochure is built from the disposal itself. Building, editing, publishing and downloading it uses no AI credits.\n\n1."
+    },
+    {
+      "id": "df7e157d14e6",
+      "path": "/commercial-property/disposals/listing-detail",
+      "title": "Listing detail",
+      "text": "ate to email matching applicants via SES (workspace brand).\n3. Add or attach interest from contacts and requirements.\n4. Progress each row through the interest schedule (for example new → viewing arranged → viewed → offer → under offer → agreed).\n5. Cross-check with Viewings so diary and interest stay aligned.\n6. When interest becomes a serious negotiation, also update WIP / HoTs as appropriate.\n\nAvailability\n\n1. Open Availability.\n2. Record total size or break down floor-by-floor / unit-by-unit.\n3. Mark units available, under offer, or let/sold so marketing matches stock.\n4. Revisit after each letting or sales completion.\n\nManagement\n\n1. Open Management.\n2. Complete instruction fields (terms of engagement, control, sizing accuracy, and related attributes).\n3. Assign internal negotiator / team ownership.\n4. Add co-agents when jointly instructed.\n5. Attach landlord and other parties from Contacts.\n6."
+    },
+    {
+      "id": "e29a434b90fc",
+      "path": "/commercial-property/disposals/listing-detail",
+      "title": "Listing detail",
+      "text": "PDF brochure is built from the disposal itself. Building, editing, publishing and downloading it uses no AI credits.\n\n1. From Publishing, choose Brochure PDF… to preview or publish to Media, or open the brochure editor to edit pages.\n2. Pick a template (Classic, Editorial or Compact) and an orientation. Landscape is the default; choose Portrait for traditional particulars. Each orientation keeps its own saved pages.\n3. Pages fill in automatically:\n - Cover: hero photo, disposal badge, address, and a grid of size, use, tenure and rent or price.\n - Summary: key facts table with photos.\n - Description: copy from Marketing, with key features.\n - Specification & terms: amenities, marketing sections and an EPC scale.\n - Photos and floor plans from Media.\n - Location: location copy, nearest stations, motorway junctions and towns with distances, and a map with numbered pins for each nearby place. Distances are straight-line, for guidance only."
     },
     {
       "id": "efe0009b25a2",

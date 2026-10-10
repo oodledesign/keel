@@ -198,9 +198,9 @@ export const COMMERCIAL_SIX_JOBS_PANELS: SixJobsPanel[] = [
     oneLine:
       'Branded particulars and a shareable slideshow, from the same disposal.',
     bullets: [
-      'PDF brochure for print and email',
-      'Online slideshow with photos, floorplans and location',
-      'Enquiry form wired back to you',
+      'PDF brochure in landscape or portrait',
+      'Local area and nearby-places map filled in for you',
+      'Online slideshow with an enquiry form wired back to you',
     ],
     bgStyle: {
       bg: 'bg-[#E4E8DC]',

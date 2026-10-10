@@ -76,6 +76,14 @@ const config = {
       './lib/building-surveyor/fonts/*.ttf',
       './public/brand/rics-*.png',
     ],
+    // Brochure PDFs render in these API routes and the listings server actions.
+    '/api/listings/brochure-pdf': ['./lib/commercial/brochure-pdf/fonts/*.ttf'],
+    '/api/commercial/listing-brochure/**': [
+      './lib/commercial/brochure-pdf/fonts/*.ttf',
+    ],
+    '/home/[account]/listings/**': [
+      './lib/commercial/brochure-pdf/fonts/*.ttf',
+    ],
   },
   redirects: getRedirects,
   rewrites: getRewrites,

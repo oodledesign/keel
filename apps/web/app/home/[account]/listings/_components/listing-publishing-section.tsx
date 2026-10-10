@@ -184,7 +184,9 @@ export function ListingPublishingSection({
               PDF brochure
             </p>
             <p className="mb-2 text-xs text-[var(--workspace-shell-text-muted)]">
-              Preview, publish to Media for portals, or upload an external PDF.
+              Landscape or portrait, with local area facts and a nearby-places
+              map filled in automatically. Preview, publish to Media for
+              portals, or upload an external PDF. No AI credits used.
             </p>
             <ListingBrochureDownload
               listingId={listing.id}

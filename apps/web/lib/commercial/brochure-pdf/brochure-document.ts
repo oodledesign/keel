@@ -40,7 +40,12 @@ export type BrochureSlotValue =
       type: 'map';
       latitude: number | null;
       longitude: number | null;
-      amenities: Array<{ label: string; index: number }>;
+      amenities: Array<{
+        label: string;
+        index: number;
+        latitude?: number | null;
+        longitude?: number | null;
+      }>;
     }
   | { type: 'agents' }
   | {
@@ -52,6 +57,7 @@ export type BrochureLayoutId =
   | 'cover_hero_band'
   | 'facts_table'
   | 'description_highlights'
+  | 'details_columns'
   | 'photo_full'
   | 'photo_grid_2'
   | 'photo_grid_3'

@@ -37,6 +37,8 @@ export type ListingMarketingSource = {
   epcRating: string | number | null;
   existingSummary?: string | null;
   existingDescription?: string | null;
+  /** Straight-line distances from bundled UK datasets (stations, motorways, towns, airports). */
+  verifiedLocalFacts?: string[];
 };
 
 export async function generateListingMarketingCopy(input: {
@@ -54,6 +56,7 @@ Return ONLY valid JSON:
 }
 Rules:
 - Use only facts present in the listing data. Do not invent amenities, transport, rents, or sizes.
+- verifiedLocalFacts (when present) are measured straight-line distances: use them for locationCopy, rounding naturally ("approximately 0.3 miles", "around a 7 minute walk"). Never add stations, roads, journey times or places not listed there.
 - Concise agency tone. No emoji. No markdown headings.
 - If a fact is missing, omit it rather than guessing.
 - Prefer sq ft and £ formatting where numbers are provided.`;

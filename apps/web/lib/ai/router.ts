@@ -19,6 +19,10 @@ import {
   isConversationalAiFeature,
   withAiSafetySystemPrompt,
 } from '~/lib/ai/safety';
+import {
+  LISTING_LINKEDIN_POST_CREDITS,
+  LISTING_MARKETING_COPY_CREDITS,
+} from '~/lib/commercial/listing-ai-credits.shared';
 
 export const GEMINI_FLASH_LITE_MODEL = 'gemini-3.1-flash-lite';
 export const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
@@ -503,7 +507,7 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
   commercial_listing_marketing_copy: {
     provider: 'anthropic',
     model: HAIKU_MODEL,
-    credits: 3,
+    credits: LISTING_MARKETING_COPY_CREDITS,
     batchable: false,
     maxOutputTokens: 2048,
     structuredOutput: true,
@@ -511,7 +515,7 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
   commercial_listing_linkedin_post: {
     provider: 'anthropic',
     model: HAIKU_MODEL,
-    credits: 3,
+    credits: LISTING_LINKEDIN_POST_CREDITS,
     batchable: false,
     maxOutputTokens: 1024,
     structuredOutput: true,

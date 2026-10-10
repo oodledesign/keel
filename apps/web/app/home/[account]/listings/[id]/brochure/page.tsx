@@ -19,7 +19,7 @@ interface PageProps {
 async function ListingBrochureEditorPage({ params, searchParams }: PageProps) {
   const { account: slug, id: listingId } = await params;
   const sp = await searchParams;
-  const orientation = sp.orientation === 'landscape' ? 'landscape' : 'portrait';
+  const orientation = sp.orientation === 'portrait' ? 'portrait' : 'landscape';
 
   const workspace = await loadTeamWorkspace(slug);
   const accountId = workspace.account.id as string;

@@ -43,6 +43,7 @@ import {
   type AskingPriceQualifier,
   disposalIncludesForSale,
 } from '~/lib/commercial/commercial-constants';
+import { LISTING_MARKETING_COPY_CREDITS } from '~/lib/commercial/listing-ai-credits.shared';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
@@ -275,7 +276,13 @@ export function ListingMarketingEditor({
       data-tour="sop-listing-marketing"
     >
       <div className="space-y-6">
-        <div className="flex flex-wrap justify-end gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+          <p className="max-w-md text-right text-xs text-[var(--workspace-shell-text)]/50">
+            Drafts the summary, description, location and key points. Location
+            copy uses measured distances to nearby stations, motorway junctions
+            and towns. Uses {LISTING_MARKETING_COPY_CREDITS} AI credits per
+            generation, and nothing is saved until you save.
+          </p>
           <Button
             type="button"
             variant="outline"

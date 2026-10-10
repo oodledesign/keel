@@ -788,9 +788,11 @@ export function ListingBrochureEditor({
             Brochure editor
           </h2>
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-            Slot-based pages for {listingName}. Preview mirrors layout and brand
-            colours — download PDF for print-ready output. After changing
-            template, regenerate to rebuild pages.
+            Pages for {listingName}, built from the listing details, photos and
+            floor plans, with local area facts (nearest stations, motorway
+            junctions and towns) and a map of nearby places filled in
+            automatically. Changing template rebuilds the pages. Building and
+            downloading the brochure uses no AI credits.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -802,8 +804,8 @@ export function ListingBrochureEditor({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="portrait">Portrait</SelectItem>
               <SelectItem value="landscape">Landscape</SelectItem>
+              <SelectItem value="portrait">Portrait</SelectItem>
             </SelectContent>
           </Select>
           <Select

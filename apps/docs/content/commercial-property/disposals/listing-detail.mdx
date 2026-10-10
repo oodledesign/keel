@@ -2,15 +2,15 @@
 
 Open any disposal from `/app/[account]/listings` to reach `/app/[account]/listings/[id]`. The left (or top, on mobile) nav groups the work into these tabs:
 
-| Tab          | Path suffix     | Purpose                                                              |
-| ------------ | --------------- | -------------------------------------------------------------------- |
-| Overview     | (base)          | Snapshot of status, address, and key metrics                         |
-| Marketing    | `/marketing`    | Particulars copy only (summary, key points, amenities, POA)          |
-| Publishing   | `/publishing`   | Go-live channels: Website, EACH, Rightmove, brochure, LinkedIn       |
-| Media        | `/media`        | Public photos, floorplans, and brochure assets                       |
-| Interest     | `/interest`     | Interest schedule against contacts / requirements                    |
-| Availability | `/availability` | Units, floors, and availability schedule                             |
-| Management   | `/management`   | Instruction, assignment, co-agents, parties, private media           |
+| Tab          | Path suffix     | Purpose                                                        |
+| ------------ | --------------- | -------------------------------------------------------------- |
+| Overview     | (base)          | Snapshot of status, address, and key metrics                   |
+| Marketing    | `/marketing`    | Particulars copy only (summary, key points, amenities, POA)    |
+| Publishing   | `/publishing`   | Go-live channels: Website, EACH, Rightmove, brochure, LinkedIn |
+| Media        | `/media`        | Public photos, floorplans, and brochure assets                 |
+| Interest     | `/interest`     | Interest schedule against contacts / requirements              |
+| Availability | `/availability` | Units, floors, and availability schedule                       |
+| Management   | `/management`   | Instruction, assignment, co-agents, parties, private media     |
 
 ## Overview
 
@@ -23,6 +23,7 @@ Open any disposal from `/app/[account]/listings` to reach `/app/[account]/listin
 
 1. Open **Marketing**.
 2. Complete headline particulars, description, amenities, and any AI-assisted draft fields you use.
+   - **Generate with AI** drafts the summary, description, location paragraph and key points. The location paragraph only uses measured distances to nearby stations, motorway junctions and towns. Each generation uses **3 AI credits** from the workspace pool, and nothing is saved until you save.
 3. Hide rent or price as POA when figures should not appear on particulars.
 4. Align marketing text with the physical **Availability** schedule before going live.
 5. Team, co-agents, and channel toggles are not on this tab — use **Management** and **Publishing**.
@@ -34,8 +35,25 @@ Open any disposal from `/app/[account]/listings` to reach `/app/[account]/listin
 3. Toggle **Website** to include or exclude this disposal from the website XML feed (included by default when on-market).
 4. Toggle **EACH** to include or exclude this disposal from the EACH XML feed.
 5. **Rightmove** is visible but not live yet.
-6. Share the online brochure or generate a PDF, and post to LinkedIn from this tab.
+6. Share the online brochure or generate a PDF, and post to LinkedIn from this tab. **Generate with AI** for a LinkedIn post uses **3 AI credits** per draft; writing your own or using the listing description is free.
 7. Workspace feed URLs and credentials stay under **Website & portals**.
+
+## Brochure
+
+The PDF brochure is built from the disposal itself. Building, editing, publishing and downloading it uses **no AI credits**.
+
+1. From **Publishing**, choose **Brochure PDF…** to preview or publish to Media, or open the **brochure editor** to edit pages.
+2. Pick a template (Classic, Editorial or Compact) and an orientation. **Landscape** is the default; choose **Portrait** for traditional particulars. Each orientation keeps its own saved pages.
+3. Pages fill in automatically:
+   - **Cover**: hero photo, disposal badge, address, and a grid of size, use, tenure and rent or price.
+   - **Summary**: key facts table with photos.
+   - **Description**: copy from Marketing, with key features.
+   - **Specification & terms**: amenities, marketing sections and an EPC scale.
+   - **Photos** and **floor plans** from Media.
+   - **Location**: location copy, nearest stations, motorway junctions and towns with distances, and a map with numbered pins for each nearby place. Distances are straight-line, for guidance only.
+   - **Contact**: office details, shopfront photo, agents and the important notice.
+4. Use the **Details to include** toggles to hide rent, price, size, rates, service or estate charges, or to add a reduced-price badge and website or online brochure buttons.
+5. Agency logo and colours come from workspace brand settings. Office details and the shopfront photo come from the disposal's branch.
 
 ## Media
 

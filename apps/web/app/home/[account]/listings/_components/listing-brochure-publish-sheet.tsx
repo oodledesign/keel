@@ -89,7 +89,7 @@ export function ListingBrochurePublishSheet({
   const router = useRouter();
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const [orientation, setOrientation] =
-    useState<BrochureOrientation>('portrait');
+    useState<BrochureOrientation>('landscape');
   const [templateId, setTemplateId] = useState<BrochureTemplateId>('classic');
   const [useSaved, setUseSaved] = useState(true);
   const [display, setDisplay] = useState<BrochureDisplayOptions>({
@@ -274,6 +274,10 @@ export function ListingBrochurePublishSheet({
               ) : null}
             </div>
           </div>
+          <p className="mt-3 text-xs text-[var(--workspace-shell-text-muted)]">
+            A branded PDF built from this disposal: photos, key facts, local
+            area and map, specification and contact details. Uses no AI credits.
+          </p>
         </SheetHeader>
 
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5">
@@ -316,11 +320,11 @@ export function ListingBrochurePublishSheet({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="portrait">
-                      Portrait (particulars)
-                    </SelectItem>
                     <SelectItem value="landscape">
                       Landscape (offering memo)
+                    </SelectItem>
+                    <SelectItem value="portrait">
+                      Portrait (particulars)
                     </SelectItem>
                   </SelectContent>
                 </Select>

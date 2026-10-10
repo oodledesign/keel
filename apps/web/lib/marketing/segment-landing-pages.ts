@@ -42,6 +42,10 @@ import {
   MARKETING_WORKSPACE_PLANS,
   type MarketingWorkspacePlan,
 } from '~/lib/billing/pricing-marketing';
+import {
+  LISTING_LINKEDIN_POST_CREDITS,
+  LISTING_MARKETING_COPY_CREDITS,
+} from '~/lib/commercial/listing-ai-credits.shared';
 
 export type SegmentSlug = 'personal' | 'work' | 'commercial-property';
 
@@ -254,7 +258,7 @@ function commercialPricingCards(): SegmentPricingCard[] {
     'Disposals, units & marketing',
     'Pipeline (instructions & requirements)',
     'Interest matching',
-    'Online brochures & branded decks',
+    'PDF & online brochures',
     'AI drafts for copy & requirements',
     'Rightmove, EACH & Property Hive WP',
   ];
@@ -618,7 +622,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
           icon: Wallet,
           title: 'Brochures, PDF or online',
           description:
-            'Branded PDF particulars for print and email, and shareable online slideshows, created from the same disposal.',
+            'Branded PDF particulars in landscape or portrait, with local area facts and a nearby-places map filled in automatically, plus shareable online slideshows from the same disposal.',
         },
       ],
       steps: [
@@ -695,13 +699,11 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
         },
         {
           question: 'What does AI do on the desk?',
-          answer:
-            'It drafts where the desk loses time: disposal marketing copy, requirement briefs from an enquiry or pasted email, match explanations, add/skip/review triage and a first outreach email. You review every draft, and nothing is saved, published or sent until you confirm.',
+          answer: `It drafts where the desk loses time: disposal marketing copy, LinkedIn posts, requirement briefs from an enquiry or pasted email, match explanations, add/skip/review triage and a first outreach email. You review every draft, and nothing is saved, published or sent until you confirm. Drafts come out of the workspace AI credit pool, and the cost is shown next to each button (disposal copy is ${LISTING_MARKETING_COPY_CREDITS} credits and a LinkedIn post ${LISTING_LINKEDIN_POST_CREDITS}).`,
         },
         {
           question: 'How do brochures work?',
-          answer:
-            'Each disposal can generate branded PDF particulars for print and email, or a shareable online slideshow with photos, floorplans and an enquiry form. Agency colours and logo apply automatically, and enquiries route back to the acting agents.',
+          answer: `Each disposal generates branded PDF particulars, landscape or portrait, from what is already on the desk: photos, key facts, specification and EPC, floor plans and contact details. Local area facts (nearest stations, motorway junctions and towns, with distances) and a map of nearby places fill in automatically. You can also share an online slideshow whose enquiry form routes back to the acting agents. Building a brochure uses no AI credits; drafting the marketing copy with AI uses ${LISTING_MARKETING_COPY_CREDITS} credits per generation.`,
         },
         {
           question: 'How does interest matching work?',

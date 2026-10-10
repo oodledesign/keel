@@ -137,7 +137,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const { bytes, filename } = await generateListingBrochurePdf({
       listingId,
       accountId: publishable.listing.account_id,
-      orientation: saved?.orientation ?? 'portrait',
+      orientation: saved?.orientation ?? 'landscape',
       templateId: saved?.templateId ?? 'classic',
       document: saved,
       client: getSupabaseServerAdminClient(),

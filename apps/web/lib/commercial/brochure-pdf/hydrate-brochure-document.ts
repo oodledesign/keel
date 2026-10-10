@@ -3,7 +3,9 @@ import type {
   BrochurePage,
   BrochureSlotValue,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import { brochureLocationBody } from '~/lib/commercial/brochure-pdf/build-brochure-document';
 import {
+  amenityDedupeKey,
   buildFallbackNearbyAmenities,
   isThinNearbyAmenityList,
   sanitizeBrochureAmenities,
@@ -23,6 +25,8 @@ const PHOTO_SLOT_KEYS: Record<string, string[]> = {
   floorplan: ['plan'],
 };
 
+const FACTS_PHOTO_KEYS = ['photo1', 'photo2'];
+
 function isImageSlot(
   slot: BrochureSlotValue | undefined,
 ): slot is Extract<BrochureSlotValue, { type: 'image' }> {
@@ -35,6 +39,30 @@ function mediaSlot(item: BrochureMediaItem): BrochureSlotValue {
 
 function hasImageUrl(slot: BrochureSlotValue | undefined): boolean {
   return isImageSlot(slot) && Boolean(slot.url?.trim());
+}
+
+type MapAmenity = Extract<
+  BrochureSlotValue,
+  { type: 'map' }
+>['amenities'][number];
+
+/** Saved pages predating map pins: borrow coordinates from matching fetched places. */
+function attachAmenityCoordinates(
+  saved: MapAmenity[],
+  fetched: NonNullable<PublicBrochureData['nearbyAmenities']>,
+): MapAmenity[] {
+  const byKey = new Map(
+    fetched
+      .filter((item) => item.latitude != null && item.longitude != null)
+      .map((item) => [amenityDedupeKey(item.label), item]),
+  );
+  return saved.map((item) => {
+    if (item.latitude != null && item.longitude != null) return item;
+    const match = byKey.get(amenityDedupeKey(item.label));
+    return match
+      ? { ...item, latitude: match.latitude, longitude: match.longitude }
+      : item;
+  });
 }
 
 /**
@@ -113,6 +141,12 @@ export function hydrateBrochureDocument(
       if (!lockedToListingMedia) {
         slots.shopfront = { type: 'image', mediaId: null, url: shopfront };
       }
+    } else if (page.layoutId === 'facts_table') {
+      // Optional side photos: refresh by mediaId, never back-fill.
+      for (const key of FACTS_PHOTO_KEYS) {
+        const resolved = resolve(slots[key], null, imageById);
+        if (resolved) slots[key] = resolved;
+      }
     } else if (keys.length > 0 && page.layoutId.startsWith('photo_')) {
       for (const key of keys) {
         const slot = slots[key];
@@ -137,7 +171,20 @@ export function hydrateBrochureDocument(
             ? sanitizeBrochureAmenities(fetched, data.listing.town)
             : buildFallbackNearbyAmenities(data.listing.town, fetched);
         slots.map = { ...slots.map, amenities };
+      } else {
+        slots.map = {
+          ...slots.map,
+          amenities: attachAmenityCoordinates(slots.map.amenities, fetched),
+        };
       }
+    }
+
+    if (
+      page.layoutId === 'map_amenities' &&
+      !(slots.body?.type === 'text' && slots.body.text.trim())
+    ) {
+      const location = brochureLocationBody(data).slice(0, 800);
+      if (location) slots.body = { type: 'text', text: location };
     }
 
     return { ...page, slots };

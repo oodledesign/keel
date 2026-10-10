@@ -830,17 +830,20 @@ async function CommercialSpotlightSections({
               Brochures, PDF or online
             </h2>
             <p className={cn(marketingLede, 'mt-4', marketingBodyText)}>
-              Generate branded PDF particulars for print and email, or share an
-              interactive online slideshow with photos, key facts, floorplans,
-              location and an enquire form. Agency colours and logo apply
-              automatically.
+              Generate branded PDF particulars in landscape or portrait, or
+              share an interactive online slideshow. Photos, key facts, floor
+              plans, specification and contact details come straight from the
+              disposal, and the local area (nearest stations, motorway junctions
+              and towns, with distances) is filled in for you with a map of
+              nearby places. Agency colours and logo apply automatically.
             </p>
             <RuledList
               className="mt-6"
               items={[
-                'PDF brochure ready for print and email attachments',
-                'Shareable online brochure link for landlords and enquirers',
-                'Enquire form wired back to the acting agents',
+                'PDF brochure in landscape or portrait, ready for print and email',
+                'Local area facts and a nearby-places map, filled in automatically',
+                'Shareable online brochure with an enquiry form wired back to the acting agents',
+                'No AI credits to build a brochure',
               ]}
             />
             {brochureUrl ? (
