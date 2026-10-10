@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+import {
+  BROCHURE_IMAGE_FITS,
+  BROCHURE_IMAGE_FOCUSES,
+} from '~/lib/commercial/brochure-pdf/brochure-document';
 import { AMENITY_ICONS } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 
 export const BrochureOrientationSchema = z.enum(['portrait', 'landscape']);
@@ -61,6 +65,8 @@ const BrochureSlotValueSchema = z.discriminatedUnion('type', [
     type: z.literal('image'),
     mediaId: z.union([z.string().uuid(), z.null()]),
     url: HttpOrHttpsUrlOrNull,
+    fit: z.enum(BROCHURE_IMAGE_FITS).optional(),
+    focus: z.enum(BROCHURE_IMAGE_FOCUSES).optional(),
   }),
   z.object({
     type: z.literal('text'),

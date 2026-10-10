@@ -8,6 +8,7 @@ import {
   type PDFPage,
   type RGB,
   StandardFonts,
+  appendBezierCurve,
   clip,
   closePath,
   degrees,
@@ -32,6 +33,9 @@ import {
 } from '~/lib/commercial/brochure-pdf/amenity-icons';
 import type {
   BrochureDocument,
+  BrochureImageFit,
+  BrochureImageFocus,
+  BrochureImageSlot,
   BrochureOrientation,
   BrochurePage,
   BrochureSlotValue,
@@ -40,6 +44,7 @@ import type {
 import {
   type Box,
   coverHeadline,
+  coverImageRect,
   coverTitleParts,
   fitPhotoBox,
   keepPostcodesTogether,
@@ -47,7 +52,10 @@ import {
   nameInitials,
   parseDetailsBody,
   splitLeadParagraph,
+  wholeImageRect,
 } from '~/lib/commercial/brochure-pdf/brochure-layout';
+import { fetchBrochureImageBytes } from '~/lib/commercial/brochure-pdf/brochure-image-bytes';
+import { brochureCoverImage } from '~/lib/commercial/brochure-pdf/build-brochure-document';
 import { resolveBrochureLinkButtons } from '~/lib/commercial/brochure-pdf/brochure-links';
 import { brochureContactShopfrontBox } from '~/lib/commercial/brochure-pdf/contact-layout';
 import {
@@ -73,10 +81,6 @@ import {
 } from '~/lib/commercial/public-brochure.shared';
 import { sanitizePdfText } from '~/lib/invoices/pdf-text';
 import { addUriLink } from '~/lib/pdf/pdf-links';
-import {
-  supabaseStorageObjectPath,
-  toSupabasePublicStorageUrl,
-} from '~/lib/storage/public-url';
 
 const A4_PORTRAIT = { width: 595.28, height: 841.89 };
 const A4_LANDSCAPE = { width: 841.89, height: 595.28 };
@@ -341,114 +345,6 @@ function drawWrapped(page: PDFPage, text: string, opts: WrapOptions): number {
 // Images
 // ---------------------------------------------------------------------------
 
-function isSafeRemoteImageUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-      return false;
-    }
-    const host = parsed.hostname.toLowerCase();
-    if (
-      host === 'localhost' ||
-      host === '127.0.0.1' ||
-      host === '0.0.0.0' ||
-      host === '::1' ||
-      host.endsWith('.local') ||
-      host.endsWith('.internal') ||
-      host === '169.254.169.254' ||
-      host.startsWith('169.254.') ||
-      /^10\./.test(host) ||
-      /^192\.168\./.test(host) ||
-      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
-    ) {
-      return false;
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function isWorkspaceSupabaseHost(url: string): boolean {
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!base) return false;
-  try {
-    return new URL(url).hostname === new URL(base).hostname;
-  } catch {
-    return false;
-  }
-}
-
-const BROCHURE_STORAGE_BUCKETS = [
-  'commercial-listing-media',
-  'brand-assets',
-] as const;
-
-async function downloadStorageObjectBytes(
-  url: string,
-): Promise<Uint8Array | null> {
-  if (!isWorkspaceSupabaseHost(url)) return null;
-
-  try {
-    // Dynamic import so the admin client is only loaded when HTTP fetch fails.
-    const { getSupabaseServerAdminClient } =
-      await import('@kit/supabase/server-admin-client');
-    const admin = getSupabaseServerAdminClient();
-
-    for (const bucket of BROCHURE_STORAGE_BUCKETS) {
-      const path = supabaseStorageObjectPath(url, bucket);
-      if (!path) continue;
-      const { data, error } = await admin.storage.from(bucket).download(path);
-      if (error || !data) continue;
-      return new Uint8Array(await data.arrayBuffer());
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
-}
-
-async function fetchImageBytes(url: string | null): Promise<Uint8Array | null> {
-  if (!url) return null;
-  // Signed listing-media URLs must not be rewritten to /object/public/sign/...
-  const normalized = toSupabasePublicStorageUrl(url) ?? url;
-  if (!isSafeRemoteImageUrl(normalized)) {
-    const fromStorage = await downloadStorageObjectBytes(normalized);
-    if (fromStorage) return fromStorage;
-    console.error('[brochure-pdf] blocked unsafe image url host');
-    return null;
-  }
-  try {
-    const res = await fetch(normalized, {
-      cache: 'no-store',
-      headers: { Accept: 'image/png,image/jpeg,image/webp,image/*,*/*' },
-      signal: AbortSignal.timeout(12000),
-    });
-    if (res.ok) {
-      const contentType = res.headers.get('content-type') ?? '';
-      if (
-        contentType &&
-        !contentType.startsWith('image/') &&
-        !contentType.includes('octet-stream')
-      ) {
-        console.error(
-          '[brochure-pdf] blocked non-image content-type:',
-          contentType,
-        );
-      } else {
-        return new Uint8Array(await res.arrayBuffer());
-      }
-    } else {
-      console.error('[brochure-pdf] image fetch failed:', res.status);
-    }
-  } catch {
-    // Fall through to workspace storage download.
-  }
-
-  return downloadStorageObjectBytes(normalized);
-}
-
 async function convertImageBytesToJpeg(
   bytes: Uint8Array,
 ): Promise<Uint8Array | null> {
@@ -500,20 +396,60 @@ function clipToBox(page: PDFPage, box: Box) {
   );
 }
 
-/** Fill `box` completely, cropping the overflow. */
-function drawImageCover(page: PDFPage, image: PDFImage, box: Box) {
+/** Fill `box` completely, cropping the overflow away from `focus`. */
+function drawImageCover(
+  page: PDFPage,
+  image: PDFImage,
+  box: Box,
+  focus: BrochureImageFocus = 'center',
+) {
   if (box.width <= 0 || box.height <= 0) return;
-  const scale = Math.max(box.width / image.width, box.height / image.height);
-  const w = image.width * scale;
-  const h = image.height * scale;
   clipToBox(page, box);
-  page.drawImage(image, {
-    x: box.x + (box.width - w) / 2,
-    y: box.y + (box.height - h) / 2,
-    width: w,
-    height: h,
-  });
+  page.drawImage(
+    image,
+    coverImageRect(image.width, image.height, box, focus),
+  );
   page.pushOperators(popGraphicsState());
+}
+
+/** The whole image centred in `box`, with `background` behind the gaps. */
+function drawImageWhole(
+  page: PDFPage,
+  image: PDFImage,
+  box: Box,
+  background: RGB | null,
+) {
+  if (box.width <= 0 || box.height <= 0) return;
+  if (background) page.drawRectangle({ ...box, color: background });
+  page.drawImage(image, wholeImageRect(image.width, image.height, box));
+}
+
+type ImagePlacement = { fit?: BrochureImageFit; focus?: BrochureImageFocus };
+type PlacedImage = { image: PDFImage; placement: ImagePlacement | null };
+
+function showsWhole(
+  ctx: RenderCtx,
+  image: PDFImage,
+  placement: ImagePlacement | null | undefined,
+): boolean {
+  const fit = placement?.fit ?? 'auto';
+  return fit === 'whole' || (fit === 'auto' && ctx.drawingImages.has(image));
+}
+
+/** A slot image in a fixed frame, honouring the slot's fit and focus. */
+function drawSlotImage(
+  page: PDFPage,
+  ctx: RenderCtx,
+  image: PDFImage,
+  box: Box,
+  placement: ImagePlacement | null | undefined,
+  background: RGB | null = ctx.colors.soft,
+) {
+  if (showsWhole(ctx, image, placement)) {
+    drawImageWhole(page, image, box, background);
+  } else {
+    drawImageCover(page, image, box, placement?.focus);
+  }
 }
 
 function drawPlaceholder(page: PDFPage, ctx: RenderCtx, box: Box) {
@@ -534,6 +470,7 @@ function drawPhoto(
     maxCrop?: number;
     align?: 'top' | 'center';
     anchorLeft?: boolean;
+    placement?: ImagePlacement | null;
   } = {},
 ): Box | null {
   if (area.width <= 0 || area.height <= 0) return null;
@@ -542,7 +479,11 @@ function drawPhoto(
     return area;
   }
 
-  let box = fitPhotoBox(image.width / image.height, area, opts);
+  const whole = showsWhole(ctx, image, opts.placement);
+  let box = fitPhotoBox(image.width / image.height, area, {
+    ...opts,
+    maxCrop: whole ? 0 : opts.maxCrop,
+  });
   const scale = Math.max(box.width / image.width, box.height / image.height);
   if (scale > MAX_UPSCALE) {
     const k = MAX_UPSCALE / scale;
@@ -560,7 +501,7 @@ function drawPhoto(
   }
   if (opts.anchorLeft) box = { ...box, x: area.x };
 
-  drawImageCover(page, image, box);
+  drawImageCover(page, image, box, opts.placement?.focus);
   return box;
 }
 
@@ -670,6 +611,8 @@ type RenderCtx = {
   orientation: BrochureOrientation;
   templateId: BrochureTemplateId;
   imageCache: Map<string, PDFImage | null>;
+  /** Embedded images detected as drawings (floor plans, site plans). */
+  drawingImages: Set<PDFImage>;
   imageById: Map<string, string>;
   floorplanById: Map<string, string>;
   logo: PDFImage | null;
@@ -692,10 +635,9 @@ function slotText(
 function slotImage(
   slots: Record<string, BrochureSlotValue>,
   key: string,
-): { mediaId: string | null; url: string | null } | null {
+): BrochureImageSlot | null {
   const s = slots[key];
-  if (s?.type !== 'image') return null;
-  return { mediaId: s.mediaId, url: s.url };
+  return s?.type === 'image' ? s : null;
 }
 
 function pageSize(orientation: BrochureOrientation) {
@@ -1048,9 +990,16 @@ async function resolveImage(
 ): Promise<PDFImage | null> {
   if (!url) return null;
   if (ctx.imageCache.has(url)) return ctx.imageCache.get(url) ?? null;
-  const bytes = await fetchImageBytes(url);
+  const bytes = await fetchBrochureImageBytes(url);
   const img = await embedImage(ctx.pdf, bytes);
   ctx.imageCache.set(url, img);
+  if (img && bytes) {
+    const known = [...ctx.data.images, ...ctx.data.floorplans].find(
+      (item) => item.url === url && item.isDrawing !== undefined,
+    );
+    const drawing = known ? known.isDrawing : await isDrawingImage(bytes);
+    if (drawing) ctx.drawingImages.add(img);
+  }
   return img;
 }
 
@@ -1491,9 +1440,10 @@ async function renderCover(
 ) {
   const { width, height } = page.getSize();
   const landscape = ctx.orientation === 'landscape';
+  const heroSlot = slotImage(brochurePage.slots, 'hero');
   const heroImg = await resolveListingImage(
     ctx,
-    slotImage(brochurePage.slots, 'hero'),
+    heroSlot,
     listingCoverUrl(ctx.data),
   );
   const { title, subtitle } = coverHeadline(
@@ -1574,7 +1524,9 @@ async function renderCover(
     const bandW = Math.round(width * coverBandRatio(ctx.templateId));
     const heroW = width - bandW;
     const heroBox = { x: 0, y: 0, width: heroW, height };
-    if (heroImg) drawImageCover(page, heroImg, heroBox);
+    if (heroImg) {
+      drawSlotImage(page, ctx, heroImg, heroBox, heroSlot, ctx.colors.primary);
+    }
     else drawPlaceholder(page, ctx, heroBox);
     if (reducedLabel) drawReducedBadge(page, heroBox, ctx, reducedLabel);
 
@@ -1640,7 +1592,9 @@ async function renderCover(
           ? 210
           : 236;
     const heroBox = { x: 0, y: bandH, width, height: height - bandH };
-    if (heroImg) drawImageCover(page, heroImg, heroBox);
+    if (heroImg) {
+      drawSlotImage(page, ctx, heroImg, heroBox, heroSlot, ctx.colors.primary);
+    }
     else drawPlaceholder(page, ctx, heroBox);
     if (reducedLabel) drawReducedBadge(page, heroBox, ctx, reducedLabel);
 
@@ -1881,7 +1835,7 @@ async function renderFacts(
       minY: CONTENT_MIN_Y,
     });
     const area = bleedArea(page, splitX);
-    drawBleedPhotos(page, photos, area);
+    drawBleedPhotos(page, ctx, photos, area);
     drawSizeStat(page, ctx, rows, area);
     drawFooter(page, ctx);
     return;
@@ -1994,34 +1948,54 @@ async function renderFacts(
 async function factsPhotos(
   brochurePage: BrochurePage,
   ctx: RenderCtx,
-): Promise<PDFImage[]> {
-  const keys = ['photo1', 'photo2'].filter(
-    (key) => brochurePage.slots[key]?.type === 'image',
-  );
-  if (keys.length === 0 && ctx.templateId === 'editorial') return [];
-  const images =
-    keys.length > 0
+): Promise<PlacedImage[]> {
+  const slots = ['photo1', 'photo2']
+    .map((key) => slotImage(brochurePage.slots, key))
+    .filter((slot): slot is BrochureImageSlot => slot != null);
+  if (slots.length === 0 && ctx.templateId === 'editorial') return [];
+  const placed: Array<{
+    image: PDFImage | null;
+    placement: ImagePlacement | null;
+  }> =
+    slots.length > 0
       ? await Promise.all(
-          keys.map((key) =>
-            resolveListingImage(ctx, slotImage(brochurePage.slots, key)),
-          ),
+          slots.map(async (slot) => ({
+            image: await resolveListingImage(ctx, slot),
+            placement: slot,
+          })),
         )
-      : [await resolveImage(ctx, ctx.spareImageUrls[0] ?? null)];
-  return images.filter((img): img is PDFImage => img != null);
+      : [
+          {
+            image: await resolveImage(ctx, ctx.spareImageUrls[0] ?? null),
+            placement: null,
+          },
+        ];
+  return placed.filter((p): p is PlacedImage => p.image != null);
 }
 
 /** Photos filling `area` edge to edge, stacked with a thin paper gap. */
-function drawBleedPhotos(page: PDFPage, photos: PDFImage[], area: Box) {
+function drawBleedPhotos(
+  page: PDFPage,
+  ctx: RenderCtx,
+  photos: PlacedImage[],
+  area: Box,
+) {
   const gap = 4;
   const shown = photos.slice(0, 2);
   const h = (area.height - gap * (shown.length - 1)) / shown.length;
-  shown.forEach((img, i) =>
-    drawImageCover(page, img, {
-      x: area.x,
-      y: area.y + area.height - (i + 1) * h - i * gap,
-      width: area.width,
-      height: h,
-    }),
+  shown.forEach(({ image, placement }, i) =>
+    drawSlotImage(
+      page,
+      ctx,
+      image,
+      {
+        x: area.x,
+        y: area.y + area.height - (i + 1) * h - i * gap,
+        width: area.width,
+        height: h,
+      },
+      placement,
+    ),
   );
 }
 
@@ -2066,21 +2040,22 @@ function drawSizeStat(
 function drawPhotoSet(
   page: PDFPage,
   ctx: RenderCtx,
-  photos: PDFImage[],
+  photos: PlacedImage[],
   area: Box,
   opts: { anchorLeft?: boolean } = {},
 ) {
   if (area.height < 80) return;
   if (photos.length === 1) {
-    drawPhoto(page, ctx, photos[0]!, area, {
+    drawPhoto(page, ctx, photos[0]!.image, area, {
       align: 'top',
       maxCrop: 0.3,
       anchorLeft: opts.anchorLeft,
+      placement: photos[0]!.placement,
     });
     return;
   }
   const boxes = layoutPhotoGrid(
-    photos.map((img) => img.width / img.height),
+    photos.map(({ image }) => image.width / image.height),
     area,
     { gap: 10, maxCrop: 0.3 },
   );
@@ -2092,7 +2067,13 @@ function drawPhotoSet(
   const dy = area.y + area.height - top;
   const dx = opts.anchorLeft ? area.x - left : 0;
   boxes.forEach((box, i) =>
-    drawImageCover(page, photos[i]!, { ...box, x: box.x + dx, y: box.y + dy }),
+    drawSlotImage(
+      page,
+      ctx,
+      photos[i]!.image,
+      { ...box, x: box.x + dx, y: box.y + dy },
+      photos[i]!.placement,
+    ),
   );
 }
 
@@ -2537,14 +2518,18 @@ async function renderPhotoFull(
   ctx: RenderCtx,
 ) {
   const { width, height } = page.getSize();
+  const slot = slotImage(brochurePage.slots, 'photo');
   const img = await resolveListingImage(
     ctx,
-    slotImage(brochurePage.slots, 'photo'),
+    slot,
     ctx.data.images.find((item) => !item.isCover)?.url ??
       listingCoverUrl(ctx.data),
   );
   if (hasBands(ctx)) {
-    drawPhoto(page, ctx, img, bandedPhotoArea(page, ctx), { maxCrop: 0.25 });
+    drawPhoto(page, ctx, img, bandedPhotoArea(page, ctx), {
+      maxCrop: 0.25,
+      placement: slot,
+    });
     drawFooter(page, ctx);
     return;
   }
@@ -2557,9 +2542,9 @@ async function renderPhotoFull(
     height: height - inset * 2,
   };
   if (ctx.templateId === 'editorial' && img) {
-    drawImageCover(page, img, area);
+    drawSlotImage(page, ctx, img, area, slot);
   } else {
-    drawPhoto(page, ctx, img, area, { maxCrop: 0.25 });
+    drawPhoto(page, ctx, img, area, { maxCrop: 0.25, placement: slot });
   }
   drawSectionTab(
     page,
@@ -2590,13 +2575,10 @@ async function renderPhotoGrid(
 ) {
   const { width, height } = page.getSize();
   // Fall back only to unused photos so a broken slot never repeats another page's image.
+  const slots = keys.map((key) => slotImage(brochurePage.slots, key));
   const imgs = await Promise.all(
-    keys.map((key, i) =>
-      resolveListingImage(
-        ctx,
-        slotImage(brochurePage.slots, key),
-        ctx.spareImageUrls[i] ?? null,
-      ),
+    slots.map((slot, i) =>
+      resolveListingImage(ctx, slot, ctx.spareImageUrls[i] ?? null),
     ),
   );
   const margin = ctx.templateId === 'editorial' ? 20 : 24;
@@ -2616,7 +2598,7 @@ async function renderPhotoGrid(
   );
   boxes.forEach((box, i) => {
     const img = imgs[i];
-    if (img) drawImageCover(page, img, box);
+    if (img) drawSlotImage(page, ctx, img, box, slots[i]);
     else drawPlaceholder(page, ctx, box);
   });
   if (hasBands(ctx)) {
@@ -3107,6 +3089,7 @@ async function renderContact(
     phone: branchPhone,
     email: branchEmail,
   };
+  const agentPhotos = await loadAgentPhotos(ctx);
 
   if (banded && landscape) {
     renderContactSplit(page, ctx, {
@@ -3114,6 +3097,7 @@ async function renderContact(
       office,
       shopfrontImg,
       notice,
+      agentPhotos,
     });
     drawFooter(page, ctx);
     return;
@@ -3193,7 +3177,8 @@ async function renderContact(
   const colGap = 24;
   const cardW = (agentsW - colGap * (columns - 1)) / columns;
   const cardH = 58;
-  const avatarW = banded ? 46 : 0;
+  const showAvatars = banded || agentPhotos.size > 0;
+  const avatarW = showAvatars ? 46 : 0;
   agents.forEach((agent, i) => {
     const col = i % columns;
     const row = Math.floor(i / columns);
@@ -3202,7 +3187,15 @@ async function renderContact(
     const textW = cardW - avatarW;
     const y = ay - row * (cardH + 14);
     if (y - 30 < bodyMinY) return;
-    if (banded) drawAvatar(page, ctx, agent.name, cardX + 17, y - 10);
+    if (showAvatars) {
+      drawAvatar(
+        page,
+        ctx,
+        { name: agent.name, photo: agentPhotos.get(agent.userId) },
+        cardX + 17,
+        y - 10,
+      );
+    }
     drawWrapped(page, agent.name, {
       x,
       y,
@@ -3341,16 +3334,65 @@ function drawOfficeBlock(
   return by;
 }
 
-/** Accent disc with the agent's initials. */
+/** Circular clip path (four Bézier arcs) around (cx, cy). */
+function clipToCircle(page: PDFPage, cx: number, cy: number, r: number) {
+  const k = r * 0.5523;
+  page.pushOperators(
+    pushGraphicsState(),
+    moveTo(cx + r, cy),
+    appendBezierCurve(cx + r, cy + k, cx + k, cy + r, cx, cy + r),
+    appendBezierCurve(cx - k, cy + r, cx - r, cy + k, cx - r, cy),
+    appendBezierCurve(cx - r, cy - k, cx - k, cy - r, cx, cy - r),
+    appendBezierCurve(cx + k, cy - r, cx + r, cy - k, cx + r, cy),
+    closePath(),
+    clip(),
+    endPath(),
+  );
+}
+
+/** Profile photos for the contact page, keyed by user id. */
+async function loadAgentPhotos(
+  ctx: RenderCtx,
+): Promise<Map<string, PDFImage>> {
+  const photos = new Map<string, PDFImage>();
+  await Promise.all(
+    ctx.data.agents.slice(0, 4).map(async (agent) => {
+      const img = await resolveImage(ctx, agent.pictureUrl);
+      if (img) photos.set(agent.userId, img);
+    }),
+  );
+  return photos;
+}
+
+/** Agent profile photo in a disc, or an accent disc with their initials. */
 function drawAvatar(
   page: PDFPage,
   ctx: RenderCtx,
-  name: string,
+  agent: { name: string; photo?: PDFImage | null },
   cx: number,
   cy: number,
 ) {
-  page.drawCircle({ x: cx, y: cy, size: 17, color: ctx.colors.accent });
-  const initials = nameInitials(name);
+  const r = 17;
+  if (agent.photo) {
+    const scale = Math.max(
+      (r * 2) / agent.photo.width,
+      (r * 2) / agent.photo.height,
+    );
+    const w = agent.photo.width * scale;
+    const h = agent.photo.height * scale;
+    clipToCircle(page, cx, cy, r);
+    page.drawImage(agent.photo, {
+      x: cx - w / 2,
+      // Portraits keep the face: crop from the bottom, not the top.
+      y: cy + r - h,
+      width: w,
+      height: h,
+    });
+    page.pushOperators(popGraphicsState());
+    return;
+  }
+  page.drawCircle({ x: cx, y: cy, size: r, color: ctx.colors.accent });
+  const initials = nameInitials(agent.name);
   if (!initials) return;
   const size = 11;
   drawText(page, initials, {
@@ -3374,6 +3416,7 @@ function renderContactSplit(
     office: OfficeDetails;
     shopfrontImg: PDFImage | null;
     notice: string;
+    agentPhotos: Map<string, PDFImage>;
   },
 ) {
   const { width } = page.getSize();
@@ -3458,7 +3501,13 @@ function renderContactSplit(
   for (const agent of agents) {
     if (rowTop - rowH < floor) break;
     drawHairline(page, ctx, px, px + pw, rowTop, ctx.colors.paper, 0.16);
-    drawAvatar(page, ctx, agent.name, px + 17, rowTop - rowH / 2);
+    drawAvatar(
+      page,
+      ctx,
+      { name: agent.name, photo: opts.agentPhotos.get(agent.userId) },
+      px + 17,
+      rowTop - rowH / 2,
+    );
     const tx = px + 48;
     const tw = pw - 48;
     const lines = [agent.phone, agent.email].filter((v): v is string =>
@@ -3649,7 +3698,7 @@ export async function renderBrochurePdf(
     hairline: rgb(0.86, 0.85, 0.84),
   };
 
-  const logoBytes = await fetchImageBytes(resolveBrochurePlateLogo(data.brand));
+  const logoBytes = await fetchBrochureImageBytes(resolveBrochurePlateLogo(data.brand));
   const logo = await embedImage(pdf, logoBytes);
 
   if (document.pages.length > 30) {
@@ -3667,6 +3716,7 @@ export async function renderBrochurePdf(
     orientation: document.orientation,
     templateId: document.templateId,
     imageCache: new Map(),
+    drawingImages: new Set(),
     imageById: new Map(data.images.map((item) => [item.id, item.url])),
     floorplanById: new Map(data.floorplans.map((item) => [item.id, item.url])),
     logo,

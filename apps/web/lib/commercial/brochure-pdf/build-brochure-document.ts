@@ -21,6 +21,7 @@ import {
 } from '~/lib/commercial/commercial-constants';
 import type {
   BrochureListing,
+  BrochureMediaItem,
   PublicBrochureData,
 } from '~/lib/commercial/public-brochure.shared';
 import {
@@ -239,11 +240,25 @@ export function buildAmenities(
   return sanitizeBrochureAmenities(amenities, data.listing.town);
 }
 
+/** Real photos when there are any, otherwise whatever images exist. */
+function preferPhotos(items: BrochureMediaItem[]): BrochureMediaItem[] {
+  const photos = items.filter((item) => !item.isDrawing);
+  return photos.length > 0 ? photos : items;
+}
+
+/** The marked cover photo, else the first photo; drawings only as a last resort. */
+export function brochureCoverImage(
+  images: BrochureMediaItem[],
+): BrochureMediaItem | null {
+  const pool = preferPhotos(images);
+  return pool.find((i) => i.isCover) ?? pool[0] ?? null;
+}
+
 export function coverSlots(
   data: PublicBrochureData,
   display: BrochureDisplayOptions,
 ): Record<string, BrochureSlotValue> {
-  const cover = data.images.find((i) => i.isCover) ?? data.images[0] ?? null;
+  const cover = brochureCoverImage(data.images);
   const address = formatBrochureAddress(data.listing);
   const size = display.showSize ? formatBrochureSize(data.listing) : null;
   const rent = brochureRentValue(data.listing, display);
@@ -299,13 +314,10 @@ function contactSlots(
   };
 }
 
+/** Every listing image except the one on the cover. */
 function galleryPool(data: PublicBrochureData) {
-  // Prefer non-cover for gallery; fall back to remaining images after cover
-  const gallery =
-    data.images.length > 1
-      ? data.images.filter((img) => !img.isCover)
-      : data.images.slice(1);
-  return gallery.length > 0 ? gallery : data.images.slice(1);
+  const cover = brochureCoverImage(data.images);
+  return data.images.filter((img) => img.id !== cover?.id);
 }
 
 /**
@@ -313,8 +325,9 @@ function galleryPool(data: PublicBrochureData) {
  * (no near-empty gallery page); a larger set lends one frame.
  */
 function factsPagePhotos(data: PublicBrochureData) {
-  const pool = galleryPool(data);
-  return pool.slice(0, pool.length <= 2 ? pool.length : 1);
+  const gallery = galleryPool(data);
+  const pool = preferPhotos(gallery);
+  return pool.slice(0, gallery.length <= 2 ? pool.length : 1);
 }
 
 /**

@@ -34,8 +34,24 @@ export const DEFAULT_BROCHURE_DISPLAY_OPTIONS: BrochureDisplayOptions = {
 
 export type BrochureSlotType = 'image' | 'text' | 'map' | 'agents' | 'facts';
 
+/** `auto` shows drawings whole and fills the frame with photos. */
+export const BROCHURE_IMAGE_FITS = ['auto', 'fill', 'whole'] as const;
+export type BrochureImageFit = (typeof BROCHURE_IMAGE_FITS)[number];
+
+/** Which part of a filled photo survives the crop. */
+export const BROCHURE_IMAGE_FOCUSES = ['top', 'center', 'bottom'] as const;
+export type BrochureImageFocus = (typeof BROCHURE_IMAGE_FOCUSES)[number];
+
+export type BrochureImageSlot = {
+  type: 'image';
+  mediaId: string | null;
+  url: string | null;
+  fit?: BrochureImageFit;
+  focus?: BrochureImageFocus;
+};
+
 export type BrochureSlotValue =
-  | { type: 'image'; mediaId: string | null; url: string | null }
+  | BrochureImageSlot
   | { type: 'text'; text: string }
   | {
       type: 'map';

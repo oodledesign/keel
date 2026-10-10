@@ -190,6 +190,42 @@ export function fitPhotoBox(
   return { x, y, width, height };
 }
 
+/**
+ * Rect for an image of `w`×`h` scaled to cover `box`. The overflow is cropped
+ * from the side away from `focus` (top keeps the top edge, and so on).
+ */
+export function coverImageRect(
+  w: number,
+  h: number,
+  box: Box,
+  focus: 'top' | 'center' | 'bottom' = 'center',
+): Box {
+  const scale = Math.max(box.width / w, box.height / h);
+  const width = w * scale;
+  const height = h * scale;
+  const overflowY = height - box.height;
+  const y =
+    focus === 'top'
+      ? box.y - overflowY
+      : focus === 'bottom'
+        ? box.y
+        : box.y - overflowY / 2;
+  return { x: box.x + (box.width - width) / 2, y, width, height };
+}
+
+/** Rect for an image of `w`×`h` scaled to sit entirely inside `box`, centred. */
+export function wholeImageRect(w: number, h: number, box: Box): Box {
+  const scale = Math.min(box.width / w, box.height / h);
+  const width = w * scale;
+  const height = h * scale;
+  return {
+    x: box.x + (box.width - width) / 2,
+    y: box.y + (box.height - height) / 2,
+    width,
+    height,
+  };
+}
+
 type Strips = number[][];
 
 const STRIP_PATTERNS: Record<number, Strips[]> = {

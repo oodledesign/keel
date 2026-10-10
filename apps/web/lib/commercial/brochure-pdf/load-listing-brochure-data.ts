@@ -14,6 +14,7 @@ import {
   loadAccountBrandResolved,
 } from '~/lib/brand/account-brand';
 import { brandFontsOf } from '~/lib/brand/brand-fonts.shared';
+import { flagBrochureDrawings } from '~/lib/commercial/brochure-pdf/flag-drawings';
 import { lookupLocalAreaFacts } from '~/lib/commercial/brochure-pdf/local-area';
 import {
   buildBrochureLocalArea,
@@ -436,8 +437,8 @@ export async function loadListingBrochureData(
     }),
   );
 
-  const media = signedMedia.filter(
-    (item): item is BrochureMediaItem => item != null,
+  const media = await flagBrochureDrawings(
+    signedMedia.filter((item): item is BrochureMediaItem => item != null),
   );
 
   let brand: PublicBrochureData['brand'] = {

@@ -39,7 +39,7 @@ COMMERCIAL PROPERTY WORKSPACES
 Made for agents who spend the day out of the office. Record viewings and client meetings with live captions, turn what was agreed into follow-up tasks, look up landlord, tenant and applicant contacts, and keep projects and fee invoices moving between appointments. Listings, brochures and portal feeds are managed in Ozer on the web.
 
 BUILDING SURVEYS
-Dictate observations straight into RICS report sections, take tagged site photos, and keep working with no signal. Everything syncs when you're back online.
+Dictate observations straight into your survey report sections, take tagged site photos, and keep working with no signal. Everything syncs when you're back online.
 
 MEETINGS, RECORDED ON YOUR DEVICE
 Record in-room meetings with live captions. Transcription and speaker labelling run entirely on your iPhone or iPad, and keep going with the screen locked. Save the result to a client or as a note.
@@ -63,7 +63,7 @@ An Ozer account is required. Sign in with Apple, Google or an email link.
 
 ## Keywords (100, comma-separated, no spaces)
 
-commercial,agent,surveyor,RICS,survey,landlord,tenant,lettings,viewing,CRM,meeting,transcribe,tasks
+commercial,agent,surveyor,inspection,survey,landlord,tenant,lettings,viewing,CRM,meeting,transcribe,tasks
 
 Apple already indexes the name and subtitle, so "Ozer", "workspaces" and "property" don't need repeating here.
 
@@ -162,19 +162,44 @@ Guideline 1.2 (user-generated content) asks for a way to report objectionable me
 - Username: `appreview@ozer.so`
 - Password: *testaccountpassword*
 
-**Notes for the reviewer:**
+**Notes for the reviewer** (also the reply to the 2.1 "Information Needed" request of 10 October 2026; paste into both, under 4,000 characters):
 
-> Ozer is the iPhone and iPad companion to the Ozer web app (app.ozer.so). Accounts are created by signing in with Apple, Google, or an email link; there are no in-app purchases.
->
-> To sign in with the demo account, type [appreview@ozer.so](mailto:appreview@ozer.so) in the email field — a password field replaces the "Email me a link" button.
->
-> The demo account belongs to several workspaces. Tap Menu → the workspace name at the top to switch between Personal, a Commercial Property workspace, a Surveyor workspace, and a Studio workspace — each shows different features.
->
-> Background audio: Meetings (Menu → Meetings → Start a new meeting) and Surveys (Surveyor workspace → Surveys) record from the microphone and keep recording when the screen locks, so a surveyor or meeting host can pocket the phone. Transcription runs on-device using Apple's Speech framework. Live captions need a real iPhone or iPad; the Simulator shows a placeholder.
->
-> Account deletion: Menu → Personal settings → Delete account. Deletion locks the account immediately and removes the data after 30 days.
->
-> Reporting and blocking: in Messages, press and hold another person's message to report it or block them, or use the … menu at the top of a conversation. Reports go to our team, who review them within 24 hours. Blocked people are listed under Menu → Personal settings → Blocked people.
+```text
+PURPOSE AND AUDIENCE
+Ozer (ozer.so) is a workspace app for small businesses and sole traders, mainly commercial property agents, building surveyors and studios doing client work, plus a free personal workspace for anyone. These people spend much of the day away from a desk at viewings, site surveys and client meetings, and usually juggle voice memos, notes apps, spreadsheets and email to keep track. Ozer lets them record a meeting or survey on the phone (transcribed on the device, even with no signal), turn it into follow-up tasks, look up clients, check projects and invoices, and message their team, in the same workspace they use on the web.
+
+Ozer is open to the public: anyone can create an account by signing in with Apple, Google or an email link and gets a free personal workspace. It is not limited to one organisation. Business plans are bought by businesses on our website; the app has no purchasing, prices or links to buy.
+
+HOW TO USE IT
+Demo account: appreview@ozer.so (password in App Review Information). Type the email and a password field replaces "Email me a link".
+The demo account is in four workspaces. Open Menu (last tab) and tap the workspace name to switch: Personal, Harland Reed Property (commercial property), Calloway Building Surveyors (surveyor) and Northfold Studio (client work).
+- Home: today's tasks, money in and out, suggested tasks.
+- Meetings: Menu > Meetings > Start a new meeting. Captions are transcribed on the device and recording continues with the screen locked. Live captions need a real device.
+- Surveys: Calloway workspace > Surveys > open a survey > a section to dictate or add photos.
+- Tasks and Review: accept, edit or dismiss tasks suggested from meetings.
+- Clients, Projects, Invoices, Disposals: Harland Reed workspace.
+- Messages: Menu > Messages. Press and hold another person's message (e.g. Sam Carter) to report it or block them, or use the ... menu in a conversation. Reports reach us by email and are reviewed within 24 hours. Unblock in Menu > Personal settings > Blocked people.
+- Account deletion: Menu > Personal settings > Delete account. The account locks immediately and its data is removed after 30 days. Please test deletion with a new Sign in with Apple account so the demo account stays available.
+
+EXTERNAL SERVICES
+- Supabase: sign-in, database and file storage
+- Vercel: hosts the Ozer API the app talks to (app.ozer.so)
+- Sign in with Apple and Google Sign-In
+- Apple Push Notification service
+- Apple Speech framework: on-device transcription; audio is not uploaded for transcription
+- Hugging Face: one-time download of an open-source speaker-labelling model that runs on the device
+- Anthropic (Claude) and Google Gemini API: server-side summaries of saved meeting transcripts and suggested follow-up tasks
+- Mapbox: UK address search for surveys, called from our server
+- Google Workspace and Microsoft 365: optional email and calendar connections set up on the web
+- ZeptoMail and Amazon SES: sign-in links and notification emails
+- Stripe: web billing only, not used in the app
+
+REGIONS
+Available in the United Kingdom, United States and Canada. The app works the same in every region. Survey templates and address search are built for UK building surveys; nothing else varies by region.
+
+REGULATION AND THIRD-PARTY MATERIAL
+Ozer is not a regulated service (no financial, medical or legal services) and contains no licensed third-party content. Professionals such as surveyors use it to record their own work and remain responsible for their professional standards. Ozer is not affiliated with any professional body.
+```
 
 
 

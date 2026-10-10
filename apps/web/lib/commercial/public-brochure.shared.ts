@@ -21,6 +21,8 @@ export type BrochureMediaItem = {
   url: string;
   fileName: string | null;
   isCover: boolean;
+  /** Floor plan, site plan or elevation detected from the pixels. */
+  isDrawing?: boolean;
 };
 
 export type BrochureAgent = {
