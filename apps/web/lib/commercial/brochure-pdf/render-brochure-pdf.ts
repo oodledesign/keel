@@ -168,6 +168,14 @@ function drawText(
   return trackedWidth(safe, opts.font, opts.size, tracking);
 }
 
+const EYEBROW_SIZE = 7.7;
+const EYEBROW_SMALL_SIZE = 7.1;
+/** Header band running title + postcode. */
+const HEADER_TEXT_SIZE = 10;
+/** Footer office line, "Subject to contract", editorial side tab. */
+const CHROME_SIZE = 7.7;
+const PAGE_NUMBER_SIZE = 8.8;
+
 /** Small uppercase label with open tracking. */
 function drawEyebrow(
   page: PDFPage,
@@ -178,7 +186,7 @@ function drawEyebrow(
   return drawText(page, text.toUpperCase(), {
     x: opts.x,
     y: opts.y,
-    size: opts.size ?? 7,
+    size: opts.size ?? EYEBROW_SIZE,
     font: ctx.fontBold,
     color: opts.color,
     tracking: 1.1,
@@ -785,7 +793,7 @@ function drawSectionTab(
     page.drawText(pdfText(text), {
       x: width - 11,
       y: 48,
-      size: 7,
+      size: CHROME_SIZE,
       font: ctx.fontBold,
       color: ctx.colors.paper,
       rotate: degrees(90),
@@ -915,22 +923,22 @@ function drawBands(page: PDFPage, ctx: RenderCtx) {
   const postcode = listing.postcode?.trim() ?? '';
   const right = width - margin;
   const postcodeW = postcode
-    ? trackedWidth(pdfText(postcode), ctx.font, 7.5, 0.4)
+    ? trackedWidth(pdfText(postcode), ctx.font, HEADER_TEXT_SIZE, 0.4)
     : 0;
   const titleMax = right - textLeft - (postcode ? postcodeW + 14 : 0);
   const title = fitLine(
     ctx.runningTitle,
     ctx.fontBold,
-    7.5,
+    HEADER_TEXT_SIZE,
     Math.max(0, titleMax),
   );
-  const titleW = ctx.fontBold.widthOfTextAtSize(title, 7.5);
+  const titleW = ctx.fontBold.widthOfTextAtSize(title, HEADER_TEXT_SIZE);
   const titleX = right - (postcode ? postcodeW + 14 : 0) - titleW;
   if (titleMax > 40) {
     drawText(page, title, {
       x: titleX,
-      y: midY - 2.7,
-      size: 7.5,
+      y: midY - HEADER_TEXT_SIZE * 0.36,
+      size: HEADER_TEXT_SIZE,
       font: ctx.fontBold,
       color: ctx.colors.paper,
     });
@@ -938,8 +946,8 @@ function drawBands(page: PDFPage, ctx: RenderCtx) {
   if (postcode) {
     drawText(page, postcode, {
       x: right - postcodeW,
-      y: midY - 2.7,
-      size: 7.5,
+      y: midY - HEADER_TEXT_SIZE * 0.36,
+      size: HEADER_TEXT_SIZE,
       font: ctx.font,
       color: ctx.colors.paperMuted,
       tracking: 0.4,
@@ -953,24 +961,24 @@ function drawBands(page: PDFPage, ctx: RenderCtx) {
     height: FOOTER_BAND_H,
     color: ctx.colors.soft,
   });
-  const footY = FOOTER_BAND_H / 2 - 2.5;
+  const footY = FOOTER_BAND_H / 2 - CHROME_SIZE * 0.36;
   const pageNo = String(ctx.pageNumber).padStart(2, '0');
-  const pageNoW = trackedWidth(pageNo, ctx.fontBold, 8, 0.6);
+  const pageNoW = trackedWidth(pageNo, ctx.fontBold, PAGE_NUMBER_SIZE, 0.6);
   drawText(page, pageNo, {
     x: right - pageNoW,
     y: footY,
-    size: 8,
+    size: PAGE_NUMBER_SIZE,
     font: ctx.fontBold,
     color: ctx.colors.ink,
     tracking: 0.6,
   });
   const notice = 'Subject to contract';
-  const noticeW = trackedWidth(notice, ctx.font, 7, 0.2);
+  const noticeW = trackedWidth(notice, ctx.font, CHROME_SIZE, 0.2);
   const noticeX = right - pageNoW - 18 - noticeW;
   drawText(page, notice, {
     x: noticeX,
     y: footY,
-    size: 7,
+    size: CHROME_SIZE,
     font: ctx.font,
     color: ctx.colors.muted,
     tracking: 0.2,
@@ -983,13 +991,17 @@ function drawBands(page: PDFPage, ctx: RenderCtx) {
     .filter(Boolean)
     .join('  ·  ');
   if (office) {
-    drawText(page, fitLine(office, ctx.font, 7, noticeX - 24 - margin), {
-      x: margin,
-      y: footY,
-      size: 7,
-      font: ctx.font,
-      color: ctx.colors.muted,
-    });
+    drawText(
+      page,
+      fitLine(office, ctx.font, CHROME_SIZE, noticeX - 24 - margin),
+      {
+        x: margin,
+        y: footY,
+        size: CHROME_SIZE,
+        font: ctx.font,
+        color: ctx.colors.muted,
+      },
+    );
   }
 }
 
@@ -1007,7 +1019,7 @@ function drawFooter(page: PDFPage, ctx: RenderCtx) {
   drawText(page, left, {
     x: frame.left,
     y: FOOTER_BASELINE,
-    size: 7,
+    size: CHROME_SIZE,
     font: ctx.font,
     color: ctx.colors.muted,
     tracking: 0.2,
@@ -1015,11 +1027,11 @@ function drawFooter(page: PDFPage, ctx: RenderCtx) {
 
   const pad = (n: number) => String(n).padStart(2, '0');
   const right = `${pad(ctx.pageNumber)} / ${pad(ctx.totalPages)}`;
-  const w = trackedWidth(right, ctx.fontBold, 7, 0.6);
+  const w = trackedWidth(right, ctx.fontBold, CHROME_SIZE, 0.6);
   drawText(page, right, {
     x: frame.right - w,
     y: FOOTER_BASELINE,
-    size: 7,
+    size: CHROME_SIZE,
     font: ctx.fontBold,
     color: ctx.colors.muted,
     tracking: 0.6,
@@ -1456,7 +1468,7 @@ function drawCoverFactsGrid(
       drawEyebrow(page, ctx, fact.label, {
         x: cellX,
         y: rowTop - 15,
-        size: 6.5,
+        size: EYEBROW_SMALL_SIZE,
         color: ctx.colors.paperMuted,
         opacity: 0.85,
       });
@@ -1909,7 +1921,12 @@ async function renderFacts(
       const type = typeScale(ctx);
       const headerW = Math.max(
         ctx.headingBold.widthOfTextAtSize(title, type.title),
-        trackedWidth(ctx.runningTitle.toUpperCase(), ctx.fontBold, 7, 1.1),
+        trackedWidth(
+          ctx.runningTitle.toUpperCase(),
+          ctx.fontBold,
+          EYEBROW_SIZE,
+          1.1,
+        ),
       );
       let photoTop = headerW > leftW ? contentTop + type.body : frame.top;
       if (hasCopy && copyH <= columnH * 0.38) {
@@ -2026,7 +2043,7 @@ function drawSizeStat(
   const padX = 18;
   const w = Math.max(
     ctx.headingBold.widthOfTextAtSize(value, valueSize),
-    trackedWidth(label.toUpperCase(), ctx.fontBold, 6.5, 1.1),
+    trackedWidth(label.toUpperCase(), ctx.fontBold, EYEBROW_SMALL_SIZE, 1.1),
   );
   const box = { x: area.x, y: area.y, width: w + padX * 2, height: 72 };
   page.drawRectangle({ ...box, color: ctx.colors.accent });
@@ -2040,7 +2057,7 @@ function drawSizeStat(
   drawEyebrow(page, ctx, label, {
     x: box.x + padX,
     y: box.y + 17,
-    size: 6.5,
+    size: EYEBROW_SMALL_SIZE,
     color: ctx.colors.paper,
   });
 }
@@ -3250,7 +3267,7 @@ function drawContactNotice(
     x: opts.x,
     y: top + 6,
     color: ctx.colors.muted,
-    size: 6.5,
+    size: EYEBROW_SMALL_SIZE,
   });
   drawWrapped(page, notice, {
     ...noticeOpts,
