@@ -13,6 +13,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { loadHostIdentity } from '~/home/[account]/scheduling/_lib/server/meeting-polls.service';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { type BrandFonts, brandFontsOf } from '~/lib/brand/brand-fonts.shared';
 import { sendPollResponseNotificationEmail } from '~/lib/scheduling/meeting-polls/emails';
 
 function table(client: unknown, name: string) {
@@ -29,6 +30,7 @@ export type PublicPollPage =
       brandName: string;
       logoUrl: string | null;
       primaryColor: string;
+      fonts: BrandFonts;
     });
 
 /**
@@ -174,6 +176,7 @@ export async function loadPublicPollPage(
     brandName: account?.name?.trim() || 'Ozer',
     logoUrl: brand.logo_url,
     primaryColor: safeColor(brand.primary_color),
+    fonts: brandFontsOf(brand),
   };
 }
 

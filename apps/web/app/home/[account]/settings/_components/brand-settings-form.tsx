@@ -15,9 +15,11 @@ import { toast } from '@kit/ui/sonner';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import type { AccountBrandResolved } from '~/lib/brand/account-brand';
+import type { BrandFonts } from '~/lib/brand/brand-fonts.shared';
 
 import { saveAccountBrandSettings } from '../_lib/server/account-brand-actions';
 import { BrandLogoVariantUploader } from './brand-logo-variant-uploader';
+import { BrandTypographyFields } from './brand-typography-fields';
 
 function normalizeHex(input: string): string {
   const t = input.trim();
@@ -59,6 +61,10 @@ export function BrandSettingsForm({
   const [accent, setAccent] = useState(initialBrand.accent_color);
   const [websiteUrl, setWebsiteUrl] = useState(initialBrand.website_url ?? '');
   const [address, setAddress] = useState(initialBrand.address ?? '');
+  const [fonts, setFonts] = useState<BrandFonts>({
+    heading: initialBrand.heading_font,
+    body: initialBrand.body_font,
+  });
   const [portalSlug, setPortalSlug] = useState(initialPortalSlug ?? '');
   const [saving, setSaving] = useState(false);
 
@@ -73,6 +79,8 @@ export function BrandSettingsForm({
         website_url: websiteUrl.trim() || null,
         address: address.trim() || null,
         portal_slug: normalizePortalSlug(portalSlug) || '',
+        heading_font: fonts.heading,
+        body_font: fonts.body,
       });
       toast.success('Brand settings saved');
       router.refresh();
@@ -190,6 +198,14 @@ export function BrandSettingsForm({
           description="Optional accent (available as {{brand_accent_color}} in HTML templates)."
           value={accent}
           onChange={setAccent}
+          disabled={!canEdit}
+        />
+
+        <BrandTypographyFields
+          value={fonts}
+          onChange={setFonts}
+          primaryColor={primary}
+          accentColor={accent}
           disabled={!canEdit}
         />
 

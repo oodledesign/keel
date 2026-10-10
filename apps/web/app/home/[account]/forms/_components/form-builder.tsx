@@ -30,6 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { cn } from '@kit/ui/utils';
 
 import { WorkspaceRichTextEditor } from '~/components/workspace-rich-text';
+import type { BrandFonts } from '~/lib/brand/brand-fonts.shared';
 import type { CampaignAudienceList } from '~/lib/campaigns/campaign.types';
 import type { ContactCustomFieldDefinition } from '~/lib/contacts/custom-fields';
 import { validateFormCustomCss } from '~/lib/workspace-forms/form-custom-css';
@@ -127,6 +128,7 @@ type Props = {
   accountName: string;
   brandSecondaryColor?: string | null;
   brandLogoUrl?: string | null;
+  brandFonts?: BrandFonts | null;
   /** Where the forms list lives (Forms or Campaigns › Sign-up forms). */
   listPath?: string;
   initialTab?: FormEditorTab;
@@ -146,6 +148,7 @@ export function FormBuilder({
   accountName,
   brandSecondaryColor = null,
   brandLogoUrl = null,
+  brandFonts = null,
   listPath,
   initialTab,
 }: Props) {
@@ -773,6 +776,7 @@ export function FormBuilder({
                   primary: brandColors.primary,
                   accent: brandColors.accent,
                   secondary: brandSecondaryColor,
+                  fonts: brandFonts,
                 }}
                 brandLogoUrl={brandLogoUrl}
                 name={name}

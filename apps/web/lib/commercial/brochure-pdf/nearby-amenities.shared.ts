@@ -1,13 +1,68 @@
+/** Mapbox Maki icon names, valid as Static Images pin labels. */
+export const AMENITY_ICONS = [
+  'rail',
+  'car',
+  'town',
+  'airport',
+  'grocery',
+  'hospital',
+  'school',
+  'park',
+] as const;
+
+export type AmenityIcon = (typeof AMENITY_ICONS)[number];
+
 export type BrochureAmenityItem = {
   label: string;
   index: number;
-  /** When set, the map page drops a numbered pin here. */
+  /** When set, the map page drops a pin here. */
   latitude?: number | null;
   longitude?: number | null;
+  /** Pin + legend icon; numbered when unknown. */
+  icon?: AmenityIcon | null;
 };
 
 const DUMMY_LOCAL_AREA_RE = /^local area\s*\(/i;
 const MAX_AMENITIES = 8;
+
+/** Street names and parking ("Park Road", "Park and Ride") never get a guessed icon. */
+const NOT_AN_AMENITY_RE =
+  /\b(road|lane|street|avenue|drive|way|close|crescent)$|\b(car park|parking|park and ride)\b/i;
+
+const ICON_FROM_LABEL: ReadonlyArray<[RegExp, AmenityIcon]> = [
+  [/\bairport\b/i, 'airport'],
+  [/\bstation$/i, 'rail'],
+  [/^M\d+[A-Z]?\b|\bjunction\b/i, 'car'],
+  [/\b(town|city) centre\b/i, 'town'],
+  [/\bhospital\b/i, 'hospital'],
+  [/\b(school|academy|college)\b/i, 'school'],
+  [
+    /\b(tesco|sainsbury'?s|asda|morrisons|waitrose|aldi|lidl|co-?op|m&s food|iceland|supermarket)\b/i,
+    'grocery',
+  ],
+  [
+    /(?<!\bcar )\b(park|gardens|common|green|recreation ground|playing fields?|nature reserve)\b/i,
+    'park',
+  ],
+];
+
+export function isAmenityIcon(value: unknown): value is AmenityIcon {
+  return (
+    typeof value === 'string' &&
+    (AMENITY_ICONS as readonly string[]).includes(value)
+  );
+}
+
+/** Explicit icon, else a best guess from the place name (pre-icon saved pages, manual rows). */
+export function resolveAmenityIcon(item: {
+  label: string;
+  icon?: AmenityIcon | null;
+}): AmenityIcon | null {
+  if (isAmenityIcon(item.icon)) return item.icon;
+  const name = (item.label.split(/\s+·\s+/)[0] ?? item.label).trim();
+  if (NOT_AN_AMENITY_RE.test(name)) return null;
+  return ICON_FROM_LABEL.find(([re]) => re.test(name))?.[1] ?? null;
+}
 
 export function isDummyLocalAreaAmenity(label: string): boolean {
   return DUMMY_LOCAL_AREA_RE.test(label.trim());
@@ -63,30 +118,34 @@ export function isThinNearbyAmenityList(
   return cleaned.every((label) => isTownCentreAmenity(label));
 }
 
+type AmenityInput = string | Omit<BrochureAmenityItem, 'index'>;
+
 export function buildFallbackNearbyAmenities(
   town: string | null | undefined,
-  extraPois: Array<string | { label: string }> = [],
+  extraPois: AmenityInput[] = [],
 ): BrochureAmenityItem[] {
   const items: BrochureAmenityItem[] = [];
   const seen = new Set<string>();
 
-  const push = (label: string) => {
+  const push = (input: AmenityInput) => {
+    const { label, ...rest } =
+      typeof input === 'string' ? { label: input } : input;
     const trimmed = label.trim();
     if (!trimmed || isDummyLocalAreaAmenity(trimmed)) return;
     const key = amenityDedupeKey(trimmed);
     if (!key || seen.has(key)) return;
     seen.add(key);
-    items.push({ label: trimmed, index: items.length + 1 });
+    items.push({ ...rest, label: trimmed, index: items.length + 1 });
   };
 
   const townName = town?.trim();
   if (townName) {
-    push(`${townName} town centre`);
+    push({ label: `${townName} town centre`, icon: 'town' });
   }
 
   for (const poi of extraPois) {
     if (items.length >= MAX_AMENITIES) break;
-    push(typeof poi === 'string' ? poi : poi.label);
+    push(poi);
   }
 
   return items;
@@ -107,9 +166,16 @@ export function sanitizeBrochureAmenities(
     .map((item, index) => {
       const latitude = finiteOrNull(item.latitude);
       const longitude = finiteOrNull(item.longitude);
-      return latitude != null && longitude != null
-        ? { label: item.label, index: index + 1, latitude, longitude }
-        : { label: item.label, index: index + 1 };
+      const cleanedItem: BrochureAmenityItem = {
+        label: item.label,
+        index: index + 1,
+      };
+      if (latitude != null && longitude != null) {
+        cleanedItem.latitude = latitude;
+        cleanedItem.longitude = longitude;
+      }
+      if (isAmenityIcon(item.icon)) cleanedItem.icon = item.icon;
+      return cleanedItem;
     });
 
   if (cleaned.length > 0) return cleaned;

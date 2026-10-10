@@ -1,5 +1,5 @@
 /**
- * Nearby amenity labels for brochure map pages.
+ * Nearby amenities (label, pin coordinates, icon) for brochure map pages.
  * Uses Mapbox Geocoding (same token stack as listing geocode / static maps).
  */
 import 'server-only';
@@ -11,6 +11,7 @@ import {
   logMapboxServerAuthFailure,
 } from '~/lib/commercial/brochure-pdf/mapbox-token';
 import {
+  type AmenityIcon,
   type BrochureAmenityItem,
   amenityDedupeKey,
   buildFallbackNearbyAmenities,
@@ -39,6 +40,7 @@ type PoiSearch = {
   queries: readonly string[];
   suffix: string | null;
   take: number;
+  icon: AmenityIcon;
   reject?: RegExp;
 };
 
@@ -47,23 +49,27 @@ const POI_SEARCHES: readonly PoiSearch[] = [
     queries: ['railway station', 'train station'],
     suffix: 'station',
     take: 1,
+    icon: 'rail',
   },
   {
     queries: ['supermarket', 'grocery'],
     suffix: null,
     take: 3,
+    icon: 'grocery',
   },
-  { queries: ['hospital'], suffix: null, take: 1 },
+  { queries: ['hospital'], suffix: null, take: 1, icon: 'hospital' },
   {
     queries: ['school'],
     suffix: null,
     take: 2,
+    icon: 'school',
     reject: /\bdriving school\b/i,
   },
   {
     queries: ['park'],
     suffix: null,
     take: 1,
+    icon: 'park',
     reject: /\b(car park|parking|park and ride)\b/i,
   },
 ];
@@ -115,7 +121,9 @@ type MapboxFeature = {
   center?: [number, number];
 };
 
-type PoiHit = { name: string; km: number };
+type PoiHit = { name: string; km: number; latitude: number; longitude: number };
+
+type PoiAmenity = Omit<BrochureAmenityItem, 'index'>;
 
 type SearchOutcome = {
   hits: PoiHit[];
@@ -186,16 +194,16 @@ async function searchNearbyPois(
     const name =
       feature.text?.trim() || feature.place_name?.split(',')[0]?.trim();
     if (!name) continue;
-    hits.push({ name, km });
+    hits.push({ name, km, latitude, longitude });
   }
 
   hits.sort((a, b) => a.km - b.km);
   return { hits, authFailed: false };
 }
 
-function labelsFromHits(hits: PoiHit[], search: PoiSearch): string[] {
+function amenitiesFromHits(hits: PoiHit[], search: PoiSearch): PoiAmenity[] {
   const seen = new Set<string>();
-  const labels: string[] = [];
+  const amenities: PoiAmenity[] = [];
 
   for (const hit of hits) {
     if (search.reject?.test(hit.name)) continue;
@@ -204,19 +212,22 @@ function labelsFromHits(hits: PoiHit[], search: PoiSearch): string[] {
     const key = amenityDedupeKey(name);
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    labels.push(
-      formatNearbyAmenityLabel(name, formatAmenityDistanceMiles(hit.km)),
-    );
-    if (labels.length >= search.take) break;
+    amenities.push({
+      label: formatNearbyAmenityLabel(name, formatAmenityDistanceMiles(hit.km)),
+      latitude: hit.latitude,
+      longitude: hit.longitude,
+      icon: search.icon,
+    });
+    if (amenities.length >= search.take) break;
   }
 
-  return labels;
+  return amenities;
 }
 
 async function fetchAmenitiesWithToken(
   origin: { latitude: number; longitude: number },
   resolved: ResolvedMapboxToken,
-): Promise<{ labels: string[]; authFailed: boolean; status?: number }> {
+): Promise<{ amenities: PoiAmenity[]; authFailed: boolean; status?: number }> {
   const groups = await Promise.all(
     POI_SEARCHES.map(async (search) => {
       const outcomes = await Promise.all(
@@ -227,7 +238,7 @@ async function fetchAmenitiesWithToken(
       const authFailure = outcomes.find((outcome) => outcome.authFailed);
       if (authFailure) {
         return {
-          labels: [] as string[],
+          amenities: [] as PoiAmenity[],
           authFailed: true,
           status: authFailure.status,
         };
@@ -236,7 +247,7 @@ async function fetchAmenitiesWithToken(
         .flatMap((outcome) => outcome.hits)
         .sort((a, b) => a.km - b.km);
       return {
-        labels: labelsFromHits(mergedHits, search),
+        amenities: amenitiesFromHits(mergedHits, search),
         authFailed: false,
       };
     }),
@@ -244,10 +255,13 @@ async function fetchAmenitiesWithToken(
 
   const authFailure = groups.find((group) => group.authFailed);
   if (authFailure) {
-    return { labels: [], authFailed: true, status: authFailure.status };
+    return { amenities: [], authFailed: true, status: authFailure.status };
   }
 
-  return { labels: groups.flatMap((group) => group.labels), authFailed: false };
+  return {
+    amenities: groups.flatMap((group) => group.amenities),
+    authFailed: false,
+  };
 }
 
 /**
@@ -288,7 +302,7 @@ export async function fetchNearbyBrochureAmenities(input: {
         continue;
       }
 
-      if (result.labels.length === 0) {
+      if (result.amenities.length === 0) {
         console.warn(
           '[brochure-pdf] nearby amenities: Mapbox returned no POIs within range; using town-centre fallback',
           `tokenSource=${resolved.source}`,
@@ -296,7 +310,7 @@ export async function fetchNearbyBrochureAmenities(input: {
         return fallback;
       }
 
-      return buildFallbackNearbyAmenities(input.town, result.labels).slice(
+      return buildFallbackNearbyAmenities(input.town, result.amenities).slice(
         0,
         MAX_AMENITIES,
       );

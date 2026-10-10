@@ -199,8 +199,10 @@ export type Database = {
           accent_color: string | null
           account_id: string
           address: string | null
+          body_font: string | null
           contact_email: string | null
           created_at: string
+          heading_font: string | null
           logo_on_dark_url: string | null
           logo_on_light_url: string | null
           logo_url: string | null
@@ -214,8 +216,10 @@ export type Database = {
           accent_color?: string | null
           account_id: string
           address?: string | null
+          body_font?: string | null
           contact_email?: string | null
           created_at?: string
+          heading_font?: string | null
           logo_on_dark_url?: string | null
           logo_on_light_url?: string | null
           logo_url?: string | null
@@ -229,8 +233,10 @@ export type Database = {
           accent_color?: string | null
           account_id?: string
           address?: string | null
+          body_font?: string | null
           contact_email?: string | null
           created_at?: string
+          heading_font?: string | null
           logo_on_dark_url?: string | null
           logo_on_light_url?: string | null
           logo_url?: string | null

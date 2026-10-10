@@ -13,6 +13,10 @@ import {
 } from '@kit/scheduling/google';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import {
+  type BrandFonts,
+  parseBrandFontId,
+} from '~/lib/brand/brand-fonts.shared';
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 import type {
@@ -83,6 +87,8 @@ export type PublicBookingPage = {
   hostName: string | null;
   /** Host avatar URL */
   hostPictureUrl: string | null;
+  /** Workspace brand typography */
+  fonts?: BrandFonts;
 };
 
 export type PublicEventType = {
@@ -175,7 +181,7 @@ async function enrichPublicBookingPage(
         .eq('id', page.accountId)
         .maybeSingle(),
       table(client, 'account_brand_settings')
-        .select('logo_url, primary_color')
+        .select('logo_url, primary_color, heading_font, body_font')
         .eq('account_id', page.accountId)
         .maybeSingle(),
       table(client, 'accounts')
@@ -191,6 +197,8 @@ async function enrichPublicBookingPage(
   const brand = (brandRow ?? {}) as {
     logo_url?: string | null;
     primary_color?: string | null;
+    heading_font?: string | null;
+    body_font?: string | null;
   };
   const host = (hostRow ?? {}) as {
     name?: string | null;
@@ -211,6 +219,10 @@ async function enrichPublicBookingPage(
     logoUrl,
     hostName: host.name?.trim() || null,
     hostPictureUrl,
+    fonts: {
+      heading: parseBrandFontId(brand.heading_font),
+      body: parseBrandFontId(brand.body_font),
+    },
   };
 }
 

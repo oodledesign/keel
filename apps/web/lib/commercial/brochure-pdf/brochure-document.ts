@@ -1,6 +1,7 @@
 /**
  * Brochure document model — shared between auto PDF generation and the page editor.
  */
+import type { AmenityIcon } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 
 export type BrochureOrientation = 'portrait' | 'landscape';
 export type BrochureTemplateId = 'classic' | 'editorial' | 'compact';
@@ -45,6 +46,7 @@ export type BrochureSlotValue =
         index: number;
         latitude?: number | null;
         longitude?: number | null;
+        icon?: AmenityIcon | null;
       }>;
     }
   | { type: 'agents' }

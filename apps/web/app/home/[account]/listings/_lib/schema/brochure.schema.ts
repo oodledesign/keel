@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { AMENITY_ICONS } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
+
 export const BrochureOrientationSchema = z.enum(['portrait', 'landscape']);
 export const BrochureTemplateIdSchema = z.enum([
   'classic',
@@ -75,6 +77,7 @@ const BrochureSlotValueSchema = z.discriminatedUnion('type', [
           index: z.number().int().min(1).max(99),
           latitude: z.number().min(-90).max(90).nullable().optional(),
           longitude: z.number().min(-180).max(180).nullable().optional(),
+          icon: z.enum(AMENITY_ICONS).nullable().optional(),
         }),
       )
       .max(20),

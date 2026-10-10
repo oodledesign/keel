@@ -9,6 +9,7 @@ import {
   isDummyLocalAreaAmenity,
   isThinNearbyAmenityList,
   mergeBrochureAmenities,
+  resolveAmenityIcon,
   sanitizeBrochureAmenities,
 } from '../nearby-amenities.shared';
 
@@ -72,7 +73,7 @@ describe('nearby amenity labels', () => {
 
   it('falls back to town centre only — never Local area (outward postcode)', () => {
     expect(buildFallbackNearbyAmenities('Crowborough')).toEqual([
-      { label: 'Crowborough town centre', index: 1 },
+      { label: 'Crowborough town centre', index: 1, icon: 'town' },
     ]);
     expect(
       sanitizeBrochureAmenities(
@@ -218,6 +219,16 @@ describe('fetchNearbyBrochureAmenities', () => {
       ]),
     );
     expect(amenities.length).toBeGreaterThanOrEqual(5);
+    expect(amenities.find((item) => item.label.startsWith('Lidl'))).toEqual(
+      expect.objectContaining({
+        icon: 'grocery',
+        latitude: 51.059,
+        longitude: 0.164,
+      }),
+    );
+    expect(
+      amenities.find((item) => item.label.includes('Hospital'))?.icon,
+    ).toBe('hospital');
   });
 
   it('normalises railway station names and skips car-park hits', async () => {
@@ -439,6 +450,33 @@ describe('fetchNearbyBrochureAmenities', () => {
       ),
     ).toBe(true);
     errorSpy.mockRestore();
+  });
+});
+
+describe('resolveAmenityIcon', () => {
+  it('prefers the stored icon and infers one for older saved rows', () => {
+    expect(
+      resolveAmenityIcon({ label: 'Calverley Grounds', icon: 'park' }),
+    ).toBe('park');
+    expect(
+      resolveAmenityIcon({ label: 'Otford station · 0.3 mi · 6 min walk' }),
+    ).toBe('rail');
+    expect(resolveAmenityIcon({ label: 'M25 Junction 5 · 3.1 mi' })).toBe(
+      'car',
+    );
+    expect(resolveAmenityIcon({ label: 'Sevenoaks town centre' })).toBe('town');
+    expect(resolveAmenityIcon({ label: 'Gatwick Airport · 31 mi' })).toBe(
+      'airport',
+    );
+    expect(resolveAmenityIcon({ label: 'Waitrose · 0.4 mi' })).toBe('grocery');
+    expect(
+      resolveAmenityIcon({ label: 'Otford Recreation Ground · 0.1 mi' }),
+    ).toBe('park');
+    expect(resolveAmenityIcon({ label: 'Station Road car park' })).toBeNull();
+    expect(resolveAmenityIcon({ label: 'Park Road · 0.2 mi' })).toBeNull();
+    expect(resolveAmenityIcon({ label: 'Hospital Lane' })).toBeNull();
+    expect(resolveAmenityIcon({ label: 'Park and Ride · 1.2 mi' })).toBeNull();
+    expect(resolveAmenityIcon({ label: 'Bakery · 0.1 mi' })).toBeNull();
   });
 });
 

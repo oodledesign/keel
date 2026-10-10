@@ -8,6 +8,8 @@ import {
   formatPollWhen,
   formatPollZoneLabel,
 } from '~/home/[account]/scheduling/_lib/format-poll-time';
+import type { BrandFonts } from '~/lib/brand/brand-fonts.shared';
+import { brandFontStyle } from '~/lib/brand/brand-fonts.web';
 
 import { readableOn } from '../_lib/readable-on';
 
@@ -41,6 +43,7 @@ type ResultsPage = {
   brandName: string;
   logoUrl: string | null;
   primaryColor: string;
+  fonts: BrandFonts;
   organiserName: string;
   organiserEmail: string | null;
 };
@@ -90,7 +93,10 @@ export function PollResultsClient({ page }: { page: ResultsPage }) {
     : null;
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-8 sm:px-6">
+    <div
+      className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-8 sm:px-6"
+      style={brandFontStyle(page.fonts)}
+    >
       <header
         className="mb-6 rounded-2xl px-4 py-4"
         style={{ backgroundColor: page.primaryColor, color: onBrand }}

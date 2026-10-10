@@ -3,6 +3,9 @@ import Link from 'next/link';
 import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import { cn } from '@kit/ui/utils';
 
+import type { BrandFonts } from '~/lib/brand/brand-fonts.shared';
+import { brandFontStyle } from '~/lib/brand/brand-fonts.web';
+
 type Props = {
   title?: string | null;
   description?: string | null;
@@ -10,6 +13,7 @@ type Props = {
   logoUrl?: string | null;
   hostName?: string | null;
   hostPictureUrl?: string | null;
+  fonts?: BrandFonts | null;
   /** Wider shell without page title / host chrome — used on the event booking step. */
   variant?: 'default' | 'event';
   children: React.ReactNode;
@@ -23,6 +27,7 @@ export function BookShell({
   logoUrl,
   hostName,
   hostPictureUrl,
+  fonts,
   variant = 'default',
   children,
   footerNote,
@@ -36,6 +41,7 @@ export function BookShell({
         'mx-auto flex min-h-screen w-full flex-col px-4 py-10 sm:px-6',
         isEvent ? 'max-w-5xl' : 'max-w-3xl',
       )}
+      style={brandFontStyle(fonts)}
     >
       <header className={cn(isEvent ? 'mb-6' : 'mb-8')}>
         <div className="mb-5 flex items-center justify-between gap-3">
@@ -73,7 +79,12 @@ export function BookShell({
 
         {!isEvent && title ? (
           <>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            <h1
+              className={cn(
+                'text-3xl font-bold tracking-tight sm:text-4xl',
+                fonts?.heading && 'font-heading',
+              )}
+            >
               {title}
             </h1>
             {description ? (

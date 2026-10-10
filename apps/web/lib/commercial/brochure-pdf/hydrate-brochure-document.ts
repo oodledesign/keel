@@ -46,22 +46,28 @@ type MapAmenity = Extract<
   { type: 'map' }
 >['amenities'][number];
 
-/** Saved pages predating map pins: borrow coordinates from matching fetched places. */
+/** Saved pages predating map pins / icons: borrow them from matching fetched places. */
 function attachAmenityCoordinates(
   saved: MapAmenity[],
   fetched: NonNullable<PublicBrochureData['nearbyAmenities']>,
 ): MapAmenity[] {
   const byKey = new Map(
-    fetched
-      .filter((item) => item.latitude != null && item.longitude != null)
-      .map((item) => [amenityDedupeKey(item.label), item]),
+    fetched.map((item) => [amenityDedupeKey(item.label), item]),
   );
   return saved.map((item) => {
-    if (item.latitude != null && item.longitude != null) return item;
     const match = byKey.get(amenityDedupeKey(item.label));
-    return match
-      ? { ...item, latitude: match.latitude, longitude: match.longitude }
-      : item;
+    if (!match) return item;
+    const next = { ...item };
+    if (
+      (next.latitude == null || next.longitude == null) &&
+      match.latitude != null &&
+      match.longitude != null
+    ) {
+      next.latitude = match.latitude;
+      next.longitude = match.longitude;
+    }
+    if (!next.icon && match.icon) next.icon = match.icon;
+    return next;
   });
 }
 

@@ -20,6 +20,16 @@ import {
   setCharacterSpacing,
 } from 'pdf-lib';
 
+import { loadBrandFontFiles } from '~/lib/brand/brand-fonts.server';
+import {
+  type BrandFontId,
+  DEFAULT_PDF_BODY_FONT,
+  DEFAULT_PDF_HEADING_FONT,
+} from '~/lib/brand/brand-fonts.shared';
+import {
+  AMENITY_ICON_PATHS,
+  AMENITY_ICON_VIEWBOX,
+} from '~/lib/commercial/brochure-pdf/amenity-icons';
 import type {
   BrochureDocument,
   BrochureOrientation,
@@ -27,7 +37,6 @@ import type {
   BrochureSlotValue,
   BrochureTemplateId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
-import { loadBrochureSerifFonts } from '~/lib/commercial/brochure-pdf/brochure-fonts.server';
 import {
   type Box,
   coverHeadline,
@@ -50,8 +59,10 @@ import {
   fetchBrochureMapImageBytes,
 } from '~/lib/commercial/brochure-pdf/mapbox-static';
 import {
+  type AmenityIcon,
   buildFallbackNearbyAmenities,
   isThinNearbyAmenityList,
+  resolveAmenityIcon,
   sanitizeBrochureAmenities,
 } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 import {
@@ -600,17 +611,31 @@ function drawHairline(
   });
 }
 
-/** Numbered disc matching the map's amenity pins. */
-function drawNumberBadge(
+/** Icon (or numbered) disc matching the map's amenity pins. */
+function drawAmenityBadge(
   page: PDFPage,
   ctx: RenderCtx,
-  n: number,
+  amenity: { label: string; index: number; icon?: AmenityIcon | null },
   cx: number,
   cy: number,
 ) {
-  const label = String(n);
+  const radius = 7.5;
+  page.drawCircle({ x: cx, y: cy, size: radius, color: ctx.colors.accent });
+  const icon = resolveAmenityIcon(amenity);
+  if (icon) {
+    const glyph = 9;
+    const scale = glyph / AMENITY_ICON_VIEWBOX;
+    // SVG paths draw downward from (x, y), so anchor at the glyph's top-left.
+    page.drawSvgPath(AMENITY_ICON_PATHS[icon], {
+      x: cx - glyph / 2,
+      y: cy + glyph / 2,
+      scale,
+      color: ctx.colors.paper,
+    });
+    return;
+  }
+  const label = String(amenity.index);
   const size = 7;
-  page.drawCircle({ x: cx, y: cy, size: 7.5, color: ctx.colors.accent });
   page.drawText(label, {
     x: cx - ctx.fontBold.widthOfTextAtSize(label, size) / 2,
     y: cy - size * 0.36,
@@ -628,11 +653,12 @@ type RenderCtx = {
   pdf: PDFDocument;
   data: PublicBrochureData;
   colors: BrandColors;
+  /** Brand body font (Helvetica by default). */
   font: PDFFont;
   fontBold: PDFFont;
-  /** Lora for headings and lead paragraphs (Helvetica when unavailable). */
-  serif: PDFFont;
-  serifBold: PDFFont;
+  /** Brand heading font for titles and lead paragraphs (Lora by default). */
+  heading: PDFFont;
+  headingBold: PDFFont;
   orientation: BrochureOrientation;
   templateId: BrochureTemplateId;
   imageCache: Map<string, PDFImage | null>;
@@ -823,7 +849,7 @@ function drawPageHeader(
   const next = drawWrapped(page, title, {
     x: frame.left,
     y: titleY,
-    font: ctx.serifBold,
+    font: ctx.headingBold,
     size: type.title,
     lineHeight,
     color: ctx.colors.ink,
@@ -881,7 +907,7 @@ function drawBands(page: PDFPage, ctx: RenderCtx) {
         x: margin,
         y: midY - 3.5,
         size: 10,
-        font: ctx.serifBold,
+        font: ctx.headingBold,
         color: ctx.colors.paper,
       }) + 24;
   }
@@ -1112,7 +1138,7 @@ function leadType(ctx: RenderCtx) {
   return { size, leading: size * 1.42 };
 }
 
-/** Body copy; with `lead`, the opening line is set larger in the serif. */
+/** Body copy; with `lead`, the opening line is set larger in the heading font. */
 function drawBodyCopy(
   page: PDFPage,
   ctx: RenderCtx,
@@ -1135,7 +1161,7 @@ function drawBodyCopy(
     y = drawWrapped(page, lead, {
       x: opts.x,
       y: y + type.body - lt.size,
-      font: ctx.serif,
+      font: ctx.heading,
       size: lt.size,
       color: ctx.colors.ink,
       maxWidth: opts.maxWidth,
@@ -1170,7 +1196,7 @@ function measureBodyCopy(
   const lt = leadType(ctx);
   const leadH = lead
     ? measureWrapped(lead, {
-        font: ctx.serif,
+        font: ctx.heading,
         size: lt.size,
         maxWidth: width,
         lineHeight: lt.leading,
@@ -1509,7 +1535,7 @@ async function renderCover(
     y = drawWrapped(page, title, {
       x,
       y,
-      font: ctx.serifBold,
+      font: ctx.headingBold,
       size: titleSize,
       color: ctx.colors.paper,
       maxWidth: w,
@@ -1882,7 +1908,7 @@ async function renderFacts(
       // Photos rise to the eyebrow line unless a long header reaches across.
       const type = typeScale(ctx);
       const headerW = Math.max(
-        ctx.serifBold.widthOfTextAtSize(title, type.title),
+        ctx.headingBold.widthOfTextAtSize(title, type.title),
         trackedWidth(ctx.runningTitle.toUpperCase(), ctx.fontBold, 7, 1.1),
       );
       let photoTop = headerW > leftW ? contentTop + type.body : frame.top;
@@ -1999,7 +2025,7 @@ function drawSizeStat(
   const valueSize = 26;
   const padX = 18;
   const w = Math.max(
-    ctx.serifBold.widthOfTextAtSize(value, valueSize),
+    ctx.headingBold.widthOfTextAtSize(value, valueSize),
     trackedWidth(label.toUpperCase(), ctx.fontBold, 6.5, 1.1),
   );
   const box = { x: area.x, y: area.y, width: w + padX * 2, height: 72 };
@@ -2008,7 +2034,7 @@ function drawSizeStat(
     x: box.x + padX,
     y: box.y + 32,
     size: valueSize,
-    font: ctx.serifBold,
+    font: ctx.headingBold,
     color: ctx.colors.paper,
   });
   drawEyebrow(page, ctx, label, {
@@ -2657,7 +2683,7 @@ function splitAmenityLabel(label: string): { name: string; detail: string } {
 function drawAmenityRows(
   page: PDFPage,
   ctx: RenderCtx,
-  amenities: Array<{ label: string; index: number }>,
+  amenities: Array<{ label: string; index: number; icon?: AmenityIcon | null }>,
   opts: { x: number; y: number; width: number; columns: number; minY: number },
 ) {
   const colGap = 20;
@@ -2670,7 +2696,7 @@ function drawAmenityRows(
     const y = opts.y - row * AMENITY_ROW_H;
     if (y - 12 < opts.minY) return;
     const { name, detail } = splitAmenityLabel(amenity.label);
-    drawNumberBadge(page, ctx, amenity.index, x + 7.5, y + 3);
+    drawAmenityBadge(page, ctx, amenity, x + 7.5, y + 3);
     drawWrapped(page, name, {
       x: x + 22,
       y,
@@ -2998,7 +3024,7 @@ async function renderContact(
       x: frame.left,
       y: height - 58,
       size: 22,
-      font: ctx.serifBold,
+      font: ctx.headingBold,
       color: ctx.colors.paper,
     });
 
@@ -3255,7 +3281,7 @@ function drawOfficeBlock(
       x: opts.x,
       y: by,
       size: banded ? 17 : 14,
-      font: banded ? ctx.serifBold : ctx.fontBold,
+      font: banded ? ctx.headingBold : ctx.fontBold,
       color: ctx.colors.ink,
     });
     by -= banded ? 21 : 18;
@@ -3311,10 +3337,10 @@ function drawAvatar(
   if (!initials) return;
   const size = 11;
   drawText(page, initials, {
-    x: cx - ctx.serifBold.widthOfTextAtSize(initials, size) / 2,
+    x: cx - ctx.headingBold.widthOfTextAtSize(initials, size) / 2,
     y: cy - size * 0.35,
     size,
-    font: ctx.serifBold,
+    font: ctx.headingBold,
     color: ctx.colors.paper,
   });
 }
@@ -3382,7 +3408,7 @@ function renderContactSplit(
   y = drawWrapped(page, opts.title, {
     x: px,
     y: y - 12 - titleSize * 0.72,
-    font: ctx.serifBold,
+    font: ctx.headingBold,
     size: titleSize,
     lineHeight: titleSize * 1.12,
     color: ctx.colors.paper,
@@ -3547,6 +3573,28 @@ function spareImageUrls(
     .map((item) => item.url);
 }
 
+type EmbeddedFontPair = { regular: PDFFont; bold: PDFFont };
+
+/** Embeds a bundled brand font; Helvetica stands in when it can't load. */
+async function embedBrandFont(
+  pdf: PDFDocument,
+  id: BrandFontId,
+  fallback: EmbeddedFontPair,
+): Promise<EmbeddedFontPair> {
+  const files = await loadBrandFontFiles(id);
+  if (!files) return fallback;
+  try {
+    const [regular, bold] = await Promise.all([
+      pdf.embedFont(files.regular, { subset: true }),
+      pdf.embedFont(files.bold, { subset: true }),
+    ]);
+    return { regular, bold };
+  } catch (error) {
+    console.error(`[brochure-pdf] ${id} embed failed; using Helvetica`, error);
+    return fallback;
+  }
+}
+
 /**
  * Render a brochure document to PDF bytes using pdf-lib.
  */
@@ -3555,22 +3603,21 @@ export async function renderBrochurePdf(
   data: PublicBrochureData,
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  let serif = font;
-  let serifBold = fontBold;
-  const serifFonts = await loadBrochureSerifFonts();
-  if (serifFonts) {
-    try {
-      pdf.registerFontkit(fontkit);
-      [serif, serifBold] = await Promise.all([
-        pdf.embedFont(serifFonts.regular, { subset: true }),
-        pdf.embedFont(serifFonts.semiBold, { subset: true }),
-      ]);
-    } catch (error) {
-      console.error('[brochure-pdf] Lora embed failed; using Helvetica', error);
-    }
-  }
+  pdf.registerFontkit(fontkit);
+  const [helvetica, helveticaBold] = await Promise.all([
+    pdf.embedFont(StandardFonts.Helvetica),
+    pdf.embedFont(StandardFonts.HelveticaBold),
+  ]);
+  const fallback = { regular: helvetica, bold: helveticaBold };
+  const brandFonts = data.brand.fonts;
+  const [body, heading] = await Promise.all([
+    embedBrandFont(pdf, brandFonts?.body ?? DEFAULT_PDF_BODY_FONT, fallback),
+    embedBrandFont(
+      pdf,
+      brandFonts?.heading ?? DEFAULT_PDF_HEADING_FONT,
+      fallback,
+    ),
+  ]);
   const size = pageSize(document.orientation);
 
   const colors: BrandColors = {
@@ -3596,10 +3643,10 @@ export async function renderBrochurePdf(
     pdf,
     data,
     colors,
-    font,
-    fontBold,
-    serif,
-    serifBold,
+    font: body.regular,
+    fontBold: body.bold,
+    heading: heading.regular,
+    headingBold: heading.bold,
     orientation: document.orientation,
     templateId: document.templateId,
     imageCache: new Map(),
@@ -3624,7 +3671,7 @@ export async function renderBrochurePdf(
       x: 40,
       y: size.height / 2,
       size: 14,
-      font,
+      font: body.regular,
       color: colors.muted,
     });
   }

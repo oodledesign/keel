@@ -6,6 +6,7 @@ import type { CSSProperties } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+import { brandFontStyle } from '~/lib/brand/brand-fonts.web';
 import type { PublicBrochureData } from '~/lib/commercial/public-brochure.shared';
 import { formatBrochureAddress } from '~/lib/commercial/public-brochure.shared';
 import { marketingHeroEase } from '~/lib/marketing/marketing-ui';
@@ -108,6 +109,7 @@ export function BrochureSlideshow({ data }: BrochureSlideshowProps) {
     '--brochure-primary': data.brand.primaryColor,
     '--brochure-secondary': data.brand.secondaryColor,
     '--brochure-accent': data.brand.accentColor,
+    ...brandFontStyle(data.brand.fonts),
   } as CSSProperties;
 
   return (

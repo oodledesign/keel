@@ -41,7 +41,7 @@ export type WorkspaceFormLogoMode = (typeof WORKSPACE_FORM_LOGO_MODES)[number];
 export const WORKSPACE_FORM_CUSTOM_CSS_MAX = 4000;
 
 export const WORKSPACE_FORM_FONT_LABELS: Record<WorkspaceFormFont, string> = {
-  default: 'Default',
+  default: 'Brand font',
   serif: 'Serif',
   rounded: 'Rounded',
   mono: 'Monospace',

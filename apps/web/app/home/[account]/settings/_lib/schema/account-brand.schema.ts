@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { BRAND_FONT_IDS } from '~/lib/brand/brand-fonts.shared';
+
 const hex6 = z
   .string()
   .regex(/^#[0-9A-Fa-f]{6}$/, 'Use a hex colour like #0D2344');
@@ -48,4 +50,6 @@ export const saveAccountBrandSettingsSchema = z.object({
   website_url: z.string().trim().max(500).optional().nullable(),
   address: z.string().trim().max(1000).optional().nullable(),
   portal_slug: portalSlugSchema.optional().nullable(),
+  heading_font: z.enum(BRAND_FONT_IDS).optional().nullable(),
+  body_font: z.enum(BRAND_FONT_IDS).optional().nullable(),
 });

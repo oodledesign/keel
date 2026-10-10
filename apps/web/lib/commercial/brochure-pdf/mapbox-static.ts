@@ -5,6 +5,10 @@ import {
   logMapboxServerAuthFailure,
   resolveMapboxToken,
 } from '~/lib/commercial/brochure-pdf/mapbox-token';
+import {
+  type AmenityIcon,
+  resolveAmenityIcon,
+} from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 
 /**
  * Mapbox Static Images API helper for brochure map pages.
@@ -19,6 +23,7 @@ export type BrochureMapAmenity = {
   index: number;
   longitude?: number | null;
   latitude?: number | null;
+  icon?: AmenityIcon | null;
 };
 
 export type FetchBrochureMapImageInput = {
@@ -29,11 +34,11 @@ export type FetchBrochureMapImageInput = {
   /** Pixel height. */
   height: number;
   zoom?: number;
-  /** Amenities with coordinates get numbered pins; the map then auto-fits. */
+  /** Amenities with coordinates get icon (or numbered) pins; the map then auto-fits. */
   amenities?: BrochureMapAmenity[];
   /** Workspace brand pin (`#RRGGBB` or `RRGGBB`). Overlay is `pin-l+RRGGBB`. */
   pinColor?: string;
-  /** Numbered amenity pin colour; defaults to the property pin colour. */
+  /** Amenity pin colour; defaults to the property pin colour. */
   amenityPinColor?: string;
 };
 
@@ -91,7 +96,12 @@ function roughKm(
 
 const coord = (n: number) => Number(n.toFixed(5));
 
-type PinnedAmenity = { index: number; latitude: number; longitude: number };
+type PinnedAmenity = {
+  /** Maki icon name or the row number. */
+  marker: string;
+  latitude: number;
+  longitude: number;
+};
 
 function pinnedAmenities(
   input: Pick<
@@ -101,7 +111,8 @@ function pinnedAmenities(
 ): PinnedAmenity[] {
   const origin = { latitude: input.latitude, longitude: input.longitude };
   const pinned: PinnedAmenity[] = [];
-  for (const { latitude, longitude, index } of input.amenities ?? []) {
+  for (const amenity of input.amenities ?? []) {
+    const { latitude, longitude, index } = amenity;
     if (
       typeof latitude !== 'number' ||
       typeof longitude !== 'number' ||
@@ -114,12 +125,16 @@ function pinnedAmenities(
       continue;
     }
     if (roughKm(origin, { latitude, longitude }) > AMENITY_PIN_MAX_KM) continue;
-    pinned.push({ index, latitude, longitude });
+    pinned.push({
+      marker: resolveAmenityIcon(amenity) ?? String(index),
+      latitude,
+      longitude,
+    });
   }
   return pinned;
 }
 
-/** `pin-s-3+HEX(lng,lat)` overlays for amenities close enough to map. */
+/** `pin-s-rail+HEX(lng,lat)` (or `pin-s-3+…`) overlays for amenities close enough to map. */
 export function brochureAmenityPinOverlays(
   input: Pick<
     FetchBrochureMapImageInput,
@@ -128,8 +143,8 @@ export function brochureAmenityPinOverlays(
 ): string[] {
   const hex = toMapboxPinHex(input.amenityPinColor ?? input.pinColor);
   return pinnedAmenities(input).map(
-    ({ index, latitude, longitude }) =>
-      `pin-s-${index}+${hex}(${coord(longitude)},${coord(latitude)})`,
+    ({ marker, latitude, longitude }) =>
+      `pin-s-${marker}+${hex}(${coord(longitude)},${coord(latitude)})`,
   );
 }
 

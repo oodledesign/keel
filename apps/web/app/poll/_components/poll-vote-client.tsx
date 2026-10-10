@@ -27,6 +27,8 @@ import {
   formatPollWhen,
   formatPollZoneLabel,
 } from '~/home/[account]/scheduling/_lib/format-poll-time';
+import type { BrandFonts } from '~/lib/brand/brand-fonts.shared';
+import { brandFontStyle } from '~/lib/brand/brand-fonts.web';
 
 import { readableOn } from '../_lib/readable-on';
 import { submitPollVoteAction } from '../_lib/server/public-poll-actions';
@@ -49,6 +51,7 @@ type VotePage = {
   brandName: string;
   logoUrl: string | null;
   primaryColor: string;
+  fonts: BrandFonts;
   slots: Array<{ id: string; startsAt: string; endsAt: string }>;
   participants: Array<{
     inviteeId: string;
@@ -164,7 +167,10 @@ export function PollVoteClient({ page }: { page: VotePage }) {
   const onBrand = readableOn(page.primaryColor);
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-8 sm:px-6">
+    <div
+      className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-8 sm:px-6"
+      style={brandFontStyle(page.fonts)}
+    >
       <header
         className="mb-6 rounded-2xl px-4 py-4"
         style={{ backgroundColor: page.primaryColor, color: onBrand }}

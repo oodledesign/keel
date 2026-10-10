@@ -70,7 +70,7 @@ describe('amenity map pins', () => {
     amenityPinColor: '#C8102E',
   };
 
-  it('pins numbered amenities within range and skips far or unlocated ones', () => {
+  it('pins amenities within range and skips far or unlocated ones', () => {
     const overlays = brochureAmenityPinOverlays({
       ...base,
       amenities: [
@@ -89,7 +89,34 @@ describe('amenity map pins', () => {
         { label: 'Waitrose', index: 3, latitude: null, longitude: null },
       ],
     });
-    expect(overlays).toEqual(['pin-s-1+C8102E(0.19678,51.31316)']);
+    expect(overlays).toEqual(['pin-s-rail+C8102E(0.19678,51.31316)']);
+  });
+
+  it('uses the explicit icon, else infers one, else falls back to the number', () => {
+    const overlays = brochureAmenityPinOverlays({
+      ...base,
+      amenities: [
+        {
+          label: 'Waitrose · 0.4 mi',
+          index: 1,
+          latitude: 51.314,
+          longitude: 0.19,
+          icon: 'grocery',
+        },
+        {
+          label: 'M25 Junction 5 · 3.1 mi',
+          index: 2,
+          latitude: 51.3,
+          longitude: 0.17,
+        },
+        { label: 'Bakery', index: 3, latitude: 51.313, longitude: 0.191 },
+      ],
+    });
+    expect(overlays).toEqual([
+      'pin-s-grocery+C8102E(0.19,51.314)',
+      'pin-s-car+C8102E(0.17,51.3)',
+      'pin-s-3+C8102E(0.191,51.313)',
+    ]);
   });
 
   it('zooms to fit pins, capped for close places and floored for far ones', () => {
@@ -134,7 +161,7 @@ describe('amenity map pins', () => {
       'pk.test',
     );
     expect(first).toContain(
-      'pin-s-1+C8102E(0.19678,51.31316),pin-l+0D2344(0.1903,51.3129)/0.1903,51.3129,14.25,0/450x500@2x?',
+      'pin-s-rail+C8102E(0.19678,51.31316),pin-l+0D2344(0.1903,51.3129)/0.1903,51.3129,14.25,0/450x500@2x?',
     );
   });
 });

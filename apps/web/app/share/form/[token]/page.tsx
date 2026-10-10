@@ -1,6 +1,8 @@
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { FormThemeStyle } from '~/components/workspace-forms/form-theme-style';
+import { brandFontsOf } from '~/lib/brand/brand-fonts.shared';
+import { brandFontStyle } from '~/lib/brand/brand-fonts.web';
 import {
   brandLogoSurfaceForPage,
   resolveBrandLogoForSurface,
@@ -102,7 +104,10 @@ async function PublicWorkspaceFormPage({
   return (
     <main
       className={`flex min-h-[100dvh] flex-col px-4 ${embed ? 'py-4' : 'py-10 sm:px-6'}`}
-      style={{ background: pageBackground }}
+      style={{
+        background: pageBackground,
+        ...brandFontStyle(brandFontsOf(form.brand)),
+      }}
     >
       <FormThemeStyle theme={form.theme} />
       <PublicWorkspaceForm

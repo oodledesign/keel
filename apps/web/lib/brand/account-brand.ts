@@ -2,6 +2,10 @@ import 'server-only';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import {
+  type BrandFontId,
+  parseBrandFontId,
+} from '~/lib/brand/brand-fonts.shared';
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 /** Defaults match the executive signature banner before custom brand is saved. */
@@ -21,6 +25,8 @@ export type AccountBrandSettingsRow = {
   address: string | null;
   contact_email: string | null;
   phone: string | null;
+  heading_font: string | null;
+  body_font: string | null;
 };
 
 /**
@@ -38,6 +44,10 @@ export type AccountBrandResolved = {
   address: string | null;
   contact_email: string | null;
   phone: string | null;
+  /** Null keeps each surface's standard heading font. */
+  heading_font: BrandFontId | null;
+  /** Null keeps each surface's standard body font. */
+  body_font: BrandFontId | null;
 };
 
 function resolveBrand(
@@ -58,6 +68,8 @@ function resolveBrand(
     address: row?.address?.trim() || null,
     contact_email: row?.contact_email?.trim() || null,
     phone: row?.phone?.trim() || null,
+    heading_font: parseBrandFontId(row?.heading_font),
+    body_font: parseBrandFontId(row?.body_font),
   };
 }
 
@@ -68,7 +80,7 @@ export async function loadAccountBrandResolved(
   const { data, error } = await admin
     .from('account_brand_settings')
     .select(
-      'account_id, primary_color, secondary_color, accent_color, logo_url, logo_on_light_url, logo_on_dark_url, website_url, address, contact_email, phone',
+      'account_id, primary_color, secondary_color, accent_color, logo_url, logo_on_light_url, logo_on_dark_url, website_url, address, contact_email, phone, heading_font, body_font',
     )
     .eq('account_id', accountId)
     .maybeSingle();

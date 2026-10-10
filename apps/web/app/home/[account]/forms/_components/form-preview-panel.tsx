@@ -8,6 +8,8 @@ import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
 import { FormThemeStyle } from '~/components/workspace-forms/form-theme-style';
+import type { BrandFonts } from '~/lib/brand/brand-fonts.shared';
+import { brandFontStyle } from '~/lib/brand/brand-fonts.web';
 import type { WorkspaceFormField } from '~/lib/workspace-forms/form-fields';
 import {
   type WorkspaceFormTheme,
@@ -26,7 +28,12 @@ import { PublicWorkspaceForm } from '../../../../share/form/[token]/_components/
 type Props = {
   token: string;
   accountName: string;
-  brand: { primary: string; accent: string; secondary: string | null };
+  brand: {
+    primary: string;
+    accent: string;
+    secondary: string | null;
+    fonts?: BrandFonts | null;
+  };
   brandLogoUrl: string | null;
   name: string;
   description: string;
@@ -119,7 +126,7 @@ export function FormPreviewPanel({
             'mx-auto flex min-h-[28rem] flex-col px-4 py-8 transition-[max-width]',
             device === 'mobile' ? 'max-w-[390px]' : 'max-w-full',
           )}
-          style={{ background }}
+          style={{ background, ...brandFontStyle(brand.fonts) }}
           data-test="form-preview-canvas"
         >
           <FormThemeStyle theme={theme} />

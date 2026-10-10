@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-10T00:49:40.529Z",
+  "generatedAt": "2026-10-10T07:25:25.255Z",
   "chunkCount": 142,
   "chunks": [
     {
@@ -126,7 +126,7 @@
       "id": "1c7d46bd916f",
       "path": "/commercial-property/disposals/listing-detail",
       "title": "Listing detail",
-      "text": "Listing detail\n\nOpen any disposal from /app/[account]/listings to reach /app/[account]/listings/[id]. The left (or top, on mobile) nav groups the work into these tabs:\n\n| Tab | Path suffix | Purpose |\n| ------------ | --------------- | -------------------------------------------------------------------- |\n| Overview | (base) | Snapshot of status, address, and key metrics |\n| Marketing | /marketing | Particulars copy only (summary, key points, amenities, POA) |\n| Publishing | /publishing | Go-live channels: Website, EACH, Rightmove, brochure, LinkedIn |\n| Media | /media | Public photos, floorplans, and brochure assets |\n| Interest | /interest | Interest schedule against contacts / requirements |\n| Availability | /availability | Units, floors, and availability schedule |\n| Management | /management | Instruction, assignment, co-agents, parties, private media |\n\nOverview\n\n1. Open the disposal from Disposals.\n2. Confirm address, disposal type, and status badge.\n3."
+      "text": "Listing detail\n\nOpen any disposal from /app/[account]/listings to reach /app/[account]/listings/[id]. The left (or top, on mobile) nav groups the work into these tabs:\n\n| Tab | Path suffix | Purpose |\n| ------------ | --------------- | -------------------------------------------------------------- |\n| Overview | (base) | Snapshot of status, address, and key metrics |\n| Marketing | /marketing | Particulars copy only (summary, key points, amenities, POA) |\n| Publishing | /publishing | Go-live channels: Website, EACH, Rightmove, brochure, LinkedIn |\n| Media | /media | Public photos, floorplans, and brochure assets |\n| Interest | /interest | Interest schedule against contacts / requirements |\n| Availability | /availability | Units, floors, and availability schedule |\n| Management | /management | Instruction, assignment, co-agents, parties, private media |\n\nOverview\n\n1. Open the disposal from Disposals.\n2. Confirm address, disposal type, and status badge.\n3."
     },
     {
       "id": "1d5607e0c489",

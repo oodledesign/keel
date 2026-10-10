@@ -1,3 +1,4 @@
+import type { BrandFonts } from '~/lib/brand/brand-fonts.shared';
 import {
   type BrandLogoSurface,
   brandLogoSurfaceForHex,
@@ -5,6 +6,7 @@ import {
 } from '~/lib/brand/resolve-brand-logo';
 import { formatAskingPrice } from '~/lib/commercial/asking-price';
 import type { BrochureLocalArea } from '~/lib/commercial/brochure-pdf/local-area.shared';
+import type { BrochureAmenityItem } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 import {
   type AskingPriceQualifier,
   DISPOSAL_TYPE_LABELS,
@@ -80,12 +82,7 @@ export function resolveBrochureBranch(input: {
   };
 }
 
-export type BrochureAmenity = {
-  label: string;
-  index: number;
-  latitude?: number | null;
-  longitude?: number | null;
-};
+export type BrochureAmenity = BrochureAmenityItem;
 
 export type BrochureListing = {
   id: string;
@@ -148,6 +145,8 @@ export type PublicBrochureData = {
     primaryColor: string;
     secondaryColor: string;
     accentColor: string;
+    /** Workspace typography; absent or null keeps the standard fonts. */
+    fonts?: BrandFonts;
   };
   agents: BrochureAgent[];
   images: BrochureMediaItem[];

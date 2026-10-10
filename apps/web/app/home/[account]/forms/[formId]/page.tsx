@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { PageBody } from '@kit/ui/page';
 
 import pathsConfig from '~/config/paths.config';
+import { brandFontsOf } from '~/lib/brand/brand-fonts.shared';
 import { resolveBrandLogoForSurface } from '~/lib/brand/resolve-brand-logo';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { parseFormEditorTab } from '~/lib/workspace-forms/form-editor-tab';
@@ -110,6 +111,7 @@ async function FormDetailPage({ params, searchParams }: FormDetailPageProps) {
           }}
           accountName={workspace.account.name ?? ''}
           brandSecondaryColor={brand.secondary_color}
+          brandFonts={brandFontsOf(brand)}
           brandLogoUrl={resolveBrandLogoForSurface(brand, 'light')}
           initialTab={parseFormEditorTab(query.tab)}
         />

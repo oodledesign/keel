@@ -36,6 +36,8 @@ export const saveAccountBrandSettings = enhanceAction(
       logo_url: (existing?.logo_url as string | null) ?? null,
       website_url: input.website_url?.trim() || null,
       address: input.address?.trim() || null,
+      heading_font: input.heading_font ?? null,
+      body_font: input.body_font ?? null,
     };
 
     const { error } = await admin

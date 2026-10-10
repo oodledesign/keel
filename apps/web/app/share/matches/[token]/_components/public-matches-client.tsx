@@ -19,6 +19,8 @@ import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
+import type { BrandFonts } from '~/lib/brand/brand-fonts.shared';
+import { brandFontStyle } from '~/lib/brand/brand-fonts.web';
 import {
   REQUIREMENT_LOCATION_RADIUS_OPTIONS,
   REQUIREMENT_PROPERTY_TYPES,
@@ -64,6 +66,7 @@ type Brand = {
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
+  fonts?: BrandFonts | null;
 };
 
 type Props = {
@@ -241,7 +244,10 @@ export function PublicMatchesClient({
   return (
     <main
       className="min-h-screen px-4 py-8 sm:px-6 lg:px-8"
-      style={{ background: brand.secondaryColor || '#F4F4F1' }}
+      style={{
+        background: brand.secondaryColor || '#F4F4F1',
+        ...brandFontStyle(brand.fonts),
+      }}
     >
       <div className="mx-auto w-full max-w-7xl">
         <header

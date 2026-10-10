@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { brandFontsOf } from '~/lib/brand/brand-fonts.shared';
 import { loadPublicMatchesByToken } from '~/lib/commercial/circulation/public-matches';
 
 import { PublicMatchesClient } from './_components/public-matches-client';
@@ -41,6 +42,7 @@ export default async function PublicMatchesPage({ params }: PageProps) {
         primaryColor: data.brand.primary_color,
         secondaryColor: data.brand.secondary_color,
         accentColor: data.brand.accent_color,
+        fonts: brandFontsOf(data.brand),
       }}
       initialUnsubscribed={data.unsubscribed}
       initialNotifyOnNewMatch={data.notifyOnNewMatch}

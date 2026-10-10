@@ -13,6 +13,7 @@ import {
   DEFAULT_BRAND_SECONDARY,
   loadAccountBrandResolved,
 } from '~/lib/brand/account-brand';
+import { brandFontsOf } from '~/lib/brand/brand-fonts.shared';
 import { lookupLocalAreaFacts } from '~/lib/commercial/brochure-pdf/local-area';
 import {
   buildBrochureLocalArea,
@@ -462,6 +463,7 @@ export async function loadListingBrochureData(
       primaryColor: resolved.primary_color,
       secondaryColor: resolved.secondary_color,
       accentColor: resolved.accent_color,
+      fonts: brandFontsOf(resolved),
     };
     brandContact = {
       address: resolved.address,

@@ -11,6 +11,7 @@ import {
   DEFAULT_BRAND_SECONDARY,
   loadAccountBrandResolved,
 } from '~/lib/brand/account-brand';
+import { brandFontsOf } from '~/lib/brand/brand-fonts.shared';
 import type { DisposalType } from '~/lib/commercial/commercial-constants';
 import { sortListingMedia } from '~/lib/commercial/listing-media-order';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
@@ -337,6 +338,7 @@ async function loadPublicBrochureByTokenUncached(
       primaryColor: resolved.primary_color,
       secondaryColor: resolved.secondary_color,
       accentColor: resolved.accent_color,
+      fonts: brandFontsOf(resolved),
     };
     brandContact = {
       address: resolved.address,

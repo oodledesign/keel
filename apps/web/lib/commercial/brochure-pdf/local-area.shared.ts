@@ -2,6 +2,7 @@
  * Local-area facts for brochures (stations, motorways, town centre, airport).
  * Pure helpers — the dataset lookup lives in `local-area.ts`.
  */
+import type { AmenityIcon } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 
 export type LocalAreaPlaceKind = 'station' | 'motorway' | 'town' | 'airport';
 
@@ -28,6 +29,14 @@ export type LocalAreaAmenity = {
   index: number;
   latitude: number;
   longitude: number;
+  icon: AmenityIcon;
+};
+
+const KIND_ICON: Record<LocalAreaPlaceKind, AmenityIcon> = {
+  station: 'rail',
+  motorway: 'car',
+  town: 'town',
+  airport: 'airport',
 };
 
 /** Precomputed local-area copy carried on brochure data. */
@@ -166,6 +175,7 @@ export function localAreaAmenities(
       index: i + 1,
       latitude: place.latitude,
       longitude: place.longitude,
+      icon: KIND_ICON[place.kind],
     }));
 }
 
