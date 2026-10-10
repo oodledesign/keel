@@ -2,6 +2,8 @@
 
 import type { CSSProperties } from 'react';
 
+import { Mail, Phone } from 'lucide-react';
+
 import { cn } from '@kit/ui/utils';
 
 import type {
@@ -324,19 +326,34 @@ export function BrochurePreviewPage({
             <p className="text-xs font-semibold" style={{ color: primary }}>
               {title || 'Contact'}
             </p>
-            {['branchName', 'branchAddress', 'branchPhone', 'branchEmail']
-              .map((key) => slotText(page, key))
-              .filter(Boolean)
-              .map((line, index) => (
+            {(
+              [
+                ['branchName', null],
+                ['branchAddress', null],
+                ['branchPhone', Phone],
+                ['branchEmail', Mail],
+              ] as const
+            )
+              .map(([key, Icon]) => ({ line: slotText(page, key), Icon }))
+              .filter(({ line }) => Boolean(line))
+              .map(({ line, Icon }, index) => (
                 <p
                   key={`${line}-${index}`}
                   className={cn(
                     'leading-snug whitespace-pre-line',
+                    Icon && 'flex items-center gap-1',
                     index === 0
                       ? 'text-[10px] font-medium text-[var(--workspace-shell-text)]'
                       : 'text-[9px] text-[var(--workspace-shell-text-muted)]',
                   )}
                 >
+                  {Icon ? (
+                    <Icon
+                      aria-hidden
+                      className="size-2.5 shrink-0"
+                      style={{ color: accent }}
+                    />
+                  ) : null}
                   {line}
                 </p>
               ))}

@@ -2,6 +2,7 @@ import 'server-only';
 
 import fontkit from '@pdf-lib/fontkit';
 import {
+  LineCapStyle,
   PDFDocument,
   type PDFFont,
   type PDFImage,
@@ -59,6 +60,11 @@ import {
 } from '~/lib/commercial/brochure-pdf/brochure-layout';
 import { resolveBrochureLinkButtons } from '~/lib/commercial/brochure-pdf/brochure-links';
 import { brochureCoverImage } from '~/lib/commercial/brochure-pdf/build-brochure-document';
+import {
+  CONTACT_ICON_PATHS,
+  CONTACT_ICON_VIEWBOX,
+  type ContactIcon,
+} from '~/lib/commercial/brochure-pdf/contact-icons';
 import { brochureContactShopfrontBox } from '~/lib/commercial/brochure-pdf/contact-layout';
 import {
   brochureSashHex,
@@ -610,6 +616,91 @@ function drawAmenityBadge(
     font: ctx.fontBold,
     color: ctx.colors.paper,
   });
+}
+
+/** Outline glyph vertically centred on a text line whose baseline is `y`. */
+function drawContactIcon(
+  page: PDFPage,
+  icon: ContactIcon,
+  opts: {
+    x: number;
+    y: number;
+    size: number;
+    textSize: number;
+    color: RGB;
+    opacity?: number;
+  },
+) {
+  page.drawSvgPath(CONTACT_ICON_PATHS[icon], {
+    x: opts.x,
+    y: opts.y + opts.textSize * 0.36 + opts.size / 2,
+    scale: opts.size / CONTACT_ICON_VIEWBOX,
+    borderColor: opts.color,
+    borderWidth: 2,
+    borderLineCap: LineCapStyle.Round,
+    borderOpacity: opts.opacity,
+  });
+}
+
+function contactHref(icon: 'phone' | 'email', value: string): string | null {
+  if (icon === 'email') {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? `mailto:${value}` : null;
+  }
+  const digits = value.replace(/\D/g, '');
+  if (digits.length < 6) return null;
+  return `tel:${value.startsWith('+') ? '+' : ''}${digits}`;
+}
+
+/** Phone or email with a leading icon; the line links to tel:/mailto:. */
+function drawContactLine(
+  page: PDFPage,
+  icon: 'phone' | 'email',
+  value: string,
+  opts: {
+    x: number;
+    y: number;
+    size: number;
+    font: PDFFont;
+    color: RGB;
+    iconColor: RGB;
+    maxWidth: number;
+  },
+) {
+  const iconSize = opts.size * 1.05;
+  const textX = opts.x + iconSize + opts.size * 0.55;
+  drawContactIcon(page, icon, {
+    x: opts.x,
+    y: opts.y,
+    size: iconSize,
+    textSize: opts.size,
+    color: opts.iconColor,
+  });
+  const text = fitLine(
+    value,
+    opts.font,
+    opts.size,
+    opts.maxWidth - (textX - opts.x),
+  );
+  const width = drawText(page, text, {
+    x: textX,
+    y: opts.y,
+    size: opts.size,
+    font: opts.font,
+    color: opts.color,
+  });
+  const href = contactHref(icon, value.trim());
+  if (href && width > 0) {
+    addUriLink(
+      page,
+      {
+        x: opts.x,
+        y: opts.y - opts.size * 0.3,
+        width: textX - opts.x + width,
+        height: opts.size * 1.3,
+      },
+      href,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1211,24 +1302,39 @@ function drawLinkButtons(
   const padX = 12;
   const size = 7;
   const tracking = 0.8;
+  const iconSize = 9;
+  const iconGap = 6;
   let x = opts.x;
   buttons.forEach((button, index) => {
     const label = pdfText(button.label.toUpperCase());
-    const width = trackedWidth(label, ctx.fontBold, size, tracking) + padX * 2;
+    const width =
+      trackedWidth(label, ctx.fontBold, size, tracking) +
+      iconSize +
+      iconGap +
+      padX * 2;
     if (x + width > opts.x + opts.maxWidth + 1) return;
     const box = { x, y: opts.y, width, height };
     const primary = index === 0;
+    const color = primary ? opts.text : opts.outlineText;
+    const baseline = opts.y + (height - size * 0.72) / 2;
     drawRoundedRect(page, box, height / 2, {
       color: primary ? opts.fill : undefined,
       borderColor: primary ? undefined : opts.outline,
       borderWidth: primary ? undefined : 0.75,
     });
-    drawText(page, label, {
+    drawContactIcon(page, button.id, {
       x: x + padX,
-      y: opts.y + (height - size * 0.72) / 2,
+      y: baseline,
+      size: iconSize,
+      textSize: size,
+      color,
+    });
+    drawText(page, label, {
+      x: x + padX + iconSize + iconGap,
+      y: baseline,
       size,
       font: ctx.fontBold,
-      color: primary ? opts.text : opts.outlineText,
+      color,
       tracking,
     });
     addUriLink(page, box, button.url);
@@ -3179,7 +3285,7 @@ async function renderContact(
 
   const agentsX = landscape ? frame.left + officeW + 48 : frame.left;
   const agentsW = frame.right - agentsX;
-  let ay = landscape ? height - bandH - 40 : by - 12;
+  let ay = landscape ? height - bandH - 40 : by - 28;
   drawEyebrow(page, ctx, agents.length === 1 ? 'Agent' : 'Agents', {
     x: agentsX,
     y: ay,
@@ -3219,26 +3325,29 @@ async function renderContact(
       maxWidth: textW,
       maxLines: 1,
     });
-    let line = y - 16;
+    let line = y - 19;
+    const iconColor = ctx.colors.accent;
     if (agent.phone) {
-      drawText(page, agent.phone, {
+      drawContactLine(page, 'phone', agent.phone, {
         x,
         y: line,
         size: 9.5,
         font: ctx.font,
         color: ctx.colors.ink,
+        iconColor,
+        maxWidth: textW,
       });
       line -= 13;
     }
     if (agent.email) {
-      drawWrapped(page, agent.email, {
+      drawContactLine(page, 'email', agent.email, {
         x,
         y: line,
-        font: ctx.font,
         size: 9,
+        font: ctx.font,
         color: ctx.colors.muted,
+        iconColor,
         maxWidth: textW,
-        maxLines: 1,
       });
     }
     drawHairline(page, ctx, cardX, cardX + cardW, y - cardH + 14);
@@ -3285,7 +3394,7 @@ function drawContactNotice(
   return top;
 }
 
-/** Office eyebrow, name, address and T/E lines; returns the next baseline. */
+/** Office eyebrow, name, address, phone and email; returns the next baseline. */
 function drawOfficeBlock(
   page: PDFPage,
   ctx: RenderCtx,
@@ -3324,24 +3433,19 @@ function drawOfficeBlock(
     });
     by -= 6;
   }
-  for (const [label, value] of [
-    ['T', office.phone],
-    ['E', office.email],
+  for (const [icon, value] of [
+    ['phone', office.phone],
+    ['email', office.email],
   ] as const) {
     if (!value) continue;
-    drawText(page, label, {
+    drawContactLine(page, icon, value, {
       x: opts.x,
-      y: by,
-      size: 7.5,
-      font: ctx.fontBold,
-      color: ctx.colors.accent,
-    });
-    drawText(page, value, {
-      x: opts.x + 14,
       y: by,
       size: 9.5,
       font: ctx.font,
       color: ctx.colors.ink,
+      iconColor: ctx.colors.accent,
+      maxWidth: opts.width,
     });
     by -= 14;
   }
@@ -3498,14 +3602,19 @@ function renderContactSplit(
   if (agents.length === 0) {
     drawHairline(page, ctx, px, px + pw, rowTop, ctx.colors.paper, 0.16);
     let line = rowTop - 26;
-    for (const value of [opts.office.phone, opts.office.email]) {
+    for (const [icon, value] of [
+      ['phone', opts.office.phone],
+      ['email', opts.office.email],
+    ] as const) {
       if (!value || line < floor) continue;
-      drawText(page, fitLine(value, ctx.fontBold, 12, pw), {
+      drawContactLine(page, icon, value, {
         x: px,
         y: line,
         size: 12,
         font: ctx.fontBold,
         color: ctx.colors.paper,
+        iconColor: ctx.colors.paper,
+        maxWidth: pw,
       });
       line -= 22;
     }
@@ -3522,10 +3631,10 @@ function renderContactSplit(
     );
     const tx = px + 48;
     const tw = pw - 48;
-    const lines = [agent.phone, agent.email].filter((v): v is string =>
-      Boolean(v?.trim()),
-    );
-    let line = rowTop - rowH / 2 + (lines.length * 12) / 2 + 3;
+    const lines: Array<['phone' | 'email', string]> = [];
+    if (agent.phone?.trim()) lines.push(['phone', agent.phone]);
+    if (agent.email?.trim()) lines.push(['email', agent.email]);
+    let line = rowTop - rowH / 2 + (lines.length * 12) / 2 + 4.5;
     drawText(page, fitLine(agent.name, ctx.fontBold, 11, tw), {
       x: tx,
       y: line,
@@ -3533,16 +3642,18 @@ function renderContactSplit(
       font: ctx.fontBold,
       color: ctx.colors.paper,
     });
-    for (const value of lines) {
-      line -= 12.5;
-      drawText(page, fitLine(value, ctx.font, 8.5, tw), {
+    lines.forEach(([icon, value], index) => {
+      line -= index === 0 ? 15.5 : 12.5;
+      drawContactLine(page, icon, value, {
         x: tx,
         y: line,
         size: 8.5,
         font: ctx.font,
         color: ctx.colors.paperMuted,
+        iconColor: ctx.colors.paper,
+        maxWidth: tw,
       });
-    }
+    });
     rowTop -= rowH;
   }
   if (agents.length > 0) {
