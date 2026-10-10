@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type {
+  BrochureDisplayOptions,
   BrochureDocument,
   BrochureOrientation,
   BrochurePage,
@@ -22,9 +23,19 @@ type BrochureRow = {
   pages: unknown;
   storage_path: string | null;
   updated_at: string;
+  approved_at: string | null;
+  approved_by: string | null;
+  published_media_id: string | null;
 };
 
-function mapRow(row: BrochureRow): BrochureDocument & { id: string } {
+export type ListingBrochureRecord = BrochureDocument & {
+  id: string;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  publishedMediaId: string | null;
+};
+
+function mapRow(row: BrochureRow): ListingBrochureRecord {
   return {
     id: row.id,
     listingId: row.listing_id,
@@ -33,6 +44,9 @@ function mapRow(row: BrochureRow): BrochureDocument & { id: string } {
     orientation: row.orientation as BrochureOrientation,
     pages: (Array.isArray(row.pages) ? row.pages : []) as BrochurePage[],
     updatedAt: row.updated_at,
+    approvedAt: row.approved_at ?? null,
+    approvedBy: row.approved_by ?? null,
+    publishedMediaId: row.published_media_id ?? null,
   };
 }
 
@@ -47,7 +61,7 @@ class ListingBrochureService {
     listingId: string,
     accountId: string,
     orientation: BrochureOrientation,
-  ): Promise<(BrochureDocument & { id: string }) | null> {
+  ): Promise<ListingBrochureRecord | null> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (this.client as any)
       .from('commercial_listing_brochures')
@@ -70,7 +84,7 @@ class ListingBrochureService {
     accountId: string;
     orientation: BrochureOrientation;
     templateId?: BrochureTemplateId;
-  }): Promise<BrochureDocument & { id: string }> {
+  }): Promise<ListingBrochureRecord> {
     const existing = await this.getDocument(
       input.listingId,
       input.accountId,
@@ -109,7 +123,8 @@ class ListingBrochureService {
     accountId: string;
     orientation: BrochureOrientation;
     templateId: BrochureTemplateId;
-  }): Promise<BrochureDocument & { id: string }> {
+    display?: Partial<BrochureDisplayOptions>;
+  }): Promise<ListingBrochureRecord> {
     const data = await loadListingBrochureData(
       input.listingId,
       input.accountId,
@@ -119,6 +134,7 @@ class ListingBrochureService {
     const built = buildBrochureDocument(data, {
       orientation: input.orientation,
       templateId: input.templateId,
+      display: input.display,
     });
 
     return this.upsertDocument({
@@ -132,7 +148,7 @@ class ListingBrochureService {
     listingId: string;
     accountId: string;
     document: BrochureDocument;
-  }): Promise<BrochureDocument & { id: string }> {
+  }): Promise<ListingBrochureRecord> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (this.client as any)
       .from('commercial_listing_brochures')
@@ -165,7 +181,7 @@ class ListingBrochureService {
     orientation: BrochureOrientation;
     templateId: BrochureTemplateId;
     pages: BrochurePage[];
-  }): Promise<BrochureDocument & { id: string }> {
+  }): Promise<ListingBrochureRecord> {
     return this.upsertDocument({
       listingId: input.listingId,
       accountId: input.accountId,
@@ -177,5 +193,72 @@ class ListingBrochureService {
         pages: input.pages,
       },
     });
+  }
+
+  /** Every saved brochure for the listing (one per orientation). */
+  async listDocuments(
+    listingId: string,
+    accountId: string,
+  ): Promise<ListingBrochureRecord[]> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (this.client as any)
+      .from('commercial_listing_brochures')
+      .select('*')
+      .eq('listing_id', listingId)
+      .eq('account_id', accountId);
+
+    if (error) {
+      console.error('[brochure] listDocuments error:', error.message);
+      throw new Error(error.message);
+    }
+    return ((data ?? []) as BrochureRow[]).map(mapRow);
+  }
+
+  /**
+   * Marks `orientation` as the listing's approved, published brochure and
+   * detaches any earlier published PDF (either orientation) so the listing
+   * only ever feeds one. Returns the media ids that are no longer published.
+   */
+  async recordPublished(input: {
+    listingId: string;
+    accountId: string;
+    orientation: BrochureOrientation;
+    mediaId: string;
+    userId: string;
+  }): Promise<string[]> {
+    const docs = await this.listDocuments(input.listingId, input.accountId);
+    const previous = docs
+      .map((doc) => doc.publishedMediaId)
+      .filter((id): id is string => Boolean(id) && id !== input.mediaId);
+
+    const table = () =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (this.client as any).from('commercial_listing_brochures');
+
+    const { error } = await table()
+      .update({
+        approved_at: new Date().toISOString(),
+        approved_by: input.userId,
+        published_media_id: input.mediaId,
+      })
+      .eq('listing_id', input.listingId)
+      .eq('account_id', input.accountId)
+      .eq('orientation', input.orientation);
+    if (error) {
+      console.error('[brochure] recordPublished error:', error.message);
+      throw new Error(error.message);
+    }
+
+    const { error: detachError } = await table()
+      .update({ published_media_id: null })
+      .eq('listing_id', input.listingId)
+      .eq('account_id', input.accountId)
+      .neq('orientation', input.orientation)
+      .not('published_media_id', 'is', null);
+    if (detachError) {
+      console.error('[brochure] detach published error:', detachError.message);
+    }
+
+    return previous;
   }
 }

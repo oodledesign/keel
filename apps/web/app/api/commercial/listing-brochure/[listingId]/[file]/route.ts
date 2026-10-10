@@ -2,18 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import type {
-  BrochureDocument,
-  BrochureOrientation,
-  BrochurePage,
-  BrochureTemplateId,
-} from '~/lib/commercial/brochure-pdf/brochure-document';
-import { generateListingBrochurePdf } from '~/lib/commercial/brochure-pdf/generate-listing-brochure-pdf';
-import {
-  type FeedBrochureDocumentRow,
-  pickFeedBrochureDocument,
-  shouldPublishOzerBrochureToFeed,
-} from '~/lib/commercial/property-hive-feed-brochures';
+import { buildCommercialListingMediaPublicPath } from '~/lib/commercial/listing-media-public-url';
 import { rateLimitApiRequest } from '~/lib/rate-limit/api-rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -31,91 +20,57 @@ function isUuid(value: string): boolean {
   );
 }
 
-function asTemplate(value: string): BrochureTemplateId {
-  if (value === 'editorial' || value === 'compact') return value;
-  return 'classic';
-}
-
-function asOrientation(value: string): BrochureOrientation {
-  return value === 'landscape' ? 'landscape' : 'portrait';
-}
-
-type ListingGate = {
-  id: string;
-  account_id: string;
-  status: string;
-  brochure_share_enabled: boolean | null;
-};
-
-async function loadPublishableBrochure(listingId: string): Promise<{
-  listing: ListingGate;
-  document: FeedBrochureDocumentRow | null;
-} | null> {
+/** Media path of the listing's approved, published brochure PDF. */
+async function publishedBrochurePath(
+  listingId: string,
+): Promise<string | null> {
   const admin = getSupabaseServerAdminClient();
-  const { data, error } = await admin
+  const { data: listing, error } = await admin
     .from('commercial_listings')
-    .select('id, account_id, status, brochure_share_enabled')
+    .select('id, status')
     .eq('id', listingId)
     .maybeSingle();
-
-  if (error || !data) return null;
-  const listing = data as ListingGate;
-  if (!ON_MARKET_STATUSES.has(listing.status)) return null;
+  if (error || !listing || !ON_MARKET_STATUSES.has(listing.status)) {
+    return null;
+  }
 
   const { data: docs, error: docError } = await admin
     .from('commercial_listing_brochures')
-    .select('listing_id, orientation, template_id, pages, updated_at')
-    .eq('listing_id', listingId);
-
+    .select('published_media_id, approved_at')
+    .eq('listing_id', listingId)
+    .not('published_media_id', 'is', null)
+    .order('approved_at', { ascending: false, nullsFirst: false })
+    .limit(1);
   if (docError) {
     console.error('[listing-brochure] document load error:', docError.message);
     return null;
   }
+  const mediaId = docs?.[0]?.published_media_id;
+  if (!mediaId) return null;
 
-  const documents: FeedBrochureDocumentRow[] = (docs ?? []).map((row) => ({
-    listingId: row.listing_id,
-    orientation: row.orientation,
-    templateId: row.template_id,
-    pages: row.pages,
-    updatedAt: row.updated_at,
-  }));
+  const { data: media } = await admin
+    .from('commercial_listing_media')
+    .select('id, media_type, file_name, mime_type, is_private')
+    .eq('id', mediaId)
+    .eq('listing_id', listingId)
+    .maybeSingle();
+  if (!media || media.is_private) return null;
 
-  if (
-    !shouldPublishOzerBrochureToFeed({
-      shareEnabled: Boolean(listing.brochure_share_enabled),
-      documents,
-    })
-  ) {
-    return null;
-  }
-
-  return { listing, document: pickFeedBrochureDocument(documents) };
-}
-
-function savedDocument(
-  listingId: string,
-  document: FeedBrochureDocumentRow | null,
-): BrochureDocument | undefined {
-  if (!document || !Array.isArray(document.pages) || !document.pages.length) {
-    return undefined;
-  }
-  return {
-    listingId,
-    templateId: asTemplate(document.templateId),
-    pageSize: 'A4',
-    orientation: asOrientation(document.orientation),
-    pages: document.pages as BrochurePage[],
-    updatedAt: document.updatedAt,
-  };
+  return buildCommercialListingMediaPublicPath({
+    mediaId: media.id,
+    mediaType: media.media_type,
+    fileName: media.file_name,
+    mimeType: media.mime_type,
+  });
 }
 
 /**
- * Public PDF for Property Hive `<files>` when the Ozer brochure is a saved
- * document or an enabled share link rather than an uploaded media file.
+ * Older Website/EACH feeds linked here for a live-rendered brochure. Portals
+ * keep those URLs, so send them to the approved, published PDF instead; with
+ * nothing published there is no brochure to serve.
  * GET/HEAD /api/commercial/listing-brochure/:listingId/brochure-v….pdf
- * On-market listings only. The filename is a cache-buster; the row wins.
  */
-export async function GET(request: Request, { params }: RouteParams) {
+async function handle(request: Request, { params }: RouteParams) {
   const limited = rateLimitApiRequest(request, {
     scope: 'commercial-listing-brochure',
     limit: 30,
@@ -127,66 +82,14 @@ export async function GET(request: Request, { params }: RouteParams) {
     return new NextResponse('Not found', { status: 404 });
   }
 
-  const publishable = await loadPublishableBrochure(listingId);
-  if (!publishable) {
-    return new NextResponse('Not found', { status: 404 });
-  }
+  const path = await publishedBrochurePath(listingId);
+  if (!path) return new NextResponse('Not found', { status: 404 });
 
-  try {
-    const saved = savedDocument(listingId, publishable.document);
-    const { bytes, filename } = await generateListingBrochurePdf({
-      listingId,
-      accountId: publishable.listing.account_id,
-      orientation: saved?.orientation ?? 'landscape',
-      templateId: saved?.templateId ?? 'classic',
-      document: saved,
-      client: getSupabaseServerAdminClient(),
-    });
-
-    const body = Buffer.from(bytes);
-    return new NextResponse(body, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Length': String(body.length),
-        'Content-Disposition': `inline; filename="${filename.replace(/"/g, '')}"`,
-        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
-        'X-Content-Type-Options': 'nosniff',
-      },
-    });
-  } catch (err) {
-    console.error(
-      '[listing-brochure] pdf failed',
-      listingId,
-      err instanceof Error ? err.message : err,
-    );
-    return new NextResponse('Brochure unavailable', { status: 502 });
-  }
-}
-
-export async function HEAD(request: Request, { params }: RouteParams) {
-  const limited = rateLimitApiRequest(request, {
-    scope: 'commercial-listing-brochure',
-    limit: 30,
-  });
-  if (limited) return limited;
-
-  const { listingId, file } = await params;
-  if (!isUuid(listingId) || !file.toLowerCase().endsWith('.pdf')) {
-    return new NextResponse('Not found', { status: 404 });
-  }
-
-  const publishable = await loadPublishableBrochure(listingId);
-  if (!publishable) {
-    return new NextResponse('Not found', { status: 404 });
-  }
-
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/pdf',
-      'Cache-Control': 'public, max-age=3600, s-maxage=3600',
-      'X-Content-Type-Options': 'nosniff',
-    },
+  return NextResponse.redirect(new URL(path, request.url), {
+    status: 302,
+    headers: { 'Cache-Control': 'public, max-age=300, s-maxage=300' },
   });
 }
+
+export const GET = handle;
+export const HEAD = handle;

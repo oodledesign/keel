@@ -4,7 +4,10 @@ import type {
   BrochurePage,
   BrochureSlotValue,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
-import { brochureLocationBody } from '~/lib/commercial/brochure-pdf/build-brochure-document';
+import {
+  brochureCoverImage,
+  brochureLocationBody,
+} from '~/lib/commercial/brochure-pdf/build-brochure-document';
 import {
   amenityDedupeKey,
   buildFallbackNearbyAmenities,
@@ -87,7 +90,7 @@ export function hydrateBrochureDocument(
 ): BrochureDocument {
   const images = data.images;
   const floorplans = data.floorplans;
-  const cover = images.find((item) => item.isCover) ?? images[0] ?? null;
+  const cover = brochureCoverImage(images);
   const imageById = new Map(images.map((item) => [item.id, item]));
   const floorplanById = new Map(floorplans.map((item) => [item.id, item]));
   // The wizard can place any photo or plan in any image slot.

@@ -450,8 +450,8 @@ export const DISPOSAL_PAGE_SEARCH_INDEX: DisposalSearchHit[] = [
     id: 'brochure',
     page: 'Brochure',
     href: '/brochure',
-    title: 'Brochure editor',
-    keywords: ['pdf', 'particulars', 'pages', 'layout'],
+    title: 'Brochure',
+    keywords: ['pdf', 'particulars', 'pages', 'layout', 'publish', 'approve'],
   },
   {
     id: 'preview',

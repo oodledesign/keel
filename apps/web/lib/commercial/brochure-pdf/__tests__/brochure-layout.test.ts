@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   type Box,
   coverHeadline,
+  coverImageRect,
   coverTitleParts,
   fitPhotoBox,
   keepPostcodesTogether,
@@ -11,7 +12,49 @@ import {
   parseDetailsBody,
   splitLeadParagraph,
   tidyAddress,
+  wholeImageRect,
 } from '../brochure-layout';
+
+describe('coverImageRect', () => {
+  const box: Box = { x: 10, y: 20, width: 200, height: 100 };
+
+  it('covers the box and centres a tall image by default', () => {
+    const r = coverImageRect(100, 100, box);
+    expect(r.width).toBe(200);
+    expect(r.height).toBe(200);
+    expect(r.x).toBe(10);
+    expect(r.y).toBe(20 - 50);
+  });
+
+  it('keeps the top of the image when focus is top', () => {
+    const r = coverImageRect(100, 100, box, 'top');
+    expect(r.y + r.height).toBe(box.y + box.height);
+  });
+
+  it('keeps the bottom of the image when focus is bottom', () => {
+    const r = coverImageRect(100, 100, box, 'bottom');
+    expect(r.y).toBe(box.y);
+  });
+});
+
+describe('wholeImageRect', () => {
+  const box: Box = { x: 0, y: 0, width: 200, height: 100 };
+
+  it('fits a portrait drawing inside the box without cropping', () => {
+    const r = wholeImageRect(300, 600, box);
+    expect(r.height).toBe(100);
+    expect(r.width).toBe(50);
+    expect(r.x).toBe(75);
+    expect(r.y).toBe(0);
+  });
+
+  it('fits a wide image to the box width', () => {
+    const r = wholeImageRect(800, 200, box);
+    expect(r.width).toBe(200);
+    expect(r.height).toBe(50);
+    expect(r.y).toBe(25);
+  });
+});
 
 describe('coverHeadline', () => {
   it('pulls the locality up into the title', () => {

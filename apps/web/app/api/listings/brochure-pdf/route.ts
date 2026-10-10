@@ -91,21 +91,22 @@ export const GET = enhanceRouteHandler(
         showSlideshowBrochureButton,
       };
 
-      const { bytes, filename, document } = await generateListingBrochurePdf({
-        listingId,
-        accountId,
-        orientation: saved?.orientation ?? orientation,
-        templateId: saved?.templateId ?? template,
-        document: saved,
-        // Facts bake into saved pages; reduced sash can still apply at render.
-        display: saved
-          ? {
-              showReducedPrice,
-              showWebsiteListingButton,
-              showSlideshowBrochureButton,
-            }
-          : display,
-      });
+      const { bytes, filename, document, warnings } =
+        await generateListingBrochurePdf({
+          listingId,
+          accountId,
+          orientation: saved?.orientation ?? orientation,
+          templateId: saved?.templateId ?? template,
+          document: saved,
+          // Facts bake into saved pages; reduced sash can still apply at render.
+          display: saved
+            ? {
+                showReducedPrice,
+                showWebsiteListingButton,
+                showSlideshowBrochureButton,
+              }
+            : display,
+        });
 
       // Persist auto pack when downloading without a saved doc so the editor starts warm
       if (!saved) {
@@ -131,6 +132,12 @@ export const GET = enhanceRouteHandler(
           'Content-Disposition': `attachment; filename="${filename}"`,
           'Content-Length': String(body.length),
           'Cache-Control': 'private, no-store',
+          // Read by the brochure wizard's preview step.
+          'X-Brochure-Warnings': encodeURIComponent(JSON.stringify(warnings)),
+          'X-Brochure-Page-Ids': document.pages.map((p) => p.id).join(','),
+          ...(saved?.updatedAt
+            ? { 'X-Brochure-Updated-At': saved.updatedAt }
+            : {}),
         },
       });
     } catch (err) {

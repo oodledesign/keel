@@ -126,13 +126,6 @@ export const SaveListingBrochureDocumentSchema = z.object({
   pages: z.array(BrochurePageSchema).max(30),
 });
 
-export const RegenerateListingBrochureSchema = z.object({
-  listingId: z.string().uuid(),
-  accountId: z.string().uuid(),
-  templateId: BrochureTemplateIdSchema,
-  orientation: BrochureOrientationSchema,
-});
-
 export const BrochureDisplayOptionsSchema = z.object({
   showRent: z.boolean().optional(),
   showPrice: z.boolean().optional(),
@@ -143,6 +136,19 @@ export const BrochureDisplayOptionsSchema = z.object({
   showReducedPrice: z.boolean().optional(),
   showWebsiteListingButton: z.boolean().optional(),
   showSlideshowBrochureButton: z.boolean().optional(),
+});
+
+export const RegenerateListingBrochureSchema = z.object({
+  listingId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  templateId: BrochureTemplateIdSchema,
+  orientation: BrochureOrientationSchema,
+  display: BrochureDisplayOptionsSchema.optional(),
+});
+
+export const LoadBrochureWizardSchema = z.object({
+  listingId: z.string().uuid(),
+  accountId: z.string().uuid(),
 });
 
 export const BrochurePdfQuerySchema = z.object({
@@ -192,12 +198,14 @@ export const BrochurePdfQuerySchema = z.object({
     .transform((v) => (v == null ? undefined : v === '1')),
 });
 
+/** Publishes the saved layout someone has just previewed and approved. */
 export const PublishListingBrochurePdfSchema = z.object({
   listingId: z.string().uuid(),
   accountId: z.string().uuid(),
-  orientation: BrochureOrientationSchema.default('landscape'),
-  templateId: BrochureTemplateIdSchema.default('classic'),
-  useSaved: z.boolean().optional(),
+  orientation: BrochureOrientationSchema,
+  approved: z.literal(true),
+  /** `updatedAt` of the layout that was previewed; publishing fails if it has changed since. */
+  reviewedUpdatedAt: z.string().min(1),
   display: BrochureDisplayOptionsSchema.optional(),
 });
 

@@ -91,6 +91,20 @@ export type BrochurePage = {
   slots: Record<string, BrochureSlotValue>;
 };
 
+/** Problems the renderer noticed, shown as checks before approving. */
+export type BrochureRenderWarningKind =
+  | 'small_image'
+  | 'missing_image'
+  | 'text_cut'
+  | 'empty_page';
+
+export type BrochureRenderWarning = {
+  pageId: string;
+  /** 1-based position in the saved layout. */
+  pageNumber: number;
+  kind: BrochureRenderWarningKind;
+};
+
 export type BrochureDocument = {
   listingId: string;
   templateId: BrochureTemplateId;

@@ -5762,36 +5762,45 @@ export type Database = {
       commercial_listing_brochures: {
         Row: {
           account_id: string
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           id: string
           listing_id: string
           orientation: string
           page_size: string
           pages: Json
+          published_media_id: string | null
           storage_path: string | null
           template_id: string
           updated_at: string
         }
         Insert: {
           account_id: string
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           id?: string
           listing_id: string
           orientation?: string
           page_size?: string
           pages?: Json
+          published_media_id?: string | null
           storage_path?: string | null
           template_id?: string
           updated_at?: string
         }
         Update: {
           account_id?: string
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           id?: string
           listing_id?: string
           orientation?: string
           page_size?: string
           pages?: Json
+          published_media_id?: string | null
           storage_path?: string | null
           template_id?: string
           updated_at?: string
@@ -5816,6 +5825,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_listing_brochures_published_media_id_fkey"
+            columns: ["published_media_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_listing_media"
             referencedColumns: ["id"]
           },
           {

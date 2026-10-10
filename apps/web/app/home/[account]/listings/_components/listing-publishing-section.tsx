@@ -12,19 +12,21 @@ import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 
 import pathsConfig from '~/config/paths.config';
+import type { BrochureStatusRecord } from '~/lib/commercial/brochure-pdf/brochure-status';
 import { workspacePublishingHref as workspacePublishingPath } from '~/lib/commercial/listing-routes';
 import type { WebsiteUrlHealth } from '~/lib/commercial/listing-website-url-health';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
+import { listingBrochureChannels } from '../_lib/listing-channel-statuses';
 import type {
   CommercialListing,
   CommercialListingMedia,
   CommercialPortalPublication,
 } from '../_lib/server/listings.service';
 import { setBrochureShare } from '../_lib/server/server-actions';
+import { ListingBrochurePdfPanel } from './brochure-wizard/listing-brochure-pdf-panel';
 import { useDisposalAccess } from './disposal-access-context';
-import { ListingBrochureDownload } from './listing-brochure-download';
 import { ListingPublishingChannels } from './listing-publishing-channels';
 import { MarketingReadinessCard } from './marketing-readiness-card';
 
@@ -42,6 +44,7 @@ export function ListingPublishingSection({
   accountId,
   accountSlug,
   media = [],
+  brochureRecords = [],
   websitePublicPageUrl = null,
   websiteUrlHealth = null,
 }: {
@@ -50,6 +53,7 @@ export function ListingPublishingSection({
   accountId: string;
   accountSlug: string;
   media?: CommercialListingMedia[];
+  brochureRecords?: BrochureStatusRecord[];
   websitePublicPageUrl?: string | null;
   websiteUrlHealth?: WebsiteUrlHealth | null;
 }) {
@@ -59,10 +63,13 @@ export function ListingPublishingSection({
   const [brochureCopied, setBrochureCopied] = useState(false);
   const origin = useBrowserOrigin();
 
-  const listingBase = pathsConfig.app.accountListingDetail
-    .replace('[account]', accountSlug)
-    .replace('[id]', listing.id);
-  const brochureEditorHref = `${listingBase}/brochure`;
+  const brochureChannels = listingBrochureChannels({
+    listing,
+    publications,
+    media,
+    websitePublicPageUrl,
+    websiteUrlHealth,
+  });
   const workspacePublishingHref = workspacePublishingPath(accountSlug);
 
   const brochurePath = listing.brochureShareToken
@@ -107,8 +114,8 @@ export function ListingPublishingSection({
             Brochure
           </CardTitle>
           <p className="text-sm text-[var(--workspace-shell-text)]/50">
-            Share an online slideshow or generate a PDF. Edit pages in the
-            brochure editor — this tab does not duplicate that layout.
+            Share an online slideshow, or create a PDF, check every page and
+            publish it to your website and portals.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -180,32 +187,17 @@ export function ListingPublishingSection({
           ) : null}
 
           <div className="border-t border-[color:var(--workspace-shell-border)] pt-3">
-            <p className="mb-1 text-sm font-medium text-[var(--workspace-shell-text)]">
-              PDF brochure
-            </p>
-            <p className="mb-2 text-xs text-[var(--workspace-shell-text-muted)]">
-              Landscape or portrait, with local area facts and a nearby-places
-              map filled in automatically. Preview, publish to Media for
-              portals, or upload an external PDF. No AI credits used.
-            </p>
-            <ListingBrochureDownload
+            <ListingBrochurePdfPanel
               listingId={listing.id}
               accountId={accountId}
-              accountSlug={accountSlug}
               listingName={listing.name}
-              listingAddress={[listing.town, listing.postcode]
-                .filter(Boolean)
-                .join(', ')}
-              coverUrl={listing.coverUrl}
+              records={brochureRecords}
+              channels={brochureChannels}
               defaultShowRent={!listing.hideRentFromMarketing}
               defaultShowPrice={!listing.hidePriceFromMarketing}
-              compact
+              canEdit={canEditDisposals}
             />
           </div>
-
-          <Button asChild variant="outline" size="sm">
-            <Link href={brochureEditorHref}>Open brochure editor</Link>
-          </Button>
         </CardContent>
       </Card>
 

@@ -230,6 +230,84 @@ describe('hydrateBrochureDocument', () => {
     );
   });
 
+  it('keeps the chosen fit and crop position when refreshing the URL', () => {
+    const data = brochureData();
+    const saved: BrochureDocument = {
+      listingId: data.listing.id,
+      templateId: 'classic',
+      pageSize: 'A4',
+      orientation: 'landscape',
+      pages: [
+        {
+          id: 'photo',
+          layoutId: 'photo_full',
+          slots: {
+            photo: {
+              type: 'image',
+              mediaId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+              url: 'https://cdn.example.com/expired.jpg',
+              fit: 'fill',
+              focus: 'top',
+            },
+          },
+        },
+      ],
+    };
+
+    const slot = hydrateBrochureDocument(saved, data).pages[0]!.slots.photo;
+    expect(slot).toEqual({
+      type: 'image',
+      mediaId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      url: 'https://cdn.example.com/int-1.jpg',
+      fit: 'fill',
+      focus: 'top',
+    });
+  });
+
+  it('resolves a floor plan placed in a photo slot', () => {
+    const data = brochureData({
+      floorplans: [
+        {
+          id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+          mediaType: 'floorplan',
+          url: 'https://cdn.example.com/plan-fresh.png',
+          fileName: 'plan.png',
+          isCover: false,
+          isDrawing: true,
+        },
+      ],
+    });
+    const saved: BrochureDocument = {
+      listingId: data.listing.id,
+      templateId: 'classic',
+      pageSize: 'A4',
+      orientation: 'landscape',
+      pages: [
+        {
+          id: 'grid',
+          layoutId: 'photo_grid_2',
+          slots: {
+            photo1: {
+              type: 'image',
+              mediaId: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+              url: 'https://cdn.example.com/plan-old.png',
+            },
+            photo2: {
+              type: 'image',
+              mediaId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+              url: 'https://cdn.example.com/int-1.jpg',
+            },
+          },
+        },
+      ],
+    };
+
+    const hydrated = hydrateBrochureDocument(saved, data);
+    expect(imageUrl(hydrated.pages[0]!.slots, 'photo1')).toBe(
+      'https://cdn.example.com/plan-fresh.png',
+    );
+  });
+
   it('fills an empty contact shopfront from branch settings', () => {
     const data = brochureData();
     const saved: BrochureDocument = {

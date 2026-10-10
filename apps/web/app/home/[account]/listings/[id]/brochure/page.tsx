@@ -2,13 +2,13 @@ import { notFound } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { loadListingBrochureData } from '~/lib/commercial/brochure-pdf/load-listing-brochure-data';
+import pathsConfig from '~/config/paths.config';
 import { requireCommercialBillableActor } from '~/lib/commercial/require-commercial-billable-actor';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
-import { ListingBrochureEditor } from '../../_components/listing-brochure-editor';
-import { createListingBrochureService } from '../../_lib/server/listing-brochure.service';
+import { BrochureWizardPage } from '../../_components/brochure-wizard/brochure-wizard-page';
+import { listingBrochureChannels } from '../../_lib/listing-channel-statuses';
 import { createListingsService } from '../../_lib/server/listings.service';
 
 interface PageProps {
@@ -16,7 +16,9 @@ interface PageProps {
   searchParams: Promise<{ orientation?: string }>;
 }
 
-async function ListingBrochureEditorPage({ params, searchParams }: PageProps) {
+export const generateMetadata = async () => ({ title: 'Brochure' });
+
+async function ListingBrochurePage({ params, searchParams }: PageProps) {
   const { account: slug, id: listingId } = await params;
   const sp = await searchParams;
   const orientation = sp.orientation === 'portrait' ? 'portrait' : 'landscape';
@@ -25,40 +27,31 @@ async function ListingBrochureEditorPage({ params, searchParams }: PageProps) {
   const accountId = workspace.account.id as string;
   await requireCommercialBillableActor(accountId, 'create or edit disposals');
 
-  const client = getSupabaseServerClient();
-  const listings = createListingsService(client);
+  const listings = createListingsService(getSupabaseServerClient());
   const listing = await listings.getListing(listingId, accountId);
   if (!listing) notFound();
 
-  const brochureService = createListingBrochureService(client);
-  const document = await brochureService.getOrCreateDocument({
-    listingId,
-    accountId,
-    orientation,
-    templateId: 'classic',
-  });
+  const [publications, media] = await Promise.all([
+    listings.listPublicationsForListing(listingId),
+    listings.listMedia(listingId, { privacy: 'public' }),
+  ]);
 
-  const brochureData = await loadListingBrochureData(listingId, accountId);
+  const publishingHref = `${pathsConfig.app.accountListingDetail
+    .replace('[account]', slug)
+    .replace('[id]', listingId)}/publishing`;
 
   return (
-    <ListingBrochureEditor
+    <BrochureWizardPage
+      returnHref={publishingHref}
       listingId={listingId}
       accountId={accountId}
-      accountSlug={slug}
       listingName={listing.name}
-      accountName={brochureData?.accountName ?? workspace.account.name ?? ''}
-      brand={
-        brochureData?.brand ?? {
-          logoUrl: null,
-          primaryColor: '#351E28',
-          secondaryColor: '#41606F',
-          accentColor: '#FF5C34',
-        }
-      }
-      initialDocument={document}
-      images={brochureData?.images ?? []}
+      initialOrientation={orientation}
+      defaultShowRent={!listing.hideRentFromMarketing}
+      defaultShowPrice={!listing.hidePriceFromMarketing}
+      channels={listingBrochureChannels({ listing, publications, media })}
     />
   );
 }
 
-export default withI18n(ListingBrochureEditorPage);
+export default withI18n(ListingBrochurePage);

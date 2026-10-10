@@ -18,18 +18,14 @@ import {
   type ChannelPublishBlocker,
   collectChannelPublishBlockers,
 } from '~/lib/commercial/channel-publish-blockers';
-import {
-  type ChannelPublishStatus,
-  getEachChannelStatus,
-  getRightmoveChannelStatus,
-  getWebsiteChannelStatus,
-} from '~/lib/commercial/channel-publish-status';
+import type { ChannelPublishStatus } from '~/lib/commercial/channel-publish-status';
 import { isPublicListingPageUrl } from '~/lib/commercial/listing-website-url';
 import type { WebsiteUrlHealth } from '~/lib/commercial/listing-website-url-health';
 import { getMarketingReadiness } from '~/lib/commercial/marketing-readiness';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
 import { ensureWebsiteFeedReadyAction } from '../../commercial-publishing/_lib/server/server-actions';
+import { listingChannelStatuses } from '../_lib/listing-channel-statuses';
 import type {
   CommercialListing,
   CommercialListingMedia,
@@ -69,38 +65,16 @@ export function ListingPublishingChannels({
   } | null>(null);
   const enableGateRef = useRef(createChannelEnableGate());
 
-  const websiteStatus = getWebsiteChannelStatus({
-    listing: {
-      status: listing.status,
-      externalId: listing.externalId,
-      websiteUrl: listing.websiteUrl,
-    },
+  const {
+    website: websiteStatus,
+    each: eachStatus,
+    rightmove: rightmoveStatus,
+  } = listingChannelStatuses({
+    listing,
     publications,
-    publicPageUrl: websitePublicPageUrl,
-    urlHealth: websiteUrlHealth,
-  });
-  const eachStatus = getEachChannelStatus({
-    listing: {
-      status: listing.status,
-      externalId: listing.externalId,
-      websiteUrl: listing.websiteUrl,
-      sizeMinSqft: listing.sizeMinSqft,
-      name: listing.name,
-      postcode: listing.postcode,
-      disposalType: listing.disposalType,
-    },
-    publications,
-  });
-  const rightmoveStatus = getRightmoveChannelStatus({
-    listing: {
-      status: listing.status,
-      name: listing.name,
-      postcode: listing.postcode,
-      addressLine1: listing.addressLine1,
-      updatedAt: listing.updatedAt,
-    },
-    publications,
-    mediaCreatedAt: media.map((item) => item.createdAt),
+    media,
+    websitePublicPageUrl,
+    websiteUrlHealth,
   });
   const readiness = getMarketingReadiness({ listing, media, publications });
   const eachPublication = publications.find(

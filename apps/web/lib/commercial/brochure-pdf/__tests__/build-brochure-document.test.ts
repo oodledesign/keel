@@ -199,6 +199,48 @@ describe('buildBrochureDocument', () => {
     );
   });
 
+  it('keeps drawings off the cover and the facts-page photos', () => {
+    const drawing = (id: string, isCover = false) => ({
+      id,
+      mediaType: 'image' as const,
+      url: `https://cdn.example.com/${id}.png`,
+      fileName: `${id}.png`,
+      isCover,
+      isDrawing: true,
+    });
+    const shot = (id: string) => ({
+      id,
+      mediaType: 'image' as const,
+      url: `https://cdn.example.com/${id}.jpg`,
+      fileName: `${id}.jpg`,
+      isCover: false,
+      isDrawing: false,
+    });
+    const doc = buildBrochureDocument(
+      brochureData({
+        images: [
+          drawing('elevation', true),
+          drawing('site-plan'),
+          shot('front'),
+          shot('inside-1'),
+          shot('inside-2'),
+        ],
+      }),
+      { orientation: 'landscape', templateId: 'classic' },
+    );
+
+    const cover = doc.pages.find((p) => p.layoutId === 'cover_hero_band');
+    expect(cover?.slots.hero).toMatchObject({ mediaId: 'front' });
+
+    const facts = doc.pages.find((p) => p.layoutId === 'facts_table');
+    for (const key of ['photo1', 'photo2']) {
+      const slot = facts?.slots[key];
+      if (slot?.type === 'image' && slot.mediaId) {
+        expect(['elevation', 'site-plan']).not.toContain(slot.mediaId);
+      }
+    }
+  });
+
   it('includes branch text on the contact page even with zero agents', () => {
     const doc = buildBrochureDocument(brochureData(), {
       orientation: 'landscape',

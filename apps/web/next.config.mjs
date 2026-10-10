@@ -78,7 +78,6 @@ const config = {
     ],
     // Brochure PDFs render in these API routes and the listings server actions.
     '/api/listings/brochure-pdf': ['./lib/brand/fonts/*.ttf'],
-    '/api/commercial/listing-brochure/**': ['./lib/brand/fonts/*.ttf'],
     '/home/[account]/listings/**': ['./lib/brand/fonts/*.ttf'],
   },
   redirects: getRedirects,

@@ -38,9 +38,12 @@ import type {
   BrochureImageSlot,
   BrochureOrientation,
   BrochurePage,
+  BrochureRenderWarning,
+  BrochureRenderWarningKind,
   BrochureSlotValue,
   BrochureTemplateId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import { fetchBrochureImageBytes } from '~/lib/commercial/brochure-pdf/brochure-image-bytes';
 import {
   type Box,
   coverHeadline,
@@ -54,14 +57,14 @@ import {
   splitLeadParagraph,
   wholeImageRect,
 } from '~/lib/commercial/brochure-pdf/brochure-layout';
-import { fetchBrochureImageBytes } from '~/lib/commercial/brochure-pdf/brochure-image-bytes';
-import { brochureCoverImage } from '~/lib/commercial/brochure-pdf/build-brochure-document';
 import { resolveBrochureLinkButtons } from '~/lib/commercial/brochure-pdf/brochure-links';
+import { brochureCoverImage } from '~/lib/commercial/brochure-pdf/build-brochure-document';
 import { brochureContactShopfrontBox } from '~/lib/commercial/brochure-pdf/contact-layout';
 import {
   brochureSashHex,
   parseCoverPriceLines,
 } from '~/lib/commercial/brochure-pdf/cover-prices';
+import { isDrawingImage } from '~/lib/commercial/brochure-pdf/image-kind';
 import {
   brochureMapPinColor,
   fetchBrochureMapImageBytes,
@@ -305,6 +308,14 @@ function measureWrapped(
 }
 
 /** Draw wrapped text from baseline `y`; returns the next baseline. */
+const pageWarnings = new WeakMap<PDFPage, Set<BrochureRenderWarningKind>>();
+
+function warn(page: PDFPage, kind: BrochureRenderWarningKind) {
+  const kinds = pageWarnings.get(page) ?? new Set();
+  kinds.add(kind);
+  pageWarnings.set(page, kinds);
+}
+
 function drawWrapped(page: PDFPage, text: string, opts: WrapOptions): number {
   const lineHeight = lineHeightOf(opts);
   const gap = opts.paragraphGap ?? lineHeight * 0.5;
@@ -336,7 +347,10 @@ function drawWrapped(page: PDFPage, text: string, opts: WrapOptions): number {
     );
     drawn += 1;
     y -= lineHeight;
-    if (last) break;
+    if (last) {
+      warn(page, 'text_cut');
+      break;
+    }
   }
   return y;
 }
@@ -405,10 +419,7 @@ function drawImageCover(
 ) {
   if (box.width <= 0 || box.height <= 0) return;
   clipToBox(page, box);
-  page.drawImage(
-    image,
-    coverImageRect(image.width, image.height, box, focus),
-  );
+  page.drawImage(image, coverImageRect(image.width, image.height, box, focus));
   page.pushOperators(popGraphicsState());
 }
 
@@ -445,6 +456,11 @@ function drawSlotImage(
   placement: ImagePlacement | null | undefined,
   background: RGB | null = ctx.colors.soft,
 ) {
+  const coverScale = Math.max(
+    box.width / image.width,
+    box.height / image.height,
+  );
+  if (coverScale > MAX_UPSCALE) warn(page, 'small_image');
   if (showsWhole(ctx, image, placement)) {
     drawImageWhole(page, image, box, background);
   } else {
@@ -453,6 +469,7 @@ function drawSlotImage(
 }
 
 function drawPlaceholder(page: PDFPage, ctx: RenderCtx, box: Box) {
+  warn(page, 'missing_image');
   page.drawRectangle({ ...box, color: ctx.colors.soft });
 }
 
@@ -486,6 +503,7 @@ function drawPhoto(
   });
   const scale = Math.max(box.width / image.width, box.height / image.height);
   if (scale > MAX_UPSCALE) {
+    warn(page, 'small_image');
     const k = MAX_UPSCALE / scale;
     const width = box.width * k;
     const height = box.height * k;
@@ -1024,9 +1042,7 @@ async function resolveListingImage(
 }
 
 function listingCoverUrl(data: PublicBrochureData): string | null {
-  return (
-    data.images.find((item) => item.isCover)?.url ?? data.images[0]?.url ?? null
-  );
+  return brochureCoverImage(data.images)?.url ?? null;
 }
 
 function stripBulletPrefix(line: string): string {
@@ -1526,8 +1542,7 @@ async function renderCover(
     const heroBox = { x: 0, y: 0, width: heroW, height };
     if (heroImg) {
       drawSlotImage(page, ctx, heroImg, heroBox, heroSlot, ctx.colors.primary);
-    }
-    else drawPlaceholder(page, ctx, heroBox);
+    } else drawPlaceholder(page, ctx, heroBox);
     if (reducedLabel) drawReducedBadge(page, heroBox, ctx, reducedLabel);
 
     page.drawRectangle({
@@ -1594,8 +1609,7 @@ async function renderCover(
     const heroBox = { x: 0, y: bandH, width, height: height - bandH };
     if (heroImg) {
       drawSlotImage(page, ctx, heroImg, heroBox, heroSlot, ctx.colors.primary);
-    }
-    else drawPlaceholder(page, ctx, heroBox);
+    } else drawPlaceholder(page, ctx, heroBox);
     if (reducedLabel) drawReducedBadge(page, heroBox, ctx, reducedLabel);
 
     page.drawRectangle({
@@ -3351,9 +3365,7 @@ function clipToCircle(page: PDFPage, cx: number, cy: number, r: number) {
 }
 
 /** Profile photos for the contact page, keyed by user id. */
-async function loadAgentPhotos(
-  ctx: RenderCtx,
-): Promise<Map<string, PDFImage>> {
+async function loadAgentPhotos(ctx: RenderCtx): Promise<Map<string, PDFImage>> {
   const photos = new Map<string, PDFImage>();
   await Promise.all(
     ctx.data.agents.slice(0, 4).map(async (agent) => {
@@ -3667,6 +3679,7 @@ async function embedBrandFont(
 export async function renderBrochurePdf(
   document: BrochureDocument,
   data: PublicBrochureData,
+  opts: { warnings?: BrochureRenderWarning[] } = {},
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
@@ -3698,7 +3711,9 @@ export async function renderBrochurePdf(
     hairline: rgb(0.86, 0.85, 0.84),
   };
 
-  const logoBytes = await fetchBrochureImageBytes(resolveBrochurePlateLogo(data.brand));
+  const logoBytes = await fetchBrochureImageBytes(
+    resolveBrochurePlateLogo(data.brand),
+  );
   const logo = await embedImage(pdf, logoBytes);
 
   if (document.pages.length > 30) {
@@ -3730,6 +3745,13 @@ export async function renderBrochurePdf(
     const pdfPage = pdf.addPage([size.width, size.height]);
     ctx.pageNumber = index + 1;
     await renderPage(pdfPage, brochurePage, ctx);
+    for (const kind of pageWarnings.get(pdfPage) ?? []) {
+      opts.warnings?.push({
+        pageId: brochurePage.id,
+        pageNumber: index + 1,
+        kind,
+      });
+    }
   }
 
   if (document.pages.length === 0) {
