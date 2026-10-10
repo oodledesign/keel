@@ -90,6 +90,53 @@ describe('nearby amenity labels', () => {
   });
 });
 
+const OTFORD = { latitude: 51.3129, longitude: 0.1903 };
+
+type FakePoi = [name: string, lng: number, lat: number, brand?: string];
+
+/** Trimmed from a real Search Box response around Otford, Kent. */
+const OTFORD_CATEGORIES: Record<string, FakePoi[]> = {
+  supermarket: [
+    ['JK SuperMarket Inc.', 0.1905, 51.313],
+    ['Budgens', 0.2108, 51.3135],
+    ["Sainsbury's", 0.1897, 51.2963, "Sainsbury's"],
+    ["Sainsbury's Bank Travel Money", 0.1898, 51.2962, "Sainsbury's"],
+    ["Sainsbury's Local", 0.1931, 51.288, "Sainsbury's"],
+  ],
+  school: [
+    ['Little Treacles Nursery', 0.1915, 51.3135],
+    ['Academy Of Freelance Makeup London', 0.1906, 51.313],
+    ['Bozdag Taekwondo Academy', 0.1907, 51.3131],
+    ['Russell House School', 0.1874, 51.3155],
+    ["St Michael's Preparatory School", 0.2022, 51.3191],
+    ['Oaks Driving School', 0.185, 51.296],
+  ],
+  park: [
+    ['Roundabout Bird Pond', 0.1904, 51.3129],
+    ['Otford Recreation Ground', 0.1925, 51.3115],
+    ['Knole Park Duchess Walk Entrance', 0.199, 51.271],
+  ],
+  hospital: [
+    ['League of Friends of Sevenoaks Hospital', 0.185, 51.295],
+    ["Sevenoaks Hospital Children's Emergency Department", 0.186, 51.29],
+    ['Sevenoaks Hospital', 0.1881, 51.2878],
+    ['sevenoaks hospital', 0.205, 51.278],
+  ],
+};
+
+function categoryFetch(categories: Record<string, FakePoi[]>) {
+  return async (url: string | URL) => {
+    const category = new URL(String(url)).pathname.split('/').pop() ?? '';
+    const features = (categories[category] ?? []).map(
+      ([name, lng, lat, brand]) => ({
+        geometry: { coordinates: [lng, lat] },
+        properties: { name, brand: brand ? [brand] : undefined },
+      }),
+    );
+    return { ok: true, status: 200, json: async () => ({ features }) };
+  };
+}
+
 describe('fetchNearbyBrochureAmenities', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -128,177 +175,101 @@ describe('fetchNearbyBrochureAmenities', () => {
     );
   });
 
-  it('labels the nearest station with a human name and miles', async () => {
+  it('keeps real places from noisy category results', async () => {
     vi.stubEnv('NEXT_PUBLIC_MAPBOX_TOKEN', 'pk.test');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string | URL) => {
-        const href = String(url);
-        if (href.includes('railway%20station')) {
-          return {
-            ok: true,
-            json: async () => ({
-              features: [
-                {
-                  text: 'Crowborough',
-                  center: [0.168, 51.061],
-                },
-              ],
-            }),
-          };
-        }
-        return { ok: true, json: async () => ({ features: [] }) };
-      }),
-    );
+    vi.stubGlobal('fetch', categoryFetch(OTFORD_CATEGORIES));
 
     const amenities = await fetchNearbyBrochureAmenities({
-      latitude: 51.058,
-      longitude: 0.163,
-      town: 'Crowborough',
+      ...OTFORD,
+      town: 'Sevenoaks',
     });
+    const names = amenities.map((item) => item.label.split(' · ')[0]);
 
-    expect(amenities[0]?.label).toBe('Crowborough town centre');
-    expect(
-      amenities.some((item) =>
-        /Crowborough station · \d+\.\d mi/.test(item.label),
-      ),
-    ).toBe(true);
-    expect(amenities.some((item) => item.label.includes('Local area'))).toBe(
-      false,
-    );
-  });
-
-  it('numbers several Mapbox POIs into the Nearby list', async () => {
-    vi.stubEnv('NEXT_PUBLIC_MAPBOX_TOKEN', 'pk.test');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string | URL) => {
-        const href = String(url);
-        if (href.includes('supermarket')) {
-          return {
-            ok: true,
-            json: async () => ({
-              features: [
-                { text: 'Lidl', center: [0.164, 51.059] },
-                { text: 'Morrisons', center: [0.165, 51.06] },
-                { text: 'Waitrose', center: [0.166, 51.057] },
-              ],
-            }),
-          };
-        }
-        if (href.includes('hospital')) {
-          return {
-            ok: true,
-            json: async () => ({
-              features: [
-                {
-                  text: 'Crowborough War Memorial Hospital',
-                  center: [0.17, 51.055],
-                },
-              ],
-            }),
-          };
-        }
-        return { ok: true, json: async () => ({ features: [] }) };
-      }),
-    );
-
-    const amenities = await fetchNearbyBrochureAmenities({
-      latitude: 51.058,
-      longitude: 0.163,
-      town: 'Crowborough',
-    });
-
-    expect(amenities.map((item) => item.label)).toEqual(
-      expect.arrayContaining([
-        'Crowborough town centre',
-        expect.stringMatching(/^Lidl · /),
-        expect.stringMatching(/^Morrisons · /),
-        expect.stringMatching(/^Waitrose · /),
-        expect.stringMatching(/Hospital · /),
-      ]),
-    );
-    expect(amenities.length).toBeGreaterThanOrEqual(5);
-    expect(amenities.find((item) => item.label.startsWith('Lidl'))).toEqual(
+    expect(names).toEqual([
+      'Sevenoaks town centre',
+      'Budgens',
+      'Russell House School',
+      'Otford Recreation Ground',
+      'Sevenoaks Hospital',
+      "Sainsbury's",
+      "St Michael's Preparatory School",
+    ]);
+    expect(amenities[1]).toEqual(
       expect.objectContaining({
         icon: 'grocery',
-        latitude: 51.059,
-        longitude: 0.164,
+        latitude: 51.3135,
+        longitude: 0.2108,
       }),
     );
-    expect(
-      amenities.find((item) => item.label.includes('Hospital'))?.icon,
-    ).toBe('hospital');
+    expect(amenities.map((item) => item.icon)).toEqual([
+      'town',
+      'grocery',
+      'school',
+      'park',
+      'hospital',
+      'grocery',
+      'school',
+    ]);
   });
 
-  it('normalises railway station names and skips car-park hits', async () => {
-    vi.stubEnv('MAPBOX_SECRET_TOKEN', 'sk.test');
-    vi.stubEnv('NEXT_PUBLIC_MAPBOX_TOKEN', '');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (url: string | URL) => {
-        const href = String(url);
-        if (
-          href.includes('railway%20station') ||
-          href.includes('train%20station')
-        ) {
-          return {
-            ok: true,
-            json: async () => ({
-              features: [
-                {
-                  text: 'Tonbridge Railway Station',
-                  center: [0.271, 51.164],
-                },
-              ],
-            }),
-          };
-        }
-        if (href.includes('park')) {
-          return {
-            ok: true,
-            json: async () => ({
-              features: [
-                { text: 'Station car park', center: [0.27, 51.195] },
-                { text: 'Calverley Grounds', center: [0.265, 51.133] },
-              ],
-            }),
-          };
-        }
-        return { ok: true, json: async () => ({ features: [] }) };
-      }),
-    );
+  it('queries Search Box categories near the property, excluding nurseries', async () => {
+    vi.stubEnv('NEXT_PUBLIC_MAPBOX_TOKEN', 'pk.test');
+    const fetchMock = vi.fn(categoryFetch({}));
+    vi.stubGlobal('fetch', fetchMock);
 
-    const amenities = await fetchNearbyBrochureAmenities({
-      latitude: 51.195,
-      longitude: 0.275,
-      town: 'Tonbridge',
+    await fetchNearbyBrochureAmenities({ ...OTFORD, town: 'Sevenoaks' });
+
+    const urls = fetchMock.mock.calls.map(([url]) => new URL(String(url)));
+    expect(urls.map((url) => url.pathname.split('/').pop())).toEqual([
+      'supermarket',
+      'school',
+      'park',
+      'hospital',
+    ]);
+    for (const url of urls) {
+      expect(url.pathname).toContain('/search/searchbox/v1/category/');
+      expect(url.searchParams.get('country')).toBe('GB');
+      expect(url.searchParams.get('proximity')).toBe('0.1903,51.3129');
+      expect(url.searchParams.get('bbox')).toBeTruthy();
+    }
+    expect(urls[1]?.searchParams.get('poi_category_exclusions')).toContain(
+      'kindergarten',
+    );
+  });
+
+  it('keeps other categories when one request throws', async () => {
+    vi.stubEnv('NEXT_PUBLIC_MAPBOX_TOKEN', 'pk.test');
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const ok = categoryFetch(OTFORD_CATEGORIES);
+    vi.stubGlobal('fetch', async (url: string | URL) => {
+      if (String(url).includes('/category/school')) {
+        throw new Error('timeout');
+      }
+      return ok(url);
     });
 
-    expect(
-      amenities.some((item) => /^Tonbridge station · /.test(item.label)),
-    ).toBe(true);
-    expect(amenities.some((item) => /car park/i.test(item.label))).toBe(false);
-    expect(
-      amenities.some((item) => /^Calverley Grounds · /.test(item.label)),
-    ).toBe(true);
-    expect(amenities.length).toBeGreaterThanOrEqual(3);
+    const amenities = await fetchNearbyBrochureAmenities({
+      ...OTFORD,
+      town: 'Sevenoaks',
+    });
+
+    expect(amenities.some((item) => item.icon === 'grocery')).toBe(true);
+    expect(amenities.some((item) => item.icon === 'school')).toBe(false);
+    expect(errorSpy).toHaveBeenCalledWith(
+      '[brochure-pdf] nearby amenities failed:',
+      'category=school',
+      'timeout',
+    );
+    errorSpy.mockRestore();
   });
 
   it('falls back to town centre when Mapbox returns an empty feature list', async () => {
     vi.stubEnv('MAPBOX_SECRET_TOKEN', 'sk.test');
     vi.stubEnv('NEXT_PUBLIC_MAPBOX_TOKEN', '');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => ({
-        ok: true,
-        json: async () => ({ features: [] }),
-      })),
-    );
+    vi.stubGlobal('fetch', categoryFetch({}));
 
     const amenities = await fetchNearbyBrochureAmenities({
-      latitude: 51.195,
-      longitude: 0.275,
+      ...OTFORD,
       town: 'Tonbridge',
     });
 
@@ -311,82 +282,38 @@ describe('fetchNearbyBrochureAmenities', () => {
   it('prefers MAPBOX_SECRET_TOKEN over the public map token', async () => {
     vi.stubEnv('MAPBOX_SECRET_TOKEN', 'sk.server');
     vi.stubEnv('NEXT_PUBLIC_MAPBOX_TOKEN', 'pk.public');
-    const fetchMock = vi.fn(async (url: string | URL) => {
-      const href = String(url);
-      if (href.includes('sk.server') && href.includes('railway%20station')) {
-        return {
-          ok: true,
-          json: async () => ({
-            features: [{ text: 'Tonbridge', center: [0.271, 51.164] }],
-          }),
-        };
-      }
-      return { ok: true, json: async () => ({ features: [] }) };
-    });
+    const fetchMock = vi.fn(categoryFetch(OTFORD_CATEGORIES));
     vi.stubGlobal('fetch', fetchMock);
 
     const amenities = await fetchNearbyBrochureAmenities({
-      latitude: 51.195,
-      longitude: 0.275,
-      town: 'Tonbridge',
+      ...OTFORD,
+      town: 'Sevenoaks',
     });
 
     expect(fetchMock.mock.calls.length).toBeGreaterThan(0);
     expect(
       fetchMock.mock.calls.every(([url]) => String(url).includes('sk.server')),
     ).toBe(true);
-    expect(
-      fetchMock.mock.calls.some(([url]) => String(url).includes('pk.public')),
-    ).toBe(false);
-    expect(
-      amenities.some((item) => /Tonbridge station · /.test(item.label)),
-    ).toBe(true);
-    expect(amenities[0]?.label).toBe('Tonbridge town centre');
-    expect(amenities.length).toBeGreaterThanOrEqual(2);
+    expect(amenities.length).toBeGreaterThan(1);
   });
 
   it('retries with the next token when the preferred token is rejected', async () => {
     vi.stubEnv('MAPBOX_SECRET_TOKEN', 'sk.restricted');
     vi.stubEnv('NEXT_PUBLIC_MAPBOX_TOKEN', 'pk.unrestricted');
+    const ok = categoryFetch(OTFORD_CATEGORIES);
     const fetchMock = vi.fn(async (url: string | URL) => {
-      const href = String(url);
-      if (href.includes('sk.restricted')) {
+      if (String(url).includes('sk.restricted')) {
         return { ok: false, status: 401, json: async () => ({}) };
       }
-      if (href.includes('supermarket')) {
-        return {
-          ok: true,
-          json: async () => ({
-            features: [
-              { text: 'Waitrose', center: [0.272, 51.194] },
-              { text: 'Lidl', center: [0.27, 51.196] },
-            ],
-          }),
-        };
-      }
-      if (href.includes('railway%20station')) {
-        return {
-          ok: true,
-          json: async () => ({
-            features: [{ text: 'Tonbridge', center: [0.271, 51.164] }],
-          }),
-        };
-      }
-      return { ok: true, json: async () => ({ features: [] }) };
+      return ok(url);
     });
     vi.stubGlobal('fetch', fetchMock);
 
     const amenities = await fetchNearbyBrochureAmenities({
-      latitude: 51.195,
-      longitude: 0.275,
-      town: 'Tonbridge',
+      ...OTFORD,
+      town: 'Sevenoaks',
     });
 
-    expect(
-      fetchMock.mock.calls.some(([url]) =>
-        String(url).includes('sk.restricted'),
-      ),
-    ).toBe(true);
     expect(
       fetchMock.mock.calls.some(([url]) =>
         String(url).includes('pk.unrestricted'),
@@ -394,17 +321,14 @@ describe('fetchNearbyBrochureAmenities', () => {
     ).toBe(true);
     expect(amenities.map((item) => item.label)).toEqual(
       expect.arrayContaining([
-        'Tonbridge town centre',
-        expect.stringMatching(/^Tonbridge station · /),
-        expect.stringMatching(/^Waitrose · /),
-        expect.stringMatching(/^Lidl · /),
+        'Sevenoaks town centre',
+        expect.stringMatching(/^Budgens · /),
       ]),
     );
-    expect(amenities.length).toBeGreaterThanOrEqual(4);
     expect(isThinNearbyAmenityList(amenities)).toBe(false);
   });
 
-  it('constrains geocoding to nearby POIs and logs auth failures', async () => {
+  it('falls back to town centre and logs when every token is rejected', async () => {
     vi.stubEnv('MAPBOX_SECRET_TOKEN', '');
     vi.stubEnv('MAPBOX_ACCESS_TOKEN', '');
     vi.stubEnv('MAPBOX_TOKEN', '');
@@ -412,14 +336,7 @@ describe('fetchNearbyBrochureAmenities', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string | URL) => {
-        const href = String(url);
-        expect(href).toContain('autocomplete=false');
-        expect(href).toContain('bbox=');
-        expect(href).toContain('types=poi');
-        expect(href).toContain('country=GB');
-        return { ok: false, status: 401, json: async () => ({}) };
-      }),
+      vi.fn(async () => ({ ok: false, status: 401, json: async () => ({}) })),
     );
 
     const amenities = await fetchNearbyBrochureAmenities({
@@ -431,21 +348,12 @@ describe('fetchNearbyBrochureAmenities', () => {
     expect(amenities.map((item) => item.label)).toEqual([
       'Tunbridge Wells town centre',
     ]);
-    expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(0);
     expect(
       errorSpy.mock.calls.some((args) =>
         args.some(
           (arg) =>
             typeof arg === 'string' &&
             arg.includes('tokenSource=NEXT_PUBLIC_MAPBOX_TOKEN'),
-        ),
-      ),
-    ).toBe(true);
-    expect(
-      errorSpy.mock.calls.some((args) =>
-        args.some(
-          (arg) =>
-            typeof arg === 'string' && arg.includes('MAPBOX_SECRET_TOKEN'),
         ),
       ),
     ).toBe(true);

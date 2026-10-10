@@ -1,6 +1,6 @@
 /**
  * Nearby amenities (label, pin coordinates, icon) for brochure map pages.
- * Uses Mapbox Geocoding (same token stack as listing geocode / static maps).
+ * Uses Mapbox Search Box category search (same token stack as static maps).
  */
 import 'server-only';
 
@@ -33,44 +33,72 @@ export {
 } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 
 const MAX_AMENITIES = 8;
-const MAX_DISTANCE_KM = 12;
-const POI_LIMIT = 5;
+const RESULTS_PER_CATEGORY = 10;
 
 type PoiSearch = {
-  queries: readonly string[];
-  suffix: string | null;
-  take: number;
+  /** Mapbox Search Box canonical category id. */
+  category: string;
   icon: AmenityIcon;
+  take: number;
+  maxKm: number;
+  /** Mapbox sub-categories to leave out (nurseries, driving schools…). */
+  excludeCategories?: readonly string[];
+  /** Name must match, when set. */
+  accept?: RegExp;
   reject?: RegExp;
 };
 
+/**
+ * Category search returns everything Mapbox tags under a category — e.g. a
+ * supermarket's in-store bank, nurseries as "school", a hospital's charity
+ * office — so each search filters names. Stations come from NaPTAN instead
+ * (Mapbox's railway_station category misses smaller stations).
+ */
 const POI_SEARCHES: readonly PoiSearch[] = [
   {
-    queries: ['railway station', 'train station'],
-    suffix: 'station',
-    take: 1,
-    icon: 'rail',
-  },
-  {
-    queries: ['supermarket', 'grocery'],
-    suffix: null,
-    take: 3,
+    category: 'supermarket',
     icon: 'grocery',
-  },
-  { queries: ['hospital'], suffix: null, take: 1, icon: 'hospital' },
-  {
-    queries: ['school'],
-    suffix: null,
     take: 2,
-    icon: 'school',
-    reject: /\bdriving school\b/i,
+    maxKm: 5,
+    // Recognised chains only — independents are mostly mis-tagged shops.
+    accept:
+      /\b(tesco|sainsbury'?s|asda|morrisons|waitrose|aldi|lidl|co-?op|m&s|marks (and|&) spencer|iceland|budgens|spar|nisa|londis|one stop|costcutter|farmfoods|booths|whole foods|premier)\b/i,
+    reject:
+      /\b(bank|travel money|petrol|fuel|pharmacy|caf[eé]|car wash|inn|hotel)\b/i,
   },
   {
-    queries: ['park'],
-    suffix: null,
-    take: 1,
+    category: 'school',
+    icon: 'school',
+    take: 2,
+    maxKm: 3,
+    excludeCategories: [
+      'kindergarten',
+      'language_school',
+      'music_school',
+      'driving_school',
+    ],
+    accept: /\b(school|academy|college)\b/i,
+    reject:
+      /\b(nursery|pre-?school|childcare|montessori|driving|language|music|dance|drama|stage|tuition|tutors?|swim\w*|makeup|beauty|hair|yoga|martial|karate|taekwondo|judo|boxing|kickboxing|ballet|gym|fitness|football|sports?)\b|\bacademy of\b/i,
+  },
+  {
+    category: 'park',
     icon: 'park',
-    reject: /\b(car park|parking|park and ride)\b/i,
+    take: 1,
+    maxKm: 3,
+    accept:
+      /\b(park|recreation ground|common|green|gardens?|grounds|meadows?|woods?|heath|nature reserve)\b/i,
+    reject:
+      /\b(entrance|car park|parking|park and ride|playground|golf|tennis|cricket|bowls|club)\b/i,
+  },
+  {
+    category: 'hospital',
+    icon: 'hospital',
+    take: 1,
+    maxKm: 12,
+    accept: /\bhospital\b/i,
+    reject:
+      /\b(friends of|league of|charity|shop|radio|hospice|department|unit|ward|wing|clinic|emergency)\b/i,
   },
 ];
 
@@ -103,25 +131,18 @@ function proximityBbox(
   return `${minLon},${minLat},${maxLon},${maxLat}`;
 }
 
-function humanPoiName(text: string, suffix: string | null): string {
-  let name = text.trim();
-  if (!name) return '';
-  if (suffix === 'station') {
-    name = name.replace(/\s+(?:railway|train)\s+station$/i, ' station');
-  }
-  if (suffix && !new RegExp(suffix, 'i').test(name)) {
-    return `${name} ${suffix}`;
-  }
-  return name;
-}
-
-type MapboxFeature = {
-  text?: string;
-  place_name?: string;
-  center?: [number, number];
+type CategoryFeature = {
+  geometry?: { coordinates?: [number, number] };
+  properties?: { name?: string; brand?: string[] | null };
 };
 
-type PoiHit = { name: string; km: number; latitude: number; longitude: number };
+type PoiHit = {
+  name: string;
+  brand: string | null;
+  km: number;
+  latitude: number;
+  longitude: number;
+};
 
 type PoiAmenity = Omit<BrochureAmenityItem, 'index'>;
 
@@ -131,26 +152,27 @@ type SearchOutcome = {
   status?: number;
 };
 
-async function searchNearbyPois(
-  query: string,
+async function searchCategory(
+  search: PoiSearch,
   origin: { latitude: number; longitude: number },
   resolved: ResolvedMapboxToken,
-  limit: number,
 ): Promise<SearchOutcome> {
   const url = new URL(
-    `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`,
+    `https://api.mapbox.com/search/searchbox/v1/category/${encodeURIComponent(search.category)}`,
   );
   url.searchParams.set('access_token', resolved.token);
   url.searchParams.set('country', 'GB');
-  url.searchParams.set(
-    'limit',
-    String(Math.min(POI_LIMIT, Math.max(1, limit))),
-  );
-  url.searchParams.set('types', 'poi');
-  url.searchParams.set('proximity', `${origin.longitude},${origin.latitude}`);
-  url.searchParams.set('autocomplete', 'false');
   url.searchParams.set('language', 'en');
-  url.searchParams.set('bbox', proximityBbox(origin, MAX_DISTANCE_KM));
+  url.searchParams.set('limit', String(RESULTS_PER_CATEGORY));
+  url.searchParams.set('proximity', `${origin.longitude},${origin.latitude}`);
+  url.searchParams.set('bbox', proximityBbox(origin, search.maxKm));
+  url.searchParams.set('exclude_fields', 'photos,reviews');
+  if (search.excludeCategories?.length) {
+    url.searchParams.set(
+      'poi_category_exclusions',
+      search.excludeCategories.join(','),
+    );
+  }
 
   const res = await fetch(url.toString(), {
     headers: { Accept: 'application/json' },
@@ -164,21 +186,18 @@ async function searchNearbyPois(
     console.error(
       '[brochure-pdf] nearby amenities Mapbox',
       res.status,
-      `query="${query}"`,
+      `category=${search.category}`,
       `tokenSource=${resolved.source}`,
       `tokenIsPublic=${isPublicMapboxTokenSource(resolved.source)}`,
     );
     return { hits: [], authFailed: false };
   }
 
-  const body = (await res.json()) as { features?: MapboxFeature[] };
+  const body = (await res.json()) as { features?: CategoryFeature[] };
   const hits: PoiHit[] = [];
 
   for (const feature of body.features ?? []) {
-    const center = feature.center;
-    if (!center || center.length < 2) continue;
-
-    const [longitude, latitude] = center;
+    const [longitude, latitude] = feature.geometry?.coordinates ?? [];
     if (
       typeof latitude !== 'number' ||
       typeof longitude !== 'number' ||
@@ -189,12 +208,12 @@ async function searchNearbyPois(
     }
 
     const km = haversineKm(origin, { latitude, longitude });
-    if (km > MAX_DISTANCE_KM) continue;
+    if (km > search.maxKm) continue;
 
-    const name =
-      feature.text?.trim() || feature.place_name?.split(',')[0]?.trim();
+    const name = feature.properties?.name?.trim();
     if (!name) continue;
-    hits.push({ name, km, latitude, longitude });
+    const brand = feature.properties?.brand?.[0]?.trim().toLowerCase() || null;
+    hits.push({ name, brand, km, latitude, longitude });
   }
 
   hits.sort((a, b) => a.km - b.km);
@@ -206,14 +225,19 @@ function amenitiesFromHits(hits: PoiHit[], search: PoiSearch): PoiAmenity[] {
   const amenities: PoiAmenity[] = [];
 
   for (const hit of hits) {
+    if (search.accept && !search.accept.test(hit.name)) continue;
     if (search.reject?.test(hit.name)) continue;
-    const name = humanPoiName(hit.name, search.suffix);
-    if (!name) continue;
-    const key = amenityDedupeKey(name);
-    if (!key || seen.has(key)) continue;
+    const key = amenityDedupeKey(hit.name);
+    // One branch per chain: Sainsbury's and Sainsbury's Local share a brand.
+    const brandKey = hit.brand ? `brand:${hit.brand}` : null;
+    if (!key || seen.has(key) || (brandKey && seen.has(brandKey))) continue;
     seen.add(key);
+    if (brandKey) seen.add(brandKey);
     amenities.push({
-      label: formatNearbyAmenityLabel(name, formatAmenityDistanceMiles(hit.km)),
+      label: formatNearbyAmenityLabel(
+        hit.name,
+        formatAmenityDistanceMiles(hit.km),
+      ),
       latitude: hit.latitude,
       longitude: hit.longitude,
       icon: search.icon,
@@ -224,42 +248,49 @@ function amenitiesFromHits(hits: PoiHit[], search: PoiSearch): PoiAmenity[] {
   return amenities;
 }
 
+/** First of each category, then seconds, so a capped list stays varied. */
+function interleave<T>(groups: T[][]): T[] {
+  const out: T[] = [];
+  const longest = Math.max(0, ...groups.map((group) => group.length));
+  for (let i = 0; i < longest; i++) {
+    for (const group of groups) {
+      const item = group[i];
+      if (item !== undefined) out.push(item);
+    }
+  }
+  return out;
+}
+
 async function fetchAmenitiesWithToken(
   origin: { latitude: number; longitude: number },
   resolved: ResolvedMapboxToken,
 ): Promise<{ amenities: PoiAmenity[]; authFailed: boolean; status?: number }> {
-  const groups = await Promise.all(
-    POI_SEARCHES.map(async (search) => {
-      const outcomes = await Promise.all(
-        search.queries.map((query) =>
-          searchNearbyPois(query, origin, resolved, POI_LIMIT),
-        ),
-      );
-      const authFailure = outcomes.find((outcome) => outcome.authFailed);
-      if (authFailure) {
-        return {
-          amenities: [] as PoiAmenity[],
-          authFailed: true,
-          status: authFailure.status,
-        };
-      }
-      const mergedHits = outcomes
-        .flatMap((outcome) => outcome.hits)
-        .sort((a, b) => a.km - b.km);
-      return {
-        amenities: amenitiesFromHits(mergedHits, search),
-        authFailed: false,
-      };
-    }),
+  const outcomes = await Promise.all(
+    POI_SEARCHES.map((search) =>
+      searchCategory(search, origin, resolved).catch(
+        (err: unknown): SearchOutcome => {
+          console.error(
+            '[brochure-pdf] nearby amenities failed:',
+            `category=${search.category}`,
+            err instanceof Error ? err.message : String(err),
+          );
+          return { hits: [], authFailed: false };
+        },
+      ),
+    ),
   );
 
-  const authFailure = groups.find((group) => group.authFailed);
+  const authFailure = outcomes.find((outcome) => outcome.authFailed);
   if (authFailure) {
     return { amenities: [], authFailed: true, status: authFailure.status };
   }
 
   return {
-    amenities: groups.flatMap((group) => group.amenities),
+    amenities: interleave(
+      outcomes.map((outcome, i) =>
+        amenitiesFromHits(outcome.hits, POI_SEARCHES[i]!),
+      ),
+    ),
     authFailed: false,
   };
 }

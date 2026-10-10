@@ -298,7 +298,7 @@ export async function loadListingBrochureData(
   ]);
 
   const nearbyAmenities = localFacts
-    ? mergeBrochureAmenities(localAreaAmenities(localFacts, 6), mapboxAmenities)
+    ? mergeBrochureAmenities(localAreaAmenities(localFacts, 5), mapboxAmenities)
     : mapboxAmenities;
   const localArea = localFacts
     ? buildBrochureLocalArea(localFacts, listing.town)
