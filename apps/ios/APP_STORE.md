@@ -172,6 +172,7 @@ Ozer is open to the public: anyone can create an account by signing in with Appl
 
 HOW TO USE IT
 Demo account: appreview@ozer.so (password in App Review Information). Type the email and a password field replaces "Email me a link".
+After signing in, Ozer asks whether it may send meeting, survey and note text to the AI providers listed below; nothing is uploaded until the user answers. The demo account sees this on first sign-in. Change it in Menu > Personal settings > AI features.
 The demo account is in four workspaces. Open Menu (last tab) and tap the workspace name to switch: Personal, Harland Reed Property (commercial property), Calloway Building Surveyors (surveyor) and Northfold Studio (client work).
 - Home: today's tasks, money in and out, suggested tasks.
 - Meetings: Menu > Meetings > Start a new meeting. Captions are transcribed on the device and recording continues with the screen locked. Live captions need a real device.
@@ -188,7 +189,7 @@ EXTERNAL SERVICES
 - Apple Push Notification service
 - Apple Speech framework: on-device transcription; audio is not uploaded for transcription
 - Hugging Face: one-time download of an open-source speaker-labelling model that runs on the device
-- Anthropic (Claude) and Google Gemini API: server-side summaries of saved meeting transcripts and suggested follow-up tasks
+- Anthropic (Claude), Google Gemini and Voyage AI, only if the user allows it: meeting summaries, suggested tasks, survey dictation clean-up and workspace search
 - Mapbox: UK address search for surveys, called from our server
 - Google Workspace and Microsoft 365: optional email and calendar connections set up on the web
 - ZeptoMail and Amazon SES: sign-in links and notification emails
@@ -209,6 +210,7 @@ Ozer is not a regulated service (no financial, medical or legal services) and co
 - [x] Give the demo account a Personal, Commercial Property (`commercial_property`), Surveyor (`building_surveyor`) and Studio (`work_design`) workspace with realistic sample data — no real client data. Seeded by `apps/web/scripts/seed-app-review-demo.mts --production --write` (Harland Reed Property, Calloway Building Surveyors, Northfold Studio, plus a demo teammate `hi+demo-sam@ozer.so` for Messages). Re-run it to reset the data after a review.
 - [x] Screenshots: iPhone 6.9" (1320×2868) and iPad 13" (2064×2752), seven each, captured from the demo account.
 - [x] Account deletion API is live in production (`NEXT_PUBLIC_ENABLE_PERSONAL_ACCOUNT_DELETION=true` comes from `apps/web/.env`).
+- [x] AI permission (guideline 5.1.2(i)), from build 3: the app asks after sign-in and holds uploads until answered; the server skips Claude, Gemini and Voyage for anyone who declines. Before each submission, clear the demo account's answer so the reviewer sees the prompt (the seed script does this).
 - [x] Enable the Apple provider in production Supabase (Authentication → Sign In / Providers → Apple) with Client ID `so.ozer.app`. The native iOS flow needs no secret key; that's only for web OAuth and expires every 6 months.
 - [x] Set `APNS_KEY_ID`, `APNS_P8` and `APNS_PRODUCTION=true` in production Vercel and redeploy. TestFlight and App Store builds use Apple's production push server.
 - [x] Privacy policy covers the iPhone and iPad app (on-device speech, microphone, camera, photos, push) and in-app account deletion.

@@ -2,6 +2,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { parseAiProcessingConsent } from '~/lib/ai/processing-consent';
+
 import { NativeHttpError } from './http';
 import { loadPersonalNativeWorkspace } from './workspace';
 
@@ -31,7 +33,7 @@ export async function loadNativeMe(
       loadPersonalNativeWorkspace(client, userId),
       client
         .from('user_settings')
-        .select('first_name, last_name')
+        .select('first_name, last_name, ai_processing_consent')
         .eq('user_id', userId)
         .maybeSingle(),
     ]);
@@ -62,5 +64,8 @@ export async function loadNativeMe(
       id: personal.id,
       slug: personal.slug,
     },
+    ai_processing_consent: parseAiProcessingConsent(
+      settings?.ai_processing_consent,
+    ),
   };
 }

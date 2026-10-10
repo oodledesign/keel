@@ -22,10 +22,18 @@ export async function cleanSurveyTranscript(input: {
   sectionKey?: string | null;
   accountId: string;
   supabase: SupabaseClient;
+  aiAllowed?: boolean;
 }): Promise<SurveyTranscriptCleanupResult> {
   const sourceText = stripSurveySpeakerLabels(input.sourceText);
   if (!sourceText) {
     return { cleanedText: '', source: 'passthrough', fallbackReason: 'empty' };
+  }
+  if (input.aiAllowed === false) {
+    return {
+      cleanedText: sourceText,
+      source: 'passthrough',
+      fallbackReason: 'AI processing declined',
+    };
   }
 
   try {

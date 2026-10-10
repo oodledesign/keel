@@ -6,6 +6,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { isAiProcessingDenied } from '~/lib/ai/processing-consent';
 import {
   MEETING_POST_SYNC_HEAL_WINDOW_MS,
   MEETING_POST_SYNC_KICK_DEBOUNCE_MS,
@@ -196,6 +197,22 @@ export async function processMeetingPostSync(
 
   const summary = parseMeetingPostSyncStatus(row.summary_status);
   const tasks = parseMeetingPostSyncStatus(row.task_extraction_status);
+  if (summary === 'skipped' || tasks === 'skipped') {
+    return { status: 'skipped' };
+  }
+  if (await isAiProcessingDenied(admin, row.created_by)) {
+    const { error } = await admin
+      .from('meeting_transcripts')
+      .update({
+        summary_status: 'skipped',
+        task_extraction_status: 'skipped',
+        post_sync_error: null,
+        post_sync_updated_at: new Date().toISOString(),
+      })
+      .eq('id', row.id);
+    if (error) throw new Error(error.message);
+    return { status: 'skipped' };
+  }
   if (summary === 'failed' || tasks === 'failed') return { status: 'failed' };
   if (summary === 'ready' && tasks === 'ready') return { status: 'ready' };
   if (isFreshProcessing(row, Date.now())) return { status: 'in_progress' };

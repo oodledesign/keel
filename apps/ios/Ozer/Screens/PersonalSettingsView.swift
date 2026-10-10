@@ -17,6 +17,7 @@ struct PersonalSettingsView: View {
     @State private var pushStatus: UNAuthorizationStatus?
     @State private var errorMessage: String?
     @State private var showDeleteAccount = false
+    @State private var isSavingAIConsent = false
 
     private let client = NativeAPIClient()
 
@@ -111,6 +112,28 @@ struct PersonalSettingsView: View {
                 Text("Email notifications")
             } footer: {
                 Text("In-app alerts are unchanged.")
+                    .foregroundStyle(OzerPalette.plumSoft)
+            }
+            .listRowBackground(OzerPalette.panel)
+
+            Section {
+                Toggle(isOn: aiBinding) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("AI summaries, tasks and search")
+                            .foregroundStyle(OzerPalette.plum)
+                        Text(AIConsentCopy.providers.map(\.name).joined(separator: ", "))
+                            .font(.footnote)
+                            .foregroundStyle(OzerPalette.plumMuted)
+                    }
+                }
+                .tint(OzerPalette.coral)
+                .disabled(isSavingAIConsent || session.aiConsent == .unknown)
+                Link("Privacy policy", destination: AIConsentCopy.privacyPolicy)
+                    .foregroundStyle(OzerPalette.coral)
+            } header: {
+                Text("AI features")
+            } footer: {
+                Text("When on, the text of your meetings, survey notes and notes is sent to these providers. When off, they’re still saved, just without AI summaries, suggested tasks or search.")
                     .foregroundStyle(OzerPalette.plumSoft)
             }
             .listRowBackground(OzerPalette.panel)
@@ -257,6 +280,23 @@ struct PersonalSettingsView: View {
             get: { settings?.emailNotifications.first { $0.key == key }?.enabled ?? false },
             set: { enabled in Task { await setEmailNotification(key: key, enabled: enabled) } }
         )
+    }
+
+    private var aiBinding: Binding<Bool> {
+        Binding(
+            get: { session.aiConsent == .granted },
+            set: { granted in Task { await setAIConsent(granted: granted) } }
+        )
+    }
+
+    private func setAIConsent(granted: Bool) async {
+        isSavingAIConsent = true
+        defer { isSavingAIConsent = false }
+        do {
+            try await session.setAIConsent(granted: granted)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private func apply(_ next: PersonalSettings) {

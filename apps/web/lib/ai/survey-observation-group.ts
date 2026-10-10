@@ -40,6 +40,7 @@ export async function groupSurveyObservations(input: {
   transcript: string;
   accountId: string;
   supabase: SupabaseClient;
+  aiAllowed?: boolean;
 }): Promise<ObservationGroupingResult> {
   const paragraphs = splitTranscriptParagraphs(input.transcript);
   if (paragraphs.length === 0) {
@@ -47,6 +48,13 @@ export async function groupSurveyObservations(input: {
   }
 
   const keywordDrafts = observationsFromTranscript(input.transcript);
+  if (input.aiAllowed === false) {
+    return {
+      drafts: keywordDrafts,
+      source: 'keyword_fallback',
+      fallbackReason: 'AI processing declined',
+    };
+  }
 
   try {
     const text = await callAI({

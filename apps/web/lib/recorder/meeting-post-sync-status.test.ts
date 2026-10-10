@@ -138,10 +138,7 @@ describe('shouldScheduleMeetingPostSync', () => {
       shouldScheduleMeetingPostSync(candidate({ source: 'paste' }), now),
     ).toBe(false);
     expect(
-      shouldScheduleMeetingPostSync(
-        candidate({ proposalId: 'survey-1' }),
-        now,
-      ),
+      shouldScheduleMeetingPostSync(candidate({ proposalId: 'survey-1' }), now),
     ).toBe(false);
     expect(
       shouldScheduleMeetingPostSync(candidate({ content: '   ' }), now),
@@ -220,6 +217,24 @@ describe('shouldScheduleMeetingPostSync', () => {
         now,
       ),
     ).toBe(false);
+  });
+
+  it('never queues or heals a meeting whose author declined AI processing', () => {
+    expect(
+      shouldScheduleMeetingPostSync(
+        candidate({
+          summaryStatus: 'skipped',
+          taskExtractionStatus: 'skipped',
+        }),
+        now,
+      ),
+    ).toBe(false);
+    expect(
+      describeMeetingPostSync({
+        summaryStatus: 'skipped',
+        taskExtractionStatus: 'skipped',
+      }),
+    ).toBeNull();
   });
 
   it('does not backfill Assistant meetings older than the heal window', () => {

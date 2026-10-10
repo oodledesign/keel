@@ -16,6 +16,8 @@ struct PersonalSettings: Decodable, Equatable {
     var email: String?
     var pictureUrl: String?
     var emailNotifications: [EmailNotification]
+    /// "granted", "denied", or nil when the user hasn't been asked yet.
+    var aiProcessingConsent: String?
 
     enum CodingKeys: String, CodingKey {
         case firstName = "first_name"
@@ -24,6 +26,7 @@ struct PersonalSettings: Decodable, Equatable {
         case email
         case pictureUrl = "picture_url"
         case emailNotifications = "email_notifications"
+        case aiProcessingConsent = "ai_processing_consent"
     }
 }
 

@@ -5,6 +5,15 @@ import {
   removePersonalProfileImage,
   storePersonalProfileImage,
 } from '~/lib/account/profile-image';
+import {
+  loadAiProcessingConsent,
+  parseAiProcessingConsent,
+  saveAiProcessingConsent,
+} from '~/lib/ai/processing-consent';
+import {
+  queueBrainDeleteAuthoredSources,
+  queueBrainIndexUserAccounts,
+} from '~/lib/brain/sync';
 import { resolveEmailNotificationPreferences } from '~/lib/notifications/email-notification-preferences';
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
@@ -33,7 +42,9 @@ export async function loadNativePersonalSettings(requester: Requester) {
         .maybeSingle(),
       supabase
         .from('user_settings')
-        .select('first_name, last_name, email_notification_preferences')
+        .select(
+          'first_name, last_name, email_notification_preferences, ai_processing_consent',
+        )
         .eq('user_id', userId)
         .maybeSingle(),
     ],
@@ -54,6 +65,7 @@ export async function loadNativePersonalSettings(requester: Requester) {
     first_name?: string | null;
     last_name?: string | null;
     email_notification_preferences?: unknown;
+    ai_processing_consent?: unknown;
   } | null;
   const storedFirst = stored?.first_name?.trim() ?? '';
   const storedLast = stored?.last_name?.trim() ?? '';
@@ -72,6 +84,9 @@ export async function loadNativePersonalSettings(requester: Requester) {
       resolveEmailNotificationPreferences(
         stored?.email_notification_preferences,
       ),
+    ),
+    ai_processing_consent: parseAiProcessingConsent(
+      stored?.ai_processing_consent,
     ),
   };
 }
@@ -136,6 +151,20 @@ export async function updateNativePersonalSettings(
       { onConflict: 'user_id' },
     );
     if (error) throw error;
+  }
+
+  if (patch.ai_processing_consent) {
+    const previous = await loadAiProcessingConsent(supabase, userId);
+    await saveAiProcessingConsent(
+      supabase,
+      userId,
+      patch.ai_processing_consent,
+    );
+    if (patch.ai_processing_consent === 'denied') {
+      queueBrainDeleteAuthoredSources(userId);
+    } else if (previous === 'denied') {
+      queueBrainIndexUserAccounts(userId);
+    }
   }
 
   return loadNativePersonalSettings(requester);

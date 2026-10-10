@@ -370,6 +370,17 @@ describe('createNativeMeeting', () => {
     vi.mocked(scheduleMeetingPostSync).mockClear();
   });
 
+  function consentLookup(consent: 'granted' | 'denied' | null) {
+    return {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: consent ? { ai_processing_consent: consent } : null,
+        error: null,
+      }),
+    };
+  }
+
   it('requires a client in this workspace and inserts meeting_transcripts', async () => {
     const clientLookup = {
       select: vi.fn().mockReturnThis(),
@@ -404,7 +415,11 @@ describe('createNativeMeeting', () => {
       }),
     };
     const from = vi.fn((table: string) =>
-      table === 'clients' ? clientLookup : insertChain,
+      table === 'clients'
+        ? clientLookup
+        : table === 'user_settings'
+          ? consentLookup(null)
+          : insertChain,
     );
 
     const created = await createNativeMeeting({
@@ -446,6 +461,56 @@ describe('createNativeMeeting', () => {
       meetingTranscriptId: 'm1',
       meetingTitle: 'Site visit',
     });
+  });
+
+  it('saves without AI processing when the author declined it', async () => {
+    const clientLookup = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: clientId, display_name: 'Hope and Wonder' },
+        error: null,
+      }),
+    };
+    const insertChain = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: 'm2',
+          title: 'Site visit',
+          content: 'Hello from the site',
+          client_id: clientId,
+          source: 'desktop_recorder',
+          created_at: '2026-09-01T10:00:00Z',
+          updated_at: '2026-09-01T10:00:00Z',
+        },
+        error: null,
+      }),
+    };
+    const from = vi.fn((table: string) =>
+      table === 'clients'
+        ? clientLookup
+        : table === 'user_settings'
+          ? consentLookup('denied')
+          : insertChain,
+    );
+
+    await createNativeMeeting({
+      client: { from } as never,
+      userId: 'user-dan',
+      workspace: studio,
+      content: 'Hello from the site',
+      clientId,
+    });
+
+    expect(insertChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        summary_status: 'skipped',
+        task_extraction_status: 'skipped',
+      }),
+    );
+    expect(scheduleMeetingPostSync).not.toHaveBeenCalled();
   });
 
   it('rejects a missing client', async () => {

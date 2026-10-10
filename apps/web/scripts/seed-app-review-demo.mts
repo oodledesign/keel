@@ -1730,6 +1730,15 @@ async function main() {
     throw new Error(`reviewer metadata: ${metadataError.message}`);
   }
 
+  // App Review should see the AI permission prompt on first sign-in.
+  await must(
+    'reset AI consent',
+    admin
+      .from('user_settings')
+      .update({ ai_processing_consent: null, ai_processing_consent_at: null })
+      .eq('user_id', reviewerId),
+  );
+
   await must(
     'leave Test Surveyors',
     admin

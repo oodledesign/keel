@@ -4,6 +4,8 @@ export const MEETING_POST_SYNC_STATUSES = [
   'processing',
   'ready',
   'failed',
+  /** The author declined AI processing. Terminal: never scheduled or healed. */
+  'skipped',
 ] as const;
 
 export type MeetingPostSyncStatus = (typeof MEETING_POST_SYNC_STATUSES)[number];
@@ -134,6 +136,7 @@ export function shouldScheduleMeetingPostSync(
   const tasks = parseMeetingPostSyncStatus(input.taskExtractionStatus);
 
   if (summary === 'failed' || tasks === 'failed') return false;
+  if (summary === 'skipped' || tasks === 'skipped') return false;
   if (summary === 'ready' && tasks === 'ready') return false;
 
   const updatedAt = input.postSyncUpdatedAt

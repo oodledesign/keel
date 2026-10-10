@@ -28,6 +28,7 @@ const PersonalSettingsPatchSchema = z
             ) as Partial<Record<EmailNotificationKey, boolean>>)
           : undefined,
       ),
+    ai_processing_consent: z.enum(['granted', 'denied']).optional(),
   })
   .refine((value) => value.first_name === undefined || value.first_name, {
     message: 'First name is required',

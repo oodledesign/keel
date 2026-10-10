@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** 8 October 2026
+**Last updated:** 10 October 2026
 
 Daniel Potter, a sole trader trading as Oodle Designs ("Ozer", "we", "us"), is the data controller for personal data we process for our own purposes (account and authentication data, product analytics and security logs, and SaaS billing records). Where you use Ozer to store or process your clients', staff, or invitees' personal data, we typically act as a **processor** on your instructions. See our [Data Processing Agreement](/dpa) for that relationship. We comply with the UK GDPR, EU GDPR, and the Data Protection Act 2018.
 
@@ -110,13 +110,15 @@ We process data to perform our contract with you, for legitimate interests (secu
 
 **Sign-in:** you can sign in with Apple, Google, or your email address. If you use Sign in with Apple and choose to hide your email, we only receive Apple's relay address.
 
+**AI features:** before anything is uploaded, the app asks whether Ozer may send the text of your meetings, survey notes, and notes to our AI providers: Anthropic (meeting summaries and suggested tasks), Google Gemini (tidying and sorting survey dictation), and Voyage AI (workspace search). If you choose Don't allow, your content is still saved but is not sent to them, and anything already in workspace search is removed from it. You can change your choice at any time in Personal settings → AI features.
+
 **What the app does not do:** it does not collect your location, contacts, or health data, it contains no advertising or third-party analytics SDKs, and it does not track you across other companies' apps or websites.
 
 **Permissions:** the microphone, speech recognition, camera, photos, and notifications are each requested only when first needed. You can withdraw any of them in iOS Settings → Ozer.
 
 **UK GDPR basis:** contract performance. Meeting transcripts are also covered by the Meeting transcripts and recording section above.
 
-**Sub-processors:** Supabase (database and file storage); Apple (push notification delivery and Sign in with Apple); Google (Sign in with Google); Mapbox (survey address search, called from our servers).
+**Sub-processors:** Supabase (database and file storage); Apple (push notification delivery and Sign in with Apple); Google (Sign in with Google); Mapbox (survey address search, called from our servers); Anthropic, Google Gemini, and Voyage AI (AI features, only if you allow them).
 
 **Retention:** app content follows the retention of the workspace it belongs to. Device push tokens are deleted when your account deletion completes. Recordings and photos still waiting to upload on your device are removed if you delete the app.
 

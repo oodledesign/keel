@@ -224,7 +224,9 @@ struct MeetingDetailView: View {
             } else if let notesText {
                 notesMarkdown(notesText)
             } else {
-                Text("No notes yet. Summaries are written on Mac or web after this meeting is processed.")
+                Text(session.aiConsent == .denied
+                     ? "No summary. AI features are off; turn them on in Personal settings."
+                     : "No notes yet. Summaries are written on Mac or web after this meeting is processed.")
                     .font(.body)
                     .foregroundStyle(OzerPalette.plumMuted)
             }

@@ -15,6 +15,12 @@ struct RootView: View {
                 SignInView()
             case .signedIn:
                 MainTabView()
+                    .sheet(isPresented: Binding(
+                        get: { session.aiConsent == .undecided },
+                        set: { _ in }
+                    )) {
+                        AIConsentView()
+                    }
             }
         }
         .ozerReadableWidth()

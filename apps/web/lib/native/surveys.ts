@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
+import { isAiProcessingDenied } from '~/lib/ai/processing-consent';
 import { groupSurveyObservations } from '~/lib/ai/survey-observation-group';
 import { cleanSurveyTranscript } from '~/lib/ai/survey-transcript-cleanup';
 import { queueBrainIndexSource } from '~/lib/brain/sync';
@@ -659,6 +660,7 @@ export async function createNativeSurveySession(input: {
     ? 'user'
     : 'keyword_fallback';
   let cleanupSource: 'ai' | 'passthrough' | null = null;
+  const aiAllowed = !(await isAiProcessingDenied(input.client, input.userId));
 
   if (chosenSection) {
     try {
@@ -668,6 +670,7 @@ export async function createNativeSurveySession(input: {
         sectionKey: chosenSection.key,
         accountId: input.workspace.id,
         supabase: input.client,
+        aiAllowed,
       });
       cleanupSource = cleanup.source;
       await upsertUserSectionObservation({
@@ -693,6 +696,7 @@ export async function createNativeSurveySession(input: {
         transcript: content,
         accountId: input.workspace.id,
         supabase: input.client,
+        aiAllowed,
       });
       groupingSource = grouping.source;
 
@@ -717,6 +721,7 @@ export async function createNativeSurveySession(input: {
             sectionKey: draft.sectionKey,
             accountId: input.workspace.id,
             supabase: input.client,
+            aiAllowed,
           });
           if (cleanup.source === 'ai' || cleanupSource == null) {
             cleanupSource = cleanup.source;

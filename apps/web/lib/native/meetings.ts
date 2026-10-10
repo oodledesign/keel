@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { isAiProcessingDenied } from '~/lib/ai/processing-consent';
 import { queueBrainIndexSource } from '~/lib/brain/sync';
 import { listUpcomingSyncedMeetings } from '~/lib/integrations/google-calendar/events';
 import {
@@ -361,6 +362,9 @@ export async function createNativeMeeting(input: {
       ? Math.round(input.durationSeconds)
       : null;
 
+  const aiDenied = await isAiProcessingDenied(input.client, input.userId);
+  const postSyncStatus = aiDenied ? 'skipped' : 'pending';
+
   const { data, error } = await input.client
     .from('meeting_transcripts')
     .insert({
@@ -375,8 +379,8 @@ export async function createNativeMeeting(input: {
       created_by: input.userId,
       duration_seconds: duration,
       recorded_at: new Date().toISOString(),
-      summary_status: 'pending',
-      task_extraction_status: 'pending',
+      summary_status: postSyncStatus,
+      task_extraction_status: postSyncStatus,
       post_sync_error: null,
       post_sync_updated_at: new Date().toISOString(),
     })
@@ -388,8 +392,10 @@ export async function createNativeMeeting(input: {
   }
 
   const row = data as NativeMeetingRow;
-  queueBrainIndexSource(input.workspace.id, 'transcript', row.id);
-  scheduleMeetingPostSync(row.id);
+  if (!aiDenied) {
+    queueBrainIndexSource(input.workspace.id, 'transcript', row.id);
+    scheduleMeetingPostSync(row.id);
+  }
 
   void notifyMeetingTranscriptSyncedInApp({
     accountId: input.workspace.id,

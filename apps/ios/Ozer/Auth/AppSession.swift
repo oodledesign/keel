@@ -13,7 +13,27 @@ final class AppSession {
         case signedIn
     }
 
+    /// Whether the user lets Ozer send their content to third-party AI providers.
+    enum AIConsent: Equatable {
+        /// Not fetched yet (or offline).
+        case unknown
+        case undecided
+        case granted
+        case denied
+
+        init(serverValue: String?) {
+            switch serverValue {
+            case "granted": self = .granted
+            case "denied": self = .denied
+            default: self = .undecided
+            }
+        }
+
+        var isDecided: Bool { self == .granted || self == .denied }
+    }
+
     private(set) var phase: Phase = .loading
+    private(set) var aiConsent: AIConsent = .unknown
     private(set) var session: AuthSession?
     private(set) var workspaces: [NativeWorkspace] = []
     private(set) var workspacesLoaded = false
@@ -235,6 +255,7 @@ final class AppSession {
         workspacesLoaded = false
         selectedWorkspace = nil
         pendingTaskReviewCount = 0
+        aiConsent = .unknown
         phase = .signedOut
         try? KeychainStore.deleteAll()
         if let token {
@@ -277,8 +298,34 @@ final class AppSession {
         pendingTaskReviewCount = max(0, count)
     }
 
+    func refreshAIConsent() async {
+        guard phase == .signedIn else { return }
+        do {
+            let token = try await validAccessToken()
+            let settings = try await api.personalSettings(accessToken: token)
+            aiConsent = AIConsent(serverValue: settings.aiProcessingConsent)
+        } catch {
+            return
+        }
+    }
+
+    func setAIConsent(granted: Bool) async throws {
+        let token = try await validAccessToken()
+        let settings = try await api.updatePersonalSettings(
+            ["ai_processing_consent": granted ? "granted" : "denied"],
+            accessToken: token
+        )
+        aiConsent = AIConsent(serverValue: settings.aiProcessingConsent)
+        await flushOfflineWork()
+    }
+
     func flushOfflineWork() async {
         guard phase == .signedIn else { return }
+        if aiConsent == .unknown {
+            await refreshAIConsent()
+        }
+        // Queued meetings, surveys and notes wait until the user has answered the AI question.
+        guard aiConsent.isDecided else { return }
         do {
             let token = try await validAccessToken()
             await OfflineNoteQueue.shared.flush(accessToken: token)
@@ -311,6 +358,9 @@ final class AppSession {
         workspacesLoaded = true
         reconcileSelection()
         Task {
+            if !aiConsent.isDecided {
+                await refreshAIConsent()
+            }
             await flushOfflineWork()
             await PushRegistration.registerIfNeeded(session: self)
         }

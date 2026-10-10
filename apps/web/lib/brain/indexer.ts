@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { loadAiProcessingDeniedUserIds } from '~/lib/ai/processing-consent';
 import { htmlToMarkdown } from '~/lib/markdown';
 
 import { brainChunksNeedRefresh } from './brain-index-refresh';
@@ -54,6 +55,26 @@ async function loadAccountSlug(admin: AdminClient, accountId: string) {
     .eq('id', accountId)
     .maybeSingle();
   return (data?.slug as string | undefined) ?? accountId;
+}
+
+type AuthoredRow = { created_by?: string | null; user_id?: string | null };
+
+/** Notes and transcripts whose author said no to AI processing are never embedded. */
+async function withoutAiDeclinedAuthors<T extends AuthoredRow>(
+  admin: AdminClient,
+  rows: T[],
+): Promise<T[]> {
+  const denied = await loadAiProcessingDeniedUserIds(
+    admin,
+    rows.flatMap((row) => [row.created_by, row.user_id]),
+  );
+  if (denied.size === 0) return rows;
+
+  return rows.filter(
+    (row) =>
+      !(row.created_by && denied.has(row.created_by)) &&
+      !(row.user_id && denied.has(row.user_id)),
+  );
 }
 
 const MEETING_TRANSCRIPT_CLIENT_SELECT =
@@ -142,7 +163,7 @@ async function loadTranscriptIndexable(
   const { data: row, error } = await admin
     .from('meeting_transcripts')
     .select(
-      `id, title, content, updated_at, client_id, meeting_date, ${MEETING_TRANSCRIPT_CLIENT_SELECT}`,
+      `id, title, content, updated_at, client_id, meeting_date, created_by, ${MEETING_TRANSCRIPT_CLIENT_SELECT}`,
     )
     .eq('account_id', accountId)
     .eq('id', sourceId)
@@ -152,7 +173,7 @@ async function loadTranscriptIndexable(
     throw new Error(`meeting_transcripts: ${error.message}`);
   }
 
-  if (!row) {
+  if (!row || (await withoutAiDeclinedAuthors(admin, [row])).length === 0) {
     return null;
   }
 
@@ -179,10 +200,12 @@ export async function loadAccountIndexables(
 
   const { data: notes } = await admin
     .from('notes')
-    .select('id, title, content, updated_at, job_id, client_id')
+    .select(
+      'id, title, content, updated_at, job_id, client_id, created_by, user_id',
+    )
     .eq('account_id', accountId);
 
-  for (const row of notes ?? []) {
+  for (const row of await withoutAiDeclinedAuthors(admin, notes ?? [])) {
     const content = (row.content as string)?.trim();
     if (!content) continue;
     records.push({
@@ -316,7 +339,7 @@ export async function loadAccountIndexables(
   const { data: transcripts, error: transcriptsError } = await admin
     .from('meeting_transcripts')
     .select(
-      `id, title, content, updated_at, client_id, meeting_date, ${MEETING_TRANSCRIPT_CLIENT_SELECT}`,
+      `id, title, content, updated_at, client_id, meeting_date, created_by, ${MEETING_TRANSCRIPT_CLIENT_SELECT}`,
     )
     .eq('account_id', accountId);
 
@@ -324,7 +347,10 @@ export async function loadAccountIndexables(
     throw new Error(`meeting_transcripts: ${transcriptsError.message}`);
   }
 
-  const transcriptRows = transcripts ?? [];
+  const transcriptRows = await withoutAiDeclinedAuthors(
+    admin,
+    transcripts ?? [],
+  );
   const enrichmentByTranscriptId = await loadMeetingTranscriptEnrichmentByIds(
     admin,
     accountId,
@@ -345,10 +371,10 @@ export async function loadAccountIndexables(
 
   const { data: proposals } = await admin
     .from('proposals')
-    .select('id, title, content_html, updated_at, client_id')
+    .select('id, title, content_html, updated_at, client_id, created_by')
     .eq('account_id', accountId);
 
-  for (const row of proposals ?? []) {
+  for (const row of await withoutAiDeclinedAuthors(admin, proposals ?? [])) {
     const html = (row.content_html as string | null)?.trim();
     if (!html) continue;
     records.push({
@@ -582,12 +608,15 @@ async function loadProposalIndexable(
 ): Promise<IndexableRecord | null> {
   const { data: row } = await admin
     .from('proposals')
-    .select('id, title, content_html, updated_at, client_id')
+    .select('id, title, content_html, updated_at, client_id, created_by')
     .eq('account_id', accountId)
     .eq('id', sourceId)
     .maybeSingle();
 
   if (!row) return null;
+  if ((await withoutAiDeclinedAuthors(admin, [row])).length === 0) {
+    return null;
+  }
 
   const html = (row.content_html as string | null)?.trim();
   if (!html) return null;
@@ -616,12 +645,17 @@ export async function loadIndexableSource(
     case 'note': {
       const { data: row } = await admin
         .from('notes')
-        .select('id, title, content, updated_at, job_id, client_id')
+        .select(
+          'id, title, content, updated_at, job_id, client_id, created_by, user_id',
+        )
         .eq('account_id', accountId)
         .eq('id', sourceId)
         .maybeSingle();
 
       if (!row) return null;
+      if ((await withoutAiDeclinedAuthors(admin, [row])).length === 0) {
+        return null;
+      }
 
       const content = (row.content as string)?.trim();
       if (!content) return null;
@@ -712,11 +746,11 @@ export async function listAccountIndexableRefs(
 
   const { data: notes } = await admin
     .from('notes')
-    .select('id, title')
+    .select('id, title, created_by, user_id')
     .eq('account_id', accountId)
     .not('content', 'is', null);
 
-  for (const row of notes ?? []) {
+  for (const row of await withoutAiDeclinedAuthors(admin, notes ?? [])) {
     refs.push({
       sourceType: 'note',
       sourceId: row.id as string,
@@ -798,14 +832,14 @@ export async function listAccountIndexableRefs(
 
   const { data: transcripts, error: transcriptsError } = await admin
     .from('meeting_transcripts')
-    .select('id, title')
+    .select('id, title, created_by')
     .eq('account_id', accountId);
 
   if (transcriptsError) {
     throw new Error(`meeting_transcripts: ${transcriptsError.message}`);
   }
 
-  for (const row of transcripts ?? []) {
+  for (const row of await withoutAiDeclinedAuthors(admin, transcripts ?? [])) {
     refs.push({
       sourceType: 'transcript',
       sourceId: row.id as string,
@@ -815,11 +849,11 @@ export async function listAccountIndexableRefs(
 
   const { data: proposals } = await admin
     .from('proposals')
-    .select('id, title')
+    .select('id, title, created_by')
     .eq('account_id', accountId)
     .not('content_html', 'is', null);
 
-  for (const row of proposals ?? []) {
+  for (const row of await withoutAiDeclinedAuthors(admin, proposals ?? [])) {
     refs.push({
       sourceType: 'proposal',
       sourceId: row.id as string,
@@ -1001,6 +1035,40 @@ export async function deleteSourceChunks(
     query = query.eq('account_id', accountId);
   }
   await query;
+}
+
+/** Drop search chunks for everything a user wrote, after they decline AI processing. */
+export async function deleteAuthoredSourceChunks(
+  admin: AdminClient,
+  userId: string,
+) {
+  const results = await Promise.all([
+    admin.from('notes').select('id').eq('created_by', userId),
+    admin.from('notes').select('id').eq('user_id', userId),
+    admin.from('meeting_transcripts').select('id').eq('created_by', userId),
+    admin.from('proposals').select('id').eq('created_by', userId),
+  ]);
+
+  for (const result of results) {
+    if (result.error) throw new Error(result.error.message);
+  }
+
+  const sourceIds = [
+    ...new Set(
+      results.flatMap((result) =>
+        (result.data ?? []).map((row) => row.id as string),
+      ),
+    ),
+  ];
+
+  const chunkSize = 200;
+  for (let start = 0; start < sourceIds.length; start += chunkSize) {
+    const { error } = await admin
+      .from('brain_chunks')
+      .delete()
+      .in('source_id', sourceIds.slice(start, start + chunkSize));
+    if (error) throw new Error(error.message);
+  }
 }
 
 export async function indexSource(
