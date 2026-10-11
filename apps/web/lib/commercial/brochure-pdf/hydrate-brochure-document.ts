@@ -1,12 +1,16 @@
-import type {
-  BrochureDocument,
-  BrochureImageSlot,
-  BrochurePage,
-  BrochureSlotValue,
+import {
+  type BrochureDocument,
+  type BrochureImageSlot,
+  type BrochureLayoutId,
+  type BrochurePage,
+  type BrochureSlotValue,
+  isCoverLayout,
+  isLocationLayout,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
 import {
   brochureCoverImage,
   brochureLocationBody,
+  clipAtSentence,
 } from '~/lib/commercial/brochure-pdf/build-brochure-document';
 import {
   amenityDedupeKey,
@@ -19,14 +23,24 @@ import type {
   PublicBrochureData,
 } from '~/lib/commercial/public-brochure.shared';
 
-const PHOTO_LAYOUTS = new Set(['photo_full', 'photo_grid_2', 'photo_grid_3']);
+/** Photo-only pages; dropped from the PDF when none of their photos resolve. */
+const PHOTO_LAYOUTS = new Set<BrochureLayoutId>([
+  'photo_full',
+  'photo_grid_2',
+  'photo_grid_3',
+  'photo_row_3',
+  'photo_grid_4',
+]);
 
-const PHOTO_SLOT_KEYS: Record<string, string[]> = {
-  cover_hero_band: ['hero'],
+/** Pages whose empty photo slots borrow unused listing photos. */
+const BACKFILL_SLOT_KEYS: Partial<Record<BrochureLayoutId, string[]>> = {
   photo_full: ['photo'],
   photo_grid_2: ['photo1', 'photo2'],
   photo_grid_3: ['photo1', 'photo2', 'photo3'],
-  floorplan: ['plan'],
+  photo_row_3: ['photo1', 'photo2', 'photo3'],
+  photo_grid_4: ['photo1', 'photo2', 'photo3', 'photo4'],
+  photo_text: ['photo'],
+  description_photo: ['photo'],
 };
 
 const FACTS_PHOTO_KEYS = ['photo1', 'photo2'];
@@ -48,7 +62,6 @@ function mediaSlot(
 function hasImageUrl(slot: BrochureSlotValue | undefined): boolean {
   return isImageSlot(slot) && Boolean(slot.url?.trim());
 }
-
 type MapAmenity = Extract<
   BrochureSlotValue,
   { type: 'map' }
@@ -132,9 +145,9 @@ export function hydrateBrochureDocument(
 
   const pages: BrochurePage[] = document.pages.map((page) => {
     const slots = { ...page.slots };
-    const keys = PHOTO_SLOT_KEYS[page.layoutId] ?? [];
+    const keys = BACKFILL_SLOT_KEYS[page.layoutId] ?? [];
 
-    if (page.layoutId === 'cover_hero_band') {
+    if (isCoverLayout(page.layoutId)) {
       const resolved = resolve(slots.hero, cover);
       if (resolved) slots.hero = resolved;
     } else if (page.layoutId === 'floorplan') {
@@ -162,7 +175,7 @@ export function hydrateBrochureDocument(
         const resolved = resolve(slots[key], null);
         if (resolved) slots[key] = resolved;
       }
-    } else if (keys.length > 0 && page.layoutId.startsWith('photo_')) {
+    } else if (keys.length > 0) {
       for (const key of keys) {
         const slot = slots[key];
         const canResolve =
@@ -174,7 +187,7 @@ export function hydrateBrochureDocument(
       }
     }
 
-    if (page.layoutId === 'map_amenities' && slots.map?.type === 'map') {
+    if (isLocationLayout(page.layoutId) && slots.map?.type === 'map') {
       const fetched = data.nearbyAmenities ?? [];
       if (isThinNearbyAmenityList(slots.map.amenities)) {
         const amenities =
@@ -191,10 +204,13 @@ export function hydrateBrochureDocument(
     }
 
     if (
-      page.layoutId === 'map_amenities' &&
+      isLocationLayout(page.layoutId) &&
       !(slots.body?.type === 'text' && slots.body.text.trim())
     ) {
-      const location = brochureLocationBody(data).slice(0, 800);
+      const location = clipAtSentence(
+        brochureLocationBody(data),
+        page.layoutId === 'map_amenities' ? 800 : 2000,
+      );
       if (location) slots.body = { type: 'text', text: location };
     }
 
@@ -203,7 +219,7 @@ export function hydrateBrochureDocument(
 
   const filtered = pages.filter((page) => {
     if (!PHOTO_LAYOUTS.has(page.layoutId)) return true;
-    return (PHOTO_SLOT_KEYS[page.layoutId] ?? []).some((key) =>
+    return (BACKFILL_SLOT_KEYS[page.layoutId] ?? []).some((key) =>
       hasImageUrl(page.slots[key]),
     );
   });

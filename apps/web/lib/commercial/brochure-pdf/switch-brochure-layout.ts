@@ -10,10 +10,15 @@ import type { BrochureMediaItem } from '~/lib/commercial/public-brochure.shared'
 /** Listing-media image slots per layout, in reading order (no shopfront). */
 const IMAGE_SLOT_KEYS: Partial<Record<BrochureLayoutId, string[]>> = {
   cover_hero_band: ['hero'],
+  cover_photo_band: ['hero'],
   facts_table: ['photo1', 'photo2'],
+  description_photo: ['photo'],
   photo_full: ['photo'],
   photo_grid_2: ['photo1', 'photo2'],
   photo_grid_3: ['photo1', 'photo2', 'photo3'],
+  photo_row_3: ['photo1', 'photo2', 'photo3'],
+  photo_grid_4: ['photo1', 'photo2', 'photo3', 'photo4'],
+  photo_text: ['photo'],
   floorplan: ['plan'],
 };
 

@@ -9,7 +9,9 @@ import { Label } from '@kit/ui/label';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
@@ -22,6 +24,7 @@ import {
   newBrochurePageId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
 import {
+  BROCHURE_LAYOUT_GROUPS,
   BROCHURE_LAYOUT_OPTIONS,
   createBlankBrochurePage,
 } from '~/lib/commercial/brochure-pdf/build-brochure-document';
@@ -32,6 +35,10 @@ import {
 } from '~/lib/commercial/brochure-pdf/switch-brochure-layout';
 import type { BrochureMediaItem } from '~/lib/commercial/public-brochure.shared';
 
+import {
+  BrochureLivePage,
+  type BrochureLivePageDisplay,
+} from './brochure-live-page';
 import { BrochureMediaTray } from './brochure-media-tray';
 import { BrochurePageStrip } from './brochure-page-strip';
 import {
@@ -46,6 +53,9 @@ import {
 const MAX_PAGES = 30;
 
 export function BrochurePagesStep({
+  listingId,
+  accountId,
+  display,
   doc,
   pages,
   selectedPageId,
@@ -58,6 +68,9 @@ export function BrochurePagesStep({
   warnedPageIds,
   onNext,
 }: {
+  listingId: string;
+  accountId: string;
+  display: BrochureLivePageDisplay;
   doc: { templateId: BrochureTemplateId; orientation: BrochureOrientation };
   pages: BrochurePage[];
   warnedPageIds: ReadonlySet<string>;
@@ -197,10 +210,17 @@ export function BrochurePagesStep({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {BROCHURE_LAYOUT_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.id} value={opt.id}>
-                      {opt.label}
-                    </SelectItem>
+                  {BROCHURE_LAYOUT_GROUPS.map((group) => (
+                    <SelectGroup key={group}>
+                      <SelectLabel>{group}</SelectLabel>
+                      {BROCHURE_LAYOUT_OPTIONS.filter(
+                        (opt) => opt.group === group,
+                      ).map((opt) => (
+                        <SelectItem key={opt.id} value={opt.id}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   ))}
                 </SelectContent>
               </Select>
@@ -226,17 +246,25 @@ export function BrochurePagesStep({
                     : 'w-full max-w-md'
                 }
               >
-                <BrochurePreviewPage
-                  page={page}
-                  orientation={doc.orientation}
+                <BrochureLivePage
+                  listingId={listingId}
+                  accountId={accountId}
                   templateId={doc.templateId}
-                  brandName={brandName}
-                  brand={brand}
-                  drawingIds={drawingIds}
+                  orientation={doc.orientation}
+                  pages={pages}
+                  pageId={page.id}
+                  display={display}
+                  sketch={
+                    <BrochurePreviewPage
+                      page={page}
+                      orientation={doc.orientation}
+                      templateId={doc.templateId}
+                      brandName={brandName}
+                      brand={brand}
+                      drawingIds={drawingIds}
+                    />
+                  }
                 />
-                <p className="mt-2 text-center text-[11px] text-[var(--workspace-shell-text-muted)]">
-                  A quick preview. The next step shows the real PDF.
-                </p>
               </div>
             </div>
 

@@ -13,6 +13,7 @@ import { buildBrochureDocument } from '~/lib/commercial/brochure-pdf/build-broch
 import { hydrateBrochureDocument } from '~/lib/commercial/brochure-pdf/hydrate-brochure-document';
 import { loadListingBrochureData } from '~/lib/commercial/brochure-pdf/load-listing-brochure-data';
 import { renderBrochurePdf } from '~/lib/commercial/brochure-pdf/render-brochure-pdf';
+import type { PublicBrochureData } from '~/lib/commercial/public-brochure.shared';
 
 export async function generateListingBrochurePdf(input: {
   listingId: string;
@@ -21,8 +22,12 @@ export async function generateListingBrochurePdf(input: {
   templateId: BrochureTemplateId;
   document?: BrochureDocument | null;
   display?: Partial<BrochureDisplayOptions>;
+  /** Render just these pages (the wizard's live page preview). */
+  pageIds?: readonly string[];
   /** Override the RLS client. Public feed downloads pass the admin client. */
   client?: SupabaseClient;
+  /** Already-loaded listing data (the live preview's cache); not modified. */
+  data?: PublicBrochureData;
 }): Promise<{
   bytes: Uint8Array;
   /** The layout as rendered: media refreshed, empty photo pages dropped. */
@@ -31,14 +36,17 @@ export async function generateListingBrochurePdf(input: {
   /** Saved page numbers refer to `input.document` (or the built layout). */
   warnings: BrochureRenderWarning[];
 }> {
-  const data = await loadListingBrochureData(
-    input.listingId,
-    input.accountId,
-    input.client,
-  );
-  if (!data) {
+  const loaded =
+    input.data ??
+    (await loadListingBrochureData(
+      input.listingId,
+      input.accountId,
+      input.client,
+    ));
+  if (!loaded) {
     throw new Error('Listing not found');
   }
+  const data = { ...loaded };
 
   if (input.display?.showReducedPrice != null) {
     data.showReducedPrice = input.display.showReducedPrice;
@@ -66,6 +74,7 @@ export async function generateListingBrochurePdf(input: {
   const rendererWarnings: BrochureRenderWarning[] = [];
   const bytes = await renderBrochurePdf(document, data, {
     warnings: rendererWarnings,
+    pageIds: input.pageIds,
   });
   const savedNumber = new Map(
     built.pages.map((page, index) => [page.id, index + 1]),

@@ -125,7 +125,11 @@ export function BrochurePreviewPage({
     landscape ? 'aspect-[297/210]' : 'aspect-[210/297]',
   );
 
-  if (page.layoutId === 'cover_hero_band') {
+  if (
+    page.layoutId === 'cover_hero_band' ||
+    page.layoutId === 'cover_photo_band'
+  ) {
+    const sideBand = landscape && page.layoutId === 'cover_hero_band';
     const disposal = slotText(page, 'disposal');
     const bandPct =
       templateId === 'editorial' ? 26 : templateId === 'compact' ? 38 : 32;
@@ -144,7 +148,7 @@ export function BrochurePreviewPage({
         alt=""
         className={cn(
           'mb-1 w-auto object-contain object-left',
-          landscape ? 'h-6 max-w-full' : 'h-5 max-w-[40%]',
+          sideBand ? 'h-6 max-w-full' : 'h-5 max-w-[40%]',
         )}
       />
     ) : (
@@ -163,7 +167,7 @@ export function BrochurePreviewPage({
 
     return (
       <div className={frameClass}>
-        <div className={cn('flex h-full', landscape ? '' : 'flex-col')}>
+        <div className={cn('flex h-full', sideBand ? '' : 'flex-col')}>
           <div
             className="relative min-h-0 flex-1"
             style={{ backgroundColor: primary }}
@@ -174,12 +178,12 @@ export function BrochurePreviewPage({
           <div
             className="flex flex-col gap-1.5 p-3"
             style={{
-              width: landscape ? `${bandPct}%` : undefined,
-              minHeight: landscape ? undefined : '32%',
+              width: sideBand ? `${bandPct}%` : undefined,
+              minHeight: sideBand ? undefined : landscape ? '36%' : '32%',
               backgroundColor: primary,
               color: paper,
               borderLeft:
-                landscape && templateId === 'editorial'
+                sideBand && templateId === 'editorial'
                   ? `3px solid ${accent}`
                   : undefined,
             }}
@@ -196,7 +200,7 @@ export function BrochurePreviewPage({
             <p
               className={cn(
                 'leading-tight font-semibold',
-                landscape ? 'line-clamp-5 text-base' : 'line-clamp-2 text-sm',
+                sideBand ? 'line-clamp-5 text-base' : 'line-clamp-2 text-sm',
               )}
             >
               {title}
@@ -266,6 +270,130 @@ export function BrochurePreviewPage({
               );
             })
           )}
+        </div>
+      </div>
+    );
+  }
+
+  if (page.layoutId === 'photo_row_3' || page.layoutId === 'photo_grid_4') {
+    const keys =
+      page.layoutId === 'photo_row_3'
+        ? ['photo1', 'photo2', 'photo3']
+        : ['photo1', 'photo2', 'photo3', 'photo4'];
+    return (
+      <div className={frameClass}>
+        <div
+          className={cn(
+            'grid h-full gap-1 bg-[var(--ozer-surface-panel-hover)] p-1.5',
+            page.layoutId === 'photo_grid_4'
+              ? 'grid-cols-2 grid-rows-2'
+              : landscape
+                ? 'grid-cols-3'
+                : 'grid-rows-3',
+          )}
+        >
+          {keys.map((key) => (
+            <SlotImg
+              key={key}
+              image={image(key)}
+              className="min-h-0 bg-white"
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (page.layoutId === 'photo_text' || page.layoutId === 'description_photo') {
+    const body = slotText(page, 'body');
+    const highlights = slotText(page, 'highlights').trim();
+    const heading =
+      slotText(page, 'title') ||
+      (page.layoutId === 'description_photo' ? 'About the property' : '');
+    return (
+      <div className={frameClass}>
+        <div className={cn('flex h-full bg-white', !landscape && 'flex-col')}>
+          <div
+            className={cn(
+              'min-w-0 space-y-1.5 p-3',
+              landscape &&
+                (page.layoutId === 'photo_text' ? 'w-[40%]' : 'w-[52%]'),
+            )}
+          >
+            {heading ? (
+              <p className="text-xs font-semibold" style={{ color: primary }}>
+                {heading}
+              </p>
+            ) : null}
+            {body ? (
+              <p className="line-clamp-6 text-[10px] leading-relaxed text-[var(--workspace-shell-text-muted)]">
+                {body}
+              </p>
+            ) : null}
+            {highlights ? (
+              <p className="line-clamp-4 text-[10px] whitespace-pre-line text-[var(--workspace-shell-text)]">
+                {highlights}
+              </p>
+            ) : null}
+          </div>
+          <div className="min-h-0 min-w-0 flex-1">
+            <SlotImg image={image('photo')} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (
+    page.layoutId === 'map_text' ||
+    page.layoutId === 'map_top' ||
+    page.layoutId === 'location_text'
+  ) {
+    const mapSlot = page.slots.map;
+    const places =
+      mapSlot?.type === 'map'
+        ? mapSlot.amenities.slice(0, mapSlot.limit ?? undefined)
+        : [];
+    const map =
+      page.layoutId === 'location_text' ? null : (
+        <div
+          className={cn(
+            'shrink-0 rounded-sm bg-[var(--ozer-surface-panel-hover)]',
+            page.layoutId === 'map_top'
+              ? 'h-[42%] w-full'
+              : landscape
+                ? 'w-[36%]'
+                : 'h-[30%] w-full',
+          )}
+        />
+      );
+    return (
+      <div className={frameClass}>
+        <div
+          className={cn(
+            'flex h-full gap-2 bg-white p-3',
+            landscape && page.layoutId === 'map_text' ? 'flex-row' : 'flex-col',
+          )}
+        >
+          {page.layoutId === 'map_top' ? map : null}
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-xs font-semibold" style={{ color: primary }}>
+              {title || 'Location'}
+            </p>
+            <p className="line-clamp-6 text-[10px] text-[var(--workspace-shell-text-muted)]">
+              {slotText(page, 'body') || 'Location'}
+            </p>
+            {places.length > 0 ? (
+              <ul className="grid grid-cols-2 gap-x-2 text-[9px] text-[var(--workspace-shell-text)]">
+                {places.map((place) => (
+                  <li key={place.index} className="truncate">
+                    {place.index}. {place.label}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+          {page.layoutId === 'map_text' ? map : null}
         </div>
       </div>
     );

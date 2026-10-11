@@ -458,6 +458,14 @@ export function brochureLocationBody(data: PublicBrochureData): string {
   );
 }
 
+/** Cut to `max` characters, ending on a full sentence when one is near the cut. */
+export function clipAtSentence(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const end = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('.\n'));
+  return end >= max * 0.5 ? cut.slice(0, end + 1) : cut;
+}
+
 /**
  * Body for the "Specification & terms" page. Light markup the renderer
  * understands: "## " starts a section, "- " a bullet, blank lines split
@@ -596,7 +604,7 @@ export function buildBrochureDocument(
       pages.push(
         page('map_amenities', {
           title: textSlot('Location'),
-          body: textSlot(locationCopy.slice(0, 500)),
+          body: textSlot(clipAtSentence(locationCopy, 500)),
           map: {
             type: 'map',
             latitude: data.listing.latitude,
@@ -696,7 +704,7 @@ export function buildBrochureDocument(
         'map_amenities',
         {
           title: textSlot('Location'),
-          body: textSlot(locationCopy.slice(0, 800)),
+          body: textSlot(clipAtSentence(locationCopy, 800)),
           map: {
             type: 'map',
             latitude: data.listing.latitude,
@@ -742,58 +750,132 @@ export function buildBrochureDocument(
   };
 }
 
+export type BrochureLayoutGroup =
+  | 'Cover'
+  | 'Text'
+  | 'Photos'
+  | 'Location'
+  | 'Contact';
+
+export const BROCHURE_LAYOUT_GROUPS: BrochureLayoutGroup[] = [
+  'Cover',
+  'Text',
+  'Photos',
+  'Location',
+  'Contact',
+];
+
 export const BROCHURE_LAYOUT_OPTIONS: Array<{
   id: BrochureLayoutId;
+  group: BrochureLayoutGroup;
   label: string;
   description: string;
 }> = [
   {
     id: 'cover_hero_band',
+    group: 'Cover',
     label: 'Cover',
-    description: 'Hero image with brand band',
+    description: 'Photo with the brand band at the side',
+  },
+  {
+    id: 'cover_photo_band',
+    group: 'Cover',
+    label: 'Cover, band below',
+    description: 'Full-width photo with the brand band underneath',
   },
   {
     id: 'facts_table',
+    group: 'Text',
     label: 'Facts',
     description: 'Summary facts table',
   },
   {
     id: 'description_highlights',
+    group: 'Text',
     label: 'Description',
     description: 'Copy and key points',
   },
   {
+    id: 'description_photo',
+    group: 'Text',
+    label: 'Description with photo',
+    description: 'Copy and key points beside a photo',
+  },
+  {
     id: 'details_columns',
+    group: 'Text',
     label: 'Specification & terms',
     description: 'Spec list, terms and EPC in columns',
   },
   {
     id: 'photo_full',
+    group: 'Photos',
     label: 'Full-bleed photo',
     description: 'Single large photograph',
   },
   {
     id: 'photo_grid_2',
+    group: 'Photos',
     label: 'Two photos',
     description: 'Side-by-side or stacked pair',
   },
   {
     id: 'photo_grid_3',
+    group: 'Photos',
     label: 'Photo collage',
     description: '1+2 collage of three photos',
   },
   {
+    id: 'photo_row_3',
+    group: 'Photos',
+    label: 'Three photos in a row',
+    description: 'Three equal photos side by side',
+  },
+  {
+    id: 'photo_grid_4',
+    group: 'Photos',
+    label: 'Four-photo grid',
+    description: 'Two by two grid',
+  },
+  {
+    id: 'photo_text',
+    group: 'Photos',
+    label: 'Photo with text',
+    description: 'Large photo with a heading and copy',
+  },
+  {
     id: 'floorplan',
+    group: 'Photos',
     label: 'Floor plan',
     description: 'Dedicated floor plan page',
   },
   {
     id: 'map_amenities',
+    group: 'Location',
     label: 'Map & amenities',
     description: 'Map with amenity list',
   },
   {
+    id: 'map_text',
+    group: 'Location',
+    label: 'Location, text-led',
+    description: 'Wide copy column with a smaller map',
+  },
+  {
+    id: 'map_top',
+    group: 'Location',
+    label: 'Location, map on top',
+    description: 'Map across the top, copy and places below',
+  },
+  {
+    id: 'location_text',
+    group: 'Location',
+    label: 'Location, text only',
+    description: 'Copy and nearby places without a map',
+  },
+  {
     id: 'contact',
+    group: 'Contact',
     label: 'Contact',
     description: 'Agents and disclaimer',
   },
@@ -805,6 +887,7 @@ export function createBlankBrochurePage(
   const emptyImage = imageSlot(null, null);
   switch (layoutId) {
     case 'cover_hero_band':
+    case 'cover_photo_band':
       return page(layoutId, {
         hero: emptyImage,
         title: textSlot(''),
@@ -828,6 +911,13 @@ export function createBlankBrochurePage(
         body: textSlot(''),
         highlights: textSlot(''),
       });
+    case 'description_photo':
+      return page(layoutId, {
+        title: textSlot('About the property'),
+        body: textSlot(''),
+        highlights: textSlot(''),
+        photo: emptyImage,
+      });
     case 'details_columns':
       return page(layoutId, {
         title: textSlot('Specification & terms'),
@@ -847,12 +937,34 @@ export function createBlankBrochurePage(
         photo2: emptyImage,
         photo3: emptyImage,
       });
+    case 'photo_row_3':
+      return page(layoutId, {
+        photo1: emptyImage,
+        photo2: emptyImage,
+        photo3: emptyImage,
+      });
+    case 'photo_grid_4':
+      return page(layoutId, {
+        photo1: emptyImage,
+        photo2: emptyImage,
+        photo3: emptyImage,
+        photo4: emptyImage,
+      });
+    case 'photo_text':
+      return page(layoutId, {
+        photo: emptyImage,
+        title: textSlot(''),
+        body: textSlot(''),
+      });
     case 'floorplan':
       return page(layoutId, {
         plan: emptyImage,
         caption: textSlot('Floor plan'),
       });
     case 'map_amenities':
+    case 'map_text':
+    case 'map_top':
+    case 'location_text':
       return page(layoutId, {
         title: textSlot('Location'),
         body: textSlot(''),

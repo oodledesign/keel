@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   BROCHURE_IMAGE_FITS,
   BROCHURE_IMAGE_FOCUSES,
+  BROCHURE_LAYOUT_IDS,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
 import { AMENITY_ICONS } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 
@@ -13,18 +14,7 @@ export const BrochureTemplateIdSchema = z.enum([
   'compact',
 ]);
 
-export const BrochureLayoutIdSchema = z.enum([
-  'cover_hero_band',
-  'facts_table',
-  'description_highlights',
-  'details_columns',
-  'photo_full',
-  'photo_grid_2',
-  'photo_grid_3',
-  'floorplan',
-  'map_amenities',
-  'contact',
-]);
+export const BrochureLayoutIdSchema = z.enum(BROCHURE_LAYOUT_IDS);
 
 const HttpOrHttpsUrlOrNull = z.union([
   z
@@ -87,6 +77,7 @@ const BrochureSlotValueSchema = z.discriminatedUnion('type', [
         }),
       )
       .max(20),
+    limit: z.number().int().min(0).max(20).optional(),
   }),
   z.object({
     type: z.literal('agents'),
@@ -196,6 +187,17 @@ export const BrochurePdfQuerySchema = z.object({
     .enum(['0', '1'])
     .optional()
     .transform((v) => (v == null ? undefined : v === '1')),
+});
+
+/** One page of the unsaved working layout, rendered for the wizard's live preview. */
+export const BrochurePagePreviewSchema = z.object({
+  listingId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  templateId: BrochureTemplateIdSchema,
+  orientation: BrochureOrientationSchema,
+  pages: z.array(BrochurePageSchema).min(1).max(30),
+  pageId: z.string().min(1).max(80),
+  display: BrochureDisplayOptionsSchema.optional(),
 });
 
 /** Publishes the saved layout someone has just previewed and approved. */

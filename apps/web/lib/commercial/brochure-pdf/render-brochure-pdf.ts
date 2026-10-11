@@ -77,6 +77,7 @@ import {
 } from '~/lib/commercial/brochure-pdf/mapbox-static';
 import {
   type AmenityIcon,
+  type BrochureAmenityItem,
   buildFallbackNearbyAmenities,
   isThinNearbyAmenityList,
   resolveAmenityIcon,
@@ -856,9 +857,13 @@ function drawSectionTab(
 const PAGE_EYEBROWS: Partial<Record<BrochurePage['layoutId'], string>> = {
   facts_table: 'The opportunity',
   description_highlights: 'Description',
+  description_photo: 'Description',
   details_columns: 'Particulars',
   floorplan: 'Accommodation',
   map_amenities: 'Location',
+  map_text: 'Location',
+  map_top: 'Location',
+  location_text: 'Location',
   contact: 'Viewing & enquiries',
 };
 
@@ -883,6 +888,8 @@ function drawPageHeader(
   brochurePage: BrochurePage,
   title: string,
   maxWidth?: number,
+  /** Start below something drawn above the header, e.g. a map band. */
+  top?: number,
 ): number {
   const frame = contentFrame(page, ctx);
   const type = typeScale(ctx);
@@ -896,7 +903,7 @@ function drawPageHeader(
     ? (PAGE_EYEBROWS[brochurePage.layoutId] ?? brochurePage.sectionLabel ?? '')
     : (editorialSection ?? ctx.runningTitle);
 
-  const eyebrowY = frame.top - 7;
+  const eyebrowY = (top ?? frame.top) - 7;
   drawEyebrow(page, ctx, eyebrow, {
     x: frame.left,
     y: eyebrowY,
@@ -1093,9 +1100,23 @@ function drawFooter(page: PDFPage, ctx: RenderCtx) {
 // Shared blocks
 // ---------------------------------------------------------------------------
 
+/** The listing's own drawing flag, so the PDF agrees with the wizard's label. */
+function knownDrawingFlag(
+  ctx: RenderCtx,
+  url: string,
+  mediaId: string | null | undefined,
+): boolean | undefined {
+  const media = [...ctx.data.images, ...ctx.data.floorplans];
+  const byId = mediaId ? media.find((item) => item.id === mediaId) : undefined;
+  if (byId?.isDrawing !== undefined) return byId.isDrawing;
+  const path = url.split('?')[0];
+  return media.find((item) => item.url.split('?')[0] === path)?.isDrawing;
+}
+
 async function resolveImage(
   ctx: RenderCtx,
   url: string | null,
+  mediaId?: string | null,
 ): Promise<PDFImage | null> {
   if (!url) return null;
   if (ctx.imageCache.has(url)) return ctx.imageCache.get(url) ?? null;
@@ -1103,10 +1124,8 @@ async function resolveImage(
   const img = await embedImage(ctx.pdf, bytes);
   ctx.imageCache.set(url, img);
   if (img && bytes) {
-    const known = [...ctx.data.images, ...ctx.data.floorplans].find(
-      (item) => item.url === url && item.isDrawing !== undefined,
-    );
-    const drawing = known ? known.isDrawing : await isDrawingImage(bytes);
+    const drawing =
+      knownDrawingFlag(ctx, url, mediaId) ?? (await isDrawingImage(bytes));
     if (drawing) ctx.drawingImages.add(img);
   }
   return img;
@@ -1126,7 +1145,11 @@ async function resolveListingImage(
   for (const url of [slot?.url, fromId, fallbackUrl]) {
     if (!url || tried.has(url)) continue;
     tried.add(url);
-    const img = await resolveImage(ctx, url);
+    const img = await resolveImage(
+      ctx,
+      url,
+      url === fallbackUrl ? null : slot?.mediaId,
+    );
     if (img) return img;
   }
   return null;
@@ -1642,7 +1665,7 @@ async function renderCover(
     }
   };
 
-  if (landscape) {
+  if (landscape && brochurePage.layoutId !== 'cover_photo_band') {
     const bandW = Math.round(width * coverBandRatio(ctx.templateId));
     const heroW = width - bandW;
     const heroBox = { x: 0, y: 0, width: heroW, height };
@@ -1706,8 +1729,14 @@ async function renderCover(
     top -= (logo.height || drawBrandFallback(x, top)) + 40;
     drawTitleBlock(x, top, innerW, factsTop + 28);
   } else {
-    const bandH =
-      ctx.templateId === 'editorial'
+    // Portrait covers always band below; landscape does with cover_photo_band.
+    const bandH = landscape
+      ? ctx.templateId === 'editorial'
+        ? 220
+        : ctx.templateId === 'compact'
+          ? 188
+          : 204
+      : ctx.templateId === 'editorial'
         ? 250
         : ctx.templateId === 'compact'
           ? 210
@@ -2687,40 +2716,25 @@ function bandedPhotoArea(page: PDFPage, ctx: RenderCtx): Box {
   };
 }
 
-async function renderPhotoGrid(
-  page: PDFPage,
-  brochurePage: BrochurePage,
-  ctx: RenderCtx,
-  keys: string[],
-) {
+/** Photo-only pages: between the bands, or inset from the page edge. */
+function photoPageArea(page: PDFPage, ctx: RenderCtx): Box {
+  if (hasBands(ctx)) return bandedPhotoArea(page, ctx);
   const { width, height } = page.getSize();
-  // Fall back only to unused photos so a broken slot never repeats another page's image.
-  const slots = keys.map((key) => slotImage(brochurePage.slots, key));
-  const imgs = await Promise.all(
-    slots.map((slot, i) =>
-      resolveListingImage(ctx, slot, ctx.spareImageUrls[i] ?? null),
-    ),
-  );
   const margin = ctx.templateId === 'editorial' ? 20 : 24;
   const tab = hasSideTab(ctx) ? EDITORIAL_TAB_WIDTH : 0;
-  const area = hasBands(ctx)
-    ? bandedPhotoArea(page, ctx)
-    : {
-        x: margin,
-        y: margin,
-        width: width - margin * 2 - tab,
-        height: height - margin * 2,
-      };
-  const boxes = layoutPhotoGrid(
-    imgs.map((img) => (img ? img.width / img.height : 1.5)),
-    area,
-    { gap: 10 },
-  );
-  boxes.forEach((box, i) => {
-    const img = imgs[i];
-    if (img) drawSlotImage(page, ctx, img, box, slots[i]);
-    else drawPlaceholder(page, ctx, box);
-  });
+  return {
+    x: margin,
+    y: margin,
+    width: width - margin * 2 - tab,
+    height: height - margin * 2,
+  };
+}
+
+function finishPhotoPage(
+  page: PDFPage,
+  ctx: RenderCtx,
+  brochurePage: BrochurePage,
+) {
   if (hasBands(ctx)) {
     drawFooter(page, ctx);
     return;
@@ -2731,6 +2745,156 @@ async function renderPhotoGrid(
     brochurePage.sectionLabel,
     brochurePage.sectionNumber,
   );
+}
+
+async function resolveSlotImages(
+  ctx: RenderCtx,
+  brochurePage: BrochurePage,
+  keys: string[],
+) {
+  // Fall back only to unused photos so a broken slot never repeats another page's image.
+  const slots = keys.map((key) => slotImage(brochurePage.slots, key));
+  const imgs = await Promise.all(
+    slots.map((slot, i) =>
+      resolveListingImage(ctx, slot, ctx.spareImageUrls[i] ?? null),
+    ),
+  );
+  return { slots, imgs };
+}
+
+async function renderPhotoGrid(
+  page: PDFPage,
+  brochurePage: BrochurePage,
+  ctx: RenderCtx,
+  keys: string[],
+) {
+  const { slots, imgs } = await resolveSlotImages(ctx, brochurePage, keys);
+  const boxes = layoutPhotoGrid(
+    imgs.map((img) => (img ? img.width / img.height : 1.5)),
+    photoPageArea(page, ctx),
+    { gap: 10 },
+  );
+  boxes.forEach((box, i) => {
+    const img = imgs[i];
+    if (img) drawSlotImage(page, ctx, img, box, slots[i]);
+    else drawPlaceholder(page, ctx, box);
+  });
+  finishPhotoPage(page, ctx, brochurePage);
+}
+
+/** `area` cut into equal cells, read left to right then top to bottom. */
+function equalCells(
+  area: Box,
+  columns: number,
+  rows: number,
+  gap: number,
+): Box[] {
+  const w = (area.width - gap * (columns - 1)) / columns;
+  const h = (area.height - gap * (rows - 1)) / rows;
+  const cells: Box[] = [];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < columns; col++) {
+      cells.push({
+        x: area.x + col * (w + gap),
+        y: area.y + area.height - (row + 1) * h - row * gap,
+        width: w,
+        height: h,
+      });
+    }
+  }
+  return cells;
+}
+
+/** Equal frames (three in a row, two by two); each photo follows its fit and focus. */
+async function renderPhotoCells(
+  page: PDFPage,
+  brochurePage: BrochurePage,
+  ctx: RenderCtx,
+  keys: string[],
+  grid: { columns: number; rows: number },
+) {
+  const { slots, imgs } = await resolveSlotImages(ctx, brochurePage, keys);
+  equalCells(photoPageArea(page, ctx), grid.columns, grid.rows, 10).forEach(
+    (box, i) => {
+      const img = imgs[i];
+      if (img) drawSlotImage(page, ctx, img, box, slots[i]);
+      else drawPlaceholder(page, ctx, box);
+    },
+  );
+  finishPhotoPage(page, ctx, brochurePage);
+}
+
+/**
+ * Copy beside a large photo: text on the left and the photo to the right
+ * (bleeding to the edge on banded templates); portrait stacks copy over photo.
+ */
+async function renderTextWithPhoto(
+  page: PDFPage,
+  brochurePage: BrochurePage,
+  ctx: RenderCtx,
+  opts: { defaultTitle: string; textShare: number; highlights: string[] },
+) {
+  const { width } = page.getSize();
+  const landscape = ctx.orientation === 'landscape';
+  drawSectionTab(
+    page,
+    ctx,
+    brochurePage.sectionLabel,
+    brochurePage.sectionNumber,
+  );
+  const frame = contentFrame(page, ctx);
+  const slot = slotImage(brochurePage.slots, 'photo');
+  const img = await resolveListingImage(
+    ctx,
+    slot,
+    ctx.spareImageUrls[0] ?? null,
+  );
+  const title =
+    slotText(brochurePage.slots, 'title').trim() || opts.defaultTitle;
+  const body = slotText(brochurePage.slots, 'body').trim();
+
+  let photoBox: Box;
+  if (landscape) {
+    const splitX = Math.round(width * opts.textShare);
+    const textW = splitX - frame.left - 36;
+    const top = drawPageHeader(page, ctx, brochurePage, title, textW);
+    drawCopyColumn(page, ctx, body, opts.highlights, {
+      x: frame.left,
+      y: top,
+      width: textW,
+      minY: CONTENT_MIN_Y,
+      lead: true,
+    });
+    photoBox = hasBands(ctx)
+      ? bleedArea(page, splitX)
+      : {
+          x: splitX,
+          y: CONTENT_MIN_Y,
+          width: frame.right - splitX,
+          height: frame.top - CONTENT_MIN_Y,
+        };
+  } else {
+    const top = drawPageHeader(page, ctx, brochurePage, title);
+    const photoMinH = (frame.top - CONTENT_MIN_Y) * 0.5;
+    const end = drawCopyColumn(page, ctx, body, opts.highlights, {
+      x: frame.left,
+      y: top,
+      width: frame.width,
+      minY: CONTENT_MIN_Y + photoMinH + 24,
+      lead: true,
+    });
+    const photoTop = Math.min(end - 4, top + typeScale(ctx).body);
+    photoBox = {
+      x: frame.left,
+      y: CONTENT_MIN_Y,
+      width: frame.width,
+      height: Math.max(photoMinH, photoTop - CONTENT_MIN_Y),
+    };
+  }
+
+  if (img) drawSlotImage(page, ctx, img, photoBox, slot);
+  else drawPlaceholder(page, ctx, photoBox);
+  drawFooter(page, ctx);
 }
 
 async function renderFloorplan(
@@ -2839,6 +3003,111 @@ function drawAmenityRows(
   });
 }
 
+type LocationContent = {
+  headline: string;
+  body: string;
+  amenities: BrochureAmenityItem[];
+  lat: number | null;
+  lng: number | null;
+};
+
+function locationContent(
+  brochurePage: BrochurePage,
+  ctx: RenderCtx,
+): LocationContent {
+  const title = slotText(brochurePage.slots, 'title') || 'Location';
+  const mapSlot = brochurePage.slots.map;
+  const map = mapSlot?.type === 'map' ? mapSlot : null;
+  const rawAmenities = map?.amenities ?? [];
+  const fetched = ctx.data.nearbyAmenities ?? [];
+  const amenities = sanitizeBrochureAmenities(
+    isThinNearbyAmenityList(rawAmenities)
+      ? fetched.length > 0
+        ? fetched
+        : buildFallbackNearbyAmenities(ctx.data.listing.town, fetched)
+      : rawAmenities,
+    ctx.data.listing.town,
+  );
+  return {
+    headline:
+      hasBands(ctx) && title === 'Location'
+        ? (locationHeadline(ctx.data.listing) ?? title)
+        : title,
+    body: slotText(brochurePage.slots, 'body').trim(),
+    amenities: map?.limit == null ? amenities : amenities.slice(0, map.limit),
+    lat: map?.latitude ?? ctx.data.listing.latitude,
+    lng: map?.longitude ?? ctx.data.listing.longitude,
+  };
+}
+
+function nearbyListHeight(ctx: RenderCtx, count: number, columns: number) {
+  if (count === 0) return 0;
+  const disclaimerH = hasBands(ctx) ? 26 : 0;
+  return 22 + Math.ceil(count / columns) * AMENITY_ROW_H + disclaimerH;
+}
+
+/** "Nearby" heading, the numbered places and, on banded templates, the distance note. */
+function drawNearbyList(
+  page: PDFPage,
+  ctx: RenderCtx,
+  amenities: BrochureAmenityItem[],
+  opts: { x: number; y: number; width: number; columns: number },
+) {
+  if (amenities.length === 0) return;
+  const disclaimerH = hasBands(ctx) ? 26 : 0;
+  drawEyebrow(page, ctx, 'Nearby', {
+    x: opts.x,
+    y: opts.y,
+    color: ctx.colors.primary,
+  });
+  const rowsTop = opts.y - 22;
+  drawAmenityRows(page, ctx, amenities, {
+    x: opts.x,
+    y: rowsTop,
+    width: opts.width,
+    columns: opts.columns,
+    minY: CONTENT_MIN_Y + disclaimerH,
+  });
+  if (!disclaimerH) return;
+  const rowsShown = Math.min(
+    Math.ceil(amenities.length / opts.columns),
+    Math.floor((rowsTop - 12 - CONTENT_MIN_Y - disclaimerH) / AMENITY_ROW_H) +
+      1,
+  );
+  drawMapDisclaimer(page, ctx, {
+    x: opts.x,
+    y: rowsTop - rowsShown * AMENITY_ROW_H - 4,
+    width: opts.width,
+  });
+}
+
+async function drawLocationMap(
+  page: PDFPage,
+  ctx: RenderCtx,
+  mapBox: Box,
+  loc: LocationContent,
+) {
+  if (loc.lat == null || loc.lng == null) return;
+  const bytes = await fetchBrochureMapImageBytes({
+    latitude: loc.lat,
+    longitude: loc.lng,
+    // CSS px ≈ PDF pt so labels print at a readable size; @2x for sharpness.
+    width: Math.round(mapBox.width),
+    height: Math.round(mapBox.height),
+    zoom: 14,
+    pinColor: brochureMapPinColor(ctx.data.brand),
+    amenityPinColor: ctx.data.brand.accentColor,
+    amenities: loc.amenities,
+  });
+  const mapImg = await embedImage(ctx.pdf, bytes);
+  if (mapImg) {
+    drawImageCover(page, mapImg, mapBox);
+    if (hasBands(ctx)) drawMapAddressCard(page, ctx, mapBox);
+  } else {
+    drawMapPlaceholder(page, mapBox, ctx, loc.lat, loc.lng);
+  }
+}
+
 async function renderMap(
   page: PDFPage,
   brochurePage: BrochurePage,
@@ -2853,31 +3122,10 @@ async function renderMap(
   );
   const frame = contentFrame(page, ctx);
   const type = typeScale(ctx);
-  const title = slotText(brochurePage.slots, 'title') || 'Location';
-  const body = slotText(brochurePage.slots, 'body').trim();
-  const mapSlot = brochurePage.slots.map;
-  const rawAmenities = mapSlot?.type === 'map' ? mapSlot.amenities : [];
-  const fetched = ctx.data.nearbyAmenities ?? [];
-  const amenities = sanitizeBrochureAmenities(
-    isThinNearbyAmenityList(rawAmenities)
-      ? fetched.length > 0
-        ? fetched
-        : buildFallbackNearbyAmenities(ctx.data.listing.town, fetched)
-      : rawAmenities,
-    ctx.data.listing.town,
-  );
-  const lat =
-    (mapSlot?.type === 'map' ? mapSlot.latitude : null) ??
-    ctx.data.listing.latitude;
-  const lng =
-    (mapSlot?.type === 'map' ? mapSlot.longitude : null) ??
-    ctx.data.listing.longitude;
+  const loc = locationContent(brochurePage, ctx);
+  const { amenities, body } = loc;
 
   const banded = hasBands(ctx);
-  const headline =
-    banded && title === 'Location'
-      ? (locationHeadline(ctx.data.listing) ?? title)
-      : title;
   const splitX = Math.round(page.getSize().width * 0.46);
   const leftW =
     banded && landscape ? splitX - frame.left - 40 : frame.width * 0.36;
@@ -2885,18 +3133,14 @@ async function renderMap(
     page,
     ctx,
     brochurePage,
-    headline,
+    loc.headline,
     banded && landscape ? leftW : undefined,
   );
-  let mapBox: Box | null = null;
-  const disclaimerH = banded && amenities.length > 0 ? 26 : 0;
+  let mapBox: Box;
 
   if (landscape) {
     const gutter = 32;
-    const listH =
-      amenities.length > 0
-        ? 22 + amenities.length * AMENITY_ROW_H + disclaimerH
-        : 0;
+    const listH = nearbyListHeight(ctx, amenities.length, 1);
     let y = contentTop;
     if (body) {
       y = drawBodyCopy(page, ctx, body, {
@@ -2910,33 +3154,12 @@ async function renderMap(
       });
       y -= 14;
     }
-    if (amenities.length > 0) {
-      drawEyebrow(page, ctx, 'Nearby', {
-        x: frame.left,
-        y,
-        color: ctx.colors.primary,
-      });
-      drawAmenityRows(page, ctx, amenities, {
-        x: frame.left,
-        y: y - 22,
-        width: leftW,
-        columns: 1,
-        minY: CONTENT_MIN_Y + disclaimerH,
-      });
-      if (disclaimerH) {
-        const rowsShown = Math.min(
-          amenities.length,
-          Math.floor(
-            (y - 22 - 12 - CONTENT_MIN_Y - disclaimerH) / AMENITY_ROW_H,
-          ) + 1,
-        );
-        drawMapDisclaimer(page, ctx, {
-          x: frame.left,
-          y: y - 22 - rowsShown * AMENITY_ROW_H - 4,
-          width: leftW,
-        });
-      }
-    }
+    drawNearbyList(page, ctx, amenities, {
+      x: frame.left,
+      y,
+      width: leftW,
+      columns: 1,
+    });
     if (banded) {
       mapBox = bleedArea(page, splitX);
     } else {
@@ -2959,68 +3182,262 @@ async function renderMap(
       });
       y -= 10;
     }
-    const rows = Math.ceil(amenities.length / 2);
     const listH =
-      amenities.length > 0 ? 34 + rows * AMENITY_ROW_H + disclaimerH : 0;
-    const mapTop = y;
-    const mapH = Math.max(180, mapTop - CONTENT_MIN_Y - listH);
-    mapBox = {
+      amenities.length > 0
+        ? 12 + nearbyListHeight(ctx, amenities.length, 2)
+        : 0;
+    const mapH = Math.max(180, y - CONTENT_MIN_Y - listH);
+    mapBox = { x: frame.left, y: y - mapH, width: frame.width, height: mapH };
+    drawNearbyList(page, ctx, amenities, {
       x: frame.left,
-      y: mapTop - mapH,
+      y: mapBox.y - 24,
       width: frame.width,
-      height: mapH,
-    };
-    if (amenities.length > 0) {
-      const listTop = mapBox.y - 24;
-      drawEyebrow(page, ctx, 'Nearby', {
-        x: frame.left,
-        y: listTop,
-        color: ctx.colors.primary,
-      });
-      drawAmenityRows(page, ctx, amenities, {
-        x: frame.left,
-        y: listTop - 22,
-        width: frame.width,
-        columns: 2,
-        minY: CONTENT_MIN_Y + disclaimerH,
-      });
-      if (disclaimerH) {
-        const rowsShown = Math.min(
-          rows,
-          Math.floor(
-            (listTop - 22 - 12 - CONTENT_MIN_Y - disclaimerH) / AMENITY_ROW_H,
-          ) + 1,
-        );
-        drawMapDisclaimer(page, ctx, {
-          x: frame.left,
-          y: listTop - 22 - rowsShown * AMENITY_ROW_H - 4,
-          width: frame.width,
-        });
-      }
-    }
-  }
-
-  if (lat != null && lng != null && mapBox) {
-    const bytes = await fetchBrochureMapImageBytes({
-      latitude: lat,
-      longitude: lng,
-      // CSS px ≈ PDF pt so labels print at a readable size; @2x for sharpness.
-      width: Math.round(mapBox.width),
-      height: Math.round(mapBox.height),
-      zoom: 14,
-      pinColor: brochureMapPinColor(ctx.data.brand),
-      amenityPinColor: ctx.data.brand.accentColor,
-      amenities,
+      columns: 2,
     });
-    const mapImg = await embedImage(ctx.pdf, bytes);
-    if (mapImg) {
-      drawImageCover(page, mapImg, mapBox);
-      if (banded) drawMapAddressCard(page, ctx, mapBox);
-    } else {
-      drawMapPlaceholder(page, mapBox, ctx, lat, lng);
-    }
   }
 
+  await drawLocationMap(page, ctx, mapBox, loc);
+  drawFooter(page, ctx);
+}
+
+/** Room for a longer write-up: copy leads, with a smaller map beside or below it. */
+async function renderMapText(
+  page: PDFPage,
+  brochurePage: BrochurePage,
+  ctx: RenderCtx,
+) {
+  const landscape = ctx.orientation === 'landscape';
+  drawSectionTab(
+    page,
+    ctx,
+    brochurePage.sectionLabel,
+    brochurePage.sectionNumber,
+  );
+  const frame = contentFrame(page, ctx);
+  const type = typeScale(ctx);
+  const loc = locationContent(brochurePage, ctx);
+  const { amenities, body } = loc;
+
+  if (landscape) {
+    const splitX = Math.round(page.getSize().width * 0.62);
+    const textW = splitX - frame.left - 40;
+    const contentTop = drawPageHeader(
+      page,
+      ctx,
+      brochurePage,
+      loc.headline,
+      textW,
+    );
+    const listH = nearbyListHeight(ctx, amenities.length, 2);
+    let y = contentTop;
+    if (body) {
+      y = drawBodyCopy(page, ctx, body, {
+        x: frame.left,
+        y,
+        maxWidth: textW,
+        minY: Math.min(
+          contentTop - 6 * type.leading,
+          CONTENT_MIN_Y + listH + 10,
+        ),
+      });
+      y -= 14;
+    }
+    drawNearbyList(page, ctx, amenities, {
+      x: frame.left,
+      y,
+      width: textW,
+      columns: 2,
+    });
+    const mapBox = hasBands(ctx)
+      ? bleedArea(page, splitX)
+      : {
+          x: splitX,
+          y: CONTENT_MIN_Y,
+          width: frame.right - splitX,
+          height: frame.top - CONTENT_MIN_Y,
+        };
+    await drawLocationMap(page, ctx, mapBox, loc);
+  } else {
+    const contentTop = drawPageHeader(page, ctx, brochurePage, loc.headline);
+    const bottomH = Math.max(220, nearbyListHeight(ctx, amenities.length, 1));
+    let y = contentTop;
+    if (body) {
+      y = drawBodyCopy(page, ctx, body, {
+        x: frame.left,
+        y,
+        maxWidth: frame.width,
+        minY: CONTENT_MIN_Y + bottomH + 20,
+      });
+      y -= 14;
+    }
+    const gutter = 20;
+    const mapW =
+      amenities.length > 0 ? (frame.width - gutter) * 0.5 : frame.width;
+    const mapBox = {
+      x: frame.left,
+      y: CONTENT_MIN_Y,
+      width: mapW,
+      height: Math.max(bottomH, y - CONTENT_MIN_Y),
+    };
+    drawNearbyList(page, ctx, amenities, {
+      x: frame.left + mapW + gutter,
+      y: mapBox.y + mapBox.height - 7,
+      width: frame.width - mapW - gutter,
+      columns: 1,
+    });
+    await drawLocationMap(page, ctx, mapBox, loc);
+  }
+  drawFooter(page, ctx);
+}
+
+/** A wide map across the top, with the copy and places in columns beneath. */
+async function renderMapTop(
+  page: PDFPage,
+  brochurePage: BrochurePage,
+  ctx: RenderCtx,
+) {
+  const landscape = ctx.orientation === 'landscape';
+  const { width } = page.getSize();
+  drawSectionTab(
+    page,
+    ctx,
+    brochurePage.sectionLabel,
+    brochurePage.sectionNumber,
+  );
+  const frame = contentFrame(page, ctx);
+  const loc = locationContent(brochurePage, ctx);
+  const { amenities, body } = loc;
+  const banded = hasBands(ctx);
+
+  const top = banded ? bandsTop(page) : frame.top;
+  const mapBottom = Math.round(
+    top - (top - CONTENT_MIN_Y) * (landscape ? 0.46 : 0.4),
+  );
+  const mapBox = banded
+    ? { x: 0, y: mapBottom, width, height: top - mapBottom }
+    : {
+        x: frame.left,
+        y: mapBottom,
+        width: frame.width,
+        height: top - mapBottom,
+      };
+  await drawLocationMap(page, ctx, mapBox, loc);
+
+  const contentTop = drawPageHeader(
+    page,
+    ctx,
+    brochurePage,
+    loc.headline,
+    undefined,
+    mapBottom - 26,
+  );
+  if (landscape) {
+    const gutter = 40;
+    const hasList = amenities.length > 0;
+    const textW = hasList ? (frame.width - gutter) * 0.5 : frame.width;
+    if (body) {
+      drawBodyCopy(page, ctx, body, {
+        x: frame.left,
+        y: contentTop,
+        maxWidth: textW,
+        minY: CONTENT_MIN_Y,
+      });
+    }
+    drawNearbyList(page, ctx, amenities, {
+      x: frame.left + textW + gutter,
+      y: contentTop + 7,
+      width: frame.width - textW - gutter,
+      columns: 2,
+    });
+  } else {
+    const listH = nearbyListHeight(ctx, amenities.length, 2);
+    let y = contentTop;
+    if (body) {
+      y = drawBodyCopy(page, ctx, body, {
+        x: frame.left,
+        y,
+        maxWidth: frame.width,
+        minY: Math.min(
+          contentTop - 3 * typeScale(ctx).leading,
+          CONTENT_MIN_Y + listH + 10,
+        ),
+      });
+      y -= 14;
+    }
+    drawNearbyList(page, ctx, amenities, {
+      x: frame.left,
+      y,
+      width: frame.width,
+      columns: 2,
+    });
+  }
+  drawFooter(page, ctx);
+}
+
+/** Location copy and places only, for when the map adds little. */
+async function renderLocationText(
+  page: PDFPage,
+  brochurePage: BrochurePage,
+  ctx: RenderCtx,
+) {
+  const landscape = ctx.orientation === 'landscape';
+  drawSectionTab(
+    page,
+    ctx,
+    brochurePage.sectionLabel,
+    brochurePage.sectionNumber,
+  );
+  const frame = contentFrame(page, ctx);
+  const loc = locationContent(brochurePage, ctx);
+  const { amenities, body } = loc;
+  const hasList = amenities.length > 0;
+
+  if (landscape && hasList) {
+    const gutter = 44;
+    const leftW = (frame.width - gutter) * 0.58;
+    const contentTop = drawPageHeader(
+      page,
+      ctx,
+      brochurePage,
+      loc.headline,
+      leftW,
+    );
+    if (body) {
+      drawBodyCopy(page, ctx, body, {
+        x: frame.left,
+        y: contentTop,
+        maxWidth: leftW,
+        minY: CONTENT_MIN_Y,
+        lead: true,
+      });
+    }
+    drawNearbyList(page, ctx, amenities, {
+      x: frame.left + leftW + gutter,
+      y: contentTop,
+      width: frame.width - leftW - gutter,
+      columns: 1,
+    });
+  } else {
+    const contentTop = drawPageHeader(page, ctx, brochurePage, loc.headline);
+    const listH = nearbyListHeight(ctx, amenities.length, 2);
+    let y = contentTop;
+    if (body) {
+      y = drawBodyCopy(page, ctx, body, {
+        x: frame.left,
+        y,
+        maxWidth: frame.width,
+        minY: CONTENT_MIN_Y + listH + (hasList ? 10 : 0),
+        lead: true,
+      });
+      y -= 18;
+    }
+    drawNearbyList(page, ctx, amenities, {
+      x: frame.left,
+      y,
+      width: frame.width,
+      columns: 2,
+    });
+  }
   drawFooter(page, ctx);
 }
 
@@ -3684,6 +4101,7 @@ async function renderPage(
 ) {
   switch (brochurePage.layoutId) {
     case 'cover_hero_band':
+    case 'cover_photo_band':
       await renderCover(page, brochurePage, ctx);
       break;
     case 'facts_table':
@@ -3708,11 +4126,54 @@ async function renderPage(
         'photo3',
       ]);
       break;
+    case 'photo_row_3':
+      await renderPhotoCells(
+        page,
+        brochurePage,
+        ctx,
+        ['photo1', 'photo2', 'photo3'],
+        ctx.orientation === 'landscape'
+          ? { columns: 3, rows: 1 }
+          : { columns: 1, rows: 3 },
+      );
+      break;
+    case 'photo_grid_4':
+      await renderPhotoCells(
+        page,
+        brochurePage,
+        ctx,
+        ['photo1', 'photo2', 'photo3', 'photo4'],
+        { columns: 2, rows: 2 },
+      );
+      break;
+    case 'photo_text':
+      await renderTextWithPhoto(page, brochurePage, ctx, {
+        defaultTitle: '',
+        textShare: 0.4,
+        highlights: [],
+      });
+      break;
+    case 'description_photo':
+      await renderTextWithPhoto(page, brochurePage, ctx, {
+        defaultTitle: 'About the property',
+        textShare: 0.52,
+        highlights: highlightLinesFrom(brochurePage.slots, 8),
+      });
+      break;
     case 'floorplan':
       await renderFloorplan(page, brochurePage, ctx);
       break;
     case 'map_amenities':
       await renderMap(page, brochurePage, ctx);
+      break;
+    case 'map_text':
+      await renderMapText(page, brochurePage, ctx);
+      break;
+    case 'map_top':
+      await renderMapTop(page, brochurePage, ctx);
+      break;
+    case 'location_text':
+      await renderLocationText(page, brochurePage, ctx);
       break;
     case 'contact':
       await renderContact(page, brochurePage, ctx);
@@ -3790,7 +4251,11 @@ async function embedBrandFont(
 export async function renderBrochurePdf(
   document: BrochureDocument,
   data: PublicBrochureData,
-  opts: { warnings?: BrochureRenderWarning[] } = {},
+  opts: {
+    warnings?: BrochureRenderWarning[];
+    /** Only paint these pages; numbering and totals still follow the whole document. */
+    pageIds?: readonly string[];
+  } = {},
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
@@ -3852,7 +4317,9 @@ export async function renderBrochurePdf(
     totalPages: document.pages.length,
   };
 
+  const only = opts.pageIds ? new Set(opts.pageIds) : null;
   for (const [index, brochurePage] of document.pages.entries()) {
+    if (only && !only.has(brochurePage.id)) continue;
     const pdfPage = pdf.addPage([size.width, size.height]);
     ctx.pageNumber = index + 1;
     await renderPage(pdfPage, brochurePage, ctx);

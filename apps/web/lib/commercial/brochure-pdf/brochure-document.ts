@@ -64,6 +64,8 @@ export type BrochureSlotValue =
         longitude?: number | null;
         icon?: AmenityIcon | null;
       }>;
+      /** Most places to list and pin; unset shows them all. */
+      limit?: number;
     }
   | { type: 'agents' }
   | {
@@ -71,17 +73,48 @@ export type BrochureSlotValue =
       rows: Array<{ label: string; value: string }>;
     };
 
-export type BrochureLayoutId =
-  | 'cover_hero_band'
-  | 'facts_table'
-  | 'description_highlights'
-  | 'details_columns'
-  | 'photo_full'
-  | 'photo_grid_2'
-  | 'photo_grid_3'
-  | 'floorplan'
-  | 'map_amenities'
-  | 'contact';
+export const BROCHURE_LAYOUT_IDS = [
+  'cover_hero_band',
+  'cover_photo_band',
+  'facts_table',
+  'description_highlights',
+  'description_photo',
+  'details_columns',
+  'photo_full',
+  'photo_grid_2',
+  'photo_grid_3',
+  'photo_row_3',
+  'photo_grid_4',
+  'photo_text',
+  'floorplan',
+  'map_amenities',
+  'map_text',
+  'map_top',
+  'location_text',
+  'contact',
+] as const;
+
+export type BrochureLayoutId = (typeof BROCHURE_LAYOUT_IDS)[number];
+
+const COVER_LAYOUTS: ReadonlySet<BrochureLayoutId> = new Set([
+  'cover_hero_band',
+  'cover_photo_band',
+]);
+
+const LOCATION_LAYOUTS: ReadonlySet<BrochureLayoutId> = new Set([
+  'map_amenities',
+  'map_text',
+  'map_top',
+  'location_text',
+]);
+
+export function isCoverLayout(id: BrochureLayoutId): boolean {
+  return COVER_LAYOUTS.has(id);
+}
+
+export function isLocationLayout(id: BrochureLayoutId): boolean {
+  return LOCATION_LAYOUTS.has(id);
+}
 
 export type BrochurePage = {
   id: string;

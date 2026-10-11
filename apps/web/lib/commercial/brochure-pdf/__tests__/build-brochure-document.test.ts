@@ -12,6 +12,7 @@ import {
   buildAmenities,
   buildBrochureDocument,
   buildDetailsBody,
+  clipAtSentence,
   coverSlots,
 } from '../build-brochure-document';
 import { brochureSashHex, buildCoverPriceLines } from '../cover-prices';
@@ -500,5 +501,26 @@ describe('buildDetailsBody', () => {
       }),
     );
     expect(body).toBe('## Viewings\nCall the office.');
+  });
+});
+
+describe('clipAtSentence', () => {
+  it('leaves short copy alone', () => {
+    expect(clipAtSentence('Close to the station.', 100)).toBe(
+      'Close to the station.',
+    );
+  });
+
+  it('ends on the last full sentence before the limit', () => {
+    const text =
+      'Close to the station. The A21 is nearby. Parking is on site for staff.';
+    expect(clipAtSentence(text, 50)).toBe(
+      'Close to the station. The A21 is nearby.',
+    );
+  });
+
+  it('cuts at the limit when no sentence ends near it', () => {
+    const text = `Short. ${'a'.repeat(80)}`;
+    expect(clipAtSentence(text, 40)).toBe(text.slice(0, 40));
   });
 });

@@ -69,6 +69,61 @@ describe('switchBrochurePageLayout', () => {
     expect(next.slots.map?.type).toBe('map');
   });
 
+  it('moves photos into the new photo layouts and leaves spare frames empty', () => {
+    const page: BrochurePage = {
+      id: 'p1',
+      layoutId: 'photo_grid_3',
+      slots: { photo1: img('a'), photo2: img('b'), photo3: img('c') },
+    };
+    const grid = switchBrochurePageLayout(page, 'photo_grid_4');
+    expect(grid.slots.photo3).toEqual(img('c'));
+    expect(grid.slots.photo4).toEqual(empty);
+
+    const withText = switchBrochurePageLayout(page, 'photo_text');
+    expect(withText.slots.photo).toEqual(img('a'));
+    expect(withText.slots.body).toEqual({ type: 'text', text: '' });
+  });
+
+  it('keeps the cover photo and copy when switching cover layouts', () => {
+    const page: BrochurePage = {
+      id: 'cover',
+      layoutId: 'cover_hero_band',
+      slots: {
+        hero: img('h', { focus: 'bottom' }),
+        title: { type: 'text', text: '176 Tonbridge Road' },
+      },
+    };
+    const next = switchBrochurePageLayout(page, 'cover_photo_band');
+    expect(next.slots.hero).toEqual(img('h', { focus: 'bottom' }));
+    expect(next.slots.title).toEqual({
+      type: 'text',
+      text: '176 Tonbridge Road',
+    });
+  });
+
+  it('keeps the places and their limit across location layouts', () => {
+    const map = {
+      type: 'map' as const,
+      latitude: 51.27,
+      longitude: 0.5,
+      amenities: [{ label: 'Maidstone East station', index: 1 }],
+      limit: 3,
+    };
+    const page: BrochurePage = {
+      id: 'loc',
+      layoutId: 'map_amenities',
+      slots: { body: { type: 'text', text: 'Close to the station.' }, map },
+    };
+    for (const layoutId of ['map_text', 'map_top', 'location_text'] as const) {
+      const next = switchBrochurePageLayout(page, layoutId);
+      expect(next.slots.map).toEqual(map);
+      expect(next.slots.body).toEqual({
+        type: 'text',
+        text: 'Close to the station.',
+      });
+    }
+  });
+
   it('returns the same page when the layout is unchanged', () => {
     const page: BrochurePage = {
       id: 'p1',

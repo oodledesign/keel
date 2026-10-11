@@ -25,6 +25,7 @@ import {
   saveListingBrochureDocument,
 } from '../../_lib/server/brochure-actions';
 import { BrochureApproveStep } from './brochure-approve-step';
+import { parseWarnings } from './brochure-live-page';
 import { BrochurePagesStep } from './brochure-pages-step';
 import { BrochurePreviewStep } from './brochure-preview-step';
 import { BrochureSetupStep } from './brochure-setup-step';
@@ -66,16 +67,6 @@ const RENDER_FLAGS = [
 function filenameFrom(header: string | null, fallback: string) {
   const match = header?.match(/filename="([^"]+)"/);
   return match?.[1] ?? fallback;
-}
-
-function parseWarnings(header: string | null): BrochureRenderWarning[] {
-  if (!header) return [];
-  try {
-    const parsed = JSON.parse(decodeURIComponent(header));
-    return Array.isArray(parsed) ? (parsed as BrochureRenderWarning[]) : [];
-  } catch {
-    return [];
-  }
 }
 
 /**
@@ -531,6 +522,9 @@ export function BrochureWizard({
           />
         ) : step === 'pages' && doc ? (
           <BrochurePagesStep
+            listingId={listingId}
+            accountId={accountId}
+            display={display}
             doc={doc}
             pages={pages}
             selectedPageId={selectedPageId}

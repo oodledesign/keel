@@ -23,7 +23,7 @@ import type {
 import { brochureLayoutLabel } from './brochure-preview-page';
 import type { BrochurePreviewResult } from './brochure-wizard';
 
-const WARNING_TEXT: Record<BrochureRenderWarningKind, string> = {
+export const WARNING_TEXT: Record<BrochureRenderWarningKind, string> = {
   small_image: 'An image is low resolution and may look blurry when printed.',
   missing_image: 'An image space is empty.',
   text_cut: "Some text didn't fit and was cut short.",

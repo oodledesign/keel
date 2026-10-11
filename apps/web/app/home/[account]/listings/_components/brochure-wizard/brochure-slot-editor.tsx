@@ -52,12 +52,21 @@ export function writeBrochureDrag(
   event.dataTransfer.effectAllowed = 'move';
 }
 
+const PLACE_LIMIT_OPTIONS = [
+  { value: 'all', label: 'All places' },
+  { value: '8', label: 'Up to 8' },
+  { value: '5', label: 'Up to 5' },
+  { value: '3', label: 'Up to 3' },
+  { value: '0', label: 'None (property pin only)' },
+] as const;
+
 const SLOT_LABELS: Record<string, string> = {
   hero: 'Cover image',
   photo: 'Photo',
   photo1: 'Photo 1',
   photo2: 'Photo 2',
   photo3: 'Photo 3',
+  photo4: 'Photo 4',
   plan: 'Floor plan',
   title: 'Title',
   address: 'Address',
@@ -460,7 +469,37 @@ export function BrochureSlotEditor({
         if (slot.type === 'map') {
           return (
             <div key={key} className="grid gap-2">
+              <div className="grid gap-1.5">
+                <Label htmlFor={`${page.id}-${key}-limit`}>
+                  Places to show
+                </Label>
+                <Select
+                  value={slot.limit == null ? 'all' : String(slot.limit)}
+                  onValueChange={(value) =>
+                    updateSlot(key, {
+                      ...slot,
+                      limit: value === 'all' ? undefined : Number(value),
+                    })
+                  }
+                >
+                  <SelectTrigger id={`${page.id}-${key}-limit`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PLACE_LIMIT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Label>Nearby places on the map</Label>
+              {slot.amenities.length === 0 ? (
+                <p className="text-muted-foreground text-xs">
+                  Left empty, the brochure lists places found near the property.
+                </p>
+              ) : null}
               {slot.amenities.map((amenity, index) => (
                 <div key={index} className="grid grid-cols-[1fr_auto] gap-2">
                   <Input
