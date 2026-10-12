@@ -32,10 +32,30 @@ function isFilledImage(
   return slot?.type === 'image' && Boolean(slot.mediaId || slot.url);
 }
 
+function imageKey(slot: BrochureImageSlot): string {
+  return slot.mediaId ?? slot.url ?? '';
+}
+
+function hasContent(slot: BrochureSlotValue): boolean {
+  switch (slot.type) {
+    case 'text':
+      return Boolean(slot.text.trim());
+    case 'image':
+      return isFilledImage(slot);
+    case 'facts':
+      return slot.rows.length > 0;
+    case 'map':
+      return slot.amenities.length > 0 || slot.latitude != null;
+    case 'agents':
+      return false;
+  }
+}
+
 /**
  * Change a page's layout, carrying its content across: slots with the same
  * key and type keep their value, and images fill the new layout's image
- * slots in order. Images beyond the new layout's capacity are dropped.
+ * slots in order. Anything the new layout can't show is stashed on the page,
+ * so switching back to a layout that can show it restores it.
  */
 export function switchBrochurePageLayout(
   page: BrochurePage,
@@ -43,10 +63,14 @@ export function switchBrochurePageLayout(
 ): BrochurePage {
   if (page.layoutId === layoutId) return page;
   const blank = createBlankBrochurePage(layoutId);
+  const kept: Record<string, BrochureSlotValue> = {
+    ...page.stash,
+    ...page.slots,
+  };
   const slots: Record<string, BrochureSlotValue> = { ...blank.slots };
 
   for (const [key, slot] of Object.entries(blank.slots)) {
-    const previous = page.slots[key];
+    const previous = kept[key];
     if (previous && previous.type === slot.type && slot.type !== 'image') {
       slots[key] = previous;
     }
@@ -55,16 +79,69 @@ export function switchBrochurePageLayout(
   const images = brochureImageSlotKeys(page.layoutId)
     .map((key) => page.slots[key])
     .filter(isFilledImage);
-  brochureImageSlotKeys(layoutId).forEach((key, index) => {
+  const targetKeys = brochureImageSlotKeys(layoutId);
+  targetKeys.forEach((key, index) => {
     const image = images[index];
     if (image) slots[key] = image;
   });
 
-  if (page.slots.shopfront && slots.shopfront) {
-    slots.shopfront = page.slots.shopfront;
+  const placed = new Set(
+    Object.values(slots).filter(isFilledImage).map(imageKey),
+  );
+  for (const key of targetKeys) {
+    const stashed = page.stash?.[key];
+    if (isFilledImage(slots[key]) || !isFilledImage(stashed)) continue;
+    if (placed.has(imageKey(stashed))) continue;
+    slots[key] = stashed;
+    placed.add(imageKey(stashed));
   }
 
-  return { ...page, layoutId, slots };
+  if (kept.shopfront && slots.shopfront) {
+    slots.shopfront = kept.shopfront;
+  }
+
+  const stash: Record<string, BrochureSlotValue> = {};
+  for (const [key, slot] of Object.entries(kept)) {
+    if (key in slots || !hasContent(slot)) continue;
+    if (isFilledImage(slot) && placed.has(imageKey(slot))) continue;
+    stash[key] = slot;
+  }
+
+  const next: BrochurePage = { ...page, layoutId, slots };
+  if (Object.keys(stash).length > 0) next.stash = stash;
+  else delete next.stash;
+  return next;
+}
+
+function withFreshUrls(
+  slots: Record<string, BrochureSlotValue>,
+  urlById: ReadonlyMap<string, string>,
+): Record<string, BrochureSlotValue> {
+  let out = slots;
+  for (const [key, slot] of Object.entries(slots)) {
+    if (slot.type !== 'image' || !slot.mediaId) continue;
+    const url = urlById.get(slot.mediaId);
+    if (!url || url === slot.url) continue;
+    if (out === slots) out = { ...slots };
+    out[key] = { ...slot, url };
+  }
+  return out;
+}
+
+/** Point image slots at freshly signed links. Returns `pages` itself when nothing changed. */
+export function refreshBrochureMediaUrls(
+  pages: BrochurePage[],
+  urlById: ReadonlyMap<string, string>,
+): BrochurePage[] {
+  let changed = false;
+  const next = pages.map((page) => {
+    const slots = withFreshUrls(page.slots, urlById);
+    const stash = page.stash && withFreshUrls(page.stash, urlById);
+    if (slots === page.slots && stash === page.stash) return page;
+    changed = true;
+    return stash ? { ...page, slots, stash } : { ...page, slots };
+  });
+  return changed ? next : pages;
 }
 
 /** Put `media` in an image slot. Fit and focus belonged to the old image. */

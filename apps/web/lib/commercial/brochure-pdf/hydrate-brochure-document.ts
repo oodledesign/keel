@@ -18,6 +18,7 @@ import {
   isThinNearbyAmenityList,
   sanitizeBrochureAmenities,
 } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
+import { refreshBrochureMediaUrls } from '~/lib/commercial/brochure-pdf/switch-brochure-layout';
 import type {
   BrochureMediaItem,
   PublicBrochureData,
@@ -146,17 +147,17 @@ export function hydrateBrochureDocument(
   const pages: BrochurePage[] = document.pages.map((page) => {
     const slots = { ...page.slots };
     const keys = BACKFILL_SLOT_KEYS[page.layoutId] ?? [];
+    const fill = (media: BrochureMediaItem | null) =>
+      page.curated ? null : media;
 
     if (isCoverLayout(page.layoutId)) {
-      const resolved = resolve(slots.hero, cover);
+      const resolved = resolve(slots.hero, fill(cover));
       if (resolved) slots.hero = resolved;
     } else if (page.layoutId === 'floorplan') {
       const preferred =
         (isImageSlot(slots.plan) && slots.plan.mediaId
           ? (floorplanById.get(slots.plan.mediaId) ?? null)
-          : null) ??
-        floorplans[0] ??
-        null;
+          : null) ?? fill(floorplans[0] ?? null);
       const resolved = resolve(slots.plan, preferred);
       if (resolved) slots.plan = resolved;
     } else if (page.layoutId === 'contact') {
@@ -182,7 +183,10 @@ export function hydrateBrochureDocument(
           isImageSlot(slot) &&
           ((slot.mediaId && mediaById.has(slot.mediaId)) ||
             Boolean(slot.url?.trim()));
-        const resolved = resolve(slot, canResolve ? null : takeNext(images));
+        const resolved = resolve(
+          slot,
+          canResolve || page.curated ? null : takeNext(images),
+        );
         if (resolved) slots[key] = resolved;
       }
     }
@@ -224,5 +228,6 @@ export function hydrateBrochureDocument(
     );
   });
 
-  return { ...document, pages: filtered };
+  const urlById = new Map([...mediaById].map(([id, media]) => [id, media.url]));
+  return { ...document, pages: refreshBrochureMediaUrls(filtered, urlById) };
 }

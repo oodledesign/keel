@@ -54,7 +54,7 @@ export const POST = enhanceRouteHandler(
           templateId,
           orientation,
           pageSize: 'A4',
-          pages,
+          pages: pages.map((page) => ({ ...page, curated: true })),
         },
         display: {
           showReducedPrice: body.display?.showReducedPrice,

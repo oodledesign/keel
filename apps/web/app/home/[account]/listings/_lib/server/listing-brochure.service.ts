@@ -111,11 +111,12 @@ class ListingBrochureService {
       templateId,
     });
 
-    return this.upsertDocument({
+    const record = await this.upsertDocument({
       listingId: input.listingId,
       accountId: input.accountId,
       document: built,
     });
+    return { ...record, ...hydrateBrochureDocument(record, data) };
   }
 
   async regenerateFromTemplate(input: {
@@ -137,11 +138,12 @@ class ListingBrochureService {
       display: input.display,
     });
 
-    return this.upsertDocument({
+    const record = await this.upsertDocument({
       listingId: input.listingId,
       accountId: input.accountId,
       document: built,
     });
+    return { ...record, ...hydrateBrochureDocument(record, data) };
   }
 
   async upsertDocument(input: {
@@ -190,7 +192,7 @@ class ListingBrochureService {
         templateId: input.templateId,
         pageSize: 'A4',
         orientation: input.orientation,
-        pages: input.pages,
+        pages: input.pages.map((page) => ({ ...page, curated: true })),
       },
     });
   }

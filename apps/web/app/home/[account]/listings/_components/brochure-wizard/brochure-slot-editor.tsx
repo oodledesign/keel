@@ -144,6 +144,7 @@ function ImageSlotEditor({
   slotKey,
   slot,
   media,
+  onImageError,
   drawingIds,
   selected,
   onSelect,
@@ -154,6 +155,7 @@ function ImageSlotEditor({
   slotKey: string;
   slot: BrochureImageSlot;
   media: BrochureMediaItem[];
+  onImageError: () => void;
   drawingIds: ReadonlySet<string>;
   selected: boolean;
   onSelect: () => void;
@@ -213,6 +215,7 @@ function ImageSlotEditor({
           <img
             src={slot.url}
             alt=""
+            onError={onImageError}
             className="h-full w-full"
             style={{
               objectFit: fills ? 'cover' : 'contain',
@@ -322,6 +325,7 @@ function ImageSlotEditor({
 export function BrochureSlotEditor({
   page,
   media,
+  onImageError,
   drawingIds,
   selectedSlotKey,
   onSelectSlot,
@@ -330,6 +334,7 @@ export function BrochureSlotEditor({
 }: {
   page: BrochurePage;
   media: BrochureMediaItem[];
+  onImageError: () => void;
   drawingIds: ReadonlySet<string>;
   selectedSlotKey: string | null;
   onSelectSlot: (key: string) => void;
@@ -389,6 +394,7 @@ export function BrochureSlotEditor({
               slotKey={key}
               slot={slot}
               media={media}
+              onImageError={onImageError}
               drawingIds={drawingIds}
               selected={selectedSlotKey === key}
               onSelect={() => onSelectSlot(key)}

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { BrochureImageSlot, BrochurePage } from '../brochure-document';
 import {
   placeBrochureMedia,
+  refreshBrochureMediaUrls,
   swapBrochureImageSlots,
   switchBrochurePageLayout,
 } from '../switch-brochure-layout';
@@ -124,6 +125,53 @@ describe('switchBrochurePageLayout', () => {
     }
   });
 
+  it('restores facts and photos when switching away and back', () => {
+    const facts = {
+      type: 'facts' as const,
+      rows: [
+        { label: 'Disposal', value: 'To let' },
+        { label: 'Size', value: '1,622 – 2,326 sq ft' },
+      ],
+    };
+    const page: BrochurePage = {
+      id: 'p2',
+      layoutId: 'facts_table',
+      slots: {
+        title: { type: 'text', text: 'Summary' },
+        facts,
+        photo1: img('aerial', { fit: 'whole' }),
+        photo2: empty,
+      },
+    };
+
+    const description = switchBrochurePageLayout(
+      page,
+      'description_highlights',
+    );
+    expect(description.slots.facts).toBeUndefined();
+    expect(description.stash).toEqual({
+      facts,
+      photo1: img('aerial', { fit: 'whole' }),
+    });
+
+    const back = switchBrochurePageLayout(description, 'facts_table');
+    expect(back.slots.title).toEqual({ type: 'text', text: 'Summary' });
+    expect(back.slots.facts).toEqual(facts);
+    expect(back.slots.photo1).toEqual(img('aerial', { fit: 'whole' }));
+    expect(back.stash).toBeUndefined();
+  });
+
+  it('does not stash a photo the new layout already shows', () => {
+    const page: BrochurePage = {
+      id: 'p1',
+      layoutId: 'photo_full',
+      slots: { photo: img('a') },
+    };
+    const grid = switchBrochurePageLayout(page, 'photo_grid_2');
+    expect(grid.slots.photo1).toEqual(img('a'));
+    expect(grid.stash).toBeUndefined();
+  });
+
   it('returns the same page when the layout is unchanged', () => {
     const page: BrochurePage = {
       id: 'p1',
@@ -200,5 +248,51 @@ describe('swapBrochureImageSlots', () => {
       { pageId: 'p2', key: 'caption' },
     );
     expect(next).toBe(pages);
+  });
+});
+
+describe('refreshBrochureMediaUrls', () => {
+  it('points slots and stashed photos at the new links', () => {
+    const pages: BrochurePage[] = [
+      {
+        id: 'p1',
+        layoutId: 'photo_full',
+        slots: { photo: img('a', { focus: 'top' }) },
+        stash: { photo2: img('b') },
+      },
+      {
+        id: 'p2',
+        layoutId: 'description_highlights',
+        slots: { title: { type: 'text', text: 'About' } },
+      },
+    ];
+    const next = refreshBrochureMediaUrls(
+      pages,
+      new Map([
+        ['a', 'https://cdn.example.com/a-new.jpg'],
+        ['b', 'https://cdn.example.com/b-new.jpg'],
+      ]),
+    );
+    expect(next[0]!.slots.photo).toEqual({
+      ...img('a', { focus: 'top' }),
+      url: 'https://cdn.example.com/a-new.jpg',
+    });
+    expect(next[0]!.stash?.photo2).toEqual({
+      ...img('b'),
+      url: 'https://cdn.example.com/b-new.jpg',
+    });
+    expect(next[1]).toBe(pages[1]);
+  });
+
+  it('returns the same pages when no link changed', () => {
+    const pages: BrochurePage[] = [
+      { id: 'p1', layoutId: 'photo_full', slots: { photo: img('a') } },
+    ];
+    expect(
+      refreshBrochureMediaUrls(
+        pages,
+        new Map([['a', 'https://cdn.example.com/a.jpg']]),
+      ),
+    ).toBe(pages);
   });
 });

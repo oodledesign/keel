@@ -16,6 +16,7 @@ import {
   type BrochureTemplateId,
   DEFAULT_BROCHURE_DISPLAY_OPTIONS,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import { refreshBrochureMediaUrls } from '~/lib/commercial/brochure-pdf/switch-brochure-layout';
 
 import {
   getListingBrochureDocument,
@@ -29,6 +30,9 @@ import { parseWarnings } from './brochure-live-page';
 import { BrochurePagesStep } from './brochure-pages-step';
 import { BrochurePreviewStep } from './brochure-preview-step';
 import { BrochureSetupStep } from './brochure-setup-step';
+
+const MEDIA_REFRESH_MS = 45 * 60_000;
+const MEDIA_REFRESH_MIN_MS = 60_000;
 
 export type BrochureWizardChannel = { id: string; label: string; on: boolean };
 
@@ -128,8 +132,35 @@ export function BrochureWizard({
   const previewUrlRef = useRef<string | null>(null);
   const previewRequest = useRef(0);
 
+  const mediaLoadedAt = useRef(0);
+
+  /** Media links are signed for an hour; fetch new ones and point the pages at them. */
+  const refreshMedia = useCallback(async () => {
+    if (Date.now() - mediaLoadedAt.current < MEDIA_REFRESH_MIN_MS) return;
+    mediaLoadedAt.current = Date.now();
+    const result = await loadBrochureWizard({ listingId, accountId }).catch(
+      () => null,
+    );
+    if (!result) return;
+    setData(result);
+    const urlById = new Map(
+      [...result.images, ...result.floorplans].map((m) => [m.id, m.url]),
+    );
+    const next = refreshBrochureMediaUrls(pagesRef.current, urlById);
+    if (next !== pagesRef.current) {
+      pagesRef.current = next;
+      setPages(next);
+    }
+  }, [listingId, accountId]);
+
+  useEffect(() => {
+    const timer = setInterval(() => void refreshMedia(), MEDIA_REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [refreshMedia]);
+
   useEffect(() => {
     let cancelled = false;
+    mediaLoadedAt.current = Date.now();
     loadBrochureWizard({ listingId, accountId })
       .then((result) => {
         if (cancelled) return;
@@ -262,6 +293,7 @@ export function BrochureWizard({
         });
         loadDoc(fresh);
       }
+      void refreshMedia();
       setStep('pages');
     } catch (err) {
       toast.error(
@@ -531,6 +563,7 @@ export function BrochureWizard({
             onSelectPage={setSelectedPageId}
             editPages={editPages}
             media={media}
+            onMediaError={() => void refreshMedia()}
             drawingIds={drawingIds}
             brandName={data.accountName ?? ''}
             brand={data.brand}

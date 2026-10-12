@@ -423,4 +423,78 @@ describe('hydrateBrochureDocument', () => {
     const hydrated = hydrateBrochureDocument(saved, data);
     expect(imageUrl(hydrated.pages[0]!.slots, 'shopfront')).toBeNull();
   });
+
+  it('leaves empty frames empty on pages edited in the wizard', () => {
+    const data = brochureData();
+    const empty = { type: 'image' as const, mediaId: null, url: null };
+    const doc: BrochureDocument = {
+      listingId: data.listing.id,
+      templateId: 'classic',
+      pageSize: 'A4',
+      orientation: 'landscape',
+      pages: [
+        {
+          id: 'grid',
+          layoutId: 'photo_grid_3',
+          curated: true,
+          slots: {
+            photo1: {
+              type: 'image',
+              mediaId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+              url: 'https://cdn.example.com/expired.jpg',
+            },
+            photo2: empty,
+            photo3: empty,
+          },
+        },
+        {
+          id: 'legacy',
+          layoutId: 'photo_full',
+          slots: { photo: empty },
+        },
+      ],
+    };
+
+    const hydrated = hydrateBrochureDocument(doc, data);
+    const grid = hydrated.pages.find((p) => p.id === 'grid')!;
+    expect(imageUrl(grid.slots, 'photo1')).toBe(
+      'https://cdn.example.com/int-1.jpg',
+    );
+    expect(imageUrl(grid.slots, 'photo2')).toBeNull();
+    expect(imageUrl(grid.slots, 'photo3')).toBeNull();
+
+    const legacy = hydrated.pages.find((p) => p.id === 'legacy')!;
+    expect(imageUrl(legacy.slots, 'photo')).toBe(
+      'https://cdn.example.com/int-2.jpg',
+    );
+  });
+
+  it('gives held-back photos fresh links', () => {
+    const data = brochureData();
+    const doc: BrochureDocument = {
+      listingId: data.listing.id,
+      templateId: 'classic',
+      pageSize: 'A4',
+      orientation: 'landscape',
+      pages: [
+        {
+          id: 'about',
+          layoutId: 'description_highlights',
+          slots: { title: { type: 'text', text: 'About' } },
+          stash: {
+            photo: {
+              type: 'image',
+              mediaId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+              url: 'https://cdn.example.com/expired.jpg',
+            },
+          },
+        },
+      ],
+    };
+
+    const stashed = hydrateBrochureDocument(doc, data).pages[0]!.stash?.photo;
+    expect(stashed?.type === 'image' ? stashed.url : null).toBe(
+      'https://cdn.example.com/int-2.jpg',
+    );
+  });
 });

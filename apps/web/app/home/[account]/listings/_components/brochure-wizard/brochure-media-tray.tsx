@@ -12,12 +12,14 @@ import { writeBrochureDrag } from './brochure-slot-editor';
  */
 export function BrochureMediaTray({
   media,
+  onImageError,
   drawingIds,
   usedIds,
   canPlace,
   onPlace,
 }: {
   media: BrochureMediaItem[];
+  onImageError: () => void;
   drawingIds: ReadonlySet<string>;
   usedIds: ReadonlySet<string>;
   canPlace: boolean;
@@ -73,6 +75,7 @@ export function BrochureMediaTray({
                 <img
                   src={item.url}
                   alt=""
+                  onError={onImageError}
                   className={cn(
                     'h-full w-full',
                     drawingIds.has(item.id) ? 'object-contain' : 'object-cover',

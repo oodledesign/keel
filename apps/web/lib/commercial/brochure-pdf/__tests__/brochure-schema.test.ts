@@ -39,6 +39,20 @@ describe('brochure page schema', () => {
     expect(BrochurePageSchema.safeParse(negative).success).toBe(false);
   });
 
+  it('keeps stashed content when saving', () => {
+    const stash = {
+      facts: {
+        type: 'facts' as const,
+        rows: [{ label: 'Size', value: '1,622 sq ft' }],
+      },
+    };
+    const result = BrochurePageSchema.parse({
+      ...createBlankBrochurePage('description_highlights'),
+      stash,
+    });
+    expect(result.stash).toEqual(stash);
+  });
+
   it('rejects unknown layouts', () => {
     expect(
       BrochurePageSchema.safeParse({

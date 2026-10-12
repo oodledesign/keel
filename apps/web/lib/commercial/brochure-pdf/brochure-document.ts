@@ -122,6 +122,10 @@ export type BrochurePage = {
   sectionLabel?: string;
   sectionNumber?: string;
   slots: Record<string, BrochureSlotValue>;
+  /** Content the current layout can't show, restored on switching back to a layout that can. */
+  stash?: Record<string, BrochureSlotValue>;
+  /** Edited in the wizard: render it as shown there, without filling empty frames with spare photos. */
+  curated?: boolean;
 };
 
 /** Problems the renderer noticed, shown as checks before approving. */

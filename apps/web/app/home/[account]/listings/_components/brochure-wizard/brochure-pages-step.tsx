@@ -62,6 +62,7 @@ export function BrochurePagesStep({
   onSelectPage,
   editPages,
   media,
+  onMediaError,
   drawingIds,
   brandName,
   brand,
@@ -78,6 +79,8 @@ export function BrochurePagesStep({
   onSelectPage: (pageId: string) => void;
   editPages: (update: (pages: BrochurePage[]) => BrochurePage[]) => void;
   media: BrochureMediaItem[];
+  /** A thumbnail failed to load (its signed link may have expired). */
+  onMediaError: () => void;
   drawingIds: ReadonlySet<string>;
   brandName: string;
   brand: BrochureWizardBrand;
@@ -271,6 +274,7 @@ export function BrochurePagesStep({
             <div className="shrink-0 border-t border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-5 py-3">
               <BrochureMediaTray
                 media={media}
+                onImageError={onMediaError}
                 drawingIds={drawingIds}
                 usedIds={usedIds}
                 canPlace={selectedImageSlot != null}
@@ -295,6 +299,7 @@ export function BrochurePagesStep({
             key={page.id}
             page={page}
             media={media}
+            onImageError={onMediaError}
             drawingIds={drawingIds}
             selectedSlotKey={selectedSlotKey}
             onSelectSlot={setSelectedSlotKey}

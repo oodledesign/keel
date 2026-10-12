@@ -101,6 +101,8 @@ export const BrochurePageSchema = z.object({
   sectionLabel: z.string().max(80).optional(),
   sectionNumber: z.string().max(10).optional(),
   slots: z.record(z.string().max(40), BrochureSlotValueSchema),
+  stash: z.record(z.string().max(40), BrochureSlotValueSchema).optional(),
+  curated: z.boolean().optional(),
 });
 
 export const GetListingBrochureDocumentSchema = z.object({

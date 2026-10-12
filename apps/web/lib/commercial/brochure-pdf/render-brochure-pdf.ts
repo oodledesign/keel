@@ -1155,6 +1155,14 @@ async function resolveListingImage(
   return null;
 }
 
+/** Wizard pages render as edited: an empty frame stays empty rather than borrowing a photo. */
+function fallbackFor(
+  brochurePage: BrochurePage,
+  url: string | null | undefined,
+): string | null {
+  return brochurePage.curated ? null : (url ?? null);
+}
+
 function listingCoverUrl(data: PublicBrochureData): string | null {
   return brochureCoverImage(data.images)?.url ?? null;
 }
@@ -1589,7 +1597,7 @@ async function renderCover(
   const heroImg = await resolveListingImage(
     ctx,
     heroSlot,
-    listingCoverUrl(ctx.data),
+    fallbackFor(brochurePage, listingCoverUrl(ctx.data)),
   );
   const { title, subtitle } = coverHeadline(
     coverTitleParts(
@@ -2671,8 +2679,11 @@ async function renderPhotoFull(
   const img = await resolveListingImage(
     ctx,
     slot,
-    ctx.data.images.find((item) => !item.isCover)?.url ??
-      listingCoverUrl(ctx.data),
+    fallbackFor(
+      brochurePage,
+      ctx.data.images.find((item) => !item.isCover)?.url ??
+        listingCoverUrl(ctx.data),
+    ),
   );
   if (hasBands(ctx)) {
     drawPhoto(page, ctx, img, bandedPhotoArea(page, ctx), {
@@ -2756,7 +2767,11 @@ async function resolveSlotImages(
   const slots = keys.map((key) => slotImage(brochurePage.slots, key));
   const imgs = await Promise.all(
     slots.map((slot, i) =>
-      resolveListingImage(ctx, slot, ctx.spareImageUrls[i] ?? null),
+      resolveListingImage(
+        ctx,
+        slot,
+        fallbackFor(brochurePage, ctx.spareImageUrls[i]),
+      ),
     ),
   );
   return { slots, imgs };
@@ -2847,7 +2862,7 @@ async function renderTextWithPhoto(
   const img = await resolveListingImage(
     ctx,
     slot,
-    ctx.spareImageUrls[0] ?? null,
+    fallbackFor(brochurePage, ctx.spareImageUrls[0]),
   );
   const title =
     slotText(brochurePage.slots, 'title').trim() || opts.defaultTitle;
@@ -2914,7 +2929,7 @@ async function renderFloorplan(
   const img = await resolveListingImage(
     ctx,
     slotImage(brochurePage.slots, 'plan'),
-    ctx.data.floorplans[0]?.url ?? null,
+    fallbackFor(brochurePage, ctx.data.floorplans[0]?.url),
   );
   // Plans are never cropped.
   drawPhoto(
