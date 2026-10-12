@@ -94,7 +94,6 @@ export function weekDayOffsetsForAnchor(
   weekAnchorIso: string,
 ): Record<string, number> {
   const anchor = parsePlanDateAnchor(weekAnchorIso);
-  const anchorYmd = toLocalDateYmdFromAnchor(anchor);
   const offsets: Record<string, number> = {};
 
   for (const weekday of WEEKDAY_NAMES) {

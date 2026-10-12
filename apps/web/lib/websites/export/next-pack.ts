@@ -2,7 +2,7 @@ import { emptyWebsiteStyleSystem } from '../planning-types';
 import { findSectionLibraryEntry } from '../section-library';
 import { styleTokensRootCss } from './tokens-css';
 import type { WebsiteExportFile, WebsiteExportInput } from './types';
-import { pageRoute, pascalCase } from './types';
+import { pageRoute, pascalCase, seoForPage } from './types';
 
 /** Next.js (App Router) starter: pages, section components, typed content config. */
 export function buildNextPack(input: WebsiteExportInput): WebsiteExportFile[] {
@@ -43,7 +43,7 @@ npx create-next-app@latest --ts --app --tailwind
   // Typed content config from wireframes + SEO.
   const pagesConfig = input.sitemap.map((page) => {
     const wireframe = input.wireframes.find((item) => item.pageId === page.id);
-    const seo = input.seoPages[page.id];
+    const seo = seoForPage(input, page.id);
     return {
       route: pageRoute(page),
       title: page.title,
@@ -128,7 +128,7 @@ export const pages: PageContent[] = ${JSON.stringify(pagesConfig, null, 2)};
   // Page routes.
   for (const page of input.sitemap) {
     const wireframe = input.wireframes.find((item) => item.pageId === page.id);
-    const seo = input.seoPages[page.id];
+    const seo = seoForPage(input, page.id);
     const route = pageRoute(page);
     const filePath =
       route === '/' ? 'next/app/page.tsx' : `next/app${route}/page.tsx`;

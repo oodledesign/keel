@@ -1,13 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+
 import { z } from 'zod';
 
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-
 import { queueBrainIndexSource } from '~/lib/brain/sync';
 
 const SaveDocSchema = z.object({
@@ -28,7 +28,7 @@ export const saveWorkDocAction = enhanceAction(
         title: data.title.trim() || 'Untitled document',
         // Content MUST be a Markdown string — see lib/markdown.ts contract.
         content: data.content ?? '',
-        doc_type: data.docType ?? null,
+        doc_type: data.docType ?? 'general',
       })
       .eq('id', data.docId)
       .eq('account_id', data.accountId);

@@ -8,6 +8,7 @@ import {
 } from '~/lib/email/wrap-notification-email';
 import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
+import type { SupportAttachmentMeta } from '~/lib/support/support-attachment.types';
 import { renderSupportAttachmentsEmailHtml } from '~/lib/support/support-attachments-email';
 
 import {
@@ -68,7 +69,7 @@ export async function notifySupportTeamNewTicket(
     subject: string;
     body: string;
     category?: string | null;
-    attachments?: Array<{ name: string; url: string }> | null;
+    attachments?: SupportAttachmentMeta[] | null;
     userId: string;
     accountName?: string | null;
   },
@@ -130,7 +131,7 @@ export async function notifyUserSupportReply(
     subject: string;
     userId: string;
     replyBody: string;
-    attachments?: Array<{ name: string; url: string }> | null;
+    attachments?: SupportAttachmentMeta[] | null;
   },
 ): Promise<void> {
   const config = getEmailConfig();
@@ -176,7 +177,7 @@ export async function notifySupportTeamUserReply(
     subject: string;
     userId: string;
     replyBody: string;
-    attachments?: Array<{ name: string; url: string }> | null;
+    attachments?: SupportAttachmentMeta[] | null;
   },
 ): Promise<void> {
   const config = getEmailConfig();

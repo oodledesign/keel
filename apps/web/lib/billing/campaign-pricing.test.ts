@@ -103,15 +103,15 @@ describe('campaign pricing', () => {
       oneTime: { priceGbp: 79 },
       monthly: { priceGbp: 69 },
     });
-    expect(CAMPAIGN_SEND_PACKS.some((pack) => pack.id === 'send-500k')).toBe(
-      false,
+    expect(CAMPAIGN_SEND_PACKS.map((pack) => pack.id)).not.toContain(
+      'send-500k',
     );
     expect(CAMPAIGN_CONTACT_BUMPS.map((bump) => bump.maxContacts)).toEqual([
       500, 2500, 10000, 50000,
     ]);
-    expect(
-      CAMPAIGN_CONTACT_BUMPS.find((bump) => bump.id === 'contacts-2000'),
-    ).toBeUndefined();
+    expect(CAMPAIGN_CONTACT_BUMPS.map((bump) => bump.id)).not.toContain(
+      'contacts-2000',
+    );
     expect(
       CAMPAIGN_CONTACT_BUMPS.find((bump) => bump.id === 'contacts-10000')
         ?.monthly.priceGbp,

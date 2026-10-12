@@ -304,7 +304,7 @@ export const addRanklyKeywordsBulk = enhanceAction(
     }
 
     const existing = new Set(
-      (existingRows ?? []).map((row) =>
+      (existingRows ?? []).map((row: { keyword: string }) =>
         String(row.keyword).trim().toLowerCase(),
       ),
     );

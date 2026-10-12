@@ -25,12 +25,12 @@ import { Trans } from '@kit/ui/trans';
 
 import featureFlagsConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
-import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
+import type { WorkNavCounts } from '~/config/work-account-navigation.config';
 import { flattenTeamNavLinks } from '~/home/[account]/_lib/flatten-team-nav-links';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
-import type { WorkNavCounts } from '~/config/work-account-navigation.config';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
+import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
 
 type TeamAccountAccessSource = {
   permissions?: string[] | null;
@@ -142,7 +142,7 @@ function SignOutDropdownItem(
 }
 
 function TeamAccountsModal(props: {
-  accounts: Accounts;
+  accounts: WorkspaceSwitcherAccount[];
   userId: string;
   account: string;
 }) {

@@ -38,7 +38,6 @@ interface StepSidebarProps {
 
 export function StepSidebar({
   steps,
-  currentIndex,
   currentStep,
   accountName,
   savedOnboardingStep,
@@ -80,7 +79,7 @@ export function StepSidebar({
     <nav className="space-y-1">
       {accountName && (
         <div className="mb-4 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/60 px-3 py-2">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--workspace-shell-text-muted)]">
+          <p className="text-xs font-medium tracking-wider text-[var(--workspace-shell-text-muted)] uppercase">
             Business
           </p>
           <p className="mt-0.5 truncate text-sm font-medium text-[var(--workspace-shell-text)]">
@@ -88,7 +87,7 @@ export function StepSidebar({
           </p>
         </div>
       )}
-      <p className="mb-4 text-xs font-medium uppercase tracking-wider text-[var(--workspace-shell-text-muted)]">
+      <p className="mb-4 text-xs font-medium tracking-wider text-[var(--workspace-shell-text-muted)] uppercase">
         Steps
       </p>
       {steps.map((s, idx) => {

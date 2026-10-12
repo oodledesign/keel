@@ -1,5 +1,9 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import type { Database } from '~/lib/database.types';
+
 function buildClientDisplayName(row: {
   display_name?: string | null;
   company_name?: string | null;
@@ -19,7 +23,7 @@ function buildClientDisplayName(row: {
 }
 
 export async function loadPrimaryContactEmailsByClientId(
-  admin: any,
+  admin: SupabaseClient<Database>,
   clientIds: string[],
 ) {
   const out = new Map<string, string>();
@@ -50,7 +54,10 @@ export async function loadPrimaryContactEmailsByClientId(
   return out;
 }
 
-export async function loadMessageClientOptions(admin: any, accountId: string) {
+export async function loadMessageClientOptions(
+  admin: SupabaseClient<Database>,
+  accountId: string,
+) {
   const { data: clients, error } = await admin
     .from('clients')
     .select('id, display_name, company_name, first_name, last_name, email')
@@ -67,13 +74,13 @@ export async function loadMessageClientOptions(admin: any, accountId: string) {
     }>;
   }
 
-  const clientIds = (clients ?? []).map((c: any) => c.id as string);
+  const clientIds = (clients ?? []).map((c) => c.id);
   const emailByClientId = await loadPrimaryContactEmailsByClientId(
     admin,
     clientIds,
   );
 
-  return (clients ?? []).map((c: any) => ({
+  return (clients ?? []).map((c) => ({
     clientId: c.id as string,
     name: buildClientDisplayName(c),
     email:
@@ -82,7 +89,10 @@ export async function loadMessageClientOptions(admin: any, accountId: string) {
   }));
 }
 
-export async function loadClientDisplayByIds(admin: any, clientIds: string[]) {
+export async function loadClientDisplayByIds(
+  admin: SupabaseClient<Database>,
+  clientIds: string[],
+) {
   const out = new Map<string, { name: string; email: string | null }>();
   if (clientIds.length === 0) return out;
 

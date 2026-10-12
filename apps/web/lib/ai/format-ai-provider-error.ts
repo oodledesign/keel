@@ -86,7 +86,7 @@ export function formatUserFacingAiError(
   if (!message) return fallback;
 
   // Never surface third-party docs/console links or JSON-ish provider dumps.
-  if (URL_RE.test(message) || /^[\[{]/.test(message) || message.length > 280) {
+  if (URL_RE.test(message) || /^[[{]/.test(message) || message.length > 280) {
     return fallback;
   }
 

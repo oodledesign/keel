@@ -1,7 +1,7 @@
 import { emptyWebsiteStyleSystem } from '../planning-types';
 import { findSectionLibraryEntry } from '../section-library';
 import type { WebsiteExportFile, WebsiteExportInput } from './types';
-import { pageRoute } from './types';
+import { pageRoute, seoForPage } from './types';
 
 function clientFirstName(
   libraryKey: string | null | undefined,
@@ -61,7 +61,7 @@ export function buildWebflowGuide(
 
   for (const page of input.sitemap) {
     const wireframe = input.wireframes.find((item) => item.pageId === page.id);
-    const seo = input.seoPages[page.id];
+    const seo = seoForPage(input, page.id);
 
     lines.push(`### ${page.title} — \`${pageRoute(page)}\``, '');
     if (seo?.title) {

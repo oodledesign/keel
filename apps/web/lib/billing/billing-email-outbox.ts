@@ -4,6 +4,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getLogger } from '@kit/shared/logger';
 
+import type { Database, Json } from '~/lib/database.types';
+
 import type {
   AccountBillingStatus,
   BillingEmailKind,
@@ -11,9 +13,9 @@ import type {
 import { sendBillingLifecycleEmail } from './billing-lifecycle-emails';
 import type { SubscriptionWelcomeContext } from './subscription-welcome-email';
 
-type AnyClient = SupabaseClient<any>;
+type AdminClient = SupabaseClient<Database>;
 
-function outbox(client: AnyClient) {
+function outbox(client: AdminClient) {
   return client.from('billing_email_outbox');
 }
 
@@ -30,7 +32,7 @@ export type BillingEmailPayload = {
  * Idempotent when stripeEventId is provided (unique on event + kind).
  */
 export async function enqueueBillingEmail(
-  admin: AnyClient,
+  admin: AdminClient,
   input: {
     accountId: string;
     emailKind: BillingEmailKind;
@@ -42,7 +44,7 @@ export async function enqueueBillingEmail(
   const row = {
     account_id: input.accountId,
     email_kind: input.emailKind,
-    payload: input.payload ?? {},
+    payload: (input.payload ?? {}) as Json,
     status: 'pending',
     stripe_event_id: input.stripeEventId ?? null,
   };
@@ -73,7 +75,7 @@ export async function enqueueBillingEmail(
  * Dedupes with billing_notification_log so webhook + cron cannot double-send.
  */
 export async function flushBillingEmailJob(
-  admin: AnyClient,
+  admin: AdminClient,
   jobId: string,
 ): Promise<void> {
   const logger = await getLogger();
@@ -150,7 +152,8 @@ export async function flushBillingEmailJob(
                 ? payload.productDescription
                 : '',
             features: (payload.features as string[] | undefined) ?? [],
-            gettingStartedSteps: payload.gettingStartedSteps as SubscriptionWelcomeContext['gettingStartedSteps'],
+            gettingStartedSteps:
+              payload.gettingStartedSteps as SubscriptionWelcomeContext['gettingStartedSteps'],
             isTrial: payload.isTrial === true,
             planFamily:
               typeof payload.planFamily === 'string'
@@ -202,7 +205,7 @@ export async function flushBillingEmailJob(
 }
 
 export async function flushBillingEmailJobs(
-  admin: AnyClient,
+  admin: AdminClient,
   jobIds: string[],
 ): Promise<void> {
   for (const id of jobIds) {

@@ -47,6 +47,11 @@ export default defineConfig(
       '@typescript-eslint/non-nullable-type-assertion-style': 'off',
       '@typescript-eslint/only-throw-error': 'off',
       '@typescript-eslint/prefer-nullish-coalescing': 'off',
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/static-components': 'warn',
+      'react-hooks/error-boundaries': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },

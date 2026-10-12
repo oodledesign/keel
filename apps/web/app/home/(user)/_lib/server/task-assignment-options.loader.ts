@@ -2,10 +2,13 @@ import 'server-only';
 
 import { cache } from 'react';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { getDbForWorkspaceTaskAssignmentOptions } from '~/home/_lib/server/workspace-scope';
 import { loadUserTeamMemberships } from '~/home/_lib/server/user-team-memberships.loader';
+import { getDbForWorkspaceTaskAssignmentOptions } from '~/home/_lib/server/workspace-scope';
+import type { Database } from '~/lib/database.types';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import type { TaskAssignmentOption } from '../actions/task-actions';
@@ -47,11 +50,12 @@ export const loadTaskAssignmentOptionsForWorkspace = cache(
     const userClient = getSupabaseServerClient();
     const user = await requireUserInServerComponent();
 
-    const readDb = await getDbForWorkspaceTaskAssignmentOptions(
-      userClient,
-      user.id,
-      accountId,
-    );
+    const readDb: SupabaseClient<Database> =
+      await getDbForWorkspaceTaskAssignmentOptions(
+        userClient,
+        user.id,
+        accountId,
+      );
 
     const [projectsResult, clientsResult, accountResult] = await Promise.all([
       readDb

@@ -35,17 +35,6 @@ class AccountMembersService {
 
     logger.info(ctx, `Removing member from account...`);
 
-    const { data: membership } = await this.client
-      .from('accounts_memberships')
-      .select('seat_kind')
-      .match({
-        account_id: params.accountId,
-        user_id: params.userId,
-      })
-      .maybeSingle();
-    const seatKind =
-      (membership as { seat_kind?: string } | null)?.seat_kind ?? 'billable';
-
     const { data, error } = await this.client
       .from('accounts_memberships')
       .delete()

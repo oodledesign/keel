@@ -306,8 +306,8 @@ export async function ingestKatoListingEnrichment(
         .join(', ');
       const looksWrong =
         Boolean(addressName) &&
-        Boolean(listing.name) &&
-        listing.address_line_1 &&
+        !!listing.name &&
+        !!listing.address_line_1 &&
         !listing.name.includes(listing.address_line_1);
       if (looksWrong && addressName !== listing.name) {
         patch.name = addressName;

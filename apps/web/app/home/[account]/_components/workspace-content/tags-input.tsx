@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 
-import { Plus } from 'lucide-react';
-
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';

@@ -133,7 +133,9 @@ export function buildPersonalShortcutRoutes(): PersonalShortcutRoute[] {
   const fromNav: PersonalShortcutRoute[] = [];
 
   for (const group of buildPersonalHomeNavRoutes()) {
-    for (const child of group.children ?? []) {
+    if (!('children' in group)) continue;
+
+    for (const child of group.children) {
       if (!child.path) continue;
       fromNav.push({
         label: child.label,
@@ -219,7 +221,7 @@ export function buildPersonalMobileNavIconLinks(): Array<{
   );
 
   const fromNav = buildPersonalHomeNavRoutes().flatMap((group) =>
-    (group.children ?? []).flatMap((child) =>
+    ('children' in group ? group.children : []).flatMap((child) =>
       child.path
         ? [{ path: child.path, label: child.label, Icon: child.Icon }]
         : [],

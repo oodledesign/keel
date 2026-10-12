@@ -314,6 +314,7 @@ export async function assignUnassignedReportFilterAction(
         domain,
         url,
         window_title,
+        repo_name,
         started_at,
         ended_at,
         duration_seconds,

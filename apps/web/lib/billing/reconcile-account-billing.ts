@@ -7,7 +7,7 @@ import {
   mapStripeSubscriptionStatus,
 } from './account-billing-lifecycle';
 
-type AnyClient = SupabaseClient<any>;
+type AnyClient = SupabaseClient;
 
 /**
  * Best-effort reconcile of account_billing from MakerKit subscriptions.

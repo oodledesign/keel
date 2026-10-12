@@ -67,7 +67,7 @@ export function JobEventForm({
   >([]);
   const [clientsLoading, setClientsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [deleting] = useState(false);
   const [assignments, setAssignments] = useState<
     { user_id: string; role_on_event: string | null }[]
   >([]);

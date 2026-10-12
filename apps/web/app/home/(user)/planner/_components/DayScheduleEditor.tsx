@@ -17,7 +17,6 @@ import { cn } from '@kit/ui/utils';
 import {
   type EditablePlanBlock,
   type PlanDocument,
-  flattenPlanBlocks,
   resolveEditablePlanBlocks,
   setPlanBlockDuration,
   updatePlanBlock,

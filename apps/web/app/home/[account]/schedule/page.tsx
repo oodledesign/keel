@@ -31,19 +31,18 @@ async function OrgSchedulePage({ params }: OrgSchedulePageProps) {
   const { account: accountSlug } = await params;
   const workspace = await loadTeamWorkspace(accountSlug);
   redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
-  const access = getTeamAccountAccess(
-    workspace.account as {
-      permissions?: string[] | null;
-      role?: string | null;
-      company_role?: string | null;
-    },
-  );
+  const accountAccess = workspace.account as {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
+  const access = getTeamAccountAccess(accountAccess);
 
   if (
     !access.canViewSchedule ||
     !isWorkModuleEnabled(workspace.moduleSettings, 'schedule')
   ) {
-    return redirect(getDefaultAccountPath(accountSlug, workspace.account));
+    return redirect(getDefaultAccountPath(accountSlug, accountAccess));
   }
 
   const { accountId, canViewJobs } = await loadJobsPageData(accountSlug);

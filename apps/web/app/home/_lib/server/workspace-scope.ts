@@ -4,11 +4,10 @@ import { cache } from 'react';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { loadUserTeamMemberships } from '~/home/_lib/server/user-team-memberships.loader';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 export type WorkspaceAccountRow = {
   id: string;

@@ -34,6 +34,7 @@ export function SignatureInstallActions({
       accountId,
       templateId,
       staffId,
+      view: 'install',
     });
     setUrl(result.url);
     return result.url;

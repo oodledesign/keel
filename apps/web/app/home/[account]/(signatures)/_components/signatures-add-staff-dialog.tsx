@@ -103,6 +103,7 @@ export function SignaturesAddStaffDialog({
         accountId,
         email: String(formData.get('email') ?? ''),
         full_name: String(formData.get('full_name') ?? ''),
+        credentials: '',
         job_title: String(formData.get('job_title') ?? ''),
         department: String(formData.get('department') ?? ''),
         phone_direct: String(formData.get('phone_direct') ?? ''),

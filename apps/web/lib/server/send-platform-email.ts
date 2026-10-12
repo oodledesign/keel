@@ -40,6 +40,8 @@ export const PLATFORM_EMAIL_TYPES = [
   'form_resume',
   'project_retainer_digest',
   'waitlist_notification',
+  'email_stuck_thread_digest',
+  'email_follow_up_reminders',
 ] as const;
 
 export type PlatformEmailType = (typeof PLATFORM_EMAIL_TYPES)[number];

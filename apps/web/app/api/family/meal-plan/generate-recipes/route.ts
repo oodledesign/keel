@@ -10,8 +10,8 @@ import {
   type RecipeRow,
 } from '~/home/(user)/life/family/_lib/schema/family-meal.schema';
 import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
-import { generateMealRecipes } from '~/lib/ai/meal-recipes-generate';
 import { formatUserFacingAiError } from '~/lib/ai/format-ai-provider-error';
+import { generateMealRecipes } from '~/lib/ai/meal-recipes-generate';
 import {
   insufficientCreditsResponse,
   isInsufficientCreditsError,
@@ -100,7 +100,10 @@ export async function POST(request: NextRequest) {
         household_size: preferences?.household_size ?? 2,
         preference_notes: preferences?.notes ?? '',
         favorite_recipes: favoriteRecipes,
-        favorite_dishes: parsed.data.favoriteDishes,
+        favorite_dishes: parsed.data.favoriteDishes
+          .split(/[,\n]/)
+          .map((dish) => dish.trim())
+          .filter(Boolean),
         inspiration: parsed.data.inspiration,
         use_saved_favorites: parsed.data.useSavedFavorites,
         existing_recipe_names: recipes.map((r) => r.name),
@@ -121,10 +124,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        error: formatUserFacingAiError(
-          err,
-          'Could not generate recipes',
-        ),
+        error: formatUserFacingAiError(err, 'Could not generate recipes'),
       },
       { status: 502 },
     );

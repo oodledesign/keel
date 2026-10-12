@@ -35,19 +35,18 @@ async function MeetingDetailPage({ params }: MeetingDetailPageProps) {
   const workspace = await loadTeamWorkspace(accountSlug);
   redirectIfSpaceNotIn(workspace, accountSlug, ['work', 'building-surveyor']);
 
-  const access = getTeamAccountAccess(
-    workspace.account as {
-      permissions?: string[] | null;
-      role?: string | null;
-      company_role?: string | null;
-    },
-  );
+  const accessInput = workspace.account as {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
+  const access = getTeamAccountAccess(accessInput);
 
   if (
     !access.canViewClients ||
     !isWorkNavModuleEnabled(workspace.moduleSettings, 'clients')
   ) {
-    redirect(getDefaultAccountPath(accountSlug, workspace.account));
+    redirect(getDefaultAccountPath(accountSlug, accessInput));
   }
 
   const data = await loadMeetingTranscriptPageData(accountSlug, transcriptId);

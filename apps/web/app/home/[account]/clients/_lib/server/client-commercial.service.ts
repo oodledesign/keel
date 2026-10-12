@@ -250,9 +250,7 @@ class ClientCommercialService {
     accountId: string;
     clientId: string;
   }): Promise<ClientCommercialPropertyRow[]> {
-    const { data, error } = await (
-      this.client as unknown as { from: (t: string) => any }
-    )
+    const { data, error } = await this.client
       .from('commercial_property_parties')
       .select(
         'role, contact_phone, commercial_properties!inner(id, name, postcode, town, updated_at, account_id, archived_at)',

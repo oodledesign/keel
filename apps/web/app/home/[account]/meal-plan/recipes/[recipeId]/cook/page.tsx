@@ -24,23 +24,24 @@ interface WorkspaceRecipeCookPageProps {
 
 export const dynamic = 'force-dynamic';
 
-async function WorkspaceRecipeCookPage({ params }: WorkspaceRecipeCookPageProps) {
+async function WorkspaceRecipeCookPage({
+  params,
+}: WorkspaceRecipeCookPageProps) {
   const { account: slug, recipeId } = await params;
   const workspace = await loadTeamWorkspace(slug);
   redirectIfSpaceNotIn(workspace, slug, ['family']);
-  const access = getTeamAccountAccess(
-    workspace.account as {
-      permissions?: string[] | null;
-      role?: string | null;
-      company_role?: string | null;
-    },
-  );
+  const accountAccess = workspace.account as {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
+  const access = getTeamAccountAccess(accountAccess);
 
   if (
     !access.canViewDashboard ||
     !isAccountModuleEnabled(workspace.moduleSettings, 'meal_plan')
   ) {
-    redirect(getDefaultAccountPath(slug, workspace.account));
+    redirect(getDefaultAccountPath(slug, accountAccess));
   }
 
   const [recipe, structure, scope] = await Promise.all([
@@ -50,7 +51,7 @@ async function WorkspaceRecipeCookPage({ params }: WorkspaceRecipeCookPageProps)
   ]);
 
   if (!recipe) {
-    redirect(getDefaultAccountPath(slug, workspace.account));
+    redirect(getDefaultAccountPath(slug, accountAccess));
   }
 
   return (

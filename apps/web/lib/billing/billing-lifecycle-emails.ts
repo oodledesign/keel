@@ -11,11 +11,11 @@ import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import type { BillingEmailKind } from './account-billing-types';
 import {
-  buildSubscriptionWelcomeEmail,
   type SubscriptionWelcomeContext,
+  buildSubscriptionWelcomeEmail,
 } from './subscription-welcome-email';
 
-type AnyClient = SupabaseClient<any>;
+type AnyClient = SupabaseClient;
 
 /** Dedupe owner + payer inboxes for subscription welcome (case-insensitive). */
 export function resolveWelcomeEmailRecipients(input: {

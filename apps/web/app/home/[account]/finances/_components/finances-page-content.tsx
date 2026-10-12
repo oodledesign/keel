@@ -191,11 +191,10 @@ export function FinancesPageContent({
         setLoadFailed(true);
         toast.error('Could not load finances');
       } finally {
-        if (requestId !== refreshRequestIdRef.current) {
-          return;
+        if (requestId === refreshRequestIdRef.current) {
+          setLoading(false);
+          setRefreshing(false);
         }
-        setLoading(false);
-        setRefreshing(false);
       }
     },
     [accountId, dateFrom, dateTo, page, pageSize, searchQuery],

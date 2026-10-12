@@ -5,7 +5,6 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import {
   type DebitAllocation,
   InsufficientMediaCreditsError,
-  isInsufficientMediaCreditsError,
 } from './allocate';
 
 export type { DebitAllocation };
@@ -107,7 +106,7 @@ export async function refundMediaCredits(
   const supabase = mediaCreditsDb();
   const { data, error } = await supabase.rpc('refund_media_credits', {
     p_job_id: jobId,
-    p_reason: reason ?? null,
+    p_reason: reason,
   });
 
   if (error) {
@@ -133,7 +132,7 @@ export async function grantMediaCredits(
     p_amount: amount,
     p_source_type: sourceType,
     p_expires_at: expiresAtIso,
-    p_stripe_event_id: stripeEventId ?? null,
+    p_stripe_event_id: stripeEventId ?? undefined,
   });
 
   if (error) {

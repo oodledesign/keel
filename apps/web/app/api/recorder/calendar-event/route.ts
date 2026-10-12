@@ -2,10 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import {
-  authenticateRecorderRequest,
-  recorderServiceUnavailable,
-} from '~/lib/api-tokens/recorder-auth';
+import { authenticateRecorderRequest } from '~/lib/api-tokens/recorder-auth';
 import { getRecorderCalendarEvent } from '~/lib/integrations/google-calendar/events';
 
 export const runtime = 'nodejs';

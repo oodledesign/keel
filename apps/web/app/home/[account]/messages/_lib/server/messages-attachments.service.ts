@@ -255,23 +255,17 @@ export async function loadAttachmentsForMessages(params: {
       : Promise.resolve({ data: [] }),
   ]);
 
-  const noteMeta = new Map(
-    (notesRes.data ?? []).map(
-      (row: {
-        id: string;
-        is_public: boolean;
-        public_token: string | null;
-      }) => [row.id, row],
-    ),
+  type AttachmentMeta = {
+    id: string;
+    is_public: boolean;
+    public_token: string | null;
+  };
+
+  const noteMeta = new Map<string, AttachmentMeta>(
+    (notesRes.data ?? []).map((row: AttachmentMeta) => [row.id, row]),
   );
-  const docMeta = new Map(
-    (docsRes.data ?? []).map(
-      (row: {
-        id: string;
-        is_public: boolean;
-        public_token: string | null;
-      }) => [row.id, row],
-    ),
+  const docMeta = new Map<string, AttachmentMeta>(
+    (docsRes.data ?? []).map((row: AttachmentMeta) => [row.id, row]),
   );
 
   for (const row of rows ?? []) {
@@ -281,7 +275,7 @@ export async function loadAttachmentsForMessages(params: {
     const meta =
       type === 'note' ? noteMeta.get(attachmentId) : docMeta.get(attachmentId);
     const isPublic = Boolean(meta?.is_public);
-    const publicToken = (meta?.public_token as string | null) ?? null;
+    const publicToken = meta?.public_token ?? null;
 
     const list = out.get(messageId) ?? [];
     list.push({

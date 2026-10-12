@@ -2,7 +2,6 @@ import 'server-only';
 
 import { revalidatePath } from 'next/cache';
 
-import { Database } from '@kit/supabase/database';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
@@ -13,6 +12,7 @@ import {
   spaceTypeForProfile,
 } from '~/home/[account]/_lib/server/workspace-profile';
 import { requiredEntitlementForProfile } from '~/lib/billing/ozer-plan-catalog';
+import type { Database } from '~/lib/database.types';
 import { fromAccountsUntyped } from '~/lib/supabase/accounts-table';
 import {
   readTeamAccountFromRpc,

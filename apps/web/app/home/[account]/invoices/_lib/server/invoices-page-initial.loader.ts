@@ -2,11 +2,11 @@ import 'server-only';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
 import {
   currentMonthToDateSelection,
   resolveAnalyticsDateRange,
 } from '~/lib/date-range/analytics-date-range';
-import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
 
 import { getInvoiceSummary, getInvoiceTabCounts } from './invoice-v2.server';
 import { createInvoicesService } from './invoices.service';
@@ -34,6 +34,7 @@ export async function loadInvoicesPageInitialData(
       page: 1,
       pageSize: 20,
       status: 'unpaid',
+      includeArchived: false,
     }),
     getInvoiceTabCounts(accountId),
     getInvoiceSummary(accountId, {
@@ -48,9 +49,11 @@ export async function loadInvoicesPageInitialData(
     total: invoicesResult.total ?? 0,
     counts,
     summary,
-    clients: (clientsResult.data ?? []).map((row) => ({
-      id: row.id,
-      display_name: row.display_name ?? null,
-    })),
+    clients: (clientsResult.data ?? []).map(
+      (row: { id: string; display_name: string | null }) => ({
+        id: row.id,
+        display_name: row.display_name ?? null,
+      }),
+    ),
   };
 }

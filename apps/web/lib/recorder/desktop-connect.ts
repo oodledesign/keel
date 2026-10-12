@@ -1,18 +1,19 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { createHash, randomBytes } from 'node:crypto';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { createApiToken } from '~/lib/api-tokens/api-tokens.service';
+import type { Database } from '~/lib/database.types';
 import { getPersonalAccountId } from '~/lib/recorder/personal-account';
 
 const DESKTOP_CONNECT_SCHEME = 'keelassistant';
 const CODE_TTL_MS = 2 * 60 * 1000;
 
-function connectCodesTable(
-  admin: ReturnType<typeof getSupabaseServerAdminClient>,
-) {
+function connectCodesTable(admin: SupabaseClient<Database>) {
   return admin.from('recorder_connect_codes');
 }
 

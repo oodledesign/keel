@@ -308,6 +308,7 @@ export function PresetsLibraryClient(props: {
 
             <PlayerConfigEditor
               config={draftConfig}
+              detectedAspectRatio={DEFAULT_PLAYER_CONFIG.aspect_ratio}
               captions={[]}
               presets={[]}
               saving={creating}

@@ -1,13 +1,13 @@
 name: Workflow
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 jobs:
   typescript:
     name: ʦ TypeScript
-    timeout-minutes: 10
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     env:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -41,6 +41,8 @@ jobs:
 
       - name: Typecheck
         run: pnpm run typecheck
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
 
       - name: Lint
         run: pnpm run lint

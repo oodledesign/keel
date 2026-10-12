@@ -98,7 +98,6 @@ export function OzerCalendar({
         : 'dayGridMonth';
 
   const handleEventClick = (arg: EventClickArg) => {
-    const ext = arg.event.extendedProps as FCEvent['extendedProps'];
     const raw = events.find((e) => e.id === arg.event.id);
     if (raw && onEventClick) {
       onEventClick({ ...raw, _fc: arg });

@@ -6,6 +6,8 @@ import type Stripe from 'stripe';
 
 import { getLogger } from '@kit/shared/logger';
 
+import type { Database } from '~/lib/database.types';
+
 import {
   applyAccountBillingTransition,
   findAccountIdByStripeCustomerId,
@@ -15,7 +17,7 @@ import {
 import type { AccountBillingStatus } from './account-billing-types';
 import { isBillingRecoveryStatus } from './billing-recovery';
 
-type AnyClient = SupabaseClient<any>;
+type BillingDbClient = SupabaseClient<Database>;
 
 function customerIdFrom(
   value: string | Stripe.Customer | Stripe.DeletedCustomer | null,
@@ -44,7 +46,7 @@ function unixToIso(seconds: number | null | undefined): string | null {
  * Signature verification happens in the MakerKit Stripe handler before this runs.
  */
 export async function handleBillingLifecycleStripeEvent(
-  admin: AnyClient,
+  admin: BillingDbClient,
   event: Stripe.Event,
 ): Promise<{ emailJobIds: string[] }> {
   const logger = await getLogger();

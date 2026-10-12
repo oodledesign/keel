@@ -42,7 +42,7 @@ export async function loadMessagesPageData(accountSlug: string) {
     !canViewMessages ||
     !isWorkNavModuleEnabled(workspace.moduleSettings, 'messages')
   ) {
-    redirect(getDefaultAccountPath(accountSlug, workspace.account));
+    redirect(getDefaultAccountPath(accountSlug, account));
   }
 
   const admin = getSupabaseServerAdminClient();

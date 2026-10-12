@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -292,11 +292,11 @@ export function JobScheduleTabContent({
                   className="tracking-normal normal-case"
                 />
               ) : null}
-              {details.priority && (
+              {details.priority ? (
                 <span className="rounded bg-[var(--workspace-shell-panel-hover)] px-2 py-0.5 text-[var(--workspace-shell-text-muted)] capitalize">
                   {details.priority as string}
                 </span>
-              )}
+              ) : null}
             </div>
             <p className="font-medium text-[var(--workspace-shell-text)]">
               {selectedEvent.title}
@@ -328,22 +328,22 @@ export function JobScheduleTabContent({
               </p>
             )}
             {selectedEvent.source_type === 'job_event' &&
-              (details.prep_notes || details.outcome_notes) && (
+              Boolean(details.prep_notes || details.outcome_notes) && (
                 <div className="rounded border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-2 text-[var(--workspace-shell-text-muted)]">
-                  {details.prep_notes && (
+                  {details.prep_notes ? (
                     <p className="text-xs whitespace-pre-wrap">
                       {(details.prep_notes as string).slice(0, 200)}
                       {(details.prep_notes as string).length > 200 ? '…' : ''}
                     </p>
-                  )}
-                  {details.outcome_notes && (
+                  ) : null}
+                  {details.outcome_notes ? (
                     <p className="mt-1 text-xs whitespace-pre-wrap">
                       {(details.outcome_notes as string).slice(0, 200)}
                       {(details.outcome_notes as string).length > 200
                         ? '…'
                         : ''}
                     </p>
-                  )}
+                  ) : null}
                 </div>
               )}
             {selectedEvent.source_type === 'job_event' && (

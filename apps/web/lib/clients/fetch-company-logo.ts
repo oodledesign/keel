@@ -13,7 +13,6 @@ import {
 
 const LOGO_MAX_BYTES = 5 * 1024 * 1024;
 const HTML_MAX_BYTES = 1_500_000;
-const FETCH_TIMEOUT_MS = 8_000;
 const OVERALL_DEADLINE_MS = 20_000;
 const MIN_USEFUL_BYTES = 64;
 const MAX_REDIRECTS = 3;

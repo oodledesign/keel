@@ -271,9 +271,7 @@ class AwsSesIdentityAdmin implements SesIdentityAdmin {
         await getSesv2Client().send(
           new PutConfigurationSetTrackingOptionsCommand({
             ConfigurationSetName: name,
-            TrackingOptions: {
-              CustomRedirectDomain: trackingDomain,
-            },
+            CustomRedirectDomain: trackingDomain,
           }),
         );
       } catch (error) {

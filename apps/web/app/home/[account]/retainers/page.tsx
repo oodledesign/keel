@@ -41,19 +41,18 @@ async function RetainersPage({ params, searchParams }: RetainersPageProps) {
   const workspace = await loadTeamWorkspace(accountSlug);
   redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
 
-  const access = getTeamAccountAccess(
-    workspace.account as {
-      permissions?: string[] | null;
-      role?: string | null;
-      company_role?: string | null;
-    },
-  );
+  const accessInput = workspace.account as {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
+  const access = getTeamAccountAccess(accessInput);
 
   if (
     !access.canViewClients ||
     !isWorkNavModuleEnabled(workspace.moduleSettings, 'retainers')
   ) {
-    redirect(getDefaultAccountPath(accountSlug, workspace.account));
+    redirect(getDefaultAccountPath(accountSlug, accessInput));
   }
 
   const accountId = workspace.account.id as string;

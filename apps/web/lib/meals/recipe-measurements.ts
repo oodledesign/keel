@@ -345,9 +345,10 @@ export function tokeniseIngredientMentions(
     usedIds.add(candidate.id);
   }
 
+  const nul = String.fromCharCode(0);
   const restored = working.replace(
-    /\u0000TOKEN(\d+)\u0000/g,
-    (_match, index) => {
+    new RegExp(`${nul}TOKEN(\\d+)${nul}`, 'g'),
+    (_match, index: string) => {
       return protectedTokens[Number(index)] ?? '';
     },
   );

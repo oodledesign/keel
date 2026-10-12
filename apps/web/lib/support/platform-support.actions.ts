@@ -58,11 +58,8 @@ export const createPlatformSupportTicketAction = enhanceAction(
       }
     }
 
-    // category column added by migration; generated types may lag until typegen.
-
-    const { data, error } = await (
-      client.from('platform_support_tickets') as any
-    )
+    const { data, error } = await client
+      .from('platform_support_tickets')
       .insert({
         user_id: user.id,
         account_id: input.accountId ?? null,
@@ -133,9 +130,7 @@ export const replyPlatformSupportTicketAction = enhanceAction(
 
     const body = input.body.trim();
 
-    const { error } = await (
-      client.from('platform_support_messages') as any
-    ).insert({
+    const { error } = await client.from('platform_support_messages').insert({
       ticket_id: input.ticketId,
       author_user_id: user.id,
       body,
@@ -206,8 +201,8 @@ export const adminUpdatePlatformSupportTicketAction = enhanceAction(
 
     const admin = getSupabaseServerAdminClient();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (admin.from('platform_support_tickets') as any)
+    const { error } = await admin
+      .from('platform_support_tickets')
       .update({
         status: input.status,
         priority: input.priority,
@@ -262,9 +257,7 @@ export const adminReplyPlatformSupportTicketAction = enhanceAction(
     const body = input.body.trim();
     const isInternal = input.isInternalNote ?? false;
 
-    const { error } = await (
-      admin.from('platform_support_messages') as any
-    ).insert({
+    const { error } = await admin.from('platform_support_messages').insert({
       ticket_id: input.ticketId,
       author_user_id: user.id,
       body,

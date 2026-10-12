@@ -1,5 +1,7 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
@@ -11,12 +13,12 @@ import { createInvoicesService } from '../../../invoices/_lib/server/invoices.se
 import type { PaymentPlanItem } from '../schema/contracts.schema';
 import { createContractsService } from './contracts.service';
 
-function db() {
-  return getSupabaseServerClient() as any;
+function db(): SupabaseClient {
+  return getSupabaseServerClient();
 }
 
-function adminDb() {
-  return getSupabaseServerAdminClient() as any;
+function adminDb(): SupabaseClient {
+  return getSupabaseServerAdminClient();
 }
 
 function parsePaymentPlan(raw: unknown): PaymentPlanItem[] {
@@ -197,7 +199,7 @@ export async function finalizeContractIfFullySigned(
         .select('id, signing_order, role, name, signed_at')
         .eq('contract_id', contractId)
         .eq('version_id', contract.sent_version_id)
-    : { data: [] as { signed_at?: string | null }[] };
+    : { data: [] };
 
   const rosterComplete =
     Array.isArray(signers) && signers.length > 0

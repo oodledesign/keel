@@ -190,7 +190,7 @@ export function createProjectPhasesService(client: SupabaseClient<Database>) {
 class ProjectPhasesService {
   constructor(private readonly client: SupabaseClient<Database>) {}
 
-  private get db(): any {
+  private get db(): SupabaseClient {
     return this.client;
   }
 
@@ -304,7 +304,7 @@ class ProjectPhasesService {
       return {
         id,
         account_id: phase.account_id as string,
-        project_id: phase.project_id as string,
+        job_id: phase.project_id as string,
         name: phase.name as string,
         description: (phase.description as string | null) ?? null,
         status: phase.status as PhaseStatus,
@@ -662,7 +662,7 @@ class ProjectPhasesService {
     if (membersErr) this.throwErr(membersErr);
     if (phaseErr) this.throwErr(phaseErr);
 
-    let taskRows = tasks;
+    let taskRows: Array<Record<string, unknown>> | null = tasks;
     let resolvedTasksErr = tasksErr;
 
     if (
@@ -810,6 +810,7 @@ class ProjectPhasesService {
     const phaseId = phase.id as string;
     const phaseName = (phase.name as string) ?? 'Phase';
     const accountId = phase.account_id as string;
+    const projectId = (phase.project_id as string | null) ?? null;
 
     const { data: existing, error: findErr } = await this.db
       .from('docs')
@@ -831,10 +832,12 @@ class ProjectPhasesService {
       logMissingRelation('project_phases.phase_page.find', findErr);
     }
 
-    const insertPayloads: Array<Record<string, unknown>> = [
+    const insertPayloads: Array<
+      Database['public']['Tables']['docs']['Insert']
+    > = [
       {
         account_id: accountId,
-        project_id: phase.project_id,
+        project_id: projectId,
         phase_id: phaseId,
         title: phaseName,
         content: initialContent,
@@ -847,7 +850,7 @@ class ProjectPhasesService {
       },
       {
         account_id: accountId,
-        project_id: phase.project_id,
+        project_id: projectId,
         phase_id: phaseId,
         title: phaseName,
         content: initialContent,
@@ -860,7 +863,7 @@ class ProjectPhasesService {
       },
       {
         account_id: accountId,
-        project_id: phase.project_id,
+        project_id: projectId,
         phase_id: phaseId,
         title: phaseName,
         content: initialContent,
@@ -869,7 +872,7 @@ class ProjectPhasesService {
       },
       {
         account_id: accountId,
-        project_id: phase.project_id,
+        project_id: projectId,
         title: phaseName,
         content: initialContent,
         kind: 'written',
@@ -945,7 +948,7 @@ class ProjectPhasesService {
         .order('created_at', { ascending: false }),
     ]);
 
-    let tasks = tasksResult.data ?? [];
+    let tasks: Array<Record<string, unknown>> = tasksResult.data ?? [];
 
     if (tasksResult.error) {
       if (isMissingColumnError(tasksResult.error)) {
@@ -1157,15 +1160,22 @@ class ProjectPhasesService {
         if (notesErr) this.throwErr(notesErr);
 
         const found = new Map(
-          (noteRows ?? []).map((row) => [
-            row.id as string,
-            {
-              id: row.id as string,
-              title: ((row.title as string | null)?.trim() ||
-                ((row.content as string | null) ?? '').trim().slice(0, 80) ||
-                'Untitled note') as string,
-            },
-          ]),
+          (noteRows ?? []).map(
+            (row: {
+              id: string;
+              title: string | null;
+              content: string | null;
+            }) => [
+              row.id,
+              {
+                id: row.id,
+                title:
+                  row.title?.trim() ||
+                  (row.content ?? '').trim().slice(0, 80) ||
+                  'Untitled note',
+              },
+            ],
+          ),
         );
 
         if (found.size !== uniqueIds.length) {

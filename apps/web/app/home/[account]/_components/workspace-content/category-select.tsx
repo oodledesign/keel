@@ -63,7 +63,7 @@ export function CategorySelect({
           slug: result.slug,
           label: result.label,
         });
-        onChange(result.slug);
+        onChange(result.slug as NoteFileCategory);
         setNewLabel('');
         if (!result.existed) {
           toast.success('Category added');

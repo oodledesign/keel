@@ -2,8 +2,11 @@ import 'server-only';
 
 import { cache } from 'react';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import type { Database } from '~/lib/database.types';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import type {
@@ -59,7 +62,7 @@ function formatRowLabels(startsAt: string) {
 }
 
 async function resolveAccountId(
-  client: ReturnType<typeof getSupabaseServerClient>,
+  client: SupabaseClient<Database>,
   accountSlug: string,
 ) {
   const { data } = await client
@@ -403,7 +406,7 @@ export const loadCommunityMeetupDetail = cache(
 );
 
 async function loadSeriesOptions(
-  client: ReturnType<typeof getSupabaseServerClient>,
+  client: SupabaseClient<Database>,
   accountId: string,
 ): Promise<MeetupSeriesOption[]> {
   const { data } = await client

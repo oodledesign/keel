@@ -77,7 +77,7 @@ export function buildClientRetainerSummary(input: {
   }
 
   const projects = input.projects
-    .map((project) => {
+    .map((project): ClientProjectRetainerSummary | null => {
       const subs = byProject.get(project.id) ?? [];
       const liveOrPending = subs.filter((row) => row.status !== 'cancelled');
       const balance = input.balances.has(project.id)
@@ -104,7 +104,7 @@ export function buildClientRetainerSummary(input: {
               billingCollection: primary.billingCollection,
             })
           : false,
-      } satisfies ClientProjectRetainerSummary;
+      };
     })
     .filter((row): row is ClientProjectRetainerSummary => row !== null);
 

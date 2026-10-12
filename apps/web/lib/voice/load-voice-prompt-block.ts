@@ -35,7 +35,8 @@ export async function loadVoicePromptBlock(
       .maybeSingle();
 
     if (brand) {
-      guidance = (brand as { guidance_text?: string | null }).guidance_text;
+      guidance =
+        (brand as { guidance_text?: string | null }).guidance_text ?? null;
       themes = await loadThemes(client, (brand as { id: string }).id);
     }
   }
@@ -49,7 +50,8 @@ export async function loadVoicePromptBlock(
       .maybeSingle();
 
     if (personal) {
-      guidance = (personal as { guidance_text?: string | null }).guidance_text;
+      guidance =
+        (personal as { guidance_text?: string | null }).guidance_text ?? null;
       themes = await loadThemes(client, (personal as { id: string }).id);
     }
   }

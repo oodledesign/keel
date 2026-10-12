@@ -1,7 +1,5 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
-
 import { getActivitySupabaseClient } from '~/lib/activity/activity-supabase';
 import { suggestActivityAssignments } from '~/lib/ai/activity-assignment-suggest';
 

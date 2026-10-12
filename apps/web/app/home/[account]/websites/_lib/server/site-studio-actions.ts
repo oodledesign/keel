@@ -27,6 +27,7 @@ import {
   zipPackToBase64,
   zipPromptPackToBase64,
 } from '~/lib/websites/exporters/zip-pack';
+import { normalizeWebsiteSeoPageSeo } from '~/lib/websites/seo-types';
 import type { SitemapProposeMode } from '~/lib/websites/site-studio-ai-types';
 
 import {
@@ -405,7 +406,7 @@ export const saveWebsiteSeoPage = enhanceAction(
       input.accountId,
       input.websiteId,
       input.pageId,
-      input.seo,
+      normalizeWebsiteSeoPageSeo(input.seo),
       { pageSlug: input.pageSlug, status: input.status },
     ),
   { schema: SaveWebsiteSeoPageSchema },

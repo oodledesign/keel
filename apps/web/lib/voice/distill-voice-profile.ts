@@ -41,12 +41,12 @@ Rules:
 export async function distillVoiceProfile(
   client: SupabaseClient,
   profileId: string,
-  options?: { replaceManualThemes?: boolean },
+  options?: { replaceManualThemes?: boolean; accountId?: string | null },
 ): Promise<{ guidanceText: string; themeCount: number }> {
   const { data: profile, error: profileError } = await client
     .from('voice_profiles')
     .select(
-      'id, account_id, user_id, status, distill_count, distill_count_day, learn_from_sent_email',
+      'id, account_id, owner_user_id, status, distill_count, distill_count_day, learn_from_sent_email',
     )
     .eq('id', profileId)
     .maybeSingle();
@@ -114,7 +114,7 @@ export async function distillVoiceProfile(
     const accountId =
       options?.accountId ||
       (profile as { account_id?: string | null }).account_id ||
-      (profile as { user_id?: string | null }).user_id;
+      (profile as { owner_user_id?: string | null }).owner_user_id;
     if (!accountId) {
       throw new Error(
         'Voice profile is missing account context for AI metering',

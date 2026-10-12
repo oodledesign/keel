@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { z } from 'zod';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
@@ -13,6 +15,7 @@ import {
   insufficientCreditsResponse,
   isInsufficientCreditsError,
 } from '~/lib/ai/router';
+import type { Database } from '~/lib/database.types';
 import { RECIPE_IMAGE_DATA_URL_MAX_CHARS } from '~/lib/meals/recipe-image-limits';
 import { rateLimitApiRequest } from '~/lib/rate-limit/api-rate-limit';
 
@@ -156,7 +159,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function findExistingRecipeBySourceUrl(
-  client: ReturnType<typeof getSupabaseServerClient>,
+  client: SupabaseClient<Database>,
   scope: MealPlanScope,
   sourceUrl: string | null,
 ): Promise<{ id: string; name: string } | null> {

@@ -31,19 +31,18 @@ async function DocDetailPage({ params }: DocDetailPageProps) {
   const workspace = await loadTeamWorkspace(accountSlug);
   redirectIfSpaceNotIn(workspace, accountSlug, BUSINESS_WORKSPACE_SPACE_TYPES);
 
-  const access = getTeamAccountAccess(
-    workspace.account as {
-      permissions?: string[] | null;
-      role?: string | null;
-      company_role?: string | null;
-    },
-  );
+  const accountAccess = workspace.account as {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
+  const access = getTeamAccountAccess(accountAccess);
 
   if (
     !access.canViewDashboard ||
     !isWorkNavModuleEnabled(workspace.moduleSettings, 'docs')
   ) {
-    redirect(getDefaultAccountPath(accountSlug, workspace.account));
+    redirect(getDefaultAccountPath(accountSlug, accountAccess));
   }
 
   const data = await loadDocDetailData(accountSlug, docId);

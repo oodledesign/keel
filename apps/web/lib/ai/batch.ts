@@ -7,6 +7,8 @@ import Anthropic from '@anthropic-ai/sdk';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import type { Json } from '~/lib/database.types';
+
 import {
   FEATURE_CONFIG,
   type OzerAIFeatureKey,
@@ -14,11 +16,13 @@ import {
   invokeAIProvider,
 } from './router';
 
+type JsonObject = { [key: string]: Json | undefined };
+
 type BatchRequestPayload = {
   system: string;
   user: string;
-  metadata?: Record<string, unknown>;
-  responseSchema?: Record<string, unknown>;
+  metadata?: JsonObject;
+  responseSchema?: JsonObject;
 };
 
 type BatchJobRow = {
@@ -70,8 +74,8 @@ export async function queueBatchRequest({
   systemPrompt: string;
   userPrompt: string;
   accountId: string;
-  metadata?: Record<string, unknown>;
-  responseSchema?: Record<string, unknown>;
+  metadata?: JsonObject;
+  responseSchema?: JsonObject;
   supabase: SupabaseClient;
 }) {
   const config = FEATURE_CONFIG[feature];

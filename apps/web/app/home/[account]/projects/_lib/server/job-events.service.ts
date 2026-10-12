@@ -33,7 +33,7 @@ export function createJobEventsService(client: SupabaseClient<Database>) {
 class JobEventsService {
   constructor(private readonly client: SupabaseClient<Database>) {}
 
-  private get db(): any {
+  private get db(): SupabaseClient {
     return this.client;
   }
 

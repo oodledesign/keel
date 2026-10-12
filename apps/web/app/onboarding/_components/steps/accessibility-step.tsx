@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 
 import pathsConfig from '~/config/paths.config';
 
-import type { StepDef } from '../../_lib/onboarding-steps.config';
 import {
   completeOnboarding,
   updateOnboardingStep,

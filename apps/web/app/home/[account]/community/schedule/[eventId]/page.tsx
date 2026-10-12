@@ -23,19 +23,18 @@ async function CommunityMeetupDetailPage({ params }: MeetupDetailPageProps) {
   const { account: slug, eventId } = await params;
   const workspace = await loadTeamWorkspace(slug);
   redirectIfSpaceNotIn(workspace, slug, ['community']);
-  const access = getTeamAccountAccess(
-    workspace.account as {
-      permissions?: string[] | null;
-      role?: string | null;
-      company_role?: string | null;
-    },
-  );
+  const accessInput = workspace.account as {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
+  const access = getTeamAccountAccess(accessInput);
 
   if (
     !access.canViewDashboard ||
     !isAccountModuleEnabled(workspace.moduleSettings, 'schedule')
   ) {
-    redirect(getDefaultAccountPath(slug, workspace.account));
+    redirect(getDefaultAccountPath(slug, accessInput));
   }
 
   const loaded = await loadCommunityMeetupDetail(slug, eventId);

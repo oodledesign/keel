@@ -18,6 +18,7 @@ export async function runEmailFollowUpReminders(
 ): Promise<{ usersNotified: number; emailsSent: number }> {
   const now = new Date().toISOString();
   const origin = getAppSiteOrigin();
+  const sender = process.env.EMAIL_SENDER?.trim();
 
   const { data: threads, error } = await admin
     .from('email_threads')
@@ -91,6 +92,7 @@ export async function runEmailFollowUpReminders(
 
     if (
       !email ||
+      !sender ||
       !isEmailNotificationEnabled(
         userRow?.email_notification_preferences,
         'email_follow_up_reminders',
@@ -101,13 +103,19 @@ export async function runEmailFollowUpReminders(
 
     const html = renderOzerTransactionalEmail({
       title: 'Email follow-ups due',
+      heading: 'Email follow-ups due',
       bodyHtml: `<p style="margin:0 0 12px;">You asked to be reminded about these threads:</p><ul style="margin:0;padding-left:18px;">${lines}</ul><p style="margin:16px 0 0;"><a href="${escapeEmailHtml(reviewHref)}" style="color:#41606F;font-weight:600;">Open inbox</a></p>`,
     });
 
     await sendPlatformEmail({
-      to: email,
-      subject: `${userThreads.length} email follow-up${userThreads.length === 1 ? '' : 's'} due`,
-      html,
+      type: 'email_follow_up_reminders',
+      accountId,
+      mail: {
+        to: email,
+        from: sender,
+        subject: `${userThreads.length} email follow-up${userThreads.length === 1 ? '' : 's'} due`,
+        html,
+      },
     });
 
     emailsSent += 1;

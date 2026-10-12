@@ -62,15 +62,26 @@ type DeleteQuery = PromiseLike<{ error: { message: string } | null }> & {
   eq: (column: string, value: string) => DeleteQuery;
 };
 
+type InsertError = { message: string; code?: string } | null;
+
+type InsertQuery = PromiseLike<{
+  data: unknown;
+  error: InsertError;
+}> & {
+  select: (columns: string) => {
+    single: () => PromiseLike<{
+      data: Record<string, unknown> | null;
+      error: InsertError;
+    }>;
+  };
+};
+
 type DynamicAdmin = {
   from: (table: string) => {
     select: <T>(columns: string) => MaybeSingleQuery<T> | ListQuery<T>;
     update: (values: Record<string, unknown>) => UpdateQuery;
     delete: () => DeleteQuery;
-    insert: (values: Record<string, unknown>) => PromiseLike<{
-      data: unknown;
-      error: { message: string; code?: string } | null;
-    }>;
+    insert: (values: Record<string, unknown>) => InsertQuery;
   };
   rpc: (
     fn: string,

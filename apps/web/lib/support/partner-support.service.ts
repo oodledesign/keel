@@ -101,7 +101,8 @@ export async function listPartnerLinkedOrgs(
   const orgIds = await listSupportSharedOrgIds(linkedAccountId);
   if (orgIds.length === 0) return [];
 
-  const { data: orgs, error } = await adminTable(admin, 'client_orgs')
+  const { data: orgs, error } = await admin
+    .from('client_orgs')
     .select('id, name, slug, business_id')
     .in('id', orgIds)
     .order('name');
@@ -114,16 +115,10 @@ export async function listPartnerLinkedOrgs(
   const results: PartnerLinkedOrg[] = [];
   const pictures = await loadClientPicturesByOrgIds(
     admin,
-    (orgs ?? []).map((org) => (org as { id: string }).id),
+    (orgs ?? []).map((org) => org.id),
   );
 
-  for (const org of orgs ?? []) {
-    const row = org as {
-      id: string;
-      name?: string | null;
-      slug: string;
-      business_id?: string | null;
-    };
+  for (const row of orgs ?? []) {
     const providerAccountId = await resolveClientOrgAccountId(admin, row);
     if (!providerAccountId) continue;
 

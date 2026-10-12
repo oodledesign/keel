@@ -2,11 +2,15 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { UpsertOrderParams } from '@kit/billing/types';
+import type {
+  UpsertOrderParams,
+  UpsertSubscriptionParams,
+} from '@kit/billing/types';
 import { getLogger } from '@kit/shared/logger';
 
 import { syncAccountCreditLimit } from '~/lib/ai/tiers';
 import { findAiCreditPackByPriceId } from '~/lib/billing/ai-credit-packs';
+import { parseOrderLineItems } from '~/lib/billing/order-line-items';
 
 /**
  * After a one-time Checkout completes, map Stripe price → credit pack and
@@ -37,12 +41,12 @@ export async function fulfillAiCreditPackOrder(
     return { granted: false, credits: 0 };
   }
 
-  const lineItems = order.line_items ?? [];
+  const lineItems = parseOrderLineItems(order.line_items);
   let totalCredits = 0;
   let primaryPriceId: string | null = null;
 
   for (const item of lineItems) {
-    const pack = findAiCreditPackByPriceId(item.variant_id);
+    const pack = findAiCreditPackByPriceId(item.variantId);
     if (!pack || pack.paymentType === 'monthly') continue;
     const qty = Math.max(1, Number(item.quantity) || 1);
     totalCredits += pack.credits * qty;

@@ -1,9 +1,6 @@
 import 'server-only';
 
-import {
-  type WorkspaceProfile,
-  resolveWorkspaceProfile,
-} from '../workspace-profile';
+import { resolveWorkspaceProfile } from '../workspace-profile';
 import { loadAccountDocs } from './docs-loader';
 import {
   linkOptionsForProfile,

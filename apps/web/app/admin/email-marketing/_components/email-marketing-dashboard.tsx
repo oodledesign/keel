@@ -665,7 +665,7 @@ function ContactsTab({
 }) {
   const router = useRouter();
   const [importOpen, setImportOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   const pushFilters = (updates: Partial<typeof filters>) => {
     const next = { ...filters, ...updates };

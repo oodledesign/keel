@@ -43,11 +43,8 @@ export const loadUserPlatformSupportTicket = cache(
   ): Promise<PlatformSupportTicketDetail | null> => {
     const client = getSupabaseServerClient();
 
-    // category column may lag generated Database types until typegen.
-
-    const { data: ticket, error } = await (
-      client.from('platform_support_tickets') as any
-    )
+    const { data: ticket, error } = await client
+      .from('platform_support_tickets')
       .select(
         'id, ticket_number, subject, body, status, priority, category, attachments, admin_notes, created_at, updated_at, user_id, account_id',
       )
@@ -72,9 +69,8 @@ export const loadAdminPlatformSupportTicket = cache(
   async (ticketId: string): Promise<PlatformSupportTicketDetail | null> => {
     const client = getSupabaseServerAdminClient();
 
-    const { data: ticket, error } = await (
-      client.from('platform_support_tickets') as any
-    )
+    const { data: ticket, error } = await client
+      .from('platform_support_tickets')
       .select(
         'id, ticket_number, subject, body, status, priority, category, attachments, admin_notes, created_at, updated_at, user_id, account_id',
       )

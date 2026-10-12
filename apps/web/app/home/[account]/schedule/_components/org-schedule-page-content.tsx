@@ -284,14 +284,14 @@ export function OrgSchedulePageContent({
                   Deadline
                 </span>
               )}
-              {details.status && (
+              {typeof details.status === 'string' && details.status && (
                 <span className="rounded bg-[var(--workspace-shell-panel-hover)] px-2 py-0.5 text-[var(--workspace-shell-text-muted)]">
-                  {(details.status as string).replace('_', ' ')}
+                  {details.status.replace('_', ' ')}
                 </span>
               )}
-              {details.priority && (
+              {typeof details.priority === 'string' && details.priority && (
                 <span className="rounded bg-[var(--workspace-shell-panel-hover)] px-2 py-0.5 text-[var(--workspace-shell-text-muted)] capitalize">
-                  {details.priority as string}
+                  {details.priority}
                 </span>
               )}
             </div>

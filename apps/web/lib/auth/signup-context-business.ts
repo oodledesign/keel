@@ -171,13 +171,14 @@ export function buildBusinessSetupNext(
   interval?: 'month' | 'year',
   paidPlan: BusinessPaidPlan = 'pro',
 ): string {
-  const { productId, planId } = productAndPlanFor(paidPlan, interval);
+  const billingInterval = interval === 'year' ? 'year' : 'month';
+  const { productId, planId } = productAndPlanFor(paidPlan, billingInterval);
 
   return buildSetupPath({
     profile: 'work_design',
     productId,
     planId,
     seats: clampBillableSeats(seats),
-    interval: interval === 'year' ? 'year' : 'month',
+    interval: billingInterval,
   });
 }

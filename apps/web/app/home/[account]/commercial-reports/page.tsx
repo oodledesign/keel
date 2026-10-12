@@ -81,19 +81,18 @@ async function CommercialReportsPage({
     COMMERCIAL_PROPERTY_WORKSPACE_SPACE_TYPES,
   );
 
-  const access = getTeamAccountAccess(
-    workspace.account as {
-      permissions?: string[] | null;
-      role?: string | null;
-      company_role?: string | null;
-    },
-  );
+  const accountAccess = workspace.account as {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
+  const access = getTeamAccountAccess(accountAccess);
 
   if (
     !access.canViewDashboard ||
     !isWorkModuleEnabled(workspace.moduleSettings, 'reports')
   ) {
-    redirect(getDefaultAccountPath(slug, workspace.account));
+    redirect(getDefaultAccountPath(slug, accountAccess));
   }
 
   const accountId = workspace.account.id as string;

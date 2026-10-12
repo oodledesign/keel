@@ -41,7 +41,7 @@ async function RequirementsPage({
     paramsOut.set('create', '1');
   }
 
-  redirect(`${pipelinePath}?${paramsOut.toString()}`);
+  return redirect(`${pipelinePath}?${paramsOut.toString()}`);
 }
 
 export default withI18n(RequirementsPage);

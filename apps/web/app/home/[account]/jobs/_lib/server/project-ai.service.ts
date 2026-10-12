@@ -40,7 +40,7 @@ export function createProjectAiService(client: SupabaseClient<Database>) {
 class ProjectAiService {
   constructor(private readonly client: SupabaseClient<Database>) {}
 
-  private get db(): any {
+  private get db() {
     return this.client;
   }
 
@@ -488,15 +488,12 @@ class ProjectAiService {
       );
     }
 
-    const emptyPlaceholderPhaseIds = (existingPhases ?? [])
-      .filter((phase) => {
-        const name = ((phase.name as string) ?? '').trim();
-        return (
-          name === 'New phase' &&
-          !(taskCountByPhase.get(phase.id as string) ?? 0)
-        );
+    const emptyPlaceholderPhaseIds: string[] = (existingPhases ?? [])
+      .filter((phase: { id: string; name: string | null }) => {
+        const name = (phase.name ?? '').trim();
+        return name === 'New phase' && !(taskCountByPhase.get(phase.id) ?? 0);
       })
-      .map((phase) => phase.id as string);
+      .map((phase: { id: string }) => phase.id);
 
     if (emptyPlaceholderPhaseIds.length > 0) {
       const { error: cleanupErr } = await this.db

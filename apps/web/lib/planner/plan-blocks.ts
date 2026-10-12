@@ -317,7 +317,7 @@ export function blocksFromCalendarFallback(
   }>,
 ): EditablePlanBlock[] {
   return events
-    .map((event) => {
+    .map((event): EditablePlanBlock | null => {
       const startMinutes = isoToMinutes(event.start);
       const endMinutes = isoToMinutes(event.end);
       if (
@@ -340,7 +340,7 @@ export function blocksFromCalendarFallback(
         googleEventId: event.id,
         googleCalendarId: event.calendarId ?? null,
         pushedByPlanner: false,
-      } satisfies EditablePlanBlock;
+      };
     })
     .filter((block): block is EditablePlanBlock => block !== null)
     .sort((a, b) => a.startMinutes - b.startMinutes);

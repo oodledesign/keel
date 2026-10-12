@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -285,14 +285,14 @@ export function JobScheduleTabContent({
                   Deadline
                 </span>
               )}
-              {details.status && (
+              {typeof details.status === 'string' && details.status && (
                 <span className="rounded bg-[var(--workspace-shell-panel-hover)] px-2 py-0.5 text-[var(--workspace-shell-text-muted)]">
-                  {(details.status as string).replace('_', ' ')}
+                  {details.status.replace('_', ' ')}
                 </span>
               )}
-              {details.priority && (
+              {typeof details.priority === 'string' && details.priority && (
                 <span className="rounded bg-[var(--workspace-shell-panel-hover)] px-2 py-0.5 text-[var(--workspace-shell-text-muted)] capitalize">
-                  {details.priority as string}
+                  {details.priority}
                 </span>
               )}
             </div>
@@ -325,22 +325,24 @@ export function JobScheduleTabContent({
               </p>
             )}
             {selectedEvent.source_type === 'job_event' &&
-              (details.prep_notes || details.outcome_notes) && (
+              ((typeof details.prep_notes === 'string' && details.prep_notes) ||
+                (typeof details.outcome_notes === 'string' &&
+                  details.outcome_notes)) && (
                 <div className="rounded border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-2 text-[var(--workspace-shell-text-muted)]">
-                  {details.prep_notes && (
-                    <p className="text-xs whitespace-pre-wrap">
-                      {(details.prep_notes as string).slice(0, 200)}
-                      {(details.prep_notes as string).length > 200 ? '…' : ''}
-                    </p>
-                  )}
-                  {details.outcome_notes && (
-                    <p className="mt-1 text-xs whitespace-pre-wrap">
-                      {(details.outcome_notes as string).slice(0, 200)}
-                      {(details.outcome_notes as string).length > 200
-                        ? '…'
-                        : ''}
-                    </p>
-                  )}
+                  {typeof details.prep_notes === 'string' &&
+                    details.prep_notes && (
+                      <p className="text-xs whitespace-pre-wrap">
+                        {details.prep_notes.slice(0, 200)}
+                        {details.prep_notes.length > 200 ? '…' : ''}
+                      </p>
+                    )}
+                  {typeof details.outcome_notes === 'string' &&
+                    details.outcome_notes && (
+                      <p className="mt-1 text-xs whitespace-pre-wrap">
+                        {details.outcome_notes.slice(0, 200)}
+                        {details.outcome_notes.length > 200 ? '…' : ''}
+                      </p>
+                    )}
                 </div>
               )}
             {selectedEvent.source_type === 'job_event' && (

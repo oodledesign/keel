@@ -41,11 +41,7 @@ export async function loadPlatformEmailLog(params: {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  let query = (
-    client as unknown as {
-      from: (table: string) => ReturnType<typeof client.from>;
-    }
-  )
+  let query = client
     .from('platform_email_log')
     .select(
       `
@@ -90,36 +86,25 @@ export async function loadPlatformEmailLog(params: {
     throw new Error(error.message);
   }
 
-  const rows: PlatformEmailLogRow[] = (data ?? []).map((raw) => {
-    const row = raw as unknown as {
-      id: string;
-      email_type: string;
-      account_id: string | null;
-      recipient_email: string;
-      sender_email: string | null;
-      subject: string;
-      status: 'sent' | 'failed';
-      error_message: string | null;
-      metadata: Record<string, unknown> | null;
-      created_at: string;
-      accounts: { name: string | null; slug: string | null } | null;
-    };
-
-    return {
-      id: row.id,
-      email_type: row.email_type,
-      account_id: row.account_id,
-      account_name: row.accounts?.name ?? null,
-      account_slug: row.accounts?.slug ?? null,
-      recipient_email: row.recipient_email,
-      sender_email: row.sender_email,
-      subject: row.subject,
-      status: row.status,
-      error_message: row.error_message,
-      metadata: row.metadata ?? {},
-      created_at: row.created_at,
-    };
-  });
+  const rows: PlatformEmailLogRow[] = (data ?? []).map((row) => ({
+    id: row.id,
+    email_type: row.email_type,
+    account_id: row.account_id,
+    account_name: row.accounts?.name ?? null,
+    account_slug: row.accounts?.slug ?? null,
+    recipient_email: row.recipient_email,
+    sender_email: row.sender_email,
+    subject: row.subject,
+    status: row.status === 'failed' ? 'failed' : 'sent',
+    error_message: row.error_message,
+    metadata:
+      row.metadata &&
+      typeof row.metadata === 'object' &&
+      !Array.isArray(row.metadata)
+        ? row.metadata
+        : {},
+    created_at: row.created_at,
+  }));
 
   return {
     rows,
@@ -133,11 +118,7 @@ export async function loadGroupedCampaignEmailLog(): Promise<
   await requireSuperAdmin();
   const client = getSupabaseServerClient();
 
-  const { data, error } = await (
-    client as unknown as {
-      from: (table: string) => ReturnType<typeof client.from>;
-    }
-  )
+  const { data, error } = await client
     .from('email_campaigns')
     .select('id, title, recipient_list, sent_count, sent_at, created_at')
     .in('status', ['sending', 'sent'])
@@ -147,16 +128,7 @@ export async function loadGroupedCampaignEmailLog(): Promise<
     throw new Error(error.message);
   }
 
-  return (
-    (data ?? []) as unknown as Array<{
-      id: string;
-      title: string;
-      recipient_list: string;
-      sent_count: number | null;
-      sent_at: string | null;
-      created_at: string;
-    }>
-  ).map((row) => ({
+  return (data ?? []).map((row) => ({
     id: row.id,
     title: row.title,
     recipient_list: row.recipient_list,

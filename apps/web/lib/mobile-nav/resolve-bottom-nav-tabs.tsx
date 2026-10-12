@@ -1,7 +1,4 @@
-import {
-  navHrefPathname,
-  normalizeAppHref,
-} from '~/lib/dashboard-shortcuts/personal-home-url';
+import { normalizeAppHref } from '~/lib/dashboard-shortcuts/personal-home-url';
 import type { ResolvedShortcut } from '~/lib/dashboard-shortcuts/types';
 import {
   type MobileNavIconKey,

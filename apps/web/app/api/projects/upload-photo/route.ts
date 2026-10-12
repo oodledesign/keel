@@ -29,13 +29,6 @@ async function ensureProjectsEditPermission(
   });
   if (hasJobsEdit) return true;
 
-  const hasProjectsEdit = await api.hasPermission({
-    userId,
-    accountId,
-    permission: 'projects.edit',
-  });
-  if (hasProjectsEdit) return true;
-
   const { data: membership } = await client
     .from('accounts_memberships')
     .select('account_role')

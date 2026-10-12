@@ -29,25 +29,24 @@ export const generateMetadata = async () => {
 async function CommunityTasksPage({ params }: CommunityTasksPageProps) {
   const { account: slug } = await params;
   const workspace = await loadTeamWorkspace(slug);
+  const accessInput = workspace.account as {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
 
   // Validate space type — only family and community workspaces use this route
   const spaceType = getSpaceTypeFromAccount(
     workspace.account as { space_type?: string | null },
   );
   if (spaceType !== 'family' && spaceType !== 'community') {
-    redirect(getDefaultAccountPath(slug, workspace.account));
+    redirect(getDefaultAccountPath(slug, accessInput));
   }
 
-  const access = getTeamAccountAccess(
-    workspace.account as {
-      permissions?: string[] | null;
-      role?: string | null;
-      company_role?: string | null;
-    },
-  );
+  const access = getTeamAccountAccess(accessInput);
 
   if (!access.canViewDashboard) {
-    redirect(getDefaultAccountPath(slug, workspace.account));
+    redirect(getDefaultAccountPath(slug, accessInput));
   }
 
   const accountId = workspace.account.id as string;

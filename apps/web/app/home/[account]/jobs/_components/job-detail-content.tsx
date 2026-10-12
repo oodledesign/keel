@@ -35,6 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
+import { ProjectFinancePanel } from '~/home/[account]/projects/_components/project-finance-panel';
 import { kanbanPageScrollClassName } from '~/lib/projects/projects-kanban-layout';
 
 import { MeetingTranscriptsBlock } from '../../_components/meeting-transcripts-block';
@@ -57,7 +58,6 @@ import {
 } from '../_lib/server/server-actions';
 import { JobProjectWorkspace } from './job-project/job-project-workspace';
 import { JobScheduleTabContent } from './job-schedule-tab';
-import { ProjectFinancePanel } from './project-finance-panel';
 import { ProjectImageUploader } from './project-image-uploader';
 
 type Job = {

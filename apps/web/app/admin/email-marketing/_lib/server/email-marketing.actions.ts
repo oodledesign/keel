@@ -12,7 +12,6 @@ import {
   EMAIL_RECIPIENT_LISTS,
   type EmailRecipientList,
   customListKey,
-  isCustomListKey,
   parseCustomListId,
   parseManualEmails,
 } from '~/lib/admin-email/campaigns';
@@ -40,12 +39,8 @@ import {
   isExcludableSystemList,
 } from '../recipient-list-constants';
 
-type DbClient = {
-  from: (table: string) => any;
-};
-
 function adminClient() {
-  return getSupabaseServerAdminClient() as unknown as DbClient;
+  return getSupabaseServerAdminClient();
 }
 
 function refreshEmailMarketing() {

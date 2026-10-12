@@ -53,7 +53,9 @@ export function invoiceItemsQuantityHeader(
 export function invoiceItemsShowUnitPriceColumn(
   items: Array<{ line_type?: string | null }>,
 ): boolean {
-  return items.some((item) => invoiceLineShowsUnitPrice(item.line_type));
+  return items.some((item) =>
+    invoiceLineShowsUnitPrice(normalizeInvoiceLineType(item.line_type)),
+  );
 }
 
 /** Coerce Postgres / JSON numeric values to whole pence. */

@@ -2,11 +2,14 @@ import { cache } from 'react';
 
 import { redirect } from 'next/navigation';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { createAccountsApi } from '@kit/accounts/api';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createAccountCreationPolicyEvaluator } from '@kit/team-accounts/policies';
 
 import featureFlagsConfig from '~/config/feature-flags.config';
+import type { Database } from '~/lib/database.types';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 const shouldLoadAccounts = featureFlagsConfig.enableTeamAccounts;
@@ -24,7 +27,7 @@ type TeamAccountOption = {
  * member of team accounts, load slugs from `accounts_memberships` + `accounts`.
  */
 async function loadTeamAccountsFromMemberships(
-  client: ReturnType<typeof getSupabaseServerClient>,
+  client: SupabaseClient<Database>,
   userId: string,
 ): Promise<TeamAccountOption[]> {
   const { data: memberships, error: memErr } = await client
@@ -104,23 +107,24 @@ async function workspaceLoader() {
 
   const user = await requireUserInServerComponent();
 
-  let accounts: Awaited<ReturnType<typeof api.loadUserAccounts>> | [] = [];
+  let accounts: TeamAccountOption[] = [];
   let workspace: Awaited<ReturnType<typeof api.getAccountWorkspace>> | null =
     null;
 
   if (shouldLoadAccounts) {
+    let loaded: Awaited<ReturnType<typeof api.loadUserAccounts>> | [] = [];
+
     try {
-      accounts = await api.loadUserAccounts();
+      loaded = await api.loadUserAccounts();
     } catch (err) {
       console.error(
         '[loadUserWorkspace] loadUserAccounts failed:',
         err instanceof Error ? err.message : err,
       );
-      accounts = [];
     }
 
-    accounts = (Array.isArray(accounts) ? accounts : []).filter(
-      (a): a is { label: string; value: string; image: string | null } =>
+    accounts = (Array.isArray(loaded) ? loaded : []).filter(
+      (a): a is TeamAccountOption =>
         typeof a.value === 'string' && a.value.length > 0,
     );
 

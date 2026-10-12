@@ -45,11 +45,11 @@ export function createPortalCreditsService(client: SupabaseClient) {
 }
 
 class PortalCreditsService {
-  private readonly admin = getSupabaseServerAdminClient() as any;
+  private readonly admin: SupabaseClient = getSupabaseServerAdminClient();
 
   constructor(private readonly client: SupabaseClient) {}
 
-  private get db(): any {
+  private get db(): SupabaseClient {
     return this.client;
   }
 

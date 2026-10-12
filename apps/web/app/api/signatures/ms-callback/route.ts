@@ -11,10 +11,7 @@ import {
 } from '~/lib/signatures/integration-invite';
 import { decodeMsOAuthState } from '~/lib/signatures/ms-oauth-state';
 import { denyUnlessSignaturesAddon } from '~/lib/signatures/require-signatures-api-access';
-import {
-  signSignaturesMsOAuthState,
-  verifySignaturesMsOAuthState,
-} from '~/lib/signatures/signatures-oauth-state';
+import { verifySignaturesMsOAuthState } from '~/lib/signatures/signatures-oauth-state';
 import { sendSignatureConnectionCompletedEmail } from '~/lib/signatures/sync-notifications';
 
 export const dynamic = 'force-dynamic';
@@ -39,7 +36,7 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   }
 }
 
-function resolveSettingsPath(slug: string | null, accountId: string) {
+function resolveSettingsPath(slug: string | null) {
   if (slug) {
     return `${pathsConfig.app.accountSignaturesSettings}`.replace(
       '[account]',
@@ -122,7 +119,7 @@ export async function GET(request: NextRequest) {
 
   const fallbackHome = absoluteUrl(pathsConfig.app.home);
   const settingsPath = accountId
-    ? resolveSettingsPath(slug, accountId)
+    ? resolveSettingsPath(slug)
     : pathsConfig.app.home;
   const returnBase = absoluteUrl(settingsPath);
 

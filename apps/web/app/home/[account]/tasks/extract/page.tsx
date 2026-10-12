@@ -3,9 +3,9 @@ import { redirect } from 'next/navigation';
 import { PageBody } from '@kit/ui/page';
 import { Trans } from '@kit/ui/trans';
 
+import { loadTaskAssignmentOptionsForWorkspace } from '~/home/(user)/_lib/actions/task-actions';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
-import { loadTaskAssignmentOptionsForWorkspace } from '~/home/(user)/_lib/actions/task-actions';
 
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { getDefaultAccountPath } from '../../_lib/role-access';
@@ -33,7 +33,16 @@ async function WorkspaceTasksExtractPage({ params }: PageProps) {
   redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
 
   if (!isWorkModuleEnabled(workspace.moduleSettings, 'tasks')) {
-    redirect(getDefaultAccountPath(accountSlug, workspace.account));
+    redirect(
+      getDefaultAccountPath(
+        accountSlug,
+        workspace.account as {
+          permissions?: string[] | null;
+          role?: string | null;
+          company_role?: string | null;
+        },
+      ),
+    );
   }
 
   const accountId = workspace.account.id as string;

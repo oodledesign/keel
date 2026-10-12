@@ -405,12 +405,13 @@ function StatCard({
 }
 
 function TaskStatusBadge({ status }: { status: string }) {
+  const todo = {
+    bg: 'bg-[var(--workspace-shell-sidebar-accent)]',
+    text: 'text-[var(--workspace-shell-text)]/50',
+    label: 'To do',
+  };
   const map: Record<string, { bg: string; text: string; label: string }> = {
-    todo: {
-      bg: 'bg-[var(--workspace-shell-sidebar-accent)]',
-      text: 'text-[var(--workspace-shell-text)]/50',
-      label: 'To do',
-    },
+    todo,
     in_progress: {
       bg: 'bg-sky-500/15',
       text: 'text-sky-300',
@@ -423,7 +424,7 @@ function TaskStatusBadge({ status }: { status: string }) {
     },
     blocked: { bg: 'bg-rose-500/15', text: 'text-rose-300', label: 'Blocked' },
   };
-  const style = map[status] ?? map.todo;
+  const style = map[status] ?? todo;
 
   return (
     <span

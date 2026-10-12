@@ -588,7 +588,9 @@ export async function loadProjectsDueForPagespeed(limit = 5): Promise<
     .order('next_pagespeed_check_at', { ascending: true })
     .limit(limit * 3);
 
-  const projectIds = (cronRows ?? []).map((row) => row.project_id as string);
+  const projectIds: string[] = (cronRows ?? []).map(
+    (row: { project_id: string }) => row.project_id,
+  );
   if (!projectIds.length) return [];
 
   const { data: projects } = await ranklyAdmin()
@@ -597,11 +599,17 @@ export async function loadProjectsDueForPagespeed(limit = 5): Promise<
     .in('id', projectIds)
     .neq('pagespeed_refresh_interval', 'manual');
 
-  return (projects ?? []).slice(0, limit).map((project) => ({
-    projectId: project.id as string,
-    refreshInterval:
-      project.pagespeed_refresh_interval as PagespeedRefreshInterval,
-  }));
+  return (projects ?? [])
+    .slice(0, limit)
+    .map(
+      (project: {
+        id: string;
+        pagespeed_refresh_interval: PagespeedRefreshInterval;
+      }) => ({
+        projectId: project.id,
+        refreshInterval: project.pagespeed_refresh_interval,
+      }),
+    );
 }
 
 export async function countPagespeedPages(projectId: string): Promise<number> {

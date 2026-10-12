@@ -1,5 +1,3 @@
-import { NextResponse } from 'next/server';
-
 import { markOpen } from '~/lib/admin-email/campaigns';
 
 export const dynamic = 'force-dynamic';

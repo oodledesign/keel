@@ -14,9 +14,8 @@ async function AdminSupportPage() {
   // does not depend on RLS edge cases for is_super_admin().
   const client = getSupabaseServerAdminClient();
 
-  const { data: tickets, error } = await (
-    client.from('platform_support_tickets') as any
-  )
+  const { data: tickets, error } = await client
+    .from('platform_support_tickets')
     .select(
       'id, ticket_number, subject, status, priority, category, created_at, user_id',
     )

@@ -2,6 +2,8 @@ import 'server-only';
 
 import { cache } from 'react';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
@@ -23,6 +25,7 @@ import {
   loadBusinessIdsForTeamAccount,
   loadUserWorkspaceAccounts,
 } from '~/home/_lib/server/workspace-scope';
+import type { Database } from '~/lib/database.types';
 import { listUpcomingSyncedMeetings } from '~/lib/integrations/google-calendar/events';
 import { loadPersonalIncludeWorkspaceTasks } from '~/lib/personal-preferences/load-unified-tasks-preference';
 import { createPersonalVisionService } from '~/lib/personal-vision/personal-vision.service';
@@ -249,7 +252,6 @@ type TaskRow = {
   project_id?: string | null;
   client_id?: string | null;
   account_id?: string | null;
-  job_id?: string | null;
 };
 
 type ProjectRow = {
@@ -264,13 +266,8 @@ type ClientRow = {
   account_id?: string | null;
 };
 
-type JobRow = {
-  id: string;
-  account_id?: string | null;
-};
-
 async function mapTasksToDashboard(
-  client: ReturnType<typeof getSupabaseServerClient>,
+  client: SupabaseClient<Database>,
   rows: TaskRow[],
   workspaceById: Map<string, WorkspaceAccountRow>,
 ): Promise<PersonalDashboardTask[]> {
@@ -280,11 +277,8 @@ async function mapTasksToDashboard(
   const clientIds = [
     ...new Set(rows.map((r) => r.client_id).filter(Boolean)),
   ] as string[];
-  const jobIds = [
-    ...new Set(rows.map((r) => r.job_id).filter(Boolean)),
-  ] as string[];
 
-  const [projectsResult, clientsResult, jobsResult] = await Promise.all([
+  const [projectsResult, clientsResult] = await Promise.all([
     projectIds.length > 0
       ? client
           .from('projects')
@@ -294,9 +288,6 @@ async function mapTasksToDashboard(
     clientIds.length > 0
       ? client.from('clients').select('id, account_id').in('id', clientIds)
       : Promise.resolve({ data: [] as ClientRow[] }),
-    jobIds.length > 0
-      ? client.from('jobs').select('id, account_id').in('id', jobIds)
-      : Promise.resolve({ data: [] as JobRow[] }),
   ]);
 
   const projects = new Map<string, ProjectRow>();
@@ -306,10 +297,6 @@ async function mapTasksToDashboard(
   const clients = new Map<string, ClientRow>();
   for (const c of (clientsResult.data ?? []) as ClientRow[]) {
     clients.set(c.id, c);
-  }
-  const jobs = new Map<string, JobRow>();
-  for (const j of (jobsResult.data ?? []) as JobRow[]) {
-    jobs.set(j.id, j);
   }
 
   return rows.map((row) => {
@@ -322,10 +309,6 @@ async function mapTasksToDashboard(
       accent = p?.businesses?.colour ?? null;
     } else if (row.client_id) {
       accountId = accountId ?? clients.get(row.client_id)?.account_id ?? null;
-    }
-
-    if (!accountId && row.job_id) {
-      accountId = jobs.get(row.job_id)?.account_id ?? null;
     }
 
     const ws = accountId ? workspaceById.get(accountId) : null;
@@ -354,24 +337,17 @@ async function mapTasksToDashboard(
 }
 
 async function countOpenTasksForAccount(
-  client: ReturnType<typeof getSupabaseServerClient>,
+  client: SupabaseClient<Database>,
   userId: string,
   accountId: string,
 ): Promise<number> {
-  const [{ data: projectsData }, { data: clientsData }, { data: jobsData }] =
-    await Promise.all([
-      client.from('projects').select('id').eq('account_id', accountId),
-      client.from('clients').select('id').eq('account_id', accountId),
-      client.from('jobs').select('id').eq('account_id', accountId),
-    ]);
-  const projectIds = (projectsData ?? []).map((p: { id: string }) => p.id);
-  const clientIds = (clientsData ?? []).map((c: { id: string }) => c.id);
-  const jobIds = (jobsData ?? []).map((j: { id: string }) => j.id);
-  if (
-    projectIds.length === 0 &&
-    clientIds.length === 0 &&
-    jobIds.length === 0
-  ) {
+  const [{ data: projectsData }, { data: clientsData }] = await Promise.all([
+    client.from('projects').select('id').eq('account_id', accountId),
+    client.from('clients').select('id').eq('account_id', accountId),
+  ]);
+  const projectIds = (projectsData ?? []).map((p) => p.id);
+  const clientIds = (clientsData ?? []).map((c) => c.id);
+  if (projectIds.length === 0 && clientIds.length === 0) {
     return 0;
   }
 
@@ -388,9 +364,6 @@ async function countOpenTasksForAccount(
   if (clientIds.length > 0) {
     filters.push(`client_id.in.(${clientIds.join(',')})`);
   }
-  if (jobIds.length > 0) {
-    filters.push(`job_id.in.(${jobIds.join(',')})`);
-  }
 
   q = q.or(filters.join(','));
 
@@ -399,7 +372,7 @@ async function countOpenTasksForAccount(
 }
 
 async function _buildWorkspaceOverview(
-  client: ReturnType<typeof getSupabaseServerClient>,
+  client: SupabaseClient<Database>,
   userId: string,
   workspaces: WorkspaceAccountRow[],
   bizIdsByWorkspace: Map<string, string[]>,
@@ -422,10 +395,10 @@ async function _buildWorkspaceOverview(
             ? `account_id.eq.${w.id},business_id.in.(${bids.join(',')})`
             : `account_id.eq.${w.id}`;
 
-        const [{ count: jobCount }, openTasks, { data: deals }] =
+        const [{ count: projectCount }, openTasks, { data: deals }] =
           await Promise.all([
             client
-              .from('jobs')
+              .from('projects')
               .select('id', { count: 'exact', head: true })
               .eq('account_id', w.id)
               .not('status', 'in', '("completed","cancelled")'),
@@ -444,7 +417,7 @@ async function _buildWorkspaceOverview(
         );
 
         stats.push(
-          { label: 'Active projects', value: String(jobCount ?? 0) },
+          { label: 'Active projects', value: String(projectCount ?? 0) },
           { label: 'Open tasks', value: String(openTasks) },
           {
             label: 'Pipeline value',
@@ -485,11 +458,11 @@ async function _buildWorkspaceOverview(
       } else if (spaceType === 'family') {
         const openTasks = await countOpenTasksForAccount(client, userId, w.id);
         const { count: eventCount } = await client
-          .from('job_events')
+          .from('account_calendar_events')
           .select('id', { count: 'exact', head: true })
           .eq('account_id', w.id)
-          .gte('scheduled_start_at', todayStart)
-          .lte('scheduled_start_at', `${weekEnd}T23:59:59.999Z`);
+          .gte('starts_at', todayStart)
+          .lte('starts_at', `${weekEnd}T23:59:59.999Z`);
 
         stats.push(
           { label: 'Open tasks', value: String(openTasks) },
@@ -501,17 +474,15 @@ async function _buildWorkspaceOverview(
       } else {
         const openTasks = await countOpenTasksForAccount(client, userId, w.id);
         const { data: nextEvent } = await client
-          .from('job_events')
-          .select('scheduled_start_at')
+          .from('account_calendar_events')
+          .select('starts_at')
           .eq('account_id', w.id)
-          .gte('scheduled_start_at', todayStart)
-          .order('scheduled_start_at', { ascending: true })
+          .gte('starts_at', todayStart)
+          .order('starts_at', { ascending: true })
           .limit(1)
           .maybeSingle();
 
-        const nextSession = (
-          nextEvent as { scheduled_start_at?: string } | null
-        )?.scheduled_start_at;
+        const nextSession = nextEvent?.starts_at;
         let nextLabel = '—';
         if (nextSession) {
           const d = new Date(nextSession);
@@ -543,7 +514,7 @@ async function _buildWorkspaceOverview(
 }
 
 async function loadRecentNotesAcrossWorkspaces(
-  client: ReturnType<typeof getSupabaseServerClient>,
+  client: SupabaseClient<Database>,
   workspaceRows: WorkspaceAccountRow[],
   personalAccountId: string | null,
 ): Promise<PersonalRecentNote[]> {
@@ -687,7 +658,7 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
   const { data: focusRows } = await client
     .from('tasks')
     .select(
-      'id, title, status, priority, due_date, duration_minutes, project_id, client_id, account_id, job_id',
+      'id, title, status, priority, due_date, duration_minutes, project_id, client_id, account_id',
     )
     .eq('user_id', userId)
     .not('status', 'eq', 'done')
@@ -699,7 +670,7 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
   const { data: upcomingRows } = await client
     .from('tasks')
     .select(
-      'id, title, status, priority, due_date, duration_minutes, project_id, client_id, account_id, job_id',
+      'id, title, status, priority, due_date, duration_minutes, project_id, client_id, account_id',
     )
     .eq('user_id', userId)
     .not('status', 'eq', 'done')
@@ -708,12 +679,8 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
     .limit(5);
 
   const [todaysFocus, upcoming] = await Promise.all([
-    mapTasksToDashboard(client, (focusRows ?? []) as TaskRow[], workspaceById),
-    mapTasksToDashboard(
-      client,
-      (upcomingRows ?? []) as TaskRow[],
-      workspaceById,
-    ),
+    mapTasksToDashboard(client, focusRows ?? [], workspaceById),
+    mapTasksToDashboard(client, upcomingRows ?? [], workspaceById),
   ]);
 
   type TimedDashboardEvent = PersonalCalendarEvent & { sortAt: number };
@@ -721,29 +688,23 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
   let comingUpMeetings: PersonalCalendarEvent[] = [];
   if (workspaceIds.length > 0) {
     const { data: eventRows } = await client
-      .from('job_events')
-      .select('id, title, scheduled_start_at, account_id')
+      .from('account_calendar_events')
+      .select('id, title, starts_at, account_id')
       .in('account_id', workspaceIds)
-      .gte('scheduled_start_at', todayStart)
-      .lte('scheduled_start_at', todayEnd)
-      .order('scheduled_start_at', { ascending: true })
+      .gte('starts_at', todayStart)
+      .lte('starts_at', todayEnd)
+      .order('starts_at', { ascending: true })
       .limit(20);
 
-    for (const row of eventRows ?? []) {
-      const r = row as {
-        id: string;
-        title?: string | null;
-        scheduled_start_at?: string;
-        account_id?: string;
-      };
-      const ws = r.account_id ? workspaceById.get(r.account_id) : null;
+    for (const r of eventRows ?? []) {
+      const ws = workspaceById.get(r.account_id);
       myDayTimed.push({
         id: r.id,
-        title: r.title?.trim() || 'Event',
-        timeLabel: formatTimeLabel(r.scheduled_start_at ?? ''),
+        title: r.title.trim() || 'Event',
+        timeLabel: formatTimeLabel(r.starts_at),
         workspaceName: ws?.name?.trim() || ws?.slug || 'Workspace',
         workspaceColor: workspaceColorForSpaceType(ws?.space_type),
-        sortAt: Date.parse(r.scheduled_start_at ?? '') || 0,
+        sortAt: Date.parse(r.starts_at) || 0,
       });
     }
   }

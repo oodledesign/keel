@@ -129,8 +129,7 @@ export function formatGraduatedWorkedExample(
   }
 
   if (lines.length === 1) {
-    const [only] = lines;
-    return `e.g. ${seats} seat${seats === 1 ? '' : 's'} = ${formatMoney(only.subtotalGbp)}/mo`;
+    return `e.g. ${seats} seat${seats === 1 ? '' : 's'} = ${formatMoney(totalGbp)}/mo`;
   }
 
   const expression = lines

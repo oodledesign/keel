@@ -2,7 +2,7 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-type AnyClient = SupabaseClient<any>;
+type AnyClient = SupabaseClient;
 
 /** Stripe billing contact for the workspace (usually whoever completed checkout). */
 export async function loadBillingCustomerEmail(

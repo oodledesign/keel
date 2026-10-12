@@ -1,4 +1,4 @@
-import type { IgMatchType, IgScope, IgTriggerRow } from './types';
+import type { IgMatchType, IgTriggerRow } from './types';
 
 const MAX_REGEX_PATTERN_LENGTH = 200;
 

@@ -3,7 +3,6 @@
 import { useState } from 'react';
 
 import {
-  BookOpen,
   CalendarDays,
   CheckCircle2,
   Circle,

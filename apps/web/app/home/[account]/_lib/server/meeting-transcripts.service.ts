@@ -63,6 +63,9 @@ export type MeetingTranscriptListItem = MeetingTranscript & {
   dealTitle: string | null;
 };
 
+type MeetingTranscriptUpdate =
+  Database['public']['Tables']['meeting_transcripts']['Update'];
+
 type MeetingTranscriptRow = {
   id: string;
   account_id: string;
@@ -249,7 +252,7 @@ export function createMeetingTranscriptsService(
 class MeetingTranscriptsService {
   constructor(private readonly client: SupabaseClient<Database>) {}
 
-  private get db(): any {
+  private get db() {
     return this.client;
   }
 
@@ -632,7 +635,7 @@ class MeetingTranscriptsService {
     });
     if (!existing) throw new Error('Transcript not found');
 
-    const payload: Record<string, string | null> = {};
+    const payload: MeetingTranscriptUpdate = {};
     if (input.title !== undefined) {
       payload.title = input.title.trim() || 'Meeting transcript';
     }
@@ -703,7 +706,7 @@ class MeetingTranscriptsService {
     });
     if (!existing) throw new Error('Transcript not found');
 
-    const payload: Record<string, unknown> = {};
+    const payload: MeetingTranscriptUpdate = {};
 
     if (input.speakerSegments !== undefined) {
       const segments = input.speakerSegments
@@ -1060,7 +1063,7 @@ class MeetingTranscriptsService {
       .from('meeting_transcripts')
       .update({
         portal_visible: input.portalVisible,
-      } as Record<string, unknown>)
+      })
       .eq('id', input.transcriptId)
       .eq('account_id', input.accountId)
       .select('portal_visible')

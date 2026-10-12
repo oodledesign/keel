@@ -48,6 +48,8 @@ type InvoiceItem = {
   job_id?: string | null;
   sort_order: number;
   description: string;
+  description_detail?: string | null;
+  line_type?: 'quantity' | 'hours';
   quantity: number;
   unit_price_pence: number;
   total_pence: number;
@@ -127,6 +129,8 @@ export function InvoiceEditContent({
       job_id: it.job_id ?? null,
       sort_order: it.sort_order,
       description: it.description,
+      description_detail: it.description_detail ?? null,
+      line_type: it.line_type ?? 'quantity',
       quantity: it.quantity,
       unit_price_pence: it.unit_price_pence,
       total_pence: it.total_pence,
@@ -146,7 +150,7 @@ export function InvoiceEditContent({
   const [jobs, setJobs] = useState<
     { id: string; title: string; client_id: string | null }[]
   >([]);
-  const [jobsLoading, setJobsLoading] = useState(false);
+  const [, setJobsLoading] = useState(false);
   const [creatingPaymentLink, setCreatingPaymentLink] = useState(false);
   const [statusActionLoading, setStatusActionLoading] = useState<
     null | 'cancelled' | 'cash' | 'bank_transfer'
@@ -262,6 +266,8 @@ export function InvoiceEditContent({
         job_id: row.job_id ?? null,
         sort_order: i,
         description: row.description.trim() || 'Item',
+        description_detail: row.description_detail ?? null,
+        line_type: row.line_type ?? 'quantity',
         quantity: Math.max(0, row.quantity),
         unit_price_pence: Math.max(0, row.unit_price_pence),
         total_pence:

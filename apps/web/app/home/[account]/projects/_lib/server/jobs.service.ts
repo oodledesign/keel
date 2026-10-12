@@ -47,7 +47,7 @@ export function createJobsService(client: SupabaseClient<Database>) {
 class JobsService {
   constructor(private readonly client: SupabaseClient<Database>) {}
 
-  private get db(): any {
+  private get db(): SupabaseClient {
     return this.client;
   }
 

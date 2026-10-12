@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  type KatoFeedFileItem,
   katoFileAlreadyExists,
   mapKatoEpcBand,
   mapKatoFileType,
@@ -69,26 +70,24 @@ describe('parseKatoFeedFiles', () => {
 describe('katoFileAlreadyExists', () => {
   it('matches existing rows by file name or external url', () => {
     const existing = [{ file_name: 'Unit 9 brochure.pdf', external_url: null }];
-    expect(
-      katoFileAlreadyExists(existing, {
-        externalId: '1',
-        mediaType: 'brochure',
-        fileName: 'Unit 9 brochure.pdf',
-        url: 'https://files.example/brochure.pdf',
-        source: 'files',
-        katoFileType: '11',
-      }),
-    ).toBe(true);
-    expect(
-      katoFileAlreadyExists(existing, {
-        externalId: '1',
-        mediaType: 'epc',
-        fileName: 'EPC.pdf',
-        url: 'https://files.example/epc.pdf',
-        source: 'epc',
-        katoFileType: null,
-      }),
-    ).toBe(false);
+    const brochure: KatoFeedFileItem = {
+      externalId: '1',
+      mediaType: 'brochure',
+      fileName: 'Unit 9 brochure.pdf',
+      url: 'https://files.example/brochure.pdf',
+      source: 'files',
+      katoFileType: '11',
+    };
+    const epc: KatoFeedFileItem = {
+      externalId: '1',
+      mediaType: 'epc',
+      fileName: 'EPC.pdf',
+      url: 'https://files.example/epc.pdf',
+      source: 'epc',
+      katoFileType: null,
+    };
+    expect(katoFileAlreadyExists(existing, brochure)).toBe(true);
+    expect(katoFileAlreadyExists(existing, epc)).toBe(false);
   });
 });
 

@@ -5,7 +5,7 @@ export function parseUkDate(value: string, hint?: string): string | null {
 
   if (/^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10);
 
-  const dmy = v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  const dmy = v.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/);
   if (dmy) {
     const day = dmy[1]!.padStart(2, '0');
     const month = dmy[2]!.padStart(2, '0');
@@ -15,7 +15,7 @@ export function parseUkDate(value: string, hint?: string): string | null {
   }
 
   if (hint?.includes('MM/DD')) {
-    const mdy = v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+    const mdy = v.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/);
     if (mdy) {
       const month = mdy[1]!.padStart(2, '0');
       const day = mdy[2]!.padStart(2, '0');

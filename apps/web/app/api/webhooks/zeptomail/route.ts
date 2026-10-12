@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import type { Json } from '~/lib/database.types';
+
+type JsonObject = { [key: string]: Json | undefined };
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +18,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let payload: Record<string, unknown>;
+  let payload: JsonObject;
 
   try {
     payload = await req.json();
@@ -23,8 +27,7 @@ export async function POST(req: NextRequest) {
   }
 
   const eventNames = (payload['event_name'] as string[]) ?? [];
-  const messages =
-    (payload['event_message'] as Array<Record<string, unknown>>) ?? [];
+  const messages = (payload['event_message'] as JsonObject[]) ?? [];
   const eventName = eventNames[0]?.toLowerCase() ?? '';
 
   for (const message of messages) {
@@ -122,7 +125,7 @@ function extractClickedUrl(
 async function suppress(
   email: string,
   reason: 'hard_bounce' | 'complaint',
-  raw: unknown,
+  raw: Json,
 ) {
   const supabase = getSupabaseServerAdminClient();
   await supabase
@@ -130,7 +133,7 @@ async function suppress(
     .upsert({ email, reason, raw_notification: raw }, { onConflict: 'email' });
 }
 
-async function suppressSoft(email: string, raw: unknown) {
+async function suppressSoft(email: string, raw: Json) {
   const supabase = getSupabaseServerAdminClient();
   const { data: existing } = await supabase
     .from('email_suppressions')
@@ -153,7 +156,7 @@ async function logEvent(
   subject: string | null,
   emailReference: string | null,
   clickedUrl: string | null,
-  raw: unknown,
+  raw: Json,
 ) {
   const supabase = getSupabaseServerAdminClient();
   await supabase.from('email_events').insert({

@@ -2,12 +2,15 @@ import 'server-only';
 
 import { cache } from 'react';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import {
   resolveWorkspaceProfile,
   workspaceTypeLabel,
 } from '~/home/[account]/_lib/workspace-profile';
+import type { Database } from '~/lib/database.types';
 
 export type AdminWorkspaceRow = {
   id: string;
@@ -29,7 +32,7 @@ function sanitizeFilterValue(value: string) {
  * Resolve team account IDs linked to an email (owner, member, or pending invite).
  */
 async function findTeamAccountIdsByEmail(
-  admin: ReturnType<typeof getSupabaseServerAdminClient>,
+  admin: SupabaseClient<Database>,
   query: string,
 ): Promise<string[]> {
   const pattern = `%${sanitizeFilterValue(query)}%`;

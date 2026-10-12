@@ -67,7 +67,7 @@ export function buildClusters(
   const byIntent = groupBy(keywords, (keyword) => keyword.intent);
   const clusters: ClusterDraft[] = [];
 
-  for (const [intent, group] of Object.entries(byIntent)) {
+  for (const group of Object.values(byIntent)) {
     const assigned = new Set<string>();
 
     for (const kw of group) {

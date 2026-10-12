@@ -1,7 +1,5 @@
 'use client';
 
-import Link from 'next/link';
-
 import { CalendarCheck2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';

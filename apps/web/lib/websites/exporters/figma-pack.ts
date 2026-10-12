@@ -8,8 +8,6 @@
  * documented StyleTokens JSON (labelled fallback).
  */
 import {
-  type ExportPage,
-  type ExportSectionInstance,
   type SiteStudioExport,
   type StyleTokens,
   assertCompatibleExportSchemaVersion,
@@ -266,9 +264,9 @@ function pageOutline(
       lines.push(
         `### ${section.sectionType} — \`${section.id}\``,
         `- layoutPreset: \`${section.layoutPreset}\``,
-        section.componentKey
-          ? `- componentKey: \`${section.componentKey}\``
-          : null,
+        ...(section.componentKey
+          ? [`- componentKey: \`${section.componentKey}\``]
+          : []),
         `- colorTag: \`${section.colorTag}\``,
         '',
         'Copy outline:',
@@ -281,7 +279,7 @@ function pageOutline(
     }
   }
 
-  return lines.filter((line) => line !== null).join('\n');
+  return lines.join('\n');
 }
 
 function buildFramesPrompt(exp: SiteStudioExport): string {

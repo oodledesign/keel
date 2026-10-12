@@ -2,10 +2,13 @@
 
 import { revalidatePath } from 'next/cache';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTaskForUser } from '@kit/tasks/create-task';
 
+import type { Database } from '~/lib/database.types';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import { clampDurationMinutes } from '~/lib/tasks/task-duration';
 import type { TaskPersonAssigneeOption } from '~/lib/tasks/task-person-assignee';
@@ -33,7 +36,7 @@ function normalizeTaskPriorityForDb(input: string | undefined | null): string {
 }
 
 async function resolveTaskAccountId(
-  client: ReturnType<typeof getSupabaseServerClient>,
+  client: SupabaseClient<Database>,
   input: {
     projectId?: string | null;
     clientId?: string | null;

@@ -1,5 +1,5 @@
 import type { WebsiteExportFile, WebsiteExportInput } from './types';
-import { pageRoute } from './types';
+import { pageRoute, seoForPage } from './types';
 
 /** Draft llms.txt (llmstxt.org convention) from brief + sitemap + answer blocks. */
 export function buildLlmsTxt(input: WebsiteExportInput): WebsiteExportFile {
@@ -36,7 +36,7 @@ export function buildLlmsTxt(input: WebsiteExportInput): WebsiteExportFile {
   }
 
   const faqs = sitemap.flatMap((page) => {
-    const seo = input.seoPages[page.id];
+    const seo = seoForPage(input, page.id);
     return (seo?.answerBlocks ?? []).map((block) => ({ page, block }));
   });
 
@@ -76,7 +76,7 @@ export function buildJsonLd(input: WebsiteExportInput): WebsiteExportFile {
   });
 
   for (const page of input.sitemap) {
-    const seo = input.seoPages[page.id];
+    const seo = seoForPage(input, page.id);
     if (!seo || seo.answerBlocks.length === 0) continue;
 
     blocks.push({
@@ -115,7 +115,7 @@ export function buildSeoPlan(input: WebsiteExportInput): WebsiteExportFile {
   ];
 
   for (const page of input.sitemap) {
-    const seo = input.seoPages[page.id];
+    const seo = seoForPage(input, page.id);
     lines.push(`## ${page.title} (${pageRoute(page)})`, '');
     if (!seo) {
       lines.push('_No SEO fields yet — generate them in the Search tab._', '');

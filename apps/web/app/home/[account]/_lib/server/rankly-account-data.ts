@@ -5,10 +5,7 @@ import { cache } from 'react';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import type { RanklyClientImportOption } from '~/lib/rankly/client-import';
-import {
-  buildRanklyClientImportOptions,
-  buildRanklyImportSeedForClient,
-} from '~/lib/rankly/client-import';
+import { buildRanklyClientImportOptions } from '~/lib/rankly/client-import';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 import { createClientsService } from '../../clients/_lib/server/clients.service';

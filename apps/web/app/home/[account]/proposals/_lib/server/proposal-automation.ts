@@ -6,7 +6,7 @@ import { generateContractDraft } from '~/lib/ai/contract-generate';
 import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
 
 export async function createDraftContractForProposal(proposalId: string) {
-  const admin = getSupabaseServerAdminClient() as any;
+  const admin = getSupabaseServerAdminClient();
 
   const { data: proposal } = await admin
     .from('proposals')
@@ -145,7 +145,7 @@ export async function createDraftContractForProposal(proposalId: string) {
 }
 
 export async function maybeAutoSendContractAfterApproval(proposalId: string) {
-  const admin = getSupabaseServerAdminClient() as any;
+  const admin = getSupabaseServerAdminClient();
   const { data: proposal } = await admin
     .from('proposals')
     .select('id, account_id, contract_id, recipient_email, sent_to_email')

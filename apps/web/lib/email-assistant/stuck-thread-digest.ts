@@ -31,6 +31,7 @@ export async function runStuckThreadDigest(
     Date.now() - STUCK_DAYS * 24 * 60 * 60 * 1000,
   ).toISOString();
   const origin = getAppSiteOrigin();
+  const sender = process.env.EMAIL_SENDER?.trim();
 
   const { data: threads, error } = await admin
     .from('email_threads')
@@ -133,6 +134,7 @@ export async function runStuckThreadDigest(
 
     if (
       !email ||
+      !sender ||
       !isEmailNotificationEnabled(
         userRow?.email_notification_preferences,
         'email_stuck_thread_digest',
@@ -141,18 +143,23 @@ export async function runStuckThreadDigest(
       continue;
     }
 
-    const html = wrapNotificationEmail({
-      title: 'Stuck email threads',
-      bodyHtml: buildStuckThreadDigestBodyHtml({
+    const html = wrapNotificationEmail(
+      buildStuckThreadDigestBodyHtml({
         threads: digestItems,
         reviewHref,
       }),
-    });
+      { title: 'Stuck email threads' },
+    );
 
     await sendPlatformEmail({
-      to: email,
-      subject: `${userThreads.length} email thread${userThreads.length === 1 ? '' : 's'} waiting for you`,
-      html,
+      type: 'email_stuck_thread_digest',
+      accountId,
+      mail: {
+        to: email,
+        from: sender,
+        subject: `${userThreads.length} email thread${userThreads.length === 1 ? '' : 's'} waiting for you`,
+        html,
+      },
     });
 
     emailsSent += 1;

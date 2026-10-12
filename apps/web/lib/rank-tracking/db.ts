@@ -132,7 +132,7 @@ export async function loadKeywordRankSnapshots(
   if (settings?.trackMobile) devices.push('mobile');
   if (devices.length === 0) devices.push('desktop');
 
-  const keywordIds = keywords.map((row) => row.id as string);
+  const keywordIds = keywords.map((row: { id: string }) => row.id);
   const { data: rankings } = await ranklyClient()
     .from('keyword_rankings')
     .select(
@@ -332,7 +332,9 @@ export async function loadProjectsDueForRankCheck(limit = 10): Promise<
     .order('next_rank_check_at', { ascending: true })
     .limit(limit * 3);
 
-  const projectIds = (cronRows ?? []).map((row) => row.project_id as string);
+  const projectIds = (cronRows ?? []).map(
+    (row: { project_id: string }) => row.project_id,
+  );
   if (!projectIds.length) return [];
 
   const { data: projects } = await ranklyAdmin()
@@ -343,12 +345,21 @@ export async function loadProjectsDueForRankCheck(limit = 10): Promise<
     .in('id', projectIds)
     .neq('rank_refresh_interval', 'manual');
 
-  const due = (projects ?? [])
+  const projectRows: Array<{
+    id: string;
+    domain: string;
+    target_country: string | null;
+    track_desktop: boolean | null;
+    track_mobile: boolean | null;
+    rank_refresh_interval: string;
+  }> = projects ?? [];
+
+  const due = projectRows
     .filter((project) => project.rank_refresh_interval !== 'manual')
     .slice(0, limit);
 
   return due.map((project) => ({
-    projectId: project.id as string,
+    projectId: project.id,
     domain: String(project.domain),
     targetCountry: projectCountryToCode(String(project.target_country ?? 'gb')),
     trackDesktop: Boolean(project.track_desktop ?? true),

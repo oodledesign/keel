@@ -1174,9 +1174,14 @@ export const importSignatureStaffFromCsv = enhanceAction(
       throw new Error(existingLoadError.message);
     }
 
+    type ExistingStaffRow = {
+      id: string;
+      email: string;
+      source: string | null;
+    };
     const existingByEmail = new Map(
-      (existingStaff ?? []).map((row) => [
-        normalizeStaffEmail(row.email as string),
+      ((existingStaff ?? []) as ExistingStaffRow[]).map((row) => [
+        normalizeStaffEmail(row.email),
         row,
       ]),
     );
@@ -1192,7 +1197,7 @@ export const importSignatureStaffFromCsv = enhanceAction(
         const existing = existingByEmail.get(email);
 
         if (existing?.id) {
-          if (isSyncedStaffSource(existing.source as string)) {
+          if (isSyncedStaffSource(existing.source)) {
             result.failures.push({
               rowNumber: row.rowNumber,
               email,
@@ -1213,7 +1218,7 @@ export const importSignatureStaffFromCsv = enhanceAction(
                 phone_mobile: row.phone_mobile,
                 source: 'csv',
               })
-              .eq('id', existing.id as string)
+              .eq('id', existing.id)
               .eq('account_id', input.accountId);
 
             if (error) {

@@ -16,11 +16,7 @@ export const getPlatformEmailPreviewAction = enhanceAction(
     await requireSuperAdmin();
     const client = getSupabaseServerClient();
 
-    const { data, error } = await (
-      client as unknown as {
-        from: (table: string) => ReturnType<typeof client.from>;
-      }
-    )
+    const { data: row, error } = await client
       .from('platform_email_log')
       .select(
         'id, email_type, subject, recipient_email, sender_email, status, html_body, created_at',
@@ -31,20 +27,9 @@ export const getPlatformEmailPreviewAction = enhanceAction(
     if (error) {
       throw new Error(error.message);
     }
-    if (!data) {
+    if (!row) {
       throw new Error('Email log entry not found');
     }
-
-    const row = data as {
-      id: string;
-      email_type: string;
-      subject: string;
-      recipient_email: string;
-      sender_email: string | null;
-      status: string;
-      html_body: string | null;
-      created_at: string;
-    };
 
     return {
       id: row.id,

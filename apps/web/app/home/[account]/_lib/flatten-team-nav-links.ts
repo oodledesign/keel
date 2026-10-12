@@ -17,26 +17,15 @@ export type MobileNavSection = {
   links: MobileNavLink[];
 };
 
-function flattenGroupChildren(
-  children: NavConfig['routes'][number] extends { children: infer C }
-    ? C
-    : never,
-): MobileNavLink[] {
+type NavRouteChild = Extract<
+  NavConfig['routes'][number],
+  { children: unknown }
+>['children'][number];
+
+function flattenGroupChildren(children: NavRouteChild[]): MobileNavLink[] {
   const links: MobileNavLink[] = [];
 
-  for (const child of children as Array<{
-    path?: string;
-    label: string;
-    Icon: React.ReactNode;
-    tourId?: string;
-    collapsible?: boolean;
-    children?: Array<{
-      path: string;
-      label: string;
-      Icon: React.ReactNode;
-      tourId?: string;
-    }>;
-  }>) {
+  for (const child of children) {
     if ('collapsible' in child && child.collapsible && child.children?.length) {
       if (child.path) {
         links.push({

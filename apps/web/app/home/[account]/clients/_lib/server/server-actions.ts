@@ -424,15 +424,17 @@ export const getClientPortalStatus = enhanceAction(
 
     if (invError) throw invError;
 
-    const matchingInvites = (invitations ?? []).filter((invite: any) => {
-      return (
-        invite.email?.toLowerCase() === parsed.email.toLowerCase() &&
-        invite.role === 'client'
-      );
-    });
+    const matchingInvites = (invitations ?? []).filter(
+      (invite: { email: string | null; role: string }) => {
+        return (
+          invite.email?.toLowerCase() === parsed.email.toLowerCase() &&
+          invite.role === 'client'
+        );
+      },
+    );
 
     const latestInvite = matchingInvites.sort(
-      (a: any, b: any) =>
+      (a: { created_at: string }, b: { created_at: string }) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     )[0];
 
@@ -446,22 +448,24 @@ export const getClientPortalStatus = enhanceAction(
     if (membersError) throw membersError;
 
     const member = (members ?? []).find(
-      (m: any) =>
+      (m: { email: string | null; role: string }) =>
         m.email?.toLowerCase() === parsed.email.toLowerCase() &&
         m.role === 'client',
     );
 
     let lastLogin: string | null = null;
 
-    try {
-      const admin = getSupabaseServerAdminClient();
-      const { data: userResult } = await admin.auth.admin.getUserByEmail(
-        parsed.email,
-      );
+    if (member?.user_id) {
+      try {
+        const admin = getSupabaseServerAdminClient();
+        const { data: userResult } = await admin.auth.admin.getUserById(
+          member.user_id,
+        );
 
-      lastLogin = ((userResult as any)?.user as any)?.last_sign_in_at ?? null;
-    } catch {
-      lastLogin = null;
+        lastLogin = userResult.user?.last_sign_in_at ?? null;
+      } catch {
+        lastLogin = null;
+      }
     }
 
     const now = new Date();

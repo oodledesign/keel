@@ -104,7 +104,7 @@ export async function loadCrawledUrlsForJob(
     throw new Error(error.message);
   }
 
-  return new Set((data ?? []).map((row) => String(row.url)));
+  return new Set((data ?? []).map((row: { url: unknown }) => String(row.url)));
 }
 
 export async function insertSiteCrawlPage(
@@ -194,7 +194,8 @@ export async function listActiveSiteCrawlJobs(
     throw new Error(error.message);
   }
 
-  return (data ?? []).map((row) => mapJobRow(row as Record<string, unknown>));
+  const rows: Record<string, unknown>[] = data ?? [];
+  return rows.map((row) => mapJobRow(row));
 }
 
 export async function listStalledSiteCrawlJobs(
@@ -215,8 +216,9 @@ export async function listStalledSiteCrawlJobs(
     throw new Error(error.message);
   }
 
-  return (data ?? [])
-    .map((row) => mapJobRow(row as Record<string, unknown>))
+  const rows: Record<string, unknown>[] = data ?? [];
+  return rows
+    .map((row) => mapJobRow(row))
     .filter(
       (job) => job.pending_urls.length > 0 || job.urls_crawled < job.url_limit,
     );

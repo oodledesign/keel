@@ -52,7 +52,7 @@ export function createInvoicesService(client: SupabaseClient<Database>) {
 class InvoicesService {
   constructor(private readonly client: SupabaseClient<Database>) {}
 
-  private get db(): any {
+  private get db(): SupabaseClient {
     return this.client;
   }
 

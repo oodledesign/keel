@@ -86,9 +86,9 @@ export function JobsPmMainTable({
   onAddProject: () => void;
   uiVariant: 'projects' | 'maintenance';
 }) {
-  const [collapsed, setCollapsed] = useState<Record<ProjectGroupId, boolean>>(
-    {},
-  );
+  const [collapsed, setCollapsed] = useState<
+    Partial<Record<ProjectGroupId, boolean>>
+  >({});
   const [, startTransition] = useTransition();
 
   const memberById = useMemo(
@@ -455,7 +455,8 @@ function GroupSummaryBar({
   jobs: JobsPmRow[];
   field: 'status' | 'priority';
 }) {
-  const palette = field === 'status' ? JOB_STATUS_CELL : PRIORITY_CELL;
+  const palette: Record<string, { label: string; bg: string }> =
+    field === 'status' ? JOB_STATUS_CELL : PRIORITY_CELL;
 
   const counts = jobs.reduce<Record<string, number>>((acc, job) => {
     const key = job[field];
@@ -475,7 +476,7 @@ function GroupSummaryBar({
   return (
     <div className="flex h-2 overflow-hidden rounded-full">
       {segments.map(([key, count]) => {
-        const style = palette[key as keyof typeof palette];
+        const style = palette[key];
         return (
           <div
             key={key}

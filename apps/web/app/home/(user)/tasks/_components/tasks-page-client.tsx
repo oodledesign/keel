@@ -1162,7 +1162,6 @@ function TasksFilterMenu(props: {
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent
                   className={cn(dropdownContentClass, 'max-h-72')}
-                  side="left"
                   collisionPadding={16}
                 >
                   <DropdownMenuRadioGroup
@@ -1241,7 +1240,6 @@ function TasksFilterMenu(props: {
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent
                   className={cn(dropdownContentClass, 'max-h-72 w-56')}
-                  side="left"
                   collisionPadding={16}
                 >
                   <DropdownMenuRadioGroup

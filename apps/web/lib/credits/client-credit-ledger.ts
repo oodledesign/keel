@@ -1,5 +1,7 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 export type ClientCreditSourceType =
@@ -25,8 +27,8 @@ export type ConsumeClientCreditsResult = {
   requested?: number;
 };
 
-function adminDb() {
-  return getSupabaseServerAdminClient() as any;
+function adminDb(): SupabaseClient {
+  return getSupabaseServerAdminClient();
 }
 
 export async function grantClientCredits(input: {

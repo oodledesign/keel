@@ -160,16 +160,15 @@ async function WorkDashboardContent({ account }: { account: string }) {
 async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
   const { account } = await params;
   const workspace = await loadTeamWorkspace(account);
-  const access = getTeamAccountAccess(
-    workspace.account as {
-      permissions?: string[] | null;
-      role?: string | null;
-      company_role?: string | null;
-    },
-  );
+  const accountAccess = workspace.account as {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
+  const access = getTeamAccountAccess(accountAccess);
 
   if (!access.canViewDashboard) {
-    redirect(getDefaultAccountPath(account, workspace.account));
+    redirect(getDefaultAccountPath(account, accountAccess));
   }
 
   const spaceType = spaceTypeFromProfile(workspace.workspaceProfile);

@@ -4,20 +4,32 @@ import type { UpsertSubscriptionParams } from '@kit/billing/types';
 
 import { OZER_STRIPE_PRICES } from '~/lib/billing/stripe-price-ids';
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 const businessSubscription: UpsertSubscriptionParams = {
   target_account_id: 'account-1',
   target_customer_id: 'cus_123',
   target_subscription_id: 'sub_123',
   billing_provider: 'stripe',
   status: 'trialing',
-  trial_ends_at: Math.floor(Date.now() / 1000) + 14 * 24 * 60 * 60,
+  active: true,
+  cancel_at_period_end: false,
+  currency: 'gbp',
+  period_starts_at: new Date().toISOString(),
+  period_ends_at: new Date(Date.now() + 30 * DAY_MS).toISOString(),
+  trial_ends_at: new Date(Date.now() + 14 * DAY_MS).toISOString(),
   line_items: [
     {
       id: 'li_1',
+      subscription_id: 'sub_123',
+      subscription_item_id: 'si_1',
       product_id: 'ozer-business',
       variant_id: OZER_STRIPE_PRICES.business_monthly,
       price_amount: 2900,
       quantity: 1,
+      interval: 'month',
+      interval_count: 1,
+      type: 'flat',
     },
   ],
 };
@@ -73,10 +85,15 @@ describe('subscription welcome email', () => {
       line_items: [
         {
           id: 'li_addon',
+          subscription_id: 'sub_123',
+          subscription_item_id: 'si_addon',
           product_id: 'ozer-addon-email-assistant',
           variant_id: OZER_STRIPE_PRICES.addon_email_assistant_monthly,
           price_amount: 900,
           quantity: 1,
+          interval: 'month',
+          interval_count: 1,
+          type: 'flat',
         },
       ],
     };

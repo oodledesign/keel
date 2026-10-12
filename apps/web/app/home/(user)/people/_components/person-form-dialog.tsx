@@ -106,7 +106,7 @@ export function PersonFormDialog({
       }
 
       onOpenChange(false);
-      if (!isEdit && 'id' in result && result.id) {
+      if (!isEdit && 'id' in result && typeof result.id === 'string') {
         onSaved?.(result.id);
       }
     });

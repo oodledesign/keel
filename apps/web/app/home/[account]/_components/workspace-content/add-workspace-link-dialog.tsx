@@ -95,7 +95,7 @@ export function AddWorkspaceLinkDialog({
       defaultLink &&
       defaultLink.type !== 'instruction' &&
       defaultLink.type !== 'requirement'
-        ? defaultLink
+        ? { type: defaultLink.type, id: defaultLink.id }
         : null;
 
     startTransition(async () => {

@@ -2,13 +2,35 @@
 
 import { revalidatePath } from 'next/cache';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { normalizeDisposalType } from '~/lib/commercial/instruction-to-disposal';
+import type { Database } from '~/lib/database.types';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { PIPELINE_WORKSPACE_BUSINESS_PREFIX } from '../_lib/pipeline-constants';
+
+type PipelineDealUpdate =
+  Database['public']['Tables']['pipeline_deals']['Update'];
+
+type PipelineDealPropertyColumns = Pick<
+  PipelineDealUpdate,
+  | 'address_line_1'
+  | 'address_line_2'
+  | 'town'
+  | 'county'
+  | 'postcode'
+  | 'latitude'
+  | 'longitude'
+  | 'disposal_type'
+  | 'property_type'
+  | 'size_sqft'
+  | 'asking_rent_pence'
+  | 'asking_price_pence'
+>;
 
 function parseWorkspaceDealBusinessId(businessId: string): {
   accountId: string | null;
@@ -24,7 +46,7 @@ function parseWorkspaceDealBusinessId(businessId: string): {
 }
 
 async function resolveAccountIdForBusiness(
-  client: ReturnType<typeof getSupabaseServerClient>,
+  client: SupabaseClient<Database>,
   businessId: string | null,
 ): Promise<string | null> {
   if (!businessId) return null;
@@ -281,10 +303,10 @@ export type InstructionPropertyInput = {
 /** Maps property input to pipeline_deals columns (only keys that were sent). */
 function propertyInputToColumns(
   property: InstructionPropertyInput | undefined,
-): Record<string, unknown> {
+): PipelineDealPropertyColumns {
   if (!property) return {};
   const text = (value: string | null | undefined) => value?.trim() || null;
-  const out: Record<string, unknown> = {};
+  const out: PipelineDealPropertyColumns = {};
   if (property.addressLine1 !== undefined)
     out.address_line_1 = text(property.addressLine1);
   if (property.addressLine2 !== undefined)
@@ -384,7 +406,7 @@ export async function updateDeal(dealId: string, input: UpdateDealInput) {
   const user = await requireUserInServerComponent();
   const client = getSupabaseServerClient();
 
-  const updates: Record<string, unknown> = {};
+  const updates: PipelineDealUpdate = {};
   if (input.contactName !== undefined) updates.contact_name = input.contactName;
   if (input.companyName !== undefined) updates.company_name = input.companyName;
   if (input.value !== undefined) updates.value = input.value;
@@ -645,6 +667,9 @@ export async function convertWonDealToProject(
       title,
       description,
       value_pence: valuePence,
+      priority: 'medium',
+      is_ongoing: false,
+      is_phased: false,
     });
 
     const { data: account } = await client

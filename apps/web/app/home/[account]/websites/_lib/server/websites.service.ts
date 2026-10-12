@@ -2,6 +2,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import type { z } from 'zod';
+
 import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
@@ -14,7 +16,7 @@ import type {
   GetWebsiteInput,
   ListWebsitesInput,
   SetWebsitePortalVisibleInput,
-  UpdateWebsiteInput,
+  UpdateWebsiteSchema,
   WebsiteInput,
   WebsiteStack,
   WebsiteStatus,
@@ -724,7 +726,7 @@ class WebsitesService {
 
   async updateWebsite(
     accountId: string,
-    input: UpdateWebsiteInput,
+    input: z.input<typeof UpdateWebsiteSchema>,
   ): Promise<Website> {
     await this.ensureCanEdit(accountId);
 

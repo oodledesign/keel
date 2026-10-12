@@ -10,9 +10,8 @@ import type {
   UpdateCommercialPropertyInput,
 } from '../schema/commercial-properties.schema';
 
-/** Tables not yet in generated Database types — unwrap until typegen. */
 function fromTable(client: SupabaseClient, table: string) {
-  return (client as unknown as { from: (t: string) => any }).from(table);
+  return client.from(table);
 }
 
 function num(value: unknown): number | null {

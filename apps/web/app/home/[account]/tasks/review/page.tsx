@@ -31,7 +31,16 @@ async function MeetingTaskReviewPage({ params, searchParams }: PageProps) {
   redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
 
   if (!isWorkModuleEnabled(workspace.moduleSettings, 'tasks')) {
-    redirect(getDefaultAccountPath(accountSlug, workspace.account));
+    redirect(
+      getDefaultAccountPath(
+        accountSlug,
+        workspace.account as {
+          permissions?: string[] | null;
+          role?: string | null;
+          company_role?: string | null;
+        },
+      ),
+    );
   }
 
   const data = await loadMeetingTaskReviewPageData(accountSlug);

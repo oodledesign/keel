@@ -134,9 +134,7 @@ export async function cancelRankCheckJobTasks(jobId: string): Promise<number> {
   return data?.length ?? 0;
 }
 
-export async function countRankCheckTasksByStatus(
-  jobId: string,
-): Promise<{
+export async function countRankCheckTasksByStatus(jobId: string): Promise<{
   pending: number;
   processing: number;
   done: number;
@@ -179,7 +177,10 @@ export async function loadKeywordTextMap(
   }
 
   return new Map(
-    (data ?? []).map((row) => [String(row.id), String(row.keyword)]),
+    (data ?? []).map((row: { id: string; keyword: string }) => [
+      row.id,
+      row.keyword,
+    ]),
   );
 }
 

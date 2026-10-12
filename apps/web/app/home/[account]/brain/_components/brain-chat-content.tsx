@@ -43,6 +43,21 @@ type MessageRow = {
   }>;
 };
 
+type StoredMessageRow = Awaited<
+  ReturnType<typeof listBrainThreadMessages>
+>[number];
+
+function toMessageRow(row: StoredMessageRow): MessageRow {
+  return {
+    id: row.id,
+    role: row.role === 'user' ? 'user' : 'assistant',
+    content: row.content,
+    context_refs: Array.isArray(row.context_refs)
+      ? (row.context_refs as MessageRow['context_refs'])
+      : [],
+  };
+}
+
 type BrainScope = {
   jobId?: string;
   clientId?: string;
@@ -239,7 +254,7 @@ export function BrainChatContent({
     }
     setLoadingMessages(true);
     void listBrainThreadMessages({ accountId, accountSlug, threadId })
-      .then((rows) => setMessages(rows as MessageRow[]))
+      .then((rows) => setMessages(rows.map(toMessageRow)))
       .catch(() => toast.error('Could not load messages'))
       .finally(() => setLoadingMessages(false));
   }, [accountId, accountSlug, threadId]);

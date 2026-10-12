@@ -19,7 +19,6 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
-import { type SignaturesStaffRow, renderTemplate } from './render-template';
 import { buildSyncConflictMessage, findStaffByEmail } from './staff-email';
 import {
   type StaffSource,

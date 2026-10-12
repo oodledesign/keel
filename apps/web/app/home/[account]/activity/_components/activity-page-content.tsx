@@ -17,7 +17,6 @@ import {
   ChevronRight,
   Loader2,
   Settings2,
-  Sparkles,
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -590,7 +589,6 @@ function SessionUrlCell({
 
 function ActivitySessionGroupRows({
   sessionGroup,
-  appKey,
   expanded,
   onToggle,
   canEdit,

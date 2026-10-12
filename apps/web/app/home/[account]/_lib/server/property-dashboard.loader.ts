@@ -4,6 +4,8 @@ import { cache } from 'react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { DELIVERY_PROJECT_TYPE } from '~/lib/projects/project-types';
+
 import {
   type FinanceDashboardSummary,
   loadFinanceDashboardSummary,
@@ -64,10 +66,11 @@ export const loadPropertyDashboardData = cache(
         : Promise.resolve({ data: [], error: null }),
       accountId
         ? client
-            .from('jobs')
+            .from('projects')
             .select('id', { count: 'exact', head: true })
             .eq('account_id', accountId)
-            .not('status', 'in', '("completed","cancelled")')
+            .eq('project_type', DELIVERY_PROJECT_TYPE)
+            .or('status.is.null,status.not.in.(completed,cancelled)')
         : Promise.resolve({ count: 0, error: null }),
       accountId
         ? client.from('projects').select('id').eq('account_id', accountId)

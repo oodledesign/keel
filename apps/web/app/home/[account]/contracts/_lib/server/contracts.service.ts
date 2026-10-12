@@ -24,7 +24,7 @@ import {
 } from '~/lib/contracts/version-snapshot';
 import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
 import { normalizeWorkspaceCurrency } from '~/lib/currency/workspace-currency';
-import { Database } from '~/lib/database.types';
+import { Database, type Json } from '~/lib/database.types';
 
 import {
   DEFAULT_CONTRACT_EMAIL_BODY,
@@ -67,6 +67,10 @@ import {
   sendContractSignedNotifications,
 } from './contract-notifications';
 
+type ContractUpdate = Database['public']['Tables']['contracts']['Update'];
+type ContractTemplateUpdate =
+  Database['public']['Tables']['contract_templates']['Update'];
+
 export function createContractsService(client: SupabaseClient<Database>) {
   return new ContractsService(client);
 }
@@ -74,7 +78,7 @@ export function createContractsService(client: SupabaseClient<Database>) {
 class ContractsService {
   constructor(private readonly client: SupabaseClient<Database>) {}
 
-  private get db(): any {
+  private get db() {
     return this.client;
   }
 
@@ -316,7 +320,7 @@ class ContractsService {
     accountId: string;
     contractId: string;
     eventType: string;
-    payload?: Record<string, unknown>;
+    payload?: { [key: string]: Json | undefined };
     actorId?: string | null;
   }) {
     const { error } = await this.db.from('contract_events').insert({
@@ -365,8 +369,8 @@ class ContractsService {
   }) {
     return Boolean(
       contract.current_version_id &&
-        contract.sent_version_id &&
-        contract.current_version_id !== contract.sent_version_id,
+      contract.sent_version_id &&
+      contract.current_version_id !== contract.sent_version_id,
     );
   }
 
@@ -499,7 +503,10 @@ class ContractsService {
       recipient_signed_at?: string | null;
     };
   }) {
-    const existing = await this.listSigners(params.contractId, params.versionId);
+    const existing = await this.listSigners(
+      params.contractId,
+      params.versionId,
+    );
     if (existing.length > 0) return existing;
 
     const { data, error } = await this.db
@@ -557,7 +564,7 @@ class ContractsService {
       });
     }
 
-    const rows = source.map((signer: Record<string, unknown>) => ({
+    const rows = source.map((signer) => ({
       account_id: params.accountId,
       contract_id: params.contractId,
       version_id: params.toVersionId,
@@ -611,7 +618,9 @@ class ContractsService {
 
     if (current?.status === 'draft') {
       const authorSignedAt =
-        current.author_signed_at ?? contract.author_signed_at ?? null;
+        current.author_signed_at ??
+        (contract.author_signed_at as string | null) ??
+        null;
       const { data, error } = await this.db
         .from('contract_versions')
         .update({
@@ -624,11 +633,11 @@ class ContractsService {
           author_company: fields.author_company,
           author_signature_type:
             current.author_signature_type ??
-            contract.author_signature_type ??
+            (contract.author_signature_type as string | null) ??
             null,
           author_signature_data:
             current.author_signature_data ??
-            contract.author_signature_data ??
+            (contract.author_signature_data as string | null) ??
             null,
           author_signed_at: authorSignedAt,
         })
@@ -653,9 +662,12 @@ class ContractsService {
           content_hash,
           frozen_at: now,
           created_by: params.actorId ?? null,
-          author_signature_type: contract.author_signature_type ?? null,
-          author_signature_data: contract.author_signature_data ?? null,
-          author_signed_at: contract.author_signed_at ?? null,
+          author_signature_type:
+            (contract.author_signature_type as string | null) ?? null,
+          author_signature_data:
+            (contract.author_signature_data as string | null) ?? null,
+          author_signed_at:
+            (contract.author_signed_at as string | null) ?? null,
           ...fields,
         })
         .select()
@@ -698,7 +710,7 @@ class ContractsService {
       });
     }
 
-    const contractPatch: Record<string, unknown> = {
+    const contractPatch: ContractUpdate = {
       sent_version_id: current.id,
       current_version_id: current.id,
       current_version_number: current.version_number,
@@ -762,7 +774,6 @@ class ContractsService {
 
     return current;
   }
-
 
   async listContracts(params: ListContractsInput) {
     await this.ensureUser();
@@ -886,8 +897,9 @@ class ContractsService {
     const working = unpublished && currentVersion ? currentVersion : contract;
     const workingSigners = await this.listSigners(
       contract.id,
-      (unpublished ? currentVersion?.id : sentVersion?.id ?? currentVersion?.id) ??
-        null,
+      (unpublished
+        ? currentVersion?.id
+        : (sentVersion?.id ?? currentVersion?.id)) ?? null,
     );
     const { data: attachments } = await this.db
       .from('contract_attachments')
@@ -915,7 +927,8 @@ class ContractsService {
         : contract.author_signed_at,
       recipient_type: working.recipient_type ?? contract.recipient_type,
       recipient_name: working.recipient_name ?? contract.recipient_name,
-      recipient_company: working.recipient_company ?? contract.recipient_company,
+      recipient_company:
+        working.recipient_company ?? contract.recipient_company,
       recipient_email: working.recipient_email ?? contract.recipient_email,
       recipient_signature_type: unpublished
         ? (currentVersion?.recipient_signature_type ?? null)
@@ -1106,12 +1119,11 @@ class ContractsService {
     });
     this.assertPaymentPlanValid(input.payment_plan);
 
-    const payload: Record<string, unknown> = {};
+    const payload: ContractUpdate = {};
     if (input.client_id !== undefined) payload.client_id = input.client_id;
     if (input.deal_id !== undefined) payload.deal_id = input.deal_id;
-    if (input.title !== undefined) payload.title = input.title;
-    if (input.content_html !== undefined)
-      payload.content_html = input.content_html;
+    if (input.title != null) payload.title = input.title;
+    if (input.content_html != null) payload.content_html = input.content_html;
     if (input.total_pence !== undefined)
       payload.total_pence = input.total_pence;
     if (input.currency !== undefined) payload.currency = input.currency;
@@ -1238,7 +1250,6 @@ class ContractsService {
 
     return data;
   }
-
 
   /**
    * Start a new draft version of a sent/signed contract.
@@ -1522,7 +1533,11 @@ class ContractsService {
       record: created,
     });
 
-    return { ...created, current_version_id: version.id, current_version_number: 1 };
+    return {
+      ...created,
+      current_version_id: version.id,
+      current_version_number: 1,
+    };
   }
 
   /**
@@ -1664,7 +1679,7 @@ class ContractsService {
           : 'Email delivery failed';
     }
 
-    const patch: Record<string, unknown> = {
+    const patch: ContractUpdate = {
       email_delivery_status: deliveryStatus,
       email_delivery_error: deliveryError,
       sent_to_email: recipientEmail,
@@ -1809,7 +1824,7 @@ class ContractsService {
       }
     }
 
-    const patch: Record<string, unknown> = { status: input.status };
+    const patch: ContractUpdate = { status: input.status };
     if (input.status === 'cancelled') {
       // Belt and braces: cancelled is already rejected by the public
       // token access check, but explicitly revoking too means the link
@@ -1853,7 +1868,7 @@ class ContractsService {
     if (fetchError || !contract)
       this.throwErr(fetchError, 'Contract not found');
 
-    const emailPatch: Record<string, unknown> = {};
+    const emailPatch: ContractUpdate = {};
     if (input.email_subject) emailPatch.email_subject = input.email_subject;
     if (input.email_body) emailPatch.email_body = input.email_body;
     if (input.email_signature)
@@ -1911,7 +1926,9 @@ class ContractsService {
 
     if (unpublished) {
       if (!['ready_to_sign', 'sent', 'signed'].includes(contract.status)) {
-        throw new Error('This contract cannot send a new version in its current state');
+        throw new Error(
+          'This contract cannot send a new version in its current state',
+        );
       }
     } else if (!['ready_to_sign', 'sent'].includes(contract.status)) {
       throw new Error(
@@ -1933,9 +1950,11 @@ class ContractsService {
         ...contract,
         author_signed_at: authorSignedAt,
         author_signature_type:
-          currentVersion?.author_signature_type ?? contract.author_signature_type,
+          currentVersion?.author_signature_type ??
+          contract.author_signature_type,
         author_signature_data:
-          currentVersion?.author_signature_data ?? contract.author_signature_data,
+          currentVersion?.author_signature_data ??
+          contract.author_signature_data,
       },
       actorId: user.id,
       signingExpiresAt,
@@ -1948,7 +1967,7 @@ class ContractsService {
     });
 
     const now = new Date().toISOString();
-    const sentPatch: Record<string, unknown> = {
+    const sentPatch: ContractUpdate = {
       status: 'sent',
       sent_at: now,
       sent_to_email: input.sent_to_email,
@@ -2105,7 +2124,7 @@ class ContractsService {
     }
 
     let status: 'ready_to_sign' | 'sent' = 'ready_to_sign';
-    const patch: Record<string, unknown> = unpublished
+    const patch: ContractUpdate = unpublished
       ? {}
       : {
           author_type: input.author_type,
@@ -2285,9 +2304,13 @@ class ContractsService {
       : [];
     const targetSigner =
       (input.signer_id
-        ? signers.find((signer: { id: string }) => signer.id === input.signer_id)
+        ? signers.find(
+            (signer: { id: string }) => signer.id === input.signer_id,
+          )
         : nextUnsignedSigner(
-            signers.filter((signer: { role: string }) => signer.role !== 'author'),
+            signers.filter(
+              (signer: { role: string }) => signer.role !== 'author',
+            ),
           )) ??
       signers.find((signer: { role: string }) => signer.role === 'signer');
 
@@ -2324,7 +2347,7 @@ class ContractsService {
       if (signerError) this.throwErr(signerError);
     }
 
-    const recipientPatch: Record<string, unknown> = isPrimaryRecipient
+    const recipientPatch: ContractUpdate = isPrimaryRecipient
       ? {
           recipient_type: input.recipient_type,
           recipient_name: input.recipient_name,
@@ -2650,7 +2673,7 @@ class ContractsService {
   async updateContractTemplate(input: UpdateContractTemplateInput) {
     await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
     this.assertPaymentPlanValid(input.default_payment_plan);
-    const payload: Record<string, unknown> = {};
+    const payload: ContractTemplateUpdate = {};
     if (input.name !== undefined) payload.name = input.name.trim();
     if (input.content_html !== undefined)
       payload.content_html = input.content_html;

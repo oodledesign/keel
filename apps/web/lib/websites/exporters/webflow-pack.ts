@@ -137,7 +137,7 @@ function sectionHtmlStub(section: ExportSectionInstance): string {
     `          <!-- ${comment} -->`,
     `          <h2 class="${name}_heading">${escapeHtml(outline)}</h2>`,
     `          <p class="${name}_text">${bodyText}</p>`,
-    section.sectionType === 'hero' || section.sectionType === 'cta'
+    section.sectionType === 'hero' || section.sectionType === 'conversion'
       ? `          <a href="#" class="${name}_button">Primary CTA</a>`
       : null,
     `        </div>`,

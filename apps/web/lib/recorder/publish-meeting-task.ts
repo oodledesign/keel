@@ -146,7 +146,8 @@ export async function publishMeetingTaskToPlanner(
       ? input.description
       : item.suggested_description;
   const dueDateWasExplicit = input.dueDate !== undefined;
-  let dueDate = dueDateWasExplicit ? input.dueDate : item.suggested_due_date;
+  let dueDate =
+    input.dueDate !== undefined ? input.dueDate : item.suggested_due_date;
   if (dueDate && !dueDateWasExplicit) {
     dueDate = snapDueDateYmd(dueDate, scheduling);
   }

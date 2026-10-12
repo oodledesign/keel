@@ -17,7 +17,6 @@ import {
   type ExportPackFile,
   firstOutlineLine,
   packTokensCss,
-  pageRoute,
   projectSlug,
   sectionComponentName,
   sectionsForPage,

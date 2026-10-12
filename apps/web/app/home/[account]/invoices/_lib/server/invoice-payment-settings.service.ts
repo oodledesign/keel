@@ -70,7 +70,7 @@ export function createInvoicePaymentSettingsService(
 class InvoicePaymentSettingsService {
   constructor(private readonly client: SupabaseClient<Database>) {}
 
-  private get db(): any {
+  private get db() {
     return this.client;
   }
 

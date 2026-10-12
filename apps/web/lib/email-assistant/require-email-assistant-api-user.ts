@@ -1,5 +1,3 @@
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
-
 import { canUseEmailAssistant } from '~/lib/billing/entitlements';
 import { jsonErr } from '~/lib/rankly/api-response';
 

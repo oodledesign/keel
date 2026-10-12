@@ -25,8 +25,7 @@ interface PropertyDetailPageProps {
   params: Promise<{ account: string; id: string }>;
 }
 
-export const generateMetadata = async ({ params }: PropertyDetailPageProps) => {
-  const { account } = await params;
+export const generateMetadata = async () => {
   const i18n = await createI18nServerInstance();
   const title = i18n.t('teams:home.pageTitle');
   return { title: `${title} – Property` };
@@ -40,20 +39,20 @@ async function PropertyDetailPage({ params }: PropertyDetailPageProps) {
     workspace.account as { space_type?: string | null },
   );
 
+  const accountAccess = workspace.account as {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
+
   if (spaceType !== 'work' && spaceType !== 'property') {
-    redirect(getDefaultAccountPath(slug, workspace.account));
+    redirect(getDefaultAccountPath(slug, accountAccess));
   }
 
-  const access = getTeamAccountAccess(
-    workspace.account as {
-      permissions?: string[] | null;
-      role?: string | null;
-      company_role?: string | null;
-    },
-  );
+  const access = getTeamAccountAccess(accountAccess);
 
   if (!access.canViewDashboard) {
-    redirect(getDefaultAccountPath(slug, workspace.account));
+    redirect(getDefaultAccountPath(slug, accountAccess));
   }
 
   await requireUserInServerComponent();

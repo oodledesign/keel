@@ -3,12 +3,10 @@
 import { useState } from 'react';
 
 import {
-  AlertTriangle,
   BookOpen,
   CheckCircle2,
   Circle,
   Clock,
-  Heart,
   Plus,
   Sparkles,
   Target,

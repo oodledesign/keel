@@ -41,21 +41,20 @@ async function ActivityReportsPage({
   const query = await searchParams;
   const workspace = await loadTeamWorkspace(accountSlug);
   redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  const accessInput = workspace.account as {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
 
   if (workspace.businessLite) {
-    redirect(getDefaultAccountPath(accountSlug, workspace.account));
+    redirect(getDefaultAccountPath(accountSlug, accessInput));
   }
 
-  const access = getTeamAccountAccess(
-    workspace.account as {
-      permissions?: string[] | null;
-      role?: string | null;
-      company_role?: string | null;
-    },
-  );
+  const access = getTeamAccountAccess(accessInput);
 
   if (!access.canViewDashboard) {
-    redirect(getDefaultAccountPath(accountSlug, workspace.account));
+    redirect(getDefaultAccountPath(accountSlug, accessInput));
   }
 
   const data = await loadActivityReportsData(

@@ -694,6 +694,25 @@ export function JobProjectBoard({
     ],
   );
 
+  const openTask = useCallback((task: JobBoardTask) => {
+    setSelectedTask(task);
+    setTaskSheetOpen(true);
+  }, []);
+
+  const handleTaskUpdated = useCallback(
+    (updated: JobBoardTask) => {
+      setSelectedTask(updated);
+      const next: Record<string, JobBoardTask[]> = {};
+      for (const [key, tasks] of Object.entries(board.tasksByPhase)) {
+        next[key] = tasks.map((task) =>
+          task.id === updated.id ? { ...task, ...updated } : task,
+        );
+      }
+      onBoardChange({ ...board, tasksByPhase: next });
+    },
+    [board, onBoardChange],
+  );
+
   if (phases.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/30 px-6 py-16 text-center">
@@ -718,25 +737,6 @@ export function JobProjectBoard({
   }
 
   const unphasedTasks = tasksByPhase[UNPHASED_KEY] ?? [];
-
-  const openTask = useCallback((task: JobBoardTask) => {
-    setSelectedTask(task);
-    setTaskSheetOpen(true);
-  }, []);
-
-  const handleTaskUpdated = useCallback(
-    (updated: JobBoardTask) => {
-      setSelectedTask(updated);
-      const next: Record<string, JobBoardTask[]> = {};
-      for (const [key, tasks] of Object.entries(board.tasksByPhase)) {
-        next[key] = tasks.map((task) =>
-          task.id === updated.id ? { ...task, ...updated } : task,
-        );
-      }
-      onBoardChange({ ...board, tasksByPhase: next });
-    },
-    [board, onBoardChange],
-  );
 
   return (
     <div className="flex min-h-full flex-1 flex-col">

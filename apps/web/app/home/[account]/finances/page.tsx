@@ -41,13 +41,12 @@ async function FinancesPage({ params }: FinancesPageProps) {
 
   const spaceType = spaceTypeFromProfile(workspace.workspaceProfile);
 
-  const access = getTeamAccountAccess(
-    workspace.account as {
-      permissions?: string[] | null;
-      role?: string | null;
-      company_role?: string | null;
-    },
-  );
+  const accessInput = workspace.account as {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
+  const access = getTeamAccountAccess(accessInput);
 
   const financesEnabled =
     spaceType === 'property'
@@ -55,7 +54,7 @@ async function FinancesPage({ params }: FinancesPageProps) {
       : isWorkNavModuleEnabled(workspace.moduleSettings, 'finances');
 
   if (!access.canViewDashboard || !financesEnabled) {
-    redirect(getDefaultAccountPath(accountSlug, workspace.account));
+    redirect(getDefaultAccountPath(accountSlug, accessInput));
   }
 
   const accountId = workspace.account.id as string;

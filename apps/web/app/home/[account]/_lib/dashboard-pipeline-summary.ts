@@ -24,7 +24,7 @@ export function summariseDashboardPipeline(
   deals: DashboardPipelineDealRow[],
   href: string,
 ): DayViewPipeline | null {
-  const openKeys = new Set(PIPELINE_OPEN_STAGES.map((s) => s.key));
+  const openKeys = new Set<string>(PIPELINE_OPEN_STAGES.map((s) => s.key));
   const openDeals = deals.filter(
     (deal) => deal.stage && openKeys.has(deal.stage),
   );

@@ -27,7 +27,10 @@ import { AdminMembersTable } from './admin-members-table';
 import { AdminMembershipsTable } from './admin-memberships-table';
 import { AdminReactivateUserDialog } from './admin-reactivate-user-dialog';
 
-type Account = Tables<'accounts'>;
+type Account = Pick<
+  Tables<'accounts'>,
+  'id' | 'name' | 'email' | 'slug' | 'picture_url' | 'is_personal_account'
+>;
 type Membership = Tables<'accounts_memberships'>;
 
 export function AdminAccountPage(props: { account: Account }) {

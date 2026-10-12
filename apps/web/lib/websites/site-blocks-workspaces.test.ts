@@ -56,8 +56,9 @@ describe('resolveSiteBlocksConfig', () => {
     expect(getWorkspacePack('ybb')).toBeNull();
 
     const config = resolveSiteBlocksConfig('oodle');
-    expect(config.components.YbbHero).toBeTruthy();
-    expect(config.components.YbbFooter).toBeTruthy();
+    const components: Record<string, unknown> = config.components;
+    expect(components.YbbHero).toBeTruthy();
+    expect(components.YbbFooter).toBeTruthy();
     expect(
       (config.categories as Record<string, { components: string[] }>).ybb
         ?.components,

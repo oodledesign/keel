@@ -311,7 +311,8 @@ export async function updateTaskRecurringSeries(
   const client = getSupabaseServerClient();
   const user = await requireUserInServerComponent();
 
-  const updates: Record<string, unknown> = {};
+  const updates: Database['public']['Tables']['task_recurring_series']['Update'] =
+    {};
 
   if (input.title !== undefined) {
     const title = input.title.trim();

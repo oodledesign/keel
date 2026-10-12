@@ -16,7 +16,7 @@ type RequestTypeRow = {
 };
 
 function adminDb() {
-  return getSupabaseServerAdminClient() as any;
+  return getSupabaseServerAdminClient();
 }
 
 export async function resolveRequestTypeCreditSnapshot(input: {

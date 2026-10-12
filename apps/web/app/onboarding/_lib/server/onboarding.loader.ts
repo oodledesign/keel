@@ -44,9 +44,7 @@ export const getOnboardingContext = cache(
 
     const { data: membership, error: memError } = await client
       .from('accounts_memberships')
-      .select(
-        'account_id, onboarding_step, onboarding_completed, company_role',
-      )
+      .select('account_id, onboarding_step, onboarding_completed, company_role')
       .eq('user_id', user.id)
       .eq('account_id', accountId)
       .single();
@@ -172,7 +170,7 @@ export async function isCurrentUserAccountOwner(
   accountId: string,
 ): Promise<boolean> {
   const client = getSupabaseServerClient();
-  const user = await requireUserInServerComponent();
+  await requireUserInServerComponent();
 
   const { data, error } = await client
     .rpc('is_account_owner', { account_id: accountId })

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { ChevronDown, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import type { DateRange } from 'react-day-picker';
 
 import { Button } from '@kit/ui/button';
 import { Calendar } from '@kit/ui/calendar';
@@ -33,6 +32,8 @@ import {
 } from '~/lib/date-range/analytics-date-range';
 
 type SidebarView = 'main' | 'last' | 'period';
+
+type DateRange = { from: Date | undefined; to?: Date | undefined };
 
 const LAST_PRESETS: Array<{ id: LastSubPreset; label: string }> = [
   { id: 'last_30_minutes', label: 'Last 30 minutes' },

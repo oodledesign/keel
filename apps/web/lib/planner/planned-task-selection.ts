@@ -41,7 +41,7 @@ export function resolvePlannedTasks(
       .map((id) => byId.get(id))
       .filter(
         (task): task is PlannerTask =>
-          Boolean(task) && task.status !== 'completed',
+          task !== undefined && task.status !== 'completed',
       );
   }
 

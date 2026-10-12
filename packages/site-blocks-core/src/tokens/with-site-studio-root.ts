@@ -49,10 +49,7 @@ function SiteStudioTokenRootConnected({
     fallbackTokens ??
     DEFAULT_RESOLVABLE_STYLE_TOKENS;
 
-  return createElement(SiteStudioTokenRoot, {
-    tokens,
-    children: children ?? null,
-  });
+  return createElement(SiteStudioTokenRoot, { tokens }, children ?? null);
 }
 
 /**
@@ -71,10 +68,11 @@ export function withSiteStudioRootConfig<UserConfig extends Config>(
     root: {
       ...existingRoot,
       render: (props: { children?: ReactNode }) =>
-        createElement(SiteStudioTokenRootConnected, {
-          fallbackTokens,
-          children: props.children ?? null,
-        }),
+        createElement(
+          SiteStudioTokenRootConnected,
+          { fallbackTokens },
+          props.children ?? null,
+        ),
     },
   } as UserConfig;
 }

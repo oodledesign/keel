@@ -37,12 +37,8 @@ export type AdminBlogPostListItem = {
   created_at: string;
 };
 
-type DbClient = {
-  from: (table: string) => any;
-};
-
 function adminClient() {
-  return getSupabaseServerAdminClient() as unknown as DbClient;
+  return getSupabaseServerAdminClient();
 }
 
 function revalidateBlogPaths(slug?: string) {

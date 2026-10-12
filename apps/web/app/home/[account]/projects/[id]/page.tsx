@@ -1,3 +1,5 @@
+import type { ComponentProps } from 'react';
+
 import { notFound } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
@@ -39,7 +41,7 @@ interface ProjectDetailPageProps {
 }
 
 export const generateMetadata = async ({ params }: ProjectDetailPageProps) => {
-  const { account, id } = await params;
+  const { id } = await params;
   const client = getSupabaseServerClient();
   const { data } = await client
     .from('projects')
@@ -183,13 +185,7 @@ async function ProjectDetailPage({
           notesTableAvailable: true,
           docsTableAvailable: true,
           linksTableAvailable: true,
-          linkOptions: {
-            projects: [],
-            jobs: [],
-            clients: [],
-            properties: [],
-            tasks: [],
-          },
+          linkOptions: [],
           defaultLink: { type: 'job' as const, id },
         };
 
@@ -210,7 +206,7 @@ async function ProjectDetailPage({
         accountSlug={accountSlug}
         accountId={accountId}
         jobId={id}
-        job={job as Record<string, unknown>}
+        job={job as ComponentProps<typeof JobDetailContent>['job']}
         client={jobClient}
         canViewJobs={canViewJobs}
         canEditJobs={canEditJobs}

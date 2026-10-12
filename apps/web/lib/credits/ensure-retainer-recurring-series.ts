@@ -1,5 +1,7 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 /**
@@ -16,7 +18,7 @@ export async function ensureRetainerRecurringSeries(input: {
   frequency?: 'monthly' | 'yearly';
   autoSend?: boolean;
 }): Promise<{ seriesId: string; created: boolean }> {
-  const admin = getSupabaseServerAdminClient() as any;
+  const admin: SupabaseClient = getSupabaseServerAdminClient();
 
   const { data: existing } = await admin
     .from('invoice_recurring_series')

@@ -21,6 +21,7 @@ import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.co
 import type { WorkNavCounts } from '~/config/work-account-navigation.config';
 import { listUserClientPortalMemberships } from '~/home/(user)/_lib/server/list-user-client-portal-memberships';
 import { toHomeBillingHref } from '~/lib/ai/billing-href';
+import type { Database } from '~/lib/database.types';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import {
   WORKSPACE_SHELL_PAGE_CLASS,
@@ -45,7 +46,10 @@ import { TeamWorkspaceMobileChrome } from './_components/team-workspace-mobile-c
 import { TeamWorkspaceShellAdornmentsSuspense } from './_components/team-workspace-shell-adornments-suspense';
 import { flattenTeamNavSections } from './_lib/flatten-team-nav-links';
 import { getTeamAccountAccess } from './_lib/role-access';
-import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
+import {
+  type TeamAccountWorkspace,
+  loadTeamWorkspace,
+} from './_lib/server/team-account-workspace.loader';
 import {
   type TeamWorkspaceShellAdornments,
   loadTeamWorkspaceShellAdornments,
@@ -70,6 +74,17 @@ type LayoutState = {
   open: boolean;
   style: 'sidebar' | 'header' | 'custom';
 };
+
+type TeamAccountWorkspaceRow =
+  Database['public']['Functions']['team_account_workspace']['Returns'][number];
+
+function toTeamAccountWorkspaceContextValue(data: TeamAccountWorkspace) {
+  return {
+    ...data,
+    // `loadTeamWorkspace` narrows `account`; at runtime it is the full `team_account_workspace` row.
+    account: data.account as TeamAccountWorkspaceRow,
+  };
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -217,7 +232,9 @@ async function SidebarLayout({
   };
 
   return (
-    <TeamAccountWorkspaceContextProvider value={data}>
+    <TeamAccountWorkspaceContextProvider
+      value={toTeamAccountWorkspaceContextValue(data)}
+    >
       <TeamWorkspaceShellAdornmentsSuspense
         client={client}
         userId={user.id}
@@ -453,7 +470,9 @@ async function HeaderLayout({
   const homePath = pathsConfig.app.accountHome.replace('[account]', account);
 
   return (
-    <TeamAccountWorkspaceContextProvider value={data}>
+    <TeamAccountWorkspaceContextProvider
+      value={toTeamAccountWorkspaceContextValue(data)}
+    >
       <TeamWorkspaceShellAdornmentsSuspense
         client={client}
         userId={user.id}

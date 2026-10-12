@@ -1,5 +1,7 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
@@ -15,12 +17,12 @@ import {
 } from './proposal-notifications';
 import { createProposalsService } from './proposals.service';
 
-function db() {
-  return getSupabaseServerClient() as any;
+function db(): SupabaseClient {
+  return getSupabaseServerClient();
 }
 
-function adminDb() {
-  return getSupabaseServerAdminClient() as any;
+function adminDb(): SupabaseClient {
+  return getSupabaseServerAdminClient();
 }
 
 export async function getProposalTabCounts(

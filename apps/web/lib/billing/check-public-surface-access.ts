@@ -10,17 +10,17 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import type { Database } from '~/lib/database.types';
+
 import {
-  accountAllowsCapability,
   type AccountAccessCapability,
   type AccountAccessLevel,
+  accountAllowsCapability,
 } from './account-access-matrix';
 import { checkAccountAccess } from './check-account-access';
 
-type AnyClient = SupabaseClient<any>;
-
 export async function checkPublicSurfaceAccess(
-  client: AnyClient,
+  client: SupabaseClient<Database>,
   accountId: string,
   surface: Extract<
     AccountAccessCapability,

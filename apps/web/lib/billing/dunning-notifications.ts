@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import pathsConfig from '~/config/paths.config';
+import type { Database } from '~/lib/database.types';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 export type DunningNotificationType =
@@ -22,7 +23,7 @@ type DunningCandidate = {
 const MS_DAY = 24 * 60 * 60 * 1000;
 
 export async function runBillingDunningReminders(
-  admin: SupabaseClient,
+  admin: SupabaseClient<Database>,
 ): Promise<{ sent: number; skipped: number; errors: string[] }> {
   const sender = process.env.EMAIL_SENDER;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
@@ -104,7 +105,7 @@ export async function runBillingDunningReminders(
 }
 
 async function loadDunningCandidates(
-  admin: SupabaseClient,
+  admin: SupabaseClient<Database>,
 ): Promise<DunningCandidate[]> {
   const { data: subs, error } = await admin
     .from('subscriptions')
@@ -121,9 +122,7 @@ async function loadDunningCandidates(
   const results: DunningCandidate[] = [];
 
   for (const sub of subs) {
-    const updatedAt = new Date(
-      (sub as { updated_at: string }).updated_at,
-    ).getTime();
+    const updatedAt = new Date(sub.updated_at).getTime();
     const daysPastDue = Math.floor((now - updatedAt) / MS_DAY);
 
     let notificationType: DunningNotificationType | null = null;
@@ -135,12 +134,8 @@ async function loadDunningCandidates(
 
     if (!notificationType) continue;
 
-    const account = (
-      sub as {
-        accounts: { id: string; name: string | null; slug: string | null };
-      }
-    ).accounts;
-    const accountId = (sub as { account_id: string }).account_id;
+    const account = sub.accounts;
+    const accountId = sub.account_id;
     const slug = account.slug;
     if (!slug) continue;
 
@@ -148,7 +143,7 @@ async function loadDunningCandidates(
     if (!ownerEmail) continue;
 
     results.push({
-      subscriptionId: (sub as { id: string }).id,
+      subscriptionId: sub.id,
       accountId,
       accountName: account.name ?? slug,
       accountSlug: slug,
@@ -162,7 +157,7 @@ async function loadDunningCandidates(
 }
 
 async function loadWorkspaceOwnerEmail(
-  admin: SupabaseClient,
+  admin: SupabaseClient<Database>,
   accountId: string,
 ): Promise<string | null> {
   const { data: membership } = await admin

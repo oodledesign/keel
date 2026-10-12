@@ -2,7 +2,7 @@ import { emptyWebsiteStyleSystem } from '../planning-types';
 import { findSectionLibraryEntry } from '../section-library';
 import { styleTokensRootCss } from './tokens-css';
 import type { WebsiteExportFile, WebsiteExportInput } from './types';
-import { pageRoute, pascalCase } from './types';
+import { pageRoute, pascalCase, seoForPage } from './types';
 
 /** Astro starter: pages, section components, content collections, tokens CSS. */
 export function buildAstroPack(input: WebsiteExportInput): WebsiteExportFile[] {
@@ -129,7 +129,7 @@ const { heading, body, cta } = Astro.props;
 
   for (const page of input.sitemap) {
     const wireframe = input.wireframes.find((item) => item.pageId === page.id);
-    const seo = input.seoPages[page.id];
+    const seo = seoForPage(input, page.id);
     const route = pageRoute(page);
     const filePath =
       route === '/'

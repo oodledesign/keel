@@ -100,11 +100,11 @@ export function createCampaignProjectsService(
 class CampaignProjectsService {
   constructor(private readonly client: SupabaseClient<Database>) {}
 
-  private get db(): any {
+  private get db(): SupabaseClient {
     return this.client;
   }
 
-  private get adminDb(): any {
+  private get adminDb(): SupabaseClient {
     return getSupabaseServerAdminClient();
   }
 

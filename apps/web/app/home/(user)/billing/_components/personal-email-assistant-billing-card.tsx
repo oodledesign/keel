@@ -9,7 +9,6 @@ import { CheckCircle2 } from 'lucide-react';
 import { PlanPicker } from '@kit/billing-gateway/components';
 import { useAppEvents } from '@kit/shared/events';
 import { Badge } from '@kit/ui/badge';
-import { Button } from '@kit/ui/button';
 import {
   Card,
   CardContent,

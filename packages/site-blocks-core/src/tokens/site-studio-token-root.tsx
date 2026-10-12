@@ -17,7 +17,7 @@ export function SiteStudioTokenRoot({
   className = 'sb-root min-h-full w-full',
 }: {
   tokens: ResolvableStyleTokens;
-  children: ReactNode;
+  children?: ReactNode;
   className?: string;
 }) {
   const style = useMemo(() => resolveTokensStyle(tokens), [tokens]);

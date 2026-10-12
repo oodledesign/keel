@@ -100,7 +100,13 @@ export function WebsiteScaffoldPackCard({
           kind,
         });
         setPack({
-          files: result.files,
+          files: result.files.map((file) => ({
+            path: file.path,
+            content:
+              typeof file.content === 'string'
+                ? file.content
+                : `Binary file (${file.content.byteLength} bytes) — included in the zip download.`,
+          })),
           zipBase64: result.zipBase64,
           zipFilename: result.zipFilename,
           activePath: result.files[0]?.path ?? null,

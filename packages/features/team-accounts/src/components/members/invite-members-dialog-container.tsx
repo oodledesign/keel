@@ -60,8 +60,6 @@ import { RolesDataProvider } from './roles-data-provider';
 const INVITE_LIGHT_SELECT_CONTENT_CN =
   'bg-[var(--ozer-white)] text-[var(--ozer-text-on-light)] border-[color:var(--ozer-border-on-light)] [--muted-foreground:var(--ozer-plum-600)] [--accent:var(--ozer-cream-100)] [--accent-foreground:var(--ozer-text-on-light)]';
 
-type InviteModel = ReturnType<typeof createEmptyInviteModel>;
-
 type Role = string;
 
 export type InviteProjectOption = {

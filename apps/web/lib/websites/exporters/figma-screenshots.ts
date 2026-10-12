@@ -41,12 +41,16 @@ type PlaywrightModule = {
   };
 };
 
+// A non-literal specifier keeps TypeScript from requiring Playwright's types,
+// since the package is an optional dev-only dependency.
+const PLAYWRIGHT_MODULE: string = 'playwright';
+
 async function loadPlaywright(): Promise<PlaywrightModule | null> {
   try {
     // webpackIgnore keeps Playwright (chromium-bidi / electron) out of the
     // Next webpack graph — required for Vercel builds.
     return (await import(
-      /* webpackIgnore: true */ 'playwright'
+      /* webpackIgnore: true */ PLAYWRIGHT_MODULE
     )) as PlaywrightModule;
   } catch {
     return null;

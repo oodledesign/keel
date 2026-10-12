@@ -2,6 +2,7 @@ import type { NextRequest, NextResponse } from 'next/server';
 
 import type { Session, User } from '@supabase/supabase-js';
 
+import type { Database } from '@kit/supabase/database';
 import { getSupabaseAuthCookieOptions } from '@kit/supabase/get-supabase-auth-cookie-options';
 import { createMiddlewareClient } from '@kit/supabase/middleware-client';
 import type { JWTUserData } from '@kit/supabase/types';
@@ -10,6 +11,10 @@ import {
   isAuthRetryableFetchError,
   isTransientSupabaseError,
 } from '~/lib/supabase/transient-errors';
+
+type MiddlewareSupabaseClient = ReturnType<
+  typeof createMiddlewareClient<Database>
+>;
 
 const AUTH_COOKIE_RE = /^sb-[a-z0-9-]+-auth-token(\.\d+)?$/i;
 const AUTH_GET_USER_RETRY_DELAYS_MS = [0, 300, 1000];
@@ -36,9 +41,7 @@ async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function getUserWithBackoff(
-  supabase: ReturnType<typeof createMiddlewareClient>,
-) {
+async function getUserWithBackoff(supabase: MiddlewareSupabaseClient) {
   let lastError: unknown;
 
   for (
@@ -71,7 +74,7 @@ async function getUserWithBackoff(
 }
 
 async function readSessionFromLocalClaims(
-  supabase: ReturnType<typeof createMiddlewareClient>,
+  supabase: MiddlewareSupabaseClient,
 ): Promise<Session | null> {
   const { data: claimsData, error: claimsError } =
     await supabase.auth.getClaims();
@@ -104,7 +107,7 @@ function mapSessionUser(user: User): JWTUserData {
 }
 
 function setSuppressGetSessionWarning(
-  supabase: ReturnType<typeof createMiddlewareClient>,
+  supabase: MiddlewareSupabaseClient,
   value: boolean,
 ) {
   // Suppress the getSession warning. Remove when the issue is fixed.
@@ -289,8 +292,8 @@ export async function getMiddlewareAuthenticatedUser(
   request: NextRequest,
   response: NextResponse,
 ): Promise<
-  | { user: JWTUserData; supabase: ReturnType<typeof createMiddlewareClient> }
-  | { user: null; supabase: ReturnType<typeof createMiddlewareClient> }
+  | { user: JWTUserData; supabase: MiddlewareSupabaseClient }
+  | { user: null; supabase: MiddlewareSupabaseClient }
 > {
   const { supabase, session } = await readSession(request, response, {
     allowRefresh: true,
@@ -310,7 +313,7 @@ export async function getMiddlewareAuthenticatedUser(
 export async function validateMiddlewareSessionUser(
   request: NextRequest,
   response: NextResponse,
-  _supabase: ReturnType<typeof createMiddlewareClient>,
+  _supabase: MiddlewareSupabaseClient,
 ): Promise<JWTUserData | null> {
   return getMiddlewareSessionUser(request, response);
 }

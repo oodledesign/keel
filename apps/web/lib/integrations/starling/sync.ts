@@ -113,7 +113,6 @@ export async function syncStarlingToOzer(
   options: SyncStarlingOptions = {},
 ): Promise<SyncStarlingResult> {
   const mode = options.mode ?? 'full';
-  const isIncremental = mode === 'incremental';
 
   const { data: connection, error } = await db
     .from('finance_connections')

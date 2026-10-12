@@ -441,11 +441,9 @@ export const addAdminWorkspaceMemberAction = enhanceAction(
       ? await isUserSuperAdminById(admin, existingUserId)
       : false;
 
-    const seatKind = targetIsSuperAdmin
-      ? 'platform'
-      : isCommercial && input.seatKind === 'support'
-        ? 'support'
-        : 'billable';
+    const requestedSeatKind =
+      isCommercial && input.seatKind === 'support' ? 'support' : 'billable';
+    const seatKind = targetIsSuperAdmin ? 'platform' : requestedSeatKind;
 
     if (existingUserId) {
       const { data: existingMembership } = await admin
@@ -497,8 +495,10 @@ export const addAdminWorkspaceMemberAction = enhanceAction(
       invitations: [
         {
           email: input.email.trim().toLowerCase(),
+          firstName: '',
+          lastName: '',
           role: input.role,
-          seatKind,
+          seatKind: requestedSeatKind,
         },
       ],
     });
@@ -510,7 +510,7 @@ export const addAdminWorkspaceMemberAction = enhanceAction(
       metadata: {
         email: input.email.toLowerCase(),
         role: input.role,
-        seatKind,
+        seatKind: requestedSeatKind,
         mode: 'invite',
       },
     });

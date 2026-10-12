@@ -103,7 +103,7 @@ export async function loadAccountNotes(
   const run = async (select: string) => {
     let query = client
       .from('notes')
-      .select(select)
+      .select<string, Record<string, unknown>>(select)
       .eq('account_id', accountId)
       .order('updated_at', { ascending: false });
 
@@ -135,9 +135,7 @@ export async function loadAccountNotes(
   }
 
   return {
-    notes: (data ?? []).map((row) =>
-      mapNoteRow(row as Record<string, unknown>),
-    ),
+    notes: (data ?? []).map((row) => mapNoteRow(row)),
     tableAvailable: !error,
   };
 }

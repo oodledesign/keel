@@ -2,8 +2,6 @@ import 'server-only';
 
 import { cache } from 'react';
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-
 import { isSuperAdmin } from '@kit/admin';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
@@ -50,8 +48,6 @@ export type AdminAtRiskAccountRow = {
     stripeEventId: string | null;
   } | null;
 };
-
-type AnyClient = SupabaseClient<any>;
 
 function emptyCounts(): Record<(typeof WATCH_STATUSES)[number], number> {
   return {
@@ -170,8 +166,7 @@ export const loadAdminAtRiskAccounts = cache(
       return { rows: [], counts: emptyCounts() };
     }
 
-    // account_billing / billing_events may not be in generated Database types yet
-    const admin = getSupabaseServerAdminClient() as AnyClient;
+    const admin = getSupabaseServerAdminClient();
     const now = new Date();
 
     // Pull any MakerKit trials/active subs that never wrote account_billing

@@ -42,9 +42,9 @@ export async function POST(request: Request) {
   }
 
   const session = event.data.object as Stripe.Checkout.Session;
-  const result = await applyInvoicePaymentFromCheckoutSession(session);
-
-  if (!result.paid && result.reason === 'update_failed') {
+  try {
+    await applyInvoicePaymentFromCheckoutSession(session);
+  } catch {
     return NextResponse.json(
       { error: 'Failed to update invoice' },
       { status: 500 },

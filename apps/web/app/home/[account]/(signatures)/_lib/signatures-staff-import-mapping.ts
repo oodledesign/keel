@@ -1,7 +1,7 @@
 import type {
   StaffImportFieldKey,
   StaffImportMappingValue,
-} from '../schema/signatures-module.schema';
+} from './schema/signatures-module.schema';
 
 const HEADER_ALIASES: Record<StaffImportFieldKey, string[]> = {
   full_name: ['full name', 'name', 'display name', 'staff name'],

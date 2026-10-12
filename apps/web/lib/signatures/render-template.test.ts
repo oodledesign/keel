@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import type { AccountBrandResolved } from '~/lib/brand/account-brand';
+
 import {
   type SignaturesStaffRow,
   TRANSPARENT_PIXEL_GIF,
@@ -26,7 +28,7 @@ const staffBase: SignaturesStaffRow = {
   photo_url: null,
 };
 
-const brand = {
+const brand: AccountBrandResolved = {
   account_id: 'account-1',
   logo_url: 'https://cdn.example.com/brand-logo.png',
   logo_on_light_url: null,
@@ -38,6 +40,8 @@ const brand = {
   address: '1 Main St',
   contact_email: null,
   phone: null,
+  heading_font: null,
+  body_font: null,
 };
 
 describe('resolveCompanyLogoUrl', () => {

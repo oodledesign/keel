@@ -12,20 +12,8 @@ import {
   loadRecipientListsOverview,
 } from '~/lib/admin-email/campaigns';
 
-type DbClient = {
-  from: (table: string) => any;
-  auth: {
-    admin: {
-      listUsers: (params: { page?: number; perPage?: number }) => Promise<{
-        data: { users: Array<{ id: string; email?: string }> };
-        error: { message: string } | null;
-      }>;
-    };
-  };
-};
-
 function adminClient() {
-  return getSupabaseServerAdminClient() as unknown as DbClient;
+  return getSupabaseServerAdminClient();
 }
 
 export type EmailContactRow = {

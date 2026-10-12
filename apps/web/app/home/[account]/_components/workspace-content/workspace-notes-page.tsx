@@ -146,6 +146,14 @@ function linkFromItem(item: NoteListItem | DocListItem): LinkValue {
   return null;
 }
 
+/** Docs can't be linked to instructions or requirements. */
+function toDocLink(link: LinkValue) {
+  if (!link || link.type === 'instruction' || link.type === 'requirement') {
+    return null;
+  }
+  return { type: link.type, id: link.id };
+}
+
 function matchesListFilter(
   item: UnifiedItem,
   listFilter: ListFilter,
@@ -1077,7 +1085,7 @@ function UploadFileSheet({
           financialYear: financialYear === '__none__' ? null : financialYear,
           category,
           tags,
-          link,
+          link: toDocLink(link),
           filePath,
           mimeType: file.type || null,
           fileSizeBytes: file.size,
@@ -1335,7 +1343,7 @@ function FileDetailSheet({
           financialYear: financialYear === '__none__' ? null : financialYear,
           category,
           tags,
-          link,
+          link: toDocLink(link),
         });
         toast.success('File updated');
         onOpenChange(false);

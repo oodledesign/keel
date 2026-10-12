@@ -700,8 +700,9 @@ export function InvoicesPageContent({
                           <Repeat
                             className="h-3.5 w-3.5 shrink-0 text-[var(--ozer-accent)]"
                             aria-label="Recurring invoice"
-                            title="Recurring invoice"
-                          />
+                          >
+                            <title>Recurring invoice</title>
+                          </Repeat>
                         ) : null}
                       </Link>
                     </td>

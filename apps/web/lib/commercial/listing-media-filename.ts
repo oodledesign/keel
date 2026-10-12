@@ -4,7 +4,7 @@
 export function safeMediaFileName(name: string): string {
   const ascii = name
     .normalize('NFKD')
-    .replace(/[^\w.\-]+/g, '_')
+    .replace(/[^\w.-]+/g, '_')
     .replace(/_+/g, '_')
     .replace(/^\.+/, '_')
     .replace(/\.\./g, '_')

@@ -98,10 +98,10 @@ function Calendar({
           defaultClassNames.caption_label,
           classNames?.caption_label,
         ),
-        table: cn(
+        month_grid: cn(
           'w-full border-collapse',
-          defaultClassNames.table,
-          classNames?.table,
+          defaultClassNames.month_grid,
+          classNames?.month_grid,
         ),
         weekdays: cn('flex', defaultClassNames.weekdays, classNames?.weekdays),
         weekday: cn(

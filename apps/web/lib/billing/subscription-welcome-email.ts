@@ -6,6 +6,7 @@ import type { UpsertSubscriptionParams } from '@kit/billing/types';
 
 import billingConfig from '~/config/billing.config';
 import pathsConfig from '~/config/paths.config';
+import type { Database } from '~/lib/database.types';
 import {
   escapeEmailHtml,
   renderOzerTransactionalEmail,
@@ -25,7 +26,7 @@ import {
   findPlanByStripePriceId,
 } from './ozer-plan-catalog';
 
-type AnyClient = SupabaseClient<any>;
+type AdminClient = SupabaseClient<Database>;
 
 export type SubscriptionWelcomeStep = {
   label: string;
@@ -283,7 +284,7 @@ export type SubscriptionWelcomeEmailPayload = BillingEmailPayload &
  * Skips add-on-only checkouts and dedupes per subscription.
  */
 export async function enqueueSubscriptionWelcomeEmail(
-  admin: AnyClient,
+  admin: AdminClient,
   input: {
     subscription: UpsertSubscriptionParams;
     stripeEventId?: string | null;

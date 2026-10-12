@@ -283,7 +283,7 @@ export async function deleteTeamAccountFromOnboarding(
   accountId: string,
 ): Promise<{ error?: string }> {
   const client = getSupabaseServerClient();
-  const user = await requireUserInServerComponent();
+  await requireUserInServerComponent();
 
   const { data: isOwner, error: rpcError } = await client
     .rpc('is_account_owner', { account_id: accountId })

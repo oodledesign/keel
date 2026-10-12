@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { z } from 'zod';
 
 import { enhanceAction } from '@kit/next/actions';
@@ -17,6 +19,7 @@ import {
 } from '~/lib/ai/finance-csv-map';
 import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
 import { normalizeWorkspaceCurrency } from '~/lib/currency/workspace-currency';
+import type { Database } from '~/lib/database.types';
 import { buildCsvTransactionExternalId } from '~/lib/finance/csv-transaction-id';
 import { matchPropertyFromReference } from '~/lib/finance/match-property-from-reference';
 import {
@@ -72,7 +75,7 @@ function applyFinanceSearchFilter<
 
 /** Load every matching summary row (paginated past PostgREST max_rows). */
 async function loadFinanceSummaryRows(
-  client: ReturnType<typeof getSupabaseServerClient>,
+  client: SupabaseClient<Database>,
   accountId: string,
   dateFrom?: string,
   dateTo?: string,
@@ -124,7 +127,7 @@ const DEFAULT_CATEGORIES = [
 ];
 
 async function isPropertyFinanceAccount(
-  client: ReturnType<typeof getSupabaseServerClient>,
+  client: SupabaseClient<Database>,
   accountId: string,
 ) {
   const [{ data: account }, { data: business }] = await Promise.all([

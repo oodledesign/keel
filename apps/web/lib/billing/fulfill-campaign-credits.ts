@@ -14,6 +14,7 @@ import {
   findCampaignSendPackByPriceId,
   findCampaignSubscriptionTier,
 } from '~/lib/billing/campaign-pricing';
+import { parseOrderLineItems } from '~/lib/billing/order-line-items';
 import { OZER_STRIPE_PRICES } from '~/lib/billing/stripe-price-ids';
 import {
   grantCampaignCredits,
@@ -195,8 +196,8 @@ export async function fulfillCampaignTopupOrder(
   }
 
   let totalUnits = 0;
-  for (const item of order.line_items ?? []) {
-    const pack = findCampaignSendPackByPriceId(item.variant_id);
+  for (const item of parseOrderLineItems(order.line_items)) {
+    const pack = findCampaignSendPackByPriceId(item.variantId);
     if (!pack || pack.mode !== 'one-time') continue;
     const qty = Math.max(1, Number(item.quantity) || 1);
     totalUnits += pack.sendUnits * qty;

@@ -12,6 +12,7 @@ import {
   MEDIA_SUBSCRIPTION_TIERS,
   MEDIA_TOPUP_PACKS,
 } from '~/lib/billing/media-unit-pricing';
+import { parseOrderLineItems } from '~/lib/billing/order-line-items';
 import { OZER_STRIPE_PRICES } from '~/lib/billing/stripe-price-ids';
 import { grantMediaCredits } from '~/lib/media-credits/ledger';
 
@@ -57,8 +58,8 @@ export async function fulfillMediaTopupOrder(
   }
 
   let totalUnits = 0;
-  for (const item of order.line_items ?? []) {
-    const units = MEDIA_TOPUP_BY_PRICE[item.variant_id];
+  for (const item of parseOrderLineItems(order.line_items)) {
+    const units = item.variantId ? MEDIA_TOPUP_BY_PRICE[item.variantId] : 0;
     if (!units) continue;
     const qty = Math.max(1, Number(item.quantity) || 1);
     totalUnits += units * qty;

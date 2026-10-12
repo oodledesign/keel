@@ -38,13 +38,14 @@ export async function listRanklyProjects(
 
   const workspaceByAccountId = new Map(ctx.workspaces.map((w) => [w.id, w]));
 
-  const rows = (data ?? []).map((row) => {
-    const r = row as {
-      id: string;
-      name: string;
-      domain: string;
-      account_id: string;
-    };
+  type RanklyProjectRow = {
+    id: string;
+    name: string;
+    domain: string;
+    account_id: string;
+  };
+
+  const rows = ((data ?? []) as RanklyProjectRow[]).map((r) => {
     const workspace = workspaceByAccountId.get(r.account_id);
     return {
       id: r.id,

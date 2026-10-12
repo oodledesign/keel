@@ -23,9 +23,9 @@ import {
 
 export function SiteFeaturesNavPanel() {
   const pathname = usePathname();
-  const [activeGroup, setActiveGroup] = useState(
-    FEATURE_NAV_GROUPS[0]?.label ?? 'Work',
-  );
+  const [activeGroup, setActiveGroup] = useState<
+    (typeof FEATURE_NAV_GROUPS)[number]['label']
+  >(FEATURE_NAV_GROUPS[0]?.label ?? 'Work');
 
   const activeItems =
     FEATURE_NAV_GROUPS.find((group) => group.label === activeGroup)?.items ??

@@ -77,6 +77,7 @@ function note(overrides: Partial<NativeNote> & { id: string }): NativeNote {
     category: overrides.category ?? 'idea',
     tags: overrides.tags ?? [],
     client_id: overrides.client_id ?? null,
+    client_name: overrides.client_name ?? null,
     created_at: overrides.created_at ?? '2026-09-01T10:00:00.000Z',
     updated_at: overrides.updated_at ?? '2026-09-01T10:00:00.000Z',
     ...overrides,

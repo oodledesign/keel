@@ -591,7 +591,7 @@ async function fetchStaffTemplateRows(staffId: string): Promise<{
     return { staff, templateHtml: null, accountId: staff.account_id };
   }
 
-  const ids = links.map((l) => l.template_id as string);
+  const ids = links.map((l: { template_id: string }) => l.template_id);
   const { data: templates, error: te } = await db
     .from('templates')
     .select('id, html_template, is_default, created_at')
@@ -620,18 +620,6 @@ async function fetchStaffTemplateRows(staffId: string): Promise<{
     templateHtml: sorted[0]?.html_template ?? null,
     accountId: staff.account_id,
   };
-}
-
-async function loadDepartmentBadgeUrl(
-  accountId: string,
-  department: string | null | undefined,
-): Promise<string | null> {
-  const { loadResolvedSignatureAssets } = await import('./signature-assets');
-  const resolved = await loadResolvedSignatureAssets(accountId, {
-    department,
-    branch_id: null,
-  });
-  return resolved.awardBadgeUrl;
 }
 
 async function logPush(

@@ -4,24 +4,26 @@ import { useTeamAccountWorkspace } from '@kit/team-accounts/hooks/use-team-accou
 
 import { WorkspaceTopBar } from '~/components/workspace-shell/workspace-top-bar';
 import { getTeamAccountAccess } from '~/home/[account]/_lib/role-access';
-import { spaceTypeFromProfile } from '~/home/[account]/_lib/workspace-profile';
+import {
+  type WorkspaceProfile,
+  spaceTypeFromProfile,
+} from '~/home/[account]/_lib/workspace-profile';
+
+type TeamShellWorkspace = ReturnType<typeof useTeamAccountWorkspace> & {
+  workspaceProfile: WorkspaceProfile;
+  canMutateCommercial?: boolean;
+};
 
 export function TeamWorkspaceTopBarClient({
   accountSlug,
 }: {
   accountSlug: string;
 }) {
-  const workspace = useTeamAccountWorkspace();
-  const access = getTeamAccountAccess(
-    workspace.account as {
-      permissions?: string[] | null;
-      role?: string | null;
-      company_role?: string | null;
-    },
-  );
+  // The team layout provides the full `loadTeamWorkspace` result, which extends the kit context type.
+  const workspace = useTeamAccountWorkspace() as TeamShellWorkspace;
+  const access = getTeamAccountAccess(workspace.account);
   const spaceType = spaceTypeFromProfile(workspace.workspaceProfile);
-  const canMutateCommercial =
-    (workspace as { canMutateCommercial?: boolean }).canMutateCommercial ?? true;
+  const canMutateCommercial = workspace.canMutateCommercial ?? true;
 
   return (
     <WorkspaceTopBar

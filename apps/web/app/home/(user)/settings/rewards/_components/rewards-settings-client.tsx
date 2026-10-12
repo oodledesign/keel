@@ -3,7 +3,6 @@
 import { useMemo, useState, useTransition } from 'react';
 
 import { Copy, Gift, Share2 } from 'lucide-react';
-import { toast } from 'sonner';
 
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
@@ -23,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { toast } from '@kit/ui/sonner';
 import {
   Table,
   TableBody,

@@ -20,7 +20,7 @@ import {
   WEBSITE_REVAMP_CAMPAIGN_NAME,
   WEBSITE_REVAMP_IMPORT_CLIENTS,
 } from '~/lib/campaign-projects/website-revamp-template';
-import type { Database } from '~/lib/database.types';
+import type { Database, Json } from '~/lib/database.types';
 
 import type {
   AddClientToCampaignInput,
@@ -35,6 +35,9 @@ import type {
   UpdateClientFieldValueInput,
   UpdateProjectFieldInput,
 } from '../schema/campaign-projects.schema';
+
+type ProjectFieldDefinitionUpdate =
+  Database['public']['Tables']['project_field_definitions']['Update'];
 
 type FieldRow = {
   id: string;
@@ -99,11 +102,11 @@ export function createCampaignProjectsService(
 class CampaignProjectsService {
   constructor(private readonly client: SupabaseClient<Database>) {}
 
-  private get db(): any {
+  private get db() {
     return this.client;
   }
 
-  private get adminDb(): any {
+  private get adminDb() {
     return getSupabaseServerAdminClient();
   }
 
@@ -166,22 +169,14 @@ class CampaignProjectsService {
       }
     }
 
-    return (projects ?? []).map(
-      (row: {
-        id: string;
-        account_id: string;
-        name: string;
-        created_at: string;
-        updated_at: string;
-      }) => ({
-        id: row.id,
-        accountId: row.account_id,
-        name: row.name,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        clientCount: counts.get(row.id) ?? 0,
-      }),
-    );
+    return (projects ?? []).map((row) => ({
+      id: row.id,
+      accountId: row.account_id ?? params.accountId,
+      name: row.name,
+      createdAt: row.created_at ?? '',
+      updatedAt: row.updated_at ?? '',
+      clientCount: counts.get(row.id) ?? 0,
+    }));
   }
 
   async getProject(
@@ -257,10 +252,10 @@ class CampaignProjectsService {
 
     return {
       id: project.id,
-      accountId: project.account_id,
+      accountId: project.account_id ?? params.accountId,
       name: project.name,
-      createdAt: project.created_at,
-      updatedAt: project.updated_at,
+      createdAt: project.created_at ?? '',
+      updatedAt: project.updated_at ?? '',
       clientCount: rows.length,
       fields,
       rows,
@@ -369,7 +364,7 @@ class CampaignProjectsService {
   ): Promise<ProjectFieldDefinition> {
     await this.ensurePermission(input.accountId);
 
-    const payload: Record<string, unknown> = {};
+    const payload: ProjectFieldDefinitionUpdate = {};
     if (input.label !== undefined) payload.label = input.label.trim();
     if (input.options !== undefined) payload.options = input.options;
 
@@ -496,7 +491,9 @@ class CampaignProjectsService {
     if (existingError) this.throwErr(existingError);
 
     const nextValues = {
-      ...((existing?.values as Record<string, unknown> | undefined) ?? {}),
+      ...((existing?.values as
+        | { [key: string]: Json | undefined }
+        | undefined) ?? {}),
       [input.fieldId]: normalized,
     };
 

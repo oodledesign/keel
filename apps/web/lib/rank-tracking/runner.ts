@@ -199,9 +199,9 @@ export async function runRankCheckJob(
     });
 
     const rankTasks = buildRankTasks({
-      keywords: keywords.map((row) => ({
-        id: row.id as string,
-        keyword: String(row.keyword),
+      keywords: keywords.map((row: { id: string; keyword: string }) => ({
+        id: row.id,
+        keyword: row.keyword,
       })),
       trackDesktop,
       trackMobile,
@@ -262,7 +262,8 @@ export async function runRankCheckJob(
     for (const task of claimed) {
       const keyword =
         keywordTextById.get(task.keyword_id) ??
-        keywords.find((row) => row.id === task.keyword_id)?.keyword;
+        keywords.find((row: { id: string }) => row.id === task.keyword_id)
+          ?.keyword;
 
       if (!keyword) {
         await completeRankCheckTask({

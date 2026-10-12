@@ -44,7 +44,7 @@ export function createJobsService(client: SupabaseClient<Database>) {
 class JobsService {
   constructor(private readonly client: SupabaseClient<Database>) {}
 
-  private get db(): any {
+  private get db(): SupabaseClient {
     return this.client;
   }
 
@@ -119,7 +119,9 @@ class JobsService {
     return !!data;
   }
 
-  private mapDeliveryRow(row: Record<string, unknown>) {
+  private mapDeliveryRow<T extends Record<string, unknown>>(
+    row: T,
+  ): T & { title: string } {
     return {
       ...row,
       title: deliveryProjectTitle(
@@ -208,43 +210,34 @@ class JobsService {
       count = fallbackResult.count ?? null;
     }
     const jobs = (rows ?? []).map((row) =>
-      this.mapDeliveryRow(row as Record<string, unknown>),
+      this.mapDeliveryRow(row as Record<string, unknown> & { id: string }),
     );
-    const jobIds = jobs.map((j) => j.id as string);
+    const jobIds = jobs.map((j) => j.id);
     if (jobIds.length === 0) {
       return { data: jobs as Record<string, unknown>[], total: count ?? 0 };
     }
-    const { data: assignments } = await this.db
+    const { data: assignmentsData } = await this.db
       .from(PROJECT_ASSIGNMENTS_TABLE)
       .select('project_id, user_id, role_on_project')
       .in('project_id', jobIds);
-    const countByJob = (assignments ?? []).reduce<Record<string, number>>(
-      (acc, a: { project_id: string }) => {
-        acc[a.project_id] = (acc[a.project_id] ?? 0) + 1;
-        return acc;
-      },
-      {},
-    );
-    const assigneesByJob = (assignments ?? []).reduce<
+    const assignments: Array<{
+      project_id: string;
+      user_id: string;
+      role_on_project: string | null;
+    }> = assignmentsData ?? [];
+    const countByJob = assignments.reduce<Record<string, number>>((acc, a) => {
+      acc[a.project_id] = (acc[a.project_id] ?? 0) + 1;
+      return acc;
+    }, {});
+    const assigneesByJob = assignments.reduce<
       Record<string, { user_id: string; role_on_job: string | null }[]>
-    >(
-      (
-        acc,
-        row: {
-          project_id: string;
-          user_id: string;
-          role_on_project: string | null;
-        },
-      ) => {
-        if (!acc[row.project_id]) acc[row.project_id] = [];
-        acc[row.project_id].push({
-          user_id: row.user_id,
-          role_on_job: row.role_on_project,
-        });
-        return acc;
-      },
-      {},
-    );
+    >((acc, row) => {
+      (acc[row.project_id] ??= []).push({
+        user_id: row.user_id,
+        role_on_job: row.role_on_project,
+      });
+      return acc;
+    }, {});
     const data = jobs.map((job) => ({
       ...job,
       assignment_count: countByJob[job.id] ?? 0,

@@ -64,6 +64,20 @@ type LayoutState = {
   style: 'sidebar' | 'header' | 'custom';
 };
 
+type UserWorkspace = Awaited<ReturnType<typeof loadUserWorkspace>>;
+
+function toUserWorkspaceContextValue(workspace: UserWorkspace) {
+  return {
+    ...workspace,
+    workspace: workspace.workspace ?? {
+      id: null,
+      name: null,
+      picture_url: null,
+      subscription_status: null,
+    },
+  };
+}
+
 function UserHomeLayout({ children }: React.PropsWithChildren) {
   const state = use(getLayoutState());
 
@@ -298,7 +312,9 @@ async function SidebarLayout({
   }
 
   return (
-    <UserWorkspaceContextProvider value={workspace}>
+    <UserWorkspaceContextProvider
+      value={toUserWorkspaceContextValue(workspace)}
+    >
       <PersonalHomeShellAdornmentsSuspense
         client={client}
         userId={user.id}
@@ -325,7 +341,9 @@ function HeaderLayout({ children }: React.PropsWithChildren) {
 
   return (
     <PersonalVisionChromeShell>
-      <UserWorkspaceContextProvider value={workspace}>
+      <UserWorkspaceContextProvider
+        value={toUserWorkspaceContextValue(workspace)}
+      >
         <Page style={'header'} className={WORKSPACE_SHELL_PAGE_CLASS}>
           <PageNavigation>
             <HomeMenuNavigation workspace={workspace} />

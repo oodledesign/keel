@@ -49,6 +49,7 @@ async function EditDisposalPage({ params, searchParams }: PageProps) {
       <TeamAccountLayoutPageHeader
         title={listing.name || 'New disposal'}
         description="Draft — changes save automatically"
+        account={slug}
       />
       <PageBody className="px-4 pb-10 lg:px-6">
         <ListingDisposalFormPage

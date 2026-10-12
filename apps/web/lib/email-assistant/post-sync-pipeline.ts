@@ -1,10 +1,13 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { classify } from '@kit/email-assistant';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { isInsufficientCreditsError } from '~/lib/ai/router';
 import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
+import type { Database } from '~/lib/database.types';
 
 import { isFromOwner } from './address-utils';
 import { autoExtractEmailActionItems } from './auto-extract-email-action-items';
@@ -40,7 +43,7 @@ import { suggestPipelineLeadForThread } from './suggest-pipeline-lead';
 import { buildThreadText } from './thread-text';
 
 async function maybeSuggestPipelineLead(
-  admin: ReturnType<typeof getSupabaseServerAdminClient>,
+  admin: SupabaseClient<Database>,
   params: {
     userId: string;
     threadId: string;

@@ -50,7 +50,12 @@ export async function enrichProjectKeywordMetrics(input: {
     throw new Error(keywordError.message);
   }
 
-  const rows = (keywordRows ?? []).filter((row) => {
+  const allRows: Array<{
+    id: string;
+    keyword: string;
+    metrics_updated_at: string | null;
+  }> = keywordRows ?? [];
+  const rows = allRows.filter((row) => {
     if (input.force) return true;
     return row.metrics_updated_at == null;
   });
@@ -88,7 +93,7 @@ export async function enrichProjectKeywordMetrics(input: {
         intent: metrics?.intent ?? 'informational',
         metrics_updated_at: now,
       })
-      .eq('id', row.id as string);
+      .eq('id', row.id);
 
     if (!error) {
       updated += 1;

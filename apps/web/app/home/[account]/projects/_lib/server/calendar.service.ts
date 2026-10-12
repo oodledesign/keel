@@ -60,7 +60,7 @@ class CalendarService {
     const { data: events, error: eventsErr } = await this.db
       .from('project_events')
       .select(
-        'id, job_id, client_id, title, event_type, scheduled_start_at, scheduled_end_at, location',
+        'id, project_id, client_id, title, event_type, scheduled_start_at, scheduled_end_at, location',
       )
       .eq('account_id', accountId)
       .eq('project_id', jobId)
@@ -100,7 +100,7 @@ class CalendarService {
         start_at: e.scheduled_start_at,
         end_at: e.scheduled_end_at ?? undefined,
         all_day: false,
-        project_id: e.job_id,
+        job_id: e.project_id,
         client_id: e.client_id ?? undefined,
         event_type: e.event_type as 'site_visit' | 'meeting',
         location: e.location,
@@ -137,7 +137,7 @@ class CalendarService {
             start_at: `${j.due_date.slice(0, 10)}T12:00:00.000Z`,
             end_at: undefined,
             all_day: true,
-            project_id: j.id,
+            job_id: j.id,
             client_id: j.client_id ?? undefined,
             status: j.status,
             priority: j.priority ?? undefined,
@@ -155,7 +155,7 @@ class CalendarService {
             start_at: `${j.start_date.slice(0, 10)}T09:00:00.000Z`,
             end_at: undefined,
             all_day: true,
-            project_id: j.id,
+            job_id: j.id,
             client_id: j.client_id ?? undefined,
             status: j.status,
             priority: j.priority ?? undefined,
@@ -178,7 +178,7 @@ class CalendarService {
     const { data: events, error: eventsErr } = await this.db
       .from('project_events')
       .select(
-        'id, job_id, client_id, title, event_type, scheduled_start_at, scheduled_end_at, location',
+        'id, project_id, client_id, title, event_type, scheduled_start_at, scheduled_end_at, location',
       )
       .eq('account_id', accountId)
       .gte('scheduled_start_at', start)
@@ -217,7 +217,7 @@ class CalendarService {
         start_at: e.scheduled_start_at,
         end_at: e.scheduled_end_at ?? undefined,
         all_day: false,
-        project_id: e.job_id,
+        job_id: e.project_id,
         client_id: e.client_id ?? undefined,
         event_type: e.event_type as 'site_visit' | 'meeting',
         location: e.location,
@@ -264,7 +264,7 @@ class CalendarService {
             start_at: `${d}T12:00:00.000Z`,
             end_at: undefined,
             all_day: true,
-            project_id: j.id,
+            job_id: j.id,
             client_id: j.client_id ?? undefined,
             status: j.status,
             priority: j.priority ?? undefined,
@@ -283,7 +283,7 @@ class CalendarService {
             start_at: `${d}T09:00:00.000Z`,
             end_at: undefined,
             all_day: true,
-            project_id: j.id,
+            job_id: j.id,
             client_id: j.client_id ?? undefined,
             status: j.status,
             priority: j.priority ?? undefined,

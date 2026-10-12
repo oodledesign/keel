@@ -4,6 +4,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getLogger } from '@kit/shared/logger';
 
+import type { Database } from '~/lib/database.types';
+
 import {
   applyAccountBillingTransition,
   claimBillingEmailEvent,
@@ -21,7 +23,7 @@ import { BILLING_TRIAL_DAYS } from './billing-config-prices';
 import { flushBillingEmailJobs } from './billing-email-outbox';
 import { sendBillingLifecycleEmail } from './billing-lifecycle-emails';
 
-type AnyClient = SupabaseClient<any>;
+type BillingDbClient = SupabaseClient<Database>;
 
 const MS_DAY = 24 * 60 * 60 * 1000;
 
@@ -54,7 +56,7 @@ function accountLabel(row: CronBillingRow) {
 }
 
 async function sendMilestoneEmail(
-  admin: AnyClient,
+  admin: BillingDbClient,
   row: CronBillingRow,
   emailKind: BillingEmailKind,
 ): Promise<'sent' | 'skipped'> {
@@ -87,7 +89,7 @@ async function sendMilestoneEmail(
 }
 
 async function transitionAndEmail(
-  admin: AnyClient,
+  admin: BillingDbClient,
   row: CronBillingRow,
   input: {
     toStatus: AccountBillingStatus;
@@ -120,7 +122,7 @@ async function transitionAndEmail(
 }
 
 async function loadBillingRows(
-  admin: AnyClient,
+  admin: BillingDbClient,
   statuses: NonNullable<AccountBillingRow['subscription_status']>[],
 ): Promise<CronBillingRow[]> {
   const { data, error } = await admin
@@ -155,7 +157,7 @@ async function loadBillingRows(
  * Trial cadence: day 7 value, 3 days left, 1 day left, expired → trial_expired.
  */
 export async function runBillingTrialLifecycleCron(
-  admin: AnyClient,
+  admin: BillingDbClient,
 ): Promise<BillingLifecycleCronResult> {
   const logger = await getLogger();
   const result: BillingLifecycleCronResult = {
@@ -255,7 +257,7 @@ export async function runBillingTrialLifecycleCron(
  * account-delete action, not a billing status change.
  */
 export async function runBillingDunningLifecycleCron(
-  admin: AnyClient,
+  admin: BillingDbClient,
 ): Promise<BillingLifecycleCronResult> {
   const logger = await getLogger();
   const result: BillingLifecycleCronResult = {
@@ -400,7 +402,7 @@ export async function runBillingDunningLifecycleCron(
 }
 
 /** Combined daily run (trial + dunning). */
-export async function runBillingLifecycleCron(admin: AnyClient): Promise<{
+export async function runBillingLifecycleCron(admin: BillingDbClient): Promise<{
   trial: BillingLifecycleCronResult;
   dunning: BillingLifecycleCronResult;
 }> {

@@ -36,7 +36,7 @@ function parseOutline(outline?: string | null) {
     .filter(Boolean);
   const bullets = lines
     .filter((line) => line.startsWith('•') || line.startsWith('-'))
-    .map((line) => line.replace(/^[•\-]\s*/, ''));
+    .map((line) => line.replace(/^[•-]\s*/, ''));
   const ctaLine = lines.find((line) => /^CTA:/i.test(line));
   const nonMeta = lines.filter(
     (line) =>

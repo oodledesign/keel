@@ -39,14 +39,13 @@ async function WorkspaceAppsPage({ params }: WorkspaceAppsPageProps) {
   const accountSlug = (await params).account;
   const workspace = await loadTeamWorkspace(accountSlug);
   redirectIfSpaceNotIn(workspace, accountSlug, ADDON_APPS_SPACE_TYPES);
+  const accessInput = workspace.account as {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
 
-  const access = getTeamAccountAccess(
-    workspace.account as {
-      permissions?: string[] | null;
-      role?: string | null;
-      company_role?: string | null;
-    },
-  );
+  const access = getTeamAccountAccess(accessInput);
 
   const user = await requireUserInServerComponent();
   const client = getSupabaseServerClient();
@@ -76,7 +75,7 @@ async function WorkspaceAppsPage({ params }: WorkspaceAppsPageProps) {
   const appsEnabled = isWorkNavModuleEnabled(moduleSettings, 'apps');
 
   if (!access.canViewDashboard || !appsEnabled) {
-    redirect(getDefaultAccountPath(accountSlug, workspace.account));
+    redirect(getDefaultAccountPath(accountSlug, accessInput));
   }
 
   return (

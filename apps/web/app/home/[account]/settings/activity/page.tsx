@@ -89,11 +89,17 @@ async function ActivityPrivacySettingsPage({
             (row.name as string | null)?.trim() ||
             'Project',
         }))}
-        clients={(clientsResult.data ?? []).map((row) => ({
-          id: row.id as string,
-          name:
-            row.display_name?.trim() || row.company_name?.trim() || 'Client',
-        }))}
+        clients={(clientsResult.data ?? []).map(
+          (row: {
+            id: string;
+            display_name: string | null;
+            company_name: string | null;
+          }) => ({
+            id: row.id,
+            name:
+              row.display_name?.trim() || row.company_name?.trim() || 'Client',
+          }),
+        )}
       />
     </div>
   );

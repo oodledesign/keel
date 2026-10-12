@@ -148,9 +148,8 @@ describe('generateWebflowPack', () => {
       true,
     );
 
-    const llms = pack.files.find(
-      (file) => file.path === 'public/llms.txt',
-    )!.content;
+    const llms = pack.files.find((file) => file.path === 'public/llms.txt')!
+      .content as string;
     expect(llms.startsWith('# Acme Chapel')).toBe(true);
     expect(llms).toContain('## Pages');
 
@@ -176,7 +175,7 @@ describe('generateWebflowPack', () => {
     expect(stub).toContain('Headline + CTA');
 
     const site = JSON.parse(
-      pack.files.find((file) => file.path === 'site.json')!.content,
+      pack.files.find((file) => file.path === 'site.json')!.content as string,
     ) as {
       $schemaNote: string;
       pages: Array<{ sections: Array<{ clientFirstName: string }> }>;
@@ -245,7 +244,8 @@ describe('generateAstroPack', () => {
     expect(homeMd).toContain('Headline + CTA');
 
     const pkg = JSON.parse(
-      pack.files.find((file) => file.path === 'package.json')!.content,
+      pack.files.find((file) => file.path === 'package.json')!
+        .content as string,
     ) as {
       scripts: Record<string, string>;
       dependencies: Record<string, string>;

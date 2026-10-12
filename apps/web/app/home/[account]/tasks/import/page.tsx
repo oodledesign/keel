@@ -47,7 +47,16 @@ async function WorkspaceTasksImportPage({ params }: PageProps) {
       : isWorkModuleEnabled(workspace.moduleSettings, 'tasks');
 
   if (!tasksEnabled) {
-    redirect(getDefaultAccountPath(accountSlug, workspace.account));
+    redirect(
+      getDefaultAccountPath(
+        accountSlug,
+        workspace.account as {
+          permissions?: string[] | null;
+          role?: string | null;
+          company_role?: string | null;
+        },
+      ),
+    );
   }
 
   return (

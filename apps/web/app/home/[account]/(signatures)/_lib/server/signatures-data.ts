@@ -190,7 +190,7 @@ function publicClient() {
 }
 
 function signaturesClient(client = publicClient()) {
-  return supabaseCustomSchema(client, 'signatures') as any;
+  return supabaseCustomSchema(client, 'signatures');
 }
 
 export async function loadSignaturesWorkspace(accountSlug: string) {
@@ -457,7 +457,11 @@ async function decorateStaffWithTemplates(rows: SignatureStaff[]) {
   }
 
   const templateIds = [
-    ...new Set((links ?? []).map((link: any) => link.template_id as string)),
+    ...new Set(
+      ((links ?? []) as { template_id: string }[]).map(
+        (link) => link.template_id,
+      ),
+    ),
   ];
 
   const templateMap = new Map<string, SignatureTemplate>();

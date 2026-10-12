@@ -1,4 +1,4 @@
-import { Suspense, use } from 'react';
+import { use } from 'react';
 
 import { PersonalAccountSettingsContainer } from '@kit/accounts/personal-account-settings';
 

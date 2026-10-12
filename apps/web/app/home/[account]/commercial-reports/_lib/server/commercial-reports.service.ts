@@ -255,7 +255,7 @@ function monthKey(iso: string) {
 }
 
 function monthLabel(key: string) {
-  const [y, m] = key.split('-').map(Number);
+  const [y = 1970, m = 1] = key.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-GB', {
     month: 'short',
     year: '2-digit',

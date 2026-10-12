@@ -3,8 +3,6 @@
 import { revalidatePath } from 'next/cache';
 
 import { enhanceAction } from '@kit/next/actions';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
-
 import type { Json } from '@kit/supabase/database';
 
 import pathsConfig from '~/config/paths.config';

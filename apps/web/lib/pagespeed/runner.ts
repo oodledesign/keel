@@ -75,6 +75,7 @@ async function runPagespeedTasks(input: {
     }
 
     const task = input.tasks[i];
+    if (!task) break;
 
     try {
       const response = await fetchPagespeedInsights({

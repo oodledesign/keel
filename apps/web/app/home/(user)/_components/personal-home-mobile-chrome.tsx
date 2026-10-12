@@ -91,12 +91,12 @@ export function PersonalHomeMobileChrome({
           <WorkspaceMobileTopActions
             variant="personal"
             userId={userId}
-            accountId={workspace.workspace?.id}
+            accountId={workspace.workspace?.id ?? undefined}
             showNewMenu={false}
           />
           <ProfileAccountDropdownContainer
             user={workspace.user}
-            account={workspace.workspace}
+            account={workspace.workspace ?? undefined}
             showProfileName={false}
             className="shrink-0"
             billingAccountId={userId}

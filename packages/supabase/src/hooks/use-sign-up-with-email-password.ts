@@ -42,6 +42,7 @@ export function useSignUpWithEmailAndPassword() {
       error?: string;
       reasons?: WeakPasswordReason[];
       user?: {
+        id: string;
         identities?: Array<{ id: string }>;
       } | null;
       session?: unknown;

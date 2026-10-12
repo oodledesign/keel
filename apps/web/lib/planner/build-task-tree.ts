@@ -1,11 +1,6 @@
 import type { TasksPageTask } from '~/home/(user)/_lib/server/tasks.loader';
 
-import type {
-  PlannerProjectNode,
-  PlannerScope,
-  PlannerTask,
-  PlannerWorkspaceNode,
-} from './types';
+import type { PlannerScope, PlannerTask, PlannerWorkspaceNode } from './types';
 
 const GENERIC_WORKSPACE_NAMES = new Set(['workspace', 'work']);
 
@@ -223,11 +218,11 @@ function mergeAmbiguousWorkspaceNodes(
       node.name.trim().toLowerCase() !== 'personal',
   );
 
-  if (namedWorkspaces.length !== 1) {
+  const target = namedWorkspaces[0];
+  if (namedWorkspaces.length !== 1 || !target) {
     return nodes;
   }
 
-  const target = namedWorkspaces[0];
   let merged = target;
   for (const bucket of generic) {
     merged = mergeProjectsInto(merged, bucket);

@@ -11,12 +11,10 @@ import { toast } from '@kit/ui/sonner';
 
 import { getErrorMessage } from '../_lib/error-message';
 import {
-  createJobEvent,
   deleteJobEvent,
   listAccountMembers,
   listJobEventAssignmentsForJob,
   listJobEvents,
-  updateJobEvent,
 } from '../_lib/server/server-actions';
 import { JobEventForm } from './job-event-form';
 
@@ -148,8 +146,7 @@ export function JobEventsTabContent({
       const assignments = (assignmentsResult ?? []) as AssignmentRow[];
       const byEvent: Record<string, AssignmentRow[]> = {};
       for (const a of assignments) {
-        if (!byEvent[a.job_event_id]) byEvent[a.job_event_id] = [];
-        byEvent[a.job_event_id].push(a);
+        (byEvent[a.job_event_id] ??= []).push(a);
       }
       setAssignmentsByEvent(byEvent);
       setMembers(

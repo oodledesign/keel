@@ -25,7 +25,7 @@ import {
 } from '@kit/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@kit/ui/sheet';
 import { toast } from '@kit/ui/sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
@@ -79,12 +79,20 @@ function docTypeLabel(t: string | null) {
   return getDocTypeLabel(t);
 }
 
+/** Docs can't be linked to instructions or requirements. */
+function toDocLink(link: LinkValue) {
+  if (!link || link.type === 'instruction' || link.type === 'requirement') {
+    return null;
+  }
+  return { type: link.type, id: link.id };
+}
+
 export function WorkspaceDocsPage({
   accountId,
   accountSlug,
   docs: initialDocs,
   tableAvailable,
-  variant,
+  variant: _variant,
   linkOptions,
   defaultLink,
 }: {
@@ -331,7 +339,7 @@ function NewDocSheet({
             content,
             docType,
             tags,
-            link,
+            link: toDocLink(link),
           });
           onCreated({
             id: result.docId,
@@ -339,6 +347,7 @@ function NewDocSheet({
             content,
             kind: 'written',
             docType,
+            category: 'idea',
             isPinned: false,
             tags,
             projectId: null,
@@ -352,6 +361,10 @@ function NewDocSheet({
             fileUrl: null,
             filePath: null,
             fileSizeBytes: null,
+            financialYear: null,
+            storageBucket: ACCOUNT_DOCS_BUCKET,
+            isPublic: false,
+            publicToken: null,
             updatedAt: new Date().toISOString(),
           });
           toast.success('Document created');
@@ -375,7 +388,7 @@ function NewDocSheet({
           title: title || file.name,
           docType,
           tags,
-          link,
+          link: toDocLink(link),
           filePath,
           mimeType: file.type || null,
           fileSizeBytes: file.size,
@@ -387,6 +400,7 @@ function NewDocSheet({
           content: null,
           kind: 'uploaded',
           docType,
+          category: 'idea',
           isPinned: false,
           tags,
           projectId: null,
@@ -400,6 +414,10 @@ function NewDocSheet({
           fileUrl: null,
           filePath,
           fileSizeBytes: file.size,
+          financialYear: null,
+          storageBucket: ACCOUNT_DOCS_BUCKET,
+          isPublic: false,
+          publicToken: null,
           updatedAt: new Date().toISOString(),
         });
         toast.success('File uploaded');

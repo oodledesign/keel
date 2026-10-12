@@ -4,6 +4,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getLogger } from '@kit/shared/logger';
 
+import type { Database } from '~/lib/database.types';
+
 import {
   type AccountBillingRow,
   type AccountBillingStatus,
@@ -15,21 +17,21 @@ import {
   enqueueBillingEmail,
 } from './billing-email-outbox';
 
-type AnyClient = SupabaseClient<any>;
+type BillingDbClient = SupabaseClient<Database>;
 
-function billingTable(client: AnyClient) {
+function billingTable(client: BillingDbClient) {
   return client.from('account_billing');
 }
 
-function eventsTable(client: AnyClient) {
+function eventsTable(client: BillingDbClient) {
   return client.from('billing_events');
 }
 
-function customersTable(client: AnyClient) {
+function customersTable(client: BillingDbClient) {
   return client.from('billing_customers');
 }
 
-function accountsTable(client: AnyClient) {
+function accountsTable(client: BillingDbClient) {
   return client.from('accounts');
 }
 
@@ -47,7 +49,7 @@ export type BillingTransitionResult = {
 };
 
 async function findAccountIdByStripeCustomerId(
-  admin: AnyClient,
+  admin: BillingDbClient,
   stripeCustomerId: string,
 ): Promise<string | null> {
   const { data: billingRow } = await billingTable(admin)
@@ -69,7 +71,7 @@ async function findAccountIdByStripeCustomerId(
 }
 
 async function loadAccountBilling(
-  admin: AnyClient,
+  admin: BillingDbClient,
   accountId: string,
 ): Promise<AccountBillingRow | null> {
   const { data } = await billingTable(admin)
@@ -83,7 +85,7 @@ async function loadAccountBilling(
 }
 
 async function loadAccountMeta(
-  admin: AnyClient,
+  admin: BillingDbClient,
   accountId: string,
 ): Promise<{ name: string; slug: string } | null> {
   const { data } = await accountsTable(admin)
@@ -102,7 +104,7 @@ async function loadAccountMeta(
 }
 
 async function eventAlreadyProcessed(
-  admin: AnyClient,
+  admin: BillingDbClient,
   stripeEventId: string,
 ): Promise<boolean> {
   const { data } = await eventsTable(admin)
@@ -170,7 +172,7 @@ function patchForStatus(
  * Enqueues emails; does not send them inline.
  */
 export async function applyAccountBillingTransition(
-  admin: AnyClient,
+  admin: BillingDbClient,
   input: {
     stripeEventId: string;
     stripeCustomerId?: string | null;
@@ -376,7 +378,7 @@ export function billingEmailEventId(
 }
 
 export async function claimBillingEmailEvent(
-  admin: AnyClient,
+  admin: BillingDbClient,
   input: {
     accountId: string;
     emailKind: BillingEmailKind;
@@ -410,7 +412,7 @@ export async function claimBillingEmailEvent(
 
 /** Allow retry if the send failed after claiming the milestone event. */
 export async function releaseBillingEmailEvent(
-  admin: AnyClient,
+  admin: BillingDbClient,
   accountId: string,
   emailKind: BillingEmailKind,
 ): Promise<void> {

@@ -4,10 +4,9 @@ import { AdminAccountPage } from '@kit/admin/components/admin-account-page';
 import { AdminGuard } from '@kit/admin/components/admin-guard';
 import { PageBody } from '@kit/ui/page';
 
-import { AdminBillingGrantsPanel } from './_components/admin-billing-grants-panel';
 import { AdminPersonalAddonsPanel } from './_components/admin-personal-addons-panel';
-import { loadAdminAccountBillingState } from './_lib/load-admin-account-billing';
 import { loadAdminAccount } from './_lib/load-admin-account';
+import { loadAdminAccountBillingState } from './_lib/load-admin-account-billing';
 
 interface Params {
   params: Promise<{

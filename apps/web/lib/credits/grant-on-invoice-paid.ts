@@ -1,5 +1,7 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getLogger } from '@kit/shared/logger';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
@@ -21,8 +23,8 @@ type InvoiceCreditMetadata = {
   credit_topup_expiry_months?: number;
 };
 
-function adminDb() {
-  return getSupabaseServerAdminClient() as any;
+function adminDb(): SupabaseClient {
+  return getSupabaseServerAdminClient();
 }
 
 function addMonths(date: Date, months: number): Date {

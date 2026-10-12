@@ -102,6 +102,42 @@ export function createClientsService(client: SupabaseClient<Database>) {
 
 // Database types may not include clients/client_notes/projects until supabase:typegen is run after migrations.
 
+type ClientListRow = Pick<
+  Database['public']['Tables']['clients']['Row'],
+  | 'id'
+  | 'display_name'
+  | 'company_name'
+  | 'email'
+  | 'phone'
+  | 'city'
+  | 'picture_url'
+  | 'created_at'
+  | 'updated_at'
+  | 'first_name'
+  | 'last_name'
+  | 'client_type'
+  | 'commercial_role'
+> & { archived_at?: string | null };
+
+type ClientListResult = { data: ClientListRow[]; total: number };
+
+type ClientContactJunctionRow = {
+  role?: string | null;
+  is_primary?: boolean | null;
+  contacts?: {
+    id?: string;
+    full_name?: string;
+    first_name?: string | null;
+    last_name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    picture_url?: string | null;
+    aml_completed?: boolean | null;
+    aml_completed_at?: string | null;
+    aml_notes?: string | null;
+  } | null;
+};
+
 function mapClientWriteError(err: unknown): Error {
   const e = err as {
     message?: string;
@@ -146,12 +182,12 @@ function mapClientWriteError(err: unknown): Error {
 class ClientsService {
   constructor(private readonly client: SupabaseClient<Database>) {}
 
-  private get db(): any {
+  private get db(): SupabaseClient {
     return this.client;
   }
 
   /** Mutations after permission checks; bypasses RLS so policies cannot block verified staff (RLS drift). */
-  private get adminDb(): any {
+  private get adminDb(): SupabaseClient {
     return getSupabaseServerAdminClient();
   }
 
@@ -223,7 +259,7 @@ class ClientsService {
    * Owner/admin/staff use the admin client after permission checks so SELECT policies cannot hide
    * rows that were inserted via admin (has_role_on_account / RPC drift).
    */
-  private async dbForClientReads(accountId: string): Promise<any> {
+  private async dbForClientReads(accountId: string): Promise<SupabaseClient> {
     const user = await this.ensureUserAndPermission(accountId, 'clients.view');
     const role = await this.getMembershipRole(accountId, user.id);
     if (role === 'contractor') {
@@ -248,12 +284,12 @@ class ClientsService {
    * matching rows in memory so no id list has to fit in one request URL.
    */
   private async listFilteredClients(
-    readDb: any,
+    readDb: SupabaseClient,
     params: ListClientsInput,
     ids: string[],
-  ) {
+  ): Promise<ClientListResult> {
     const { page = 1, pageSize = 20, search } = params;
-    const rows: Array<{ created_at: string }> = [];
+    const rows: ClientListRow[] = [];
 
     for (let i = 0; i < ids.length; i += 150) {
       let query = readDb
@@ -277,16 +313,16 @@ class ClientsService {
       rows.push(...(data ?? []));
     }
 
-    rows.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    rows.sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''));
     const from = (page - 1) * pageSize;
     return { data: rows.slice(from, from + pageSize), total: rows.length };
   }
 
   private async listClientsWithDb(
-    readDb: any,
+    readDb: SupabaseClient,
     params: ListClientsInput,
     index: ContactAudienceIndex | null = null,
-  ) {
+  ): Promise<ClientListResult> {
     const { page = 1, pageSize = 20, search } = params;
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
@@ -1448,24 +1484,7 @@ class ClientsService {
     await this.ensureUserAndPermission(params.accountId, 'clients.view');
     await this.ensureClientInAccount(params.clientId, params.accountId);
 
-    const mapJunctionRows = (
-      rows: Array<{
-        role?: string | null;
-        is_primary?: boolean | null;
-        contacts?: {
-          id?: string;
-          full_name?: string;
-          first_name?: string | null;
-          last_name?: string | null;
-          email?: string | null;
-          phone?: string | null;
-          picture_url?: string | null;
-          aml_completed?: boolean | null;
-          aml_completed_at?: string | null;
-          aml_notes?: string | null;
-        } | null;
-      }>,
-    ) =>
+    const mapJunctionRows = (rows: ClientContactJunctionRow[]) =>
       rows
         .map((row) => {
           const contact = row.contacts;
@@ -1501,7 +1520,8 @@ class ClientsService {
       )
       .eq('client_id', params.clientId)
       .order('is_primary', { ascending: false })
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: true })
+      .overrideTypes<ClientContactJunctionRow[], { merge: false }>();
 
     if (!error) {
       const contacts = mapJunctionRows(data ?? []).filter(
@@ -1523,7 +1543,8 @@ class ClientsService {
         )
         .eq('client_id', params.clientId)
         .order('is_primary', { ascending: false })
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .overrideTypes<ClientContactJunctionRow[], { merge: false }>();
 
       if (!fallbackError) {
         const contacts = mapJunctionRows(fallbackData ?? []).filter(
@@ -1653,7 +1674,13 @@ class ClientsService {
       params.accountId,
     );
 
-    let data = scopedRows;
+    let data: Array<{
+      id: string;
+      full_name: string | null;
+      email: string | null;
+      phone: string | null;
+      picture_url?: string | null;
+    }> | null = scopedRows;
     let error = scopedError;
 
     if (error && isMissingColumnError(error)) {

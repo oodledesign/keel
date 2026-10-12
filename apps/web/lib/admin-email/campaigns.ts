@@ -1,6 +1,8 @@
 import 'server-only';
 
-import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
 import { insertPlatformEmailLog } from '@kit/supabase/platform-email-log';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
@@ -67,7 +69,7 @@ type AuthUser = {
 };
 
 type DbClient = {
-  from: (table: string) => any;
+  from: SupabaseClient['from'];
   auth: {
     admin: {
       listUsers: (params: { page?: number; perPage?: number }) => Promise<{
@@ -82,8 +84,8 @@ const BATCH_SIZE = 50;
 const BATCH_DELAY_MS = 100;
 const BETA_CUTOFF = new Date('2025-06-08T00:00:00.000Z');
 
-function getAdminClient() {
-  return getSupabaseServerAdminClient() as unknown as DbClient;
+function getAdminClient(): DbClient {
+  return getSupabaseServerAdminClient();
 }
 
 function normalizeEmail(email: string) {
@@ -394,20 +396,6 @@ function tierRank(tier: string) {
   return 0;
 }
 
-function normalizeTier(value: string) {
-  const tier = value.toLowerCase();
-  if (tier === 'tier1' || tier === 'tier_1' || tier === 'workspace_community') {
-    return 'tier_1';
-  }
-  if (tier === 'tier2' || tier === 'tier_2' || tier === 'workspace_business') {
-    return 'tier_2';
-  }
-  if (tier === 'tier3' || tier === 'tier_3' || tier === 'workspace_property') {
-    return 'tier_3';
-  }
-  return '';
-}
-
 export async function resolveCampaignRecipients(
   campaign: Pick<
     EmailCampaignRow,
@@ -504,23 +492,25 @@ export async function resolveCampaignRecipients(
         )
       `,
       )
-      .eq('list_id', campaign.contact_list_id);
+      .eq('list_id', campaign.contact_list_id)
+      .overrideTypes<
+        Array<{
+          contact_id: string;
+          email_contacts: {
+            id: string;
+            email: string;
+            first_name?: string | null;
+            subscribed?: boolean | null;
+          } | null;
+        }>,
+        { merge: false }
+      >();
 
     if (error) {
       throw new Error(error.message);
     }
 
-    recipients = (
-      (data ?? []) as Array<{
-        contact_id: string;
-        email_contacts: {
-          id: string;
-          email: string;
-          first_name?: string | null;
-          subscribed?: boolean | null;
-        } | null;
-      }>
-    )
+    recipients = (data ?? [])
       .map((row) => row.email_contacts)
       .filter(
         (contact) =>
@@ -539,7 +529,6 @@ export async function resolveCampaignRecipients(
     );
   } else {
     const users = await listAuthUsers(admin);
-    const usersById = new Map(users.map((user) => [user.id, user]));
     const { tierByUser, businessOwnerIds } = await resolveTierUserIds(admin);
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
@@ -699,23 +688,27 @@ async function loadCustomListMembership(
       )
     `,
     )
-    .in('list_id', listIds);
+    .in('list_id', listIds)
+    .overrideTypes<
+      Array<{
+        list_id: string;
+        email_contacts: {
+          id: string;
+          email: string;
+          first_name: string;
+          last_name: string;
+          trade: string | null;
+          subscribed: boolean | null;
+        } | null;
+      }>,
+      { merge: false }
+    >();
 
   if (error) {
     throw new Error(error.message);
   }
 
-  for (const row of (data ?? []) as Array<{
-    list_id: string;
-    email_contacts: {
-      id: string;
-      email: string;
-      first_name: string;
-      last_name: string;
-      trade: string | null;
-      subscribed: boolean | null;
-    } | null;
-  }>) {
+  for (const row of data ?? []) {
     const contact = row.email_contacts;
     if (!contact?.email || contact.subscribed === false) continue;
     if (unsubscribed.has(normalizeEmail(contact.email))) continue;

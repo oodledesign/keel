@@ -50,12 +50,10 @@ function setTourNavOpen(active: boolean) {
 }
 
 function clickTourTarget(root: Element | undefined | null) {
-  if (!root) return;
-  const clickable =
-    root instanceof HTMLElement &&
-    (root.matches('button, a, [role="button"]')
-      ? root
-      : root.querySelector<HTMLElement>('button, a, [role="button"]'));
+  if (!(root instanceof HTMLElement)) return;
+  const clickable = root.matches('button, a, [role="button"]')
+    ? root
+    : root.querySelector<HTMLElement>('button, a, [role="button"]');
   clickable?.click();
 }
 

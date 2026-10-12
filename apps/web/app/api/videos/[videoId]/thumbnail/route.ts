@@ -1,8 +1,11 @@
 import { type NextRequest } from 'next/server';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { createBunnyStreamClient } from '@kit/bunny';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import type { Database } from '~/lib/database.types';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { requireVideoById } from '~/lib/videos/server/videos-access';
 
@@ -144,9 +147,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
 }
 
 async function removeOldThumbnails(
-  bucket: ReturnType<
-    ReturnType<typeof getSupabaseServerAdminClient>['storage']['from']
-  >,
+  bucket: ReturnType<SupabaseClient<Database>['storage']['from']>,
   folder: string,
   keep: string | null,
 ) {

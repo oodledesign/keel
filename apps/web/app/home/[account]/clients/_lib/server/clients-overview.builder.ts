@@ -1,5 +1,10 @@
 import 'server-only';
 
+import type {
+  PostgrestSingleResponse,
+  SupabaseClient,
+} from '@supabase/supabase-js';
+
 import {
   resolveClientListTagline,
   resolveClientListTitle,
@@ -166,7 +171,7 @@ function mapLegacyTaskRows(rows: Array<Record<string, unknown>>): TaskRow[] {
 }
 
 async function loadDeliveryProjectsForClients(
-  db: any,
+  db: SupabaseClient,
   accountId: string,
   clientIds: string[],
 ): Promise<JobRow[]> {
@@ -230,12 +235,12 @@ async function loadDeliveryProjectsForClients(
 }
 
 async function loadTasksByProjectIds(
-  db: any,
+  db: SupabaseClient,
   projectIds: string[],
 ): Promise<TaskRow[]> {
   if (projectIds.length === 0) return [];
 
-  let result = await db
+  let result: PostgrestSingleResponse<Array<Record<string, unknown>>> = await db
     .from('tasks')
     .select(
       'id, client_id, project_id, status, due_date, duration_minutes, parent_task_id',
@@ -270,16 +275,14 @@ async function loadTasksByProjectIds(
     return [];
   }
 
-  return mapLegacyTaskRows(
-    (result.data ?? []) as Array<Record<string, unknown>>,
-  );
+  return mapLegacyTaskRows(result.data ?? []);
 }
 
 async function loadTasksByClientIds(
-  db: any,
+  db: SupabaseClient,
   clientIds: string[],
 ): Promise<TaskRow[]> {
-  let result = await db
+  let result: PostgrestSingleResponse<Array<Record<string, unknown>>> = await db
     .from('tasks')
     .select(
       'id, client_id, project_id, status, due_date, duration_minutes, parent_task_id',
@@ -314,13 +317,11 @@ async function loadTasksByClientIds(
     return [];
   }
 
-  return mapLegacyTaskRows(
-    (result.data ?? []) as Array<Record<string, unknown>>,
-  );
+  return mapLegacyTaskRows(result.data ?? []);
 }
 
 async function loadProjectAssignments(
-  db: any,
+  db: SupabaseClient,
   accountId: string,
   projectIds: string[],
 ): Promise<AssignmentRow[]> {
@@ -365,7 +366,7 @@ async function loadProjectAssignments(
 }
 
 export async function buildClientsOverview(params: {
-  db: any;
+  db: SupabaseClient;
   accountId: string;
   clients: ClientRow[];
   members: MemberPreview[];
@@ -525,7 +526,7 @@ export async function buildClientsOverview(params: {
 }
 
 async function buildCommercialClientsOverview(params: {
-  db: any;
+  db: SupabaseClient;
   accountId: string;
   clients: ClientRow[];
 }): Promise<ClientOverviewItem[]> {

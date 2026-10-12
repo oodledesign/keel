@@ -2,8 +2,8 @@ import {
   addDays,
   endOfDay,
   format,
+  isSameDay,
   isToday,
-  isYesterday,
   parseISO,
   startOfDay,
   startOfWeek,
@@ -281,11 +281,11 @@ export function formatActivityFocusDateLabel(
 ): string {
   const date = parseISO(`${dayKey}T12:00:00`);
 
-  if (isToday(date)) {
+  if (isSameDay(date, now)) {
     return 'Today';
   }
 
-  if (isYesterday(date)) {
+  if (isSameDay(date, addDays(now, -1))) {
     return 'Yesterday';
   }
 
@@ -545,7 +545,7 @@ export function sumTodayActiveDuration(
   now = new Date(),
 ): number {
   return sumActiveDuration(
-    blocks.filter((block) => isToday(parseISO(block.startedAt))),
+    blocks.filter((block) => isSameDay(parseISO(block.startedAt), now)),
   );
 }
 
@@ -1128,9 +1128,9 @@ export function groupBlocksByDay(
       const date = parseISO(`${dayKey}T12:00:00`);
       let label = format(date, 'EEEE, d MMMM yyyy');
 
-      if (isToday(date)) {
+      if (isSameDay(date, now)) {
         label = 'Today';
-      } else if (isYesterday(date)) {
+      } else if (isSameDay(date, addDays(now, -1))) {
         label = 'Yesterday';
       }
 

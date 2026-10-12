@@ -34,21 +34,21 @@ async function PropertiesPage({ params }: PropertiesPageProps) {
     workspace.account as { space_type?: string | null },
   );
 
+  const accountAccess = workspace.account as {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
+
   // Properties is available on 'work' and 'property' space types
   if (spaceType !== 'work' && spaceType !== 'property') {
-    redirect(getDefaultAccountPath(slug, workspace.account));
+    redirect(getDefaultAccountPath(slug, accountAccess));
   }
 
-  const access = getTeamAccountAccess(
-    workspace.account as {
-      permissions?: string[] | null;
-      role?: string | null;
-      company_role?: string | null;
-    },
-  );
+  const access = getTeamAccountAccess(accountAccess);
 
   if (!access.canViewDashboard) {
-    redirect(getDefaultAccountPath(slug, workspace.account));
+    redirect(getDefaultAccountPath(slug, accountAccess));
   }
 
   const accountId = workspace.account.id as string;

@@ -12,6 +12,7 @@ import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import pathsConfig from '~/config/paths.config';
 import { canCommercialMutateDisposals } from '~/lib/commercial/commercial-seat-access';
 import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
+import type { Database } from '~/lib/database.types';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import {
@@ -132,12 +133,8 @@ async function workspaceLoader(accountSlug: string) {
     businessType = (businessRow as { type?: string | null }).type ?? null;
   }
 
-  const accountRecord = workspace.data.account as {
-    id: string;
-    slug: string;
-    name?: string | null;
-    space_type?: string | null;
-  };
+  const accountRecord = workspace.data
+    .account as Database['public']['Functions']['team_account_workspace']['Returns'][number];
 
   const workspaceProfile = resolveWorkspaceProfile({
     space_type: accountRecord.space_type,

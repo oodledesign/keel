@@ -8,7 +8,9 @@ import {
   CheckCircle2,
   Circle,
   Clock,
+  Eye,
   Loader2,
+  type LucideIcon,
   Pencil,
   Plus,
 } from 'lucide-react';
@@ -50,9 +52,10 @@ const priorityConfig: Record<string, string> = {
   urgent: 'text-rose-400',
 };
 
-const statusIcons = {
+const statusIcons: Record<TasksPageTask['status'], LucideIcon> = {
   pending: Circle,
   in_progress: Clock,
+  client_review: Eye,
   completed: CheckCircle2,
 };
 
@@ -212,6 +215,7 @@ export function ClientTasksBlock({
         <AddTaskForClientDialog
           clientId={clientId}
           clientName={clientName}
+          workspaceAccountId={workspaceAccountId}
           open={addOpen}
           onOpenChange={setAddOpen}
           isPending={isPending}
@@ -229,6 +233,7 @@ export function ClientTasksBlock({
 function AddTaskForClientDialog({
   clientId,
   clientName,
+  workspaceAccountId,
   open,
   onOpenChange,
   isPending,
@@ -237,6 +242,7 @@ function AddTaskForClientDialog({
 }: {
   clientId: string;
   clientName: string;
+  workspaceAccountId?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   isPending: boolean;

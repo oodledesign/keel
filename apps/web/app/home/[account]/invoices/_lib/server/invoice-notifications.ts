@@ -1,10 +1,13 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import pathsConfig from '~/config/paths.config';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
+import type { Database } from '~/lib/database.types';
 import { alignedReplyTo } from '~/lib/email/aligned-reply-to';
 import { escapeEmailHtml } from '~/lib/email/ozer-transactional-shell';
 import { wrapNotificationEmail } from '~/lib/email/wrap-notification-email';
@@ -51,7 +54,7 @@ function buildInvoiceEmailFrom(accountName: string | null | undefined) {
  * then account email, sender email, then primary owner/admin.
  */
 async function resolveInvoiceReplyToEmail(
-  admin: ReturnType<typeof getSupabaseServerAdminClient>,
+  admin: SupabaseClient<Database>,
   params: {
     accountId: string;
     accountSlug?: string | null;

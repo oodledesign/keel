@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import pathsConfig from '~/config/paths.config';
+import type { Database } from '~/lib/database.types';
 import {
   escapeNotificationHtml,
   wrapNotificationEmail,
@@ -28,7 +29,7 @@ type TrialReminderRow = {
 };
 
 export async function runBillingTrialReminders(
-  admin: SupabaseClient,
+  admin: SupabaseClient<Database>,
 ): Promise<{ sent: number; skipped: number; errors: string[] }> {
   const sender = process.env.EMAIL_SENDER;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
@@ -107,7 +108,7 @@ export async function runBillingTrialReminders(
 }
 
 async function loadTrialReminderCandidates(
-  admin: SupabaseClient,
+  admin: SupabaseClient<Database>,
 ): Promise<TrialReminderRow[]> {
   const now = Date.now();
   const inThreeDays = now + 3 * 24 * 60 * 60 * 1000;
@@ -128,17 +129,13 @@ async function loadTrialReminderCandidates(
   const results: TrialReminderRow[] = [];
 
   for (const sub of subs) {
-    const trialEndsAt = new Date(
-      (sub as { trial_ends_at: string }).trial_ends_at,
-    );
+    if (!sub.trial_ends_at) continue;
+
+    const trialEndsAt = new Date(sub.trial_ends_at);
     const endsMs = trialEndsAt.getTime();
-    const account = (
-      sub as {
-        accounts: { id: string; name: string | null; slug: string | null };
-      }
-    ).accounts;
-    const accountId = (sub as { account_id: string }).account_id;
-    const subscriptionId = (sub as { id: string }).id;
+    const account = sub.accounts;
+    const accountId = sub.account_id;
+    const subscriptionId = sub.id;
     const slug = account.slug;
 
     if (!slug) continue;
@@ -173,7 +170,7 @@ async function loadTrialReminderCandidates(
 }
 
 async function loadWorkspaceOwnerEmail(
-  admin: SupabaseClient,
+  admin: SupabaseClient<Database>,
   accountId: string,
 ): Promise<string | null> {
   const { data: membership } = await admin
@@ -265,7 +262,7 @@ function buildTrialEmail(input: {
 }
 
 export async function sendPaymentFailedEmail(
-  admin: SupabaseClient,
+  admin: SupabaseClient<Database>,
   input: {
     subscriptionId: string;
     accountId: string;

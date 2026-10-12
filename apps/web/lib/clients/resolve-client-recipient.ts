@@ -1,5 +1,7 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { isFinanceRole } from './contact-roles';
 
 export type RecipientPurpose =
@@ -73,7 +75,7 @@ function withEmail(row: ContactLinkRow): boolean {
  * 5. Optional fallback (e.g. previously stored sent_to_email)
  */
 export async function resolveClientRecipientEmail(
-  db: any,
+  db: SupabaseClient,
   clientId: string,
   options?: {
     purpose?: RecipientPurpose;

@@ -6,7 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createInvoicesService } from '~/home/[account]/invoices/_lib/server/invoices.service';
 
 function adminDb() {
-  return getSupabaseServerAdminClient() as any;
+  return getSupabaseServerAdminClient();
 }
 
 export type CreateCreditTopupInvoiceResult = {

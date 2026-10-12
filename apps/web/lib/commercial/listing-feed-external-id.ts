@@ -17,5 +17,5 @@ export function resolveListingFeedExternalId(
 export function listingNeedsFeedExternalId(
   existing: string | null | undefined,
 ): boolean {
-  return !Boolean(existing?.trim());
+  return !existing?.trim();
 }

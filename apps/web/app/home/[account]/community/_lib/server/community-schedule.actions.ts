@@ -9,9 +9,13 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { summarizeMeetupTranscript } from '~/lib/ai/meetup-summary';
+import type { Database } from '~/lib/database.types';
 import { sanitizeCommunityHtml } from '~/lib/sanitize-community-html';
 
 import type { EveningPart } from '../community-schedule.types';
+
+type CalendarEventUpdate =
+  Database['public']['Tables']['account_calendar_events']['Update'];
 
 function revalidateCommunitySchedule(accountSlug: string, eventId?: string) {
   const base = pathsConfig.app.accountCommunitySchedule.replace(
@@ -33,6 +37,13 @@ const eveningPartSchema = z.object({
   id: z.string(),
   title: z.string(),
   notes: z.string(),
+});
+
+const templateContentItemSchema = z.object({
+  kind: z.enum(['richtext', 'link', 'youtube', 'video']),
+  title: z.string(),
+  body: z.string().nullable().optional(),
+  url: z.string().nullable().optional(),
 });
 
 const createMeetupSchema = z.object({
@@ -178,7 +189,7 @@ const updateMeetupSchema = z.object({
 export const updateCommunityMeetup = enhanceAction(
   async (input) => {
     const client = getSupabaseServerClient();
-    const updates: Record<string, unknown> = {};
+    const updates: CalendarEventUpdate = {};
     if (input.title !== undefined) updates.title = input.title.trim();
     if (input.startsAt !== undefined) updates.starts_at = input.startsAt;
     if (input.endsAt !== undefined) updates.ends_at = input.endsAt || null;
@@ -403,7 +414,7 @@ export const saveMeetupTemplate = enhanceAction(
       defaultTitle: z.string().optional().nullable(),
       mealPlan: z.string().optional().nullable(),
       eveningParts: z.array(eveningPartSchema).optional(),
-      contentItems: z.array(z.unknown()).optional(),
+      contentItems: z.array(templateContentItemSchema).optional(),
     }),
   },
 );

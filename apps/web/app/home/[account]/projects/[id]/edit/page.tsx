@@ -1,3 +1,5 @@
+import type { ComponentProps } from 'react';
+
 import { notFound } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
@@ -74,7 +76,7 @@ async function JobEditPage({ params }: JobEditPageProps) {
           accountSlug={accountSlug}
           accountId={accountId}
           jobId={id}
-          job={job as Record<string, unknown>}
+          job={job as ComponentProps<typeof JobEditContent>['job']}
           canViewJobs={canViewJobs}
           canEditJobs={canEditJobs}
           canDeleteJobs={canDeleteJobs}

@@ -557,7 +557,8 @@ export function PipelineBoard({
 
       const dealId = active.id as string;
       const overId = over.id as string;
-      const overStage = (over.data.current as any)?.stage as string | undefined;
+      const overData = over.data.current as { stage?: string } | undefined;
+      const overStage = overData?.stage;
 
       let newStage: string | null = null;
 

@@ -1,3 +1,5 @@
+import type { ComponentProps } from 'react';
+
 import { notFound, redirect } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
@@ -65,7 +67,7 @@ async function PersonalProjectDetailPage({
         accountSlug={PERSONAL_PROJECTS_ACCOUNT_SLUG}
         accountId={accountId}
         jobId={id}
-        job={job as Record<string, unknown>}
+        job={job as ComponentProps<typeof JobDetailContent>['job']}
         client={null}
         canViewJobs
         canEditJobs

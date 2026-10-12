@@ -36,7 +36,6 @@ import {
   type WebsiteWireframePage,
   createPlanningId,
   emptySiteStudioBundle,
-  emptyWebsiteStyleSystem,
   normalizeWebsiteStyleSystem,
   normalizeWebsiteStyleTokens,
   styleSystemFromDbRow,

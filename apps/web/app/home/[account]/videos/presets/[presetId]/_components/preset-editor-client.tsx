@@ -64,6 +64,7 @@ export function PresetEditorClient(props: {
 
       <PlayerConfigEditor
         config={config}
+        detectedAspectRatio={DEFAULT_PLAYER_CONFIG.aspect_ratio}
         captions={[]}
         presets={[]}
         saving={saving}

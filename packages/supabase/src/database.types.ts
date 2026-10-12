@@ -7212,7 +7212,10 @@ export type Database = {
       commercial_requirements: {
         Row: {
           account_id: string
+          archived_at: string | null
+          archived_by: string | null
           assigned_to: string | null
+          board_position: number
           branch_id: string | null
           budget_max_pence: number | null
           budget_min_pence: number | null
@@ -7245,7 +7248,10 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          archived_at?: string | null
+          archived_by?: string | null
           assigned_to?: string | null
+          board_position?: number
           branch_id?: string | null
           budget_max_pence?: number | null
           budget_min_pence?: number | null
@@ -7278,7 +7284,10 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          archived_at?: string | null
+          archived_by?: string | null
           assigned_to?: string | null
+          board_position?: number
           branch_id?: string | null
           budget_max_pence?: number | null
           budget_min_pence?: number | null
@@ -15063,6 +15072,11 @@ export type Database = {
           value: number | null
           won_at: string | null
           work_type: string | null
+          aml_done: boolean
+          aml_done_at: string | null
+          aml_done_by: string | null
+          archived_at: string | null
+          archived_by: string | null
         }
         Insert: {
           address_line_1?: string | null
@@ -15115,6 +15129,11 @@ export type Database = {
           value?: number | null
           won_at?: string | null
           work_type?: string | null
+          aml_done?: boolean
+          aml_done_at?: string | null
+          aml_done_by?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
         }
         Update: {
           address_line_1?: string | null
@@ -15167,6 +15186,11 @@ export type Database = {
           value?: number | null
           won_at?: string | null
           work_type?: string | null
+          aml_done?: boolean
+          aml_done_at?: string | null
+          aml_done_by?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
         }
         Relationships: [
           {
@@ -19863,6 +19887,7 @@ export type Database = {
           id: string
           name: string
           parent_folder_id: string | null
+          public_share_allow_download: boolean
         }
         Insert: {
           account_id: string
@@ -19870,6 +19895,7 @@ export type Database = {
           id?: string
           name: string
           parent_folder_id?: string | null
+          public_share_allow_download?: boolean
         }
         Update: {
           account_id?: string
@@ -19877,6 +19903,7 @@ export type Database = {
           id?: string
           name?: string
           parent_folder_id?: string | null
+          public_share_allow_download?: boolean
         }
         Relationships: [
           {
@@ -20209,10 +20236,12 @@ export type Database = {
           published_revision: number
           published_timeline: Json | null
           recorded_at: string | null
+          sort_order: number | null
           source: string
           status: string
           summary: string | null
           tags: string[]
+          thumbnail_custom: boolean
           thumbnail_url: string | null
           title: string
           updated_at: string
@@ -20242,10 +20271,12 @@ export type Database = {
           published_revision?: number
           published_timeline?: Json | null
           recorded_at?: string | null
+          sort_order?: number | null
           source?: string
           status?: string
           summary?: string | null
           tags?: string[]
+          thumbnail_custom?: boolean
           thumbnail_url?: string | null
           title: string
           updated_at?: string
@@ -20275,10 +20306,12 @@ export type Database = {
           published_revision?: number
           published_timeline?: Json | null
           recorded_at?: string | null
+          sort_order?: number | null
           source?: string
           status?: string
           summary?: string | null
           tags?: string[]
+          thumbnail_custom?: boolean
           thumbnail_url?: string | null
           title?: string
           updated_at?: string

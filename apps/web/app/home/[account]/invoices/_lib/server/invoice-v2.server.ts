@@ -1,10 +1,13 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { convertMinorUnits, getUnitsPerGbp } from '~/lib/currency/estimate-fx';
 import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
+import type { Database } from '~/lib/database.types';
 import { addDaysIso, clampDueDays } from '~/lib/invoices/invoice-due-date';
 import { notifyInvoiceViewedInApp } from '~/lib/invoices/invoice-in-app-notifications';
 import { endOfZonedDay } from '~/lib/invoices/zoned-local-datetime';
@@ -16,16 +19,22 @@ import {
   DEFAULT_INVOICE_EMAIL_SUBJECT,
   DEFAULT_INVOICE_FOOTER_MESSAGE,
 } from '../invoice-smart-fields';
-import { computeInvoiceTotals, isInvoiceOverdue } from '../invoice-totals';
+import {
+  type DepositType,
+  computeInvoiceTotals,
+  isInvoiceOverdue,
+} from '../invoice-totals';
 import { sendInvoiceIssuedEmail } from './invoice-notifications';
 import { createInvoicesService } from './invoices.service';
 
-function db() {
-  return getSupabaseServerClient() as any;
+type InvoiceItemRow = Database['public']['Tables']['invoice_items']['Row'];
+
+function db(): SupabaseClient {
+  return getSupabaseServerClient();
 }
 
-function adminDb() {
-  return getSupabaseServerAdminClient() as any;
+function adminDb(): SupabaseClient {
+  return getSupabaseServerAdminClient();
 }
 
 export async function recomputeInvoiceTotals(invoiceId: string) {
@@ -341,7 +350,7 @@ export async function duplicateInvoice(accountId: string, invoiceId: string) {
     await service.upsertInvoiceItems({
       accountId,
       invoiceId: created.id,
-      items: source.items.map((item: any, index: number) => ({
+      items: source.items.map((item: InvoiceItemRow, index: number) => ({
         job_id: item.job_id,
         sort_order: index,
         description: item.description,
@@ -873,7 +882,7 @@ export function getCheckoutAmountPence(
 ) {
   const totals = computeInvoiceTotals({
     subtotal_pence: invoice.total_pence,
-    deposit_type: invoice.deposit_type as any,
+    deposit_type: invoice.deposit_type as DepositType | null | undefined,
     deposit_value: invoice.deposit_value,
   });
   const remaining = Math.max(

@@ -80,14 +80,11 @@ export function CreateJobSheet({
         title: title.trim(),
         description: description.trim() || undefined,
         client_id: clientId.trim() || undefined,
-        status: status as
-          | 'pending'
-          | 'in_progress'
-          | 'on_hold'
-          | 'completed'
-          | 'cancelled',
+        status,
         priority: priority as 'low' | 'medium' | 'high' | 'urgent',
         due_date: dueDate ? new Date(dueDate) : undefined,
+        is_ongoing: false,
+        is_phased: false,
         value_pence: valuePence
           ? Math.round(parseFloat(valuePence) * 100)
           : undefined,

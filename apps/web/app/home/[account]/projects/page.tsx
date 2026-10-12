@@ -50,7 +50,16 @@ async function JobsPage({ params }: JobsPageProps) {
         : isWorkModuleEnabled(workspace.moduleSettings, 'jobs');
 
   if (!jobsEnabled) {
-    redirect(getDefaultAccountPath(accountSlug, workspace.account));
+    redirect(
+      getDefaultAccountPath(
+        accountSlug,
+        workspace.account as {
+          permissions?: string[] | null;
+          role?: string | null;
+          company_role?: string | null;
+        },
+      ),
+    );
   }
 
   const {

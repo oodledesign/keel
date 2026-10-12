@@ -58,7 +58,7 @@ async function WebsiteNewPage({ params, searchParams }: WebsiteNewPageProps) {
   const siteStudioEnabled = await hasSiteStudio(accountId);
   const clientsResult = await createClientsService(getSupabaseServerClient())
     .listClients({ accountId, page: 1, pageSize: 100 })
-    .catch(() => ({ data: [] as Array<Record<string, unknown>> }));
+    .catch(() => ({ data: [] }));
 
   const clientOptions = (clientsResult.data ?? []).map(
     (row: {

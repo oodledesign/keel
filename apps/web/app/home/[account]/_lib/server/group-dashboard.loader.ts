@@ -114,7 +114,7 @@ export const loadGroupDashboardData = cache(
         .in('project_id', projectIds)
         .is('parent_task_id', null)
         .not('status', 'eq', 'done')
-        .order('due_date', { ascending: true, nullsLast: true })
+        .order('due_date', { ascending: true, nullsFirst: false })
         .limit(20);
 
       const projectNameMap = new Map(
