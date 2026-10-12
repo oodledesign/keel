@@ -6,28 +6,14 @@ import { ArrowRight } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Label } from '@kit/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@kit/ui/select';
 
 import {
-  type BrochureLayoutId,
   type BrochureOrientation,
   type BrochurePage,
   type BrochureTemplateId,
   newBrochurePageId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
-import {
-  BROCHURE_LAYOUT_GROUPS,
-  BROCHURE_LAYOUT_OPTIONS,
-  createBlankBrochurePage,
-} from '~/lib/commercial/brochure-pdf/build-brochure-document';
+import { createBlankBrochurePage } from '~/lib/commercial/brochure-pdf/build-brochure-document';
 import {
   placeBrochureMedia,
   swapBrochureImageSlots,
@@ -35,16 +21,13 @@ import {
 } from '~/lib/commercial/brochure-pdf/switch-brochure-layout';
 import type { BrochureMediaItem } from '~/lib/commercial/public-brochure.shared';
 
+import { BrochureLayoutPicker } from './brochure-layout-picker';
 import {
   BrochureLivePage,
   type BrochureLivePageDisplay,
 } from './brochure-live-page';
 import { BrochureMediaTray } from './brochure-media-tray';
 import { BrochurePageStrip } from './brochure-page-strip';
-import {
-  BrochurePreviewPage,
-  type BrochureWizardBrand,
-} from './brochure-preview-page';
 import {
   type BrochureDragPayload,
   BrochureSlotEditor,
@@ -64,8 +47,6 @@ export function BrochurePagesStep({
   media,
   onMediaError,
   drawingIds,
-  brandName,
-  brand,
   warnedPageIds,
   onNext,
 }: {
@@ -82,8 +63,6 @@ export function BrochurePagesStep({
   /** A thumbnail failed to load (its signed link may have expired). */
   onMediaError: () => void;
   drawingIds: ReadonlySet<string>;
-  brandName: string;
-  brand: BrochureWizardBrand;
   onNext: () => void;
 }) {
   const [selectedSlotKey, setSelectedSlotKey] = useState<string | null>(null);
@@ -197,36 +176,17 @@ export function BrochurePagesStep({
               <Label htmlFor="brochure-layout" className="text-xs">
                 Layout
               </Label>
-              <Select
+              <BrochureLayoutPicker
+                id="brochure-layout"
                 value={page.layoutId}
-                onValueChange={(value) => {
+                orientation={doc.orientation}
+                onChange={(layoutId) => {
                   updatePage(page.id, (p) =>
-                    switchBrochurePageLayout(p, value as BrochureLayoutId),
+                    switchBrochurePageLayout(p, layoutId),
                   );
                   setSelectedSlotKey(null);
                 }}
-              >
-                <SelectTrigger
-                  id="brochure-layout"
-                  className="h-8 w-56 text-xs"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BROCHURE_LAYOUT_GROUPS.map((group) => (
-                    <SelectGroup key={group}>
-                      <SelectLabel>{group}</SelectLabel>
-                      {BROCHURE_LAYOUT_OPTIONS.filter(
-                        (opt) => opt.group === group,
-                      ).map((opt) => (
-                        <SelectItem key={opt.id} value={opt.id}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
               <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                 Changing the layout keeps this page&apos;s text and images.
               </p>
@@ -257,16 +217,6 @@ export function BrochurePagesStep({
                   pages={pages}
                   pageId={page.id}
                   display={display}
-                  sketch={
-                    <BrochurePreviewPage
-                      page={page}
-                      orientation={doc.orientation}
-                      templateId={doc.templateId}
-                      brandName={brandName}
-                      brand={brand}
-                      drawingIds={drawingIds}
-                    />
-                  }
                 />
               </div>
             </div>

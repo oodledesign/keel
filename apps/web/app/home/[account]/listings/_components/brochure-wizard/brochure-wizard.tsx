@@ -565,8 +565,6 @@ export function BrochureWizard({
             media={media}
             onMediaError={() => void refreshMedia()}
             drawingIds={drawingIds}
-            brandName={data.accountName ?? ''}
-            brand={data.brand}
             warnedPageIds={warnedPageIds}
             onNext={() => void goTo('preview')}
           />

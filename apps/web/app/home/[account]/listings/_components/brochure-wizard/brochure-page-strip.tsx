@@ -23,8 +23,7 @@ import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
 import type { BrochurePage } from '~/lib/commercial/brochure-pdf/brochure-document';
-
-import { brochureLayoutLabel } from './brochure-preview-page';
+import { brochureLayoutLabel } from '~/lib/commercial/brochure-pdf/build-brochure-document';
 
 function SortablePageRow({
   page,

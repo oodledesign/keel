@@ -881,6 +881,10 @@ export const BROCHURE_LAYOUT_OPTIONS: Array<{
   },
 ];
 
+export function brochureLayoutLabel(id: BrochureLayoutId): string {
+  return BROCHURE_LAYOUT_OPTIONS.find((o) => o.id === id)?.label ?? id;
+}
+
 export function createBlankBrochurePage(
   layoutId: BrochureLayoutId,
 ): BrochurePage {

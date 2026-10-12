@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { AlertTriangle, Loader2 } from 'lucide-react';
 
@@ -14,6 +14,7 @@ import type {
   BrochureTemplateId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
 
+import { BrochureLayoutThumb } from './brochure-layout-thumb';
 import { WARNING_TEXT } from './brochure-preview-step';
 
 type PdfJs = typeof import('pdfjs-dist');
@@ -44,7 +45,8 @@ const DEBOUNCE_MS = 500;
 
 /**
  * The selected page as the real renderer draws it, refreshed shortly after
- * each edit. `sketch` stands in until the first render arrives or if it fails.
+ * each edit. A skeleton of the layout stands in until the first render
+ * arrives or if it fails.
  */
 export function BrochureLivePage({
   listingId,
@@ -54,7 +56,6 @@ export function BrochureLivePage({
   pages,
   pageId,
   display,
-  sketch,
 }: {
   listingId: string;
   accountId: string;
@@ -63,7 +64,6 @@ export function BrochureLivePage({
   pages: BrochurePage[];
   pageId: string;
   display: BrochureLivePageDisplay;
-  sketch: ReactNode;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
@@ -164,7 +164,8 @@ export function BrochureLivePage({
   ]);
 
   const showingRender = renderedPageId === pageId && status !== 'left_out';
-  const showSketch = !showingRender;
+  const showSkeleton = !showingRender;
+  const layoutId = pages.find((p) => p.id === pageId)?.layoutId;
 
   return (
     <div>
@@ -174,11 +175,21 @@ export function BrochureLivePage({
           aria-label="Page preview"
           className={cn(
             'w-full rounded-md border border-[var(--workspace-shell-border)] bg-white shadow-sm',
-            showSketch && 'hidden',
+            showSkeleton && 'hidden',
           )}
         />
-        {showSketch ? sketch : null}
-        {status === 'loading' ? (
+        {showSkeleton && layoutId ? (
+          <BrochureLayoutThumb
+            layoutId={layoutId}
+            orientation={orientation}
+            skeleton
+            className={cn(
+              'w-full rounded-md shadow-sm',
+              status === 'loading' && 'motion-safe:animate-pulse',
+            )}
+          />
+        ) : null}
+        {showingRender && status === 'loading' ? (
           <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-[var(--workspace-shell-panel)] px-2 py-0.5 text-[11px] text-[var(--workspace-shell-text-muted)] shadow-sm">
             <Loader2 className="h-3 w-3 animate-spin" />
             Updating
@@ -190,7 +201,7 @@ export function BrochureLivePage({
           ? 'This page has no photos, so it will be left out of the PDF.'
           : status === 'error'
             ? 'Preview unavailable. The next step still shows the PDF.'
-            : showSketch
+            : showSkeleton
               ? 'Drawing the page…'
               : null}
       </p>

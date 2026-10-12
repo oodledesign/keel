@@ -19,8 +19,8 @@ import type {
   BrochurePage,
   BrochureRenderWarningKind,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import { brochureLayoutLabel } from '~/lib/commercial/brochure-pdf/build-brochure-document';
 
-import { brochureLayoutLabel } from './brochure-preview-page';
 import type { BrochurePreviewResult } from './brochure-wizard';
 
 export const WARNING_TEXT: Record<BrochureRenderWarningKind, string> = {
