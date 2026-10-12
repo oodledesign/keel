@@ -34,7 +34,9 @@ export function BrochureLayoutPicker({
   const landscape = orientation === 'landscape';
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    // Modal so the picker scrolls when it opens over the wizard dialog, which
+    // otherwise blocks scrolling outside itself.
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <button
           id={id}
@@ -54,7 +56,10 @@ export function BrochureLayoutPicker({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className={cn('space-y-3 p-3', landscape ? 'w-[34rem]' : 'w-[30rem]')}
+        className={cn(
+          'max-h-[min(40rem,var(--radix-popover-content-available-height))] space-y-3 overflow-y-auto overscroll-contain p-3',
+          landscape ? 'w-[34rem]' : 'w-[30rem]',
+        )}
       >
         {BROCHURE_LAYOUT_GROUPS.map((group) => (
           <div key={group} role="group" aria-label={group}>
