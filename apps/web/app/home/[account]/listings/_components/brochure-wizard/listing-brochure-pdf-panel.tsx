@@ -1,12 +1,11 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { FileText, Loader2, Upload } from 'lucide-react';
+import { Download, FileText, Loader2 } from 'lucide-react';
 
-import { getSupabaseBrowserClient } from '@kit/supabase/browser-client';
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
@@ -17,15 +16,8 @@ import {
   brochureStatus,
 } from '~/lib/commercial/brochure-pdf/brochure-status';
 
-import { createListingMedia } from '../../_lib/server/server-actions';
-import type { BrochureWizardChannel } from './brochure-wizard';
+import { type BrochureWizardChannel, filenameFrom } from './brochure-wizard';
 import { BrochureWizardDialog } from './brochure-wizard-dialog';
-
-const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
-
-function safeFileName(name: string) {
-  return name.replace(/[^a-zA-Z0-9._-]+/g, '-').slice(0, 120);
-}
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', {
@@ -39,7 +31,10 @@ function formatDate(iso: string) {
 function statusText(status: BrochureStatus) {
   switch (status.kind) {
     case 'not_created':
-      return { label: 'Not created', detail: null };
+      return {
+        label: 'Not created',
+        detail: 'Have your own PDF? Upload it in Media → Brochure.',
+      };
     case 'draft':
       return {
         label: 'Draft',
@@ -82,56 +77,40 @@ export function ListingBrochurePdfPanel({
   canEdit: boolean;
 }) {
   const router = useRouter();
-  const uploadInputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
-  const [uploading, startUpload] = useTransition();
+  const [downloading, setDownloading] = useState(false);
   const status = brochureStatus(records);
   const { label, detail } = statusText(status);
+  const hasDraft = status.kind === 'draft' || status.kind === 'edited';
 
-  function uploadExternal(files: FileList | null) {
-    const file = files?.[0];
-    if (!file) return;
-    startUpload(async () => {
-      try {
-        if (file.type && file.type !== 'application/pdf') {
-          throw new Error('Please upload a PDF file');
-        }
-        if (file.size > MAX_UPLOAD_BYTES) {
-          throw new Error('PDF must be 20MB or smaller');
-        }
-
-        const client = getSupabaseBrowserClient();
-        const path = `${accountId}/${listingId}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
-        const { error: uploadError } = await client.storage
-          .from('commercial-listing-media')
-          .upload(path, file, {
-            contentType: 'application/pdf',
-            upsert: false,
-          });
-        if (uploadError) throw new Error(uploadError.message);
-
-        await createListingMedia({
-          accountId,
-          listingId,
-          mediaType: 'brochure',
-          storagePath: path,
-          fileName: file.name,
-          mimeType: 'application/pdf',
-          sortOrder: 0,
-        });
-
-        toast.success('Brochure PDF added to Media → Brochure.');
-        router.refresh();
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : 'Could not upload brochure PDF',
-        );
-      } finally {
-        if (uploadInputRef.current) uploadInputRef.current.value = '';
-      }
-    });
+  async function downloadDraft() {
+    if (status.kind !== 'draft' && status.kind !== 'edited') return;
+    setDownloading(true);
+    try {
+      const params = new URLSearchParams({
+        listingId,
+        accountId,
+        orientation: status.orientation,
+        useSaved: '1',
+      });
+      const res = await fetch(`/api/listings/brochure-pdf?${params}`);
+      if (!res.ok) throw new Error('The draft PDF could not be built.');
+      const blob = await res.blob();
+      const name = filenameFrom(
+        res.headers.get('Content-Disposition'),
+        `${listingName || 'brochure'}.pdf`,
+      ).replace(/\.pdf$/i, '-draft.pdf');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = name;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      toast.error('The draft PDF could not be built. Try again in a moment.');
+    } finally {
+      setDownloading(false);
+    }
   }
 
   return (
@@ -159,28 +138,23 @@ export function ListingBrochurePdfPanel({
           ) : null}
         </div>
         <div className="flex shrink-0 gap-2">
-          <input
-            ref={uploadInputRef}
-            type="file"
-            accept="application/pdf"
-            className="hidden"
-            onChange={(e) => uploadExternal(e.target.files)}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            disabled={!canEdit || uploading}
-            onClick={() => uploadInputRef.current?.click()}
-          >
-            {uploading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Upload className="h-3.5 w-3.5" />
-            )}
-            Upload PDF
-          </Button>
+          {hasDraft && canEdit ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={downloading}
+              onClick={() => void downloadDraft()}
+            >
+              {downloading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              {downloading ? 'Building PDF…' : 'Download draft'}
+            </Button>
+          ) : null}
           <Button
             type="button"
             size="sm"

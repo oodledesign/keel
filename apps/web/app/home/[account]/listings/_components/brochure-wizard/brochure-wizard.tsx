@@ -70,7 +70,7 @@ const RENDER_FLAGS = [
   'showSlideshowBrochureButton',
 ] as const;
 
-function filenameFrom(header: string | null, fallback: string) {
+export function filenameFrom(header: string | null, fallback: string) {
   const match = header?.match(/filename="([^"]+)"/);
   return match?.[1] ?? fallback;
 }
