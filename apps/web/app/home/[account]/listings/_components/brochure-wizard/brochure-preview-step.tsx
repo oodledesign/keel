@@ -28,6 +28,8 @@ export const WARNING_TEXT: Record<BrochureRenderWarningKind, string> = {
   missing_image: 'An image space is empty.',
   text_cut: "Some text didn't fit and was cut short.",
   empty_page: 'This page has nothing on it, so it was left out of the PDF.',
+  places_cut:
+    'Some nearby places were left out. A page shows up to 8, and fewer when space is tight.',
 };
 
 export function BrochurePreviewStep({

@@ -133,7 +133,8 @@ export type BrochureRenderWarningKind =
   | 'small_image'
   | 'missing_image'
   | 'text_cut'
-  | 'empty_page';
+  | 'empty_page'
+  | 'places_cut';
 
 export type BrochureRenderWarning = {
   pageId: string;

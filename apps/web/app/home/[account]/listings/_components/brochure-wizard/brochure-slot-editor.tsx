@@ -2,7 +2,7 @@
 
 import { type DragEvent, useState } from 'react';
 
-import { ImageIcon, X } from 'lucide-react';
+import { AlertTriangle, ImageIcon, X } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -26,6 +26,7 @@ import type {
   BrochurePage,
   BrochureSlotValue,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import { MAX_AMENITIES } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 import type { BrochureMediaItem } from '~/lib/commercial/public-brochure.shared';
 
 /** Drag payload shared by the media tray and image slots. */
@@ -473,6 +474,11 @@ export function BrochureSlotEditor({
         }
 
         if (slot.type === 'map') {
+          const shownCount = Math.min(
+            slot.limit ?? MAX_AMENITIES,
+            MAX_AMENITIES,
+          );
+          const hiddenCount = Math.max(0, slot.amenities.length - shownCount);
           return (
             <div key={key} className="grid gap-2">
               <div className="grid gap-1.5">
@@ -510,6 +516,12 @@ export function BrochureSlotEditor({
                 <div key={index} className="grid grid-cols-[1fr_auto] gap-2">
                   <Input
                     aria-label={`Place ${index + 1}`}
+                    aria-describedby={
+                      index >= shownCount
+                        ? `${page.id}-${key}-hidden`
+                        : undefined
+                    }
+                    className={cn(index >= shownCount && 'opacity-50')}
                     value={amenity.label}
                     onChange={(e) =>
                       updateSlot(key, {
@@ -539,11 +551,23 @@ export function BrochureSlotEditor({
                   </Button>
                 </div>
               ))}
+              {hiddenCount > 0 ? (
+                <p
+                  id={`${page.id}-${key}-hidden`}
+                  className="flex items-start gap-1.5 text-xs text-[var(--workspace-shell-text)]"
+                >
+                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-[var(--ozer-accent)]" />
+                  {shownCount === MAX_AMENITIES
+                    ? `A page shows up to ${MAX_AMENITIES} places, so the last ${hiddenCount === 1 ? 'one' : hiddenCount} won't appear.`
+                    : `Places to show is set to ${shownCount}, so the last ${hiddenCount === 1 ? 'one' : hiddenCount} won't appear.`}
+                </p>
+              ) : null}
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
                 className="w-fit"
+                disabled={slot.amenities.length >= MAX_AMENITIES}
                 onClick={() =>
                   updateSlot(key, {
                     ...slot,

@@ -78,6 +78,7 @@ import {
 import {
   type AmenityIcon,
   type BrochureAmenityItem,
+  MAX_AMENITIES,
   buildFallbackNearbyAmenities,
   isThinNearbyAmenityList,
   resolveAmenityIcon,
@@ -2983,16 +2984,21 @@ function drawAmenityRows(
   ctx: RenderCtx,
   amenities: Array<{ label: string; index: number; icon?: AmenityIcon | null }>,
   opts: { x: number; y: number; width: number; columns: number; minY: number },
-) {
+): number {
   const colGap = 20;
   const colW = (opts.width - colGap * (opts.columns - 1)) / opts.columns;
-  const perColumn = Math.ceil(amenities.length / opts.columns);
-  amenities.forEach((amenity, i) => {
+  const rowsFit = Math.max(
+    0,
+    Math.floor((opts.y - 12 - opts.minY) / AMENITY_ROW_H) + 1,
+  );
+  const shown = amenities.slice(0, rowsFit * opts.columns);
+  if (shown.length < amenities.length) warn(page, 'places_cut');
+  const perColumn = Math.ceil(shown.length / opts.columns);
+  shown.forEach((amenity, i) => {
     const col = Math.floor(i / perColumn);
     const row = i % perColumn;
     const x = opts.x + col * (colW + colGap);
     const y = opts.y - row * AMENITY_ROW_H;
-    if (y - 12 < opts.minY) return;
     const { name, detail } = splitAmenityLabel(amenity.label);
     drawAmenityBadge(page, ctx, amenity, x + 7.5, y + 3);
     drawWrapped(page, name, {
@@ -3016,6 +3022,7 @@ function drawAmenityRows(
       });
     }
   });
+  return shown.length;
 }
 
 type LocationContent = {
@@ -3027,6 +3034,7 @@ type LocationContent = {
 };
 
 function locationContent(
+  page: PDFPage,
   brochurePage: BrochurePage,
   ctx: RenderCtx,
 ): LocationContent {
@@ -3035,14 +3043,19 @@ function locationContent(
   const map = mapSlot?.type === 'map' ? mapSlot : null;
   const rawAmenities = map?.amenities ?? [];
   const fetched = ctx.data.nearbyAmenities ?? [];
+  const thin = isThinNearbyAmenityList(rawAmenities);
   const amenities = sanitizeBrochureAmenities(
-    isThinNearbyAmenityList(rawAmenities)
+    thin
       ? fetched.length > 0
         ? fetched
         : buildFallbackNearbyAmenities(ctx.data.listing.town, fetched)
       : rawAmenities,
     ctx.data.listing.town,
   );
+  const entered = thin ? 0 : rawAmenities.filter((a) => a.label.trim()).length;
+  if (Math.min(entered, map?.limit ?? entered) > MAX_AMENITIES) {
+    warn(page, 'places_cut');
+  }
   return {
     headline:
       hasBands(ctx) && title === 'Location'
@@ -3061,14 +3074,17 @@ function nearbyListHeight(ctx: RenderCtx, count: number, columns: number) {
   return 22 + Math.ceil(count / columns) * AMENITY_ROW_H + disclaimerH;
 }
 
-/** "Nearby" heading, the numbered places and, on banded templates, the distance note. */
+/**
+ * "Nearby" heading, the numbered places and, on banded templates, the distance
+ * note. Returns the places that fitted, so the map pins only those.
+ */
 function drawNearbyList(
   page: PDFPage,
   ctx: RenderCtx,
   amenities: BrochureAmenityItem[],
   opts: { x: number; y: number; width: number; columns: number },
-) {
-  if (amenities.length === 0) return;
+): BrochureAmenityItem[] {
+  if (amenities.length === 0) return amenities;
   const disclaimerH = hasBands(ctx) ? 26 : 0;
   drawEyebrow(page, ctx, 'Nearby', {
     x: opts.x,
@@ -3076,24 +3092,21 @@ function drawNearbyList(
     color: ctx.colors.primary,
   });
   const rowsTop = opts.y - 22;
-  drawAmenityRows(page, ctx, amenities, {
+  const shown = drawAmenityRows(page, ctx, amenities, {
     x: opts.x,
     y: rowsTop,
     width: opts.width,
     columns: opts.columns,
     minY: CONTENT_MIN_Y + disclaimerH,
   });
-  if (!disclaimerH) return;
-  const rowsShown = Math.min(
-    Math.ceil(amenities.length / opts.columns),
-    Math.floor((rowsTop - 12 - CONTENT_MIN_Y - disclaimerH) / AMENITY_ROW_H) +
-      1,
-  );
+  const listed = amenities.slice(0, shown);
+  if (!disclaimerH) return listed;
   drawMapDisclaimer(page, ctx, {
     x: opts.x,
-    y: rowsTop - rowsShown * AMENITY_ROW_H - 4,
+    y: rowsTop - Math.ceil(shown / opts.columns) * AMENITY_ROW_H - 4,
     width: opts.width,
   });
+  return listed;
 }
 
 async function drawLocationMap(
@@ -3137,7 +3150,7 @@ async function renderMap(
   );
   const frame = contentFrame(page, ctx);
   const type = typeScale(ctx);
-  const loc = locationContent(brochurePage, ctx);
+  const loc = locationContent(page, brochurePage, ctx);
   const { amenities, body } = loc;
 
   const banded = hasBands(ctx);
@@ -3152,6 +3165,7 @@ async function renderMap(
     banded && landscape ? leftW : undefined,
   );
   let mapBox: Box;
+  let listed: BrochureAmenityItem[];
 
   if (landscape) {
     const gutter = 32;
@@ -3169,7 +3183,7 @@ async function renderMap(
       });
       y -= 14;
     }
-    drawNearbyList(page, ctx, amenities, {
+    listed = drawNearbyList(page, ctx, amenities, {
       x: frame.left,
       y,
       width: leftW,
@@ -3203,7 +3217,7 @@ async function renderMap(
         : 0;
     const mapH = Math.max(180, y - CONTENT_MIN_Y - listH);
     mapBox = { x: frame.left, y: y - mapH, width: frame.width, height: mapH };
-    drawNearbyList(page, ctx, amenities, {
+    listed = drawNearbyList(page, ctx, amenities, {
       x: frame.left,
       y: mapBox.y - 24,
       width: frame.width,
@@ -3211,7 +3225,7 @@ async function renderMap(
     });
   }
 
-  await drawLocationMap(page, ctx, mapBox, loc);
+  await drawLocationMap(page, ctx, mapBox, { ...loc, amenities: listed });
   drawFooter(page, ctx);
 }
 
@@ -3230,7 +3244,7 @@ async function renderMapText(
   );
   const frame = contentFrame(page, ctx);
   const type = typeScale(ctx);
-  const loc = locationContent(brochurePage, ctx);
+  const loc = locationContent(page, brochurePage, ctx);
   const { amenities, body } = loc;
 
   if (landscape) {
@@ -3257,7 +3271,7 @@ async function renderMapText(
       });
       y -= 14;
     }
-    drawNearbyList(page, ctx, amenities, {
+    const listed = drawNearbyList(page, ctx, amenities, {
       x: frame.left,
       y,
       width: textW,
@@ -3271,7 +3285,7 @@ async function renderMapText(
           width: frame.right - splitX,
           height: frame.top - CONTENT_MIN_Y,
         };
-    await drawLocationMap(page, ctx, mapBox, loc);
+    await drawLocationMap(page, ctx, mapBox, { ...loc, amenities: listed });
   } else {
     const contentTop = drawPageHeader(page, ctx, brochurePage, loc.headline);
     const bottomH = Math.max(220, nearbyListHeight(ctx, amenities.length, 1));
@@ -3294,13 +3308,13 @@ async function renderMapText(
       width: mapW,
       height: Math.max(bottomH, y - CONTENT_MIN_Y),
     };
-    drawNearbyList(page, ctx, amenities, {
+    const listed = drawNearbyList(page, ctx, amenities, {
       x: frame.left + mapW + gutter,
       y: mapBox.y + mapBox.height - 7,
       width: frame.width - mapW - gutter,
       columns: 1,
     });
-    await drawLocationMap(page, ctx, mapBox, loc);
+    await drawLocationMap(page, ctx, mapBox, { ...loc, amenities: listed });
   }
   drawFooter(page, ctx);
 }
@@ -3320,7 +3334,7 @@ async function renderMapTop(
     brochurePage.sectionNumber,
   );
   const frame = contentFrame(page, ctx);
-  const loc = locationContent(brochurePage, ctx);
+  const loc = locationContent(page, brochurePage, ctx);
   const { amenities, body } = loc;
   const banded = hasBands(ctx);
 
@@ -3336,7 +3350,6 @@ async function renderMapTop(
         width: frame.width,
         height: top - mapBottom,
       };
-  await drawLocationMap(page, ctx, mapBox, loc);
 
   const contentTop = drawPageHeader(
     page,
@@ -3346,6 +3359,7 @@ async function renderMapTop(
     undefined,
     mapBottom - 26,
   );
+  let listed: BrochureAmenityItem[];
   if (landscape) {
     const gutter = 40;
     const hasList = amenities.length > 0;
@@ -3358,7 +3372,7 @@ async function renderMapTop(
         minY: CONTENT_MIN_Y,
       });
     }
-    drawNearbyList(page, ctx, amenities, {
+    listed = drawNearbyList(page, ctx, amenities, {
       x: frame.left + textW + gutter,
       y: contentTop + 7,
       width: frame.width - textW - gutter,
@@ -3379,13 +3393,14 @@ async function renderMapTop(
       });
       y -= 14;
     }
-    drawNearbyList(page, ctx, amenities, {
+    listed = drawNearbyList(page, ctx, amenities, {
       x: frame.left,
       y,
       width: frame.width,
       columns: 2,
     });
   }
+  await drawLocationMap(page, ctx, mapBox, { ...loc, amenities: listed });
   drawFooter(page, ctx);
 }
 
@@ -3403,7 +3418,7 @@ async function renderLocationText(
     brochurePage.sectionNumber,
   );
   const frame = contentFrame(page, ctx);
-  const loc = locationContent(brochurePage, ctx);
+  const loc = locationContent(page, brochurePage, ctx);
   const { amenities, body } = loc;
   const hasList = amenities.length > 0;
 

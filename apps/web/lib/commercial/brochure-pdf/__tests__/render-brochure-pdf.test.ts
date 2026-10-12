@@ -93,4 +93,44 @@ describe('renderBrochurePdf', () => {
     expect(warnings.every((w) => w.pageId === 'photo_text')).toBe(true);
     expect(warnings[0]?.pageNumber).toBe(3);
   }, 30_000);
+
+  it('warns when more places are entered than a page shows', async () => {
+    const places = (count: number) =>
+      Array.from({ length: count }, (_, i) => ({
+        label: `Place ${i + 1} · 0.${i + 1} mi`,
+        index: i + 1,
+      }));
+    const cut = async (count: number, limit?: number) => {
+      const base = createBlankBrochurePage('location_text');
+      const warnings: BrochureRenderWarning[] = [];
+      await renderBrochurePdf(
+        {
+          ...document(),
+          pages: [
+            {
+              ...base,
+              id: 'location',
+              slots: {
+                ...base.slots,
+                map: {
+                  type: 'map',
+                  latitude: null,
+                  longitude: null,
+                  amenities: places(count),
+                  limit,
+                },
+              },
+            },
+          ],
+        },
+        data,
+        { warnings },
+      );
+      return warnings.some((w) => w.kind === 'places_cut');
+    };
+
+    expect(await cut(10)).toBe(true);
+    expect(await cut(8)).toBe(false);
+    expect(await cut(10, 5)).toBe(false);
+  }, 30_000);
 });

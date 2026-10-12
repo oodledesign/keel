@@ -13,6 +13,7 @@ import {
 import {
   type AmenityIcon,
   type BrochureAmenityItem,
+  MAX_AMENITIES,
   amenityDedupeKey,
   buildFallbackNearbyAmenities,
   formatAmenityDistanceMiles,
@@ -32,7 +33,6 @@ export {
   sanitizeBrochureAmenities,
 } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 
-const MAX_AMENITIES = 8;
 const RESULTS_PER_CATEGORY = 10;
 
 type PoiSearch = {

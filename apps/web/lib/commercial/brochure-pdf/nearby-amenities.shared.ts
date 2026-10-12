@@ -23,7 +23,8 @@ export type BrochureAmenityItem = {
 };
 
 const DUMMY_LOCAL_AREA_RE = /^local area\s*\(/i;
-const MAX_AMENITIES = 8;
+/** Most places a brochure page lists and pins on its map. */
+export const MAX_AMENITIES = 8;
 
 /** Street names and parking ("Park Road", "Park and Ride") never get a guessed icon. */
 const NOT_AN_AMENITY_RE =
