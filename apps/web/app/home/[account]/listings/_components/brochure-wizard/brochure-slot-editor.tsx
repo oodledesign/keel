@@ -2,7 +2,22 @@
 
 import { type DragEvent, useState } from 'react';
 
-import { AlertTriangle, ImageIcon, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  Building2,
+  Car,
+  GraduationCap,
+  Hash,
+  Hospital,
+  ImageIcon,
+  type LucideIcon,
+  Plane,
+  ShoppingBasket,
+  TrainFront,
+  Trees,
+  Wand2,
+  X,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -26,7 +41,15 @@ import type {
   BrochurePage,
   BrochureSlotValue,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
-import { MAX_AMENITIES } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
+import {
+  AMENITY_ICONS,
+  type AmenityIcon,
+  type BrochureAmenityItem,
+  MAX_AMENITIES,
+  joinNearbyAmenityLabel,
+  resolveAmenityIcon,
+  splitNearbyAmenityLabel,
+} from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 import type { BrochureMediaItem } from '~/lib/commercial/public-brochure.shared';
 
 /** Drag payload shared by the media tray and image slots. */
@@ -60,6 +83,118 @@ const PLACE_LIMIT_OPTIONS = [
   { value: '3', label: 'Up to 3' },
   { value: '0', label: 'None (property pin only)' },
 ] as const;
+
+const PLACE_ICONS: Record<AmenityIcon, { label: string; Icon: LucideIcon }> = {
+  rail: { label: 'Station', Icon: TrainFront },
+  car: { label: 'Road', Icon: Car },
+  town: { label: 'Town centre', Icon: Building2 },
+  airport: { label: 'Airport', Icon: Plane },
+  grocery: { label: 'Shops', Icon: ShoppingBasket },
+  hospital: { label: 'Hospital', Icon: Hospital },
+  school: { label: 'School', Icon: GraduationCap },
+  park: { label: 'Park', Icon: Trees },
+};
+
+/** One nearby place: icon, name and distance, stored together as its label. */
+function PlaceEditor({
+  amenity,
+  hiddenNoteId,
+  onChange,
+  onRemove,
+}: {
+  amenity: BrochureAmenityItem;
+  /** Set when the place won't appear; points at the note explaining why. */
+  hiddenNoteId: string | null;
+  onChange: (amenity: BrochureAmenityItem) => void;
+  onRemove: () => void;
+}) {
+  const n = amenity.index;
+  const { name, distance } = splitNearbyAmenityLabel(amenity.label);
+  const shown = resolveAmenityIcon(amenity);
+  const ShownIcon = shown ? PLACE_ICONS[shown].Icon : Hash;
+
+  return (
+    <div
+      className={cn(
+        'grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-2 gap-y-1.5',
+        hiddenNoteId && 'opacity-50',
+      )}
+    >
+      <Select
+        value={amenity.icon ?? 'auto'}
+        onValueChange={(value) =>
+          onChange({
+            ...amenity,
+            icon: value === 'auto' ? null : (value as AmenityIcon),
+          })
+        }
+      >
+        <SelectTrigger
+          aria-label={`Icon for place ${n}`}
+          className="h-9 w-14 px-2"
+        >
+          <SelectValue>
+            <ShownIcon className="h-4 w-4" />
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="auto">
+            <span className="flex items-center gap-2">
+              <Wand2 className="h-4 w-4" />
+              Automatic
+            </span>
+          </SelectItem>
+          {AMENITY_ICONS.map((icon) => {
+            const { label, Icon } = PLACE_ICONS[icon];
+            return (
+              <SelectItem key={icon} value={icon}>
+                <span className="flex items-center gap-2">
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </span>
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+      <Input
+        aria-label={`Place ${n} name`}
+        aria-describedby={hiddenNoteId ?? undefined}
+        placeholder="Name"
+        value={name}
+        onChange={(e) =>
+          onChange({
+            ...amenity,
+            label: joinNearbyAmenityLabel(e.target.value, distance),
+          })
+        }
+      />
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        className="h-9 w-9"
+        aria-label={`Remove place ${n}`}
+        onClick={onRemove}
+      >
+        <X className="h-3.5 w-3.5" />
+      </Button>
+      <Input
+        aria-label={`Place ${n} distance`}
+        aria-describedby={hiddenNoteId ?? undefined}
+        placeholder="Distance, e.g. 0.3 mi"
+        className="col-start-2 h-8 text-xs"
+        value={distance}
+        onChange={(e) =>
+          onChange({
+            ...amenity,
+            label: joinNearbyAmenityLabel(name, e.target.value),
+          })
+        }
+      />
+    </div>
+  );
+}
 
 const SLOT_LABELS: Record<string, string> = {
   hero: 'Cover image',
@@ -513,43 +648,29 @@ export function BrochureSlotEditor({
                 </p>
               ) : null}
               {slot.amenities.map((amenity, index) => (
-                <div key={index} className="grid grid-cols-[1fr_auto] gap-2">
-                  <Input
-                    aria-label={`Place ${index + 1}`}
-                    aria-describedby={
-                      index >= shownCount
-                        ? `${page.id}-${key}-hidden`
-                        : undefined
-                    }
-                    className={cn(index >= shownCount && 'opacity-50')}
-                    value={amenity.label}
-                    onChange={(e) =>
-                      updateSlot(key, {
-                        ...slot,
-                        amenities: slot.amenities.map((a, i) =>
-                          i === index ? { ...a, label: e.target.value } : a,
-                        ),
-                      })
-                    }
-                  />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="h-9 w-9"
-                    aria-label={`Remove place ${index + 1}`}
-                    onClick={() =>
-                      updateSlot(key, {
-                        ...slot,
-                        amenities: slot.amenities
-                          .filter((_, i) => i !== index)
-                          .map((a, i) => ({ ...a, index: i + 1 })),
-                      })
-                    }
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+                <PlaceEditor
+                  key={index}
+                  amenity={amenity}
+                  hiddenNoteId={
+                    index >= shownCount ? `${page.id}-${key}-hidden` : null
+                  }
+                  onChange={(next) =>
+                    updateSlot(key, {
+                      ...slot,
+                      amenities: slot.amenities.map((a, i) =>
+                        i === index ? next : a,
+                      ),
+                    })
+                  }
+                  onRemove={() =>
+                    updateSlot(key, {
+                      ...slot,
+                      amenities: slot.amenities
+                        .filter((_, i) => i !== index)
+                        .map((a, i) => ({ ...a, index: i + 1 })),
+                    })
+                  }
+                />
               ))}
               {hiddenCount > 0 ? (
                 <p
@@ -573,7 +694,7 @@ export function BrochureSlotEditor({
                     ...slot,
                     amenities: [
                       ...slot.amenities,
-                      { label: 'Place', index: slot.amenities.length + 1 },
+                      { label: '', index: slot.amenities.length + 1 },
                     ],
                   })
                 }

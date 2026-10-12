@@ -8,9 +8,11 @@ import {
   formatNearbyAmenityLabel,
   isDummyLocalAreaAmenity,
   isThinNearbyAmenityList,
+  joinNearbyAmenityLabel,
   mergeBrochureAmenities,
   resolveAmenityIcon,
   sanitizeBrochureAmenities,
+  splitNearbyAmenityLabel,
 } from '../nearby-amenities.shared';
 
 describe('nearby amenity labels', () => {
@@ -427,5 +429,30 @@ describe('mergeBrochureAmenities', () => {
     expect(
       mergeBrochureAmenities(many.slice(0, 5), many.slice(5), 6),
     ).toHaveLength(6);
+  });
+});
+
+describe('editing a place name and distance', () => {
+  it('splits a formatted label into name and distance', () => {
+    expect(
+      splitNearbyAmenityLabel(formatNearbyAmenityLabel('Tesco', '0.3 mi')),
+    ).toEqual({ name: 'Tesco', distance: '0.3 mi' });
+    expect(splitNearbyAmenityLabel('Tesco')).toEqual({
+      name: 'Tesco',
+      distance: '',
+    });
+  });
+
+  it('round-trips text as typed, including a trailing space', () => {
+    const label = joinNearbyAmenityLabel('Tesco ', '0.3 mi');
+    expect(splitNearbyAmenityLabel(label)).toEqual({
+      name: 'Tesco ',
+      distance: '0.3 mi',
+    });
+  });
+
+  it('drops the separator when there is no distance', () => {
+    expect(joinNearbyAmenityLabel('Tesco', '')).toBe('Tesco');
+    expect(joinNearbyAmenityLabel('Tesco', '  ')).toBe('Tesco');
   });
 });

@@ -77,6 +77,8 @@ export function formatAmenityDistanceMiles(km: number): string {
   return `${Math.round(miles)} mi`;
 }
 
+const DISTANCE_SEPARATOR = ' · ';
+
 export function formatNearbyAmenityLabel(
   name: string,
   distanceLabel: string,
@@ -84,7 +86,28 @@ export function formatNearbyAmenityLabel(
   const trimmed = name.trim();
   if (!trimmed) return distanceLabel;
   if (!distanceLabel) return trimmed;
-  return `${trimmed} · ${distanceLabel}`;
+  return `${trimmed}${DISTANCE_SEPARATOR}${distanceLabel}`;
+}
+
+/**
+ * Name and distance exactly as typed, split at the separator
+ * `formatNearbyAmenityLabel` writes, so editing round-trips keystroke by
+ * keystroke.
+ */
+export function splitNearbyAmenityLabel(label: string): {
+  name: string;
+  distance: string;
+} {
+  const at = label.indexOf(DISTANCE_SEPARATOR);
+  if (at === -1) return { name: label, distance: '' };
+  return {
+    name: label.slice(0, at),
+    distance: label.slice(at + DISTANCE_SEPARATOR.length),
+  };
+}
+
+export function joinNearbyAmenityLabel(name: string, distance: string): string {
+  return distance.trim() ? `${name}${DISTANCE_SEPARATOR}${distance}` : name;
 }
 
 const TOWN_CENTRE_RE = /town centre$/i;
