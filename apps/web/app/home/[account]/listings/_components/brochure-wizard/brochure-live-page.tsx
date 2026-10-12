@@ -36,6 +36,8 @@ type Status = 'loading' | 'ready' | 'left_out' | 'error';
 
 export type BrochureLivePageDisplay = Pick<
   BrochureDisplayOptions,
+  | 'showRent'
+  | 'showPrice'
   | 'showReducedPrice'
   | 'showWebsiteListingButton'
   | 'showSlideshowBrochureButton'
@@ -72,6 +74,8 @@ export function BrochureLivePage({
   const [warnings, setWarnings] = useState<BrochureRenderWarning[]>([]);
 
   const {
+    showRent,
+    showPrice,
     showReducedPrice,
     showWebsiteListingButton,
     showSlideshowBrochureButton,
@@ -95,6 +99,8 @@ export function BrochureLivePage({
             pages,
             pageId,
             display: {
+              showRent,
+              showPrice,
               showReducedPrice,
               showWebsiteListingButton,
               showSlideshowBrochureButton,
@@ -158,6 +164,8 @@ export function BrochureLivePage({
     orientation,
     pages,
     pageId,
+    showRent,
+    showPrice,
     showReducedPrice,
     showWebsiteListingButton,
     showSlideshowBrochureButton,

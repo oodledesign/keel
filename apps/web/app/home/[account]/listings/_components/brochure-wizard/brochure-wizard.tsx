@@ -63,6 +63,8 @@ type WorkingDoc = {
 };
 
 const RENDER_FLAGS = [
+  'showRent',
+  'showPrice',
   'showReducedPrice',
   'showWebsiteListingButton',
   'showSlideshowBrochureButton',
@@ -395,11 +397,9 @@ export function BrochureWizard({
         orientation: doc.orientation,
         approved: true,
         reviewedUpdatedAt: preview.updatedAt,
-        display: {
-          showReducedPrice: display.showReducedPrice,
-          showWebsiteListingButton: display.showWebsiteListingButton,
-          showSlideshowBrochureButton: display.showSlideshowBrochureButton,
-        },
+        display: Object.fromEntries(
+          RENDER_FLAGS.map((flag) => [flag, display[flag]]),
+        ),
       });
       toast.success('Brochure published');
       onClose();

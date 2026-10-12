@@ -7,10 +7,12 @@ import type {
   BrochureOrientation,
   BrochurePage,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import { buildBrochurePageContent } from '~/lib/commercial/brochure-pdf/build-brochure-document';
 import { generateListingBrochurePdf } from '~/lib/commercial/brochure-pdf/generate-listing-brochure-pdf';
 import { loadListingBrochureData } from '~/lib/commercial/brochure-pdf/load-listing-brochure-data';
 
 import {
+  GetBrochurePageContentSchema,
   GetListingBrochureDocumentSchema,
   LoadBrochureWizardSchema,
   PublishListingBrochurePdfSchema,
@@ -89,6 +91,32 @@ export const loadBrochureWizard = enhanceAction(
   { schema: LoadBrochureWizardSchema },
 );
 
+/** A page of the chosen content filled from the listing, for changing a page's content or adding one. */
+export const getBrochurePageContent = enhanceAction(
+  async (input) => {
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
+    await requireCommercialBillableActor(
+      input.accountId,
+      'create or edit disposals',
+    );
+
+    const data = await loadListingBrochureData(
+      input.listingId,
+      input.accountId,
+    );
+    if (!data) throw new Error('Listing not found');
+
+    return buildBrochurePageContent(data, input.content, {
+      templateId: input.templateId,
+      orientation: input.orientation,
+      display: input.display,
+      usedMediaIds: input.usedMediaIds,
+    });
+  },
+  { schema: GetBrochurePageContentSchema },
+);
+
 export const saveListingBrochureDocument = enhanceAction(
   async (input) => {
     const { requireCommercialBillableActor } =
@@ -161,6 +189,8 @@ export const publishListingBrochurePdf = enhanceAction(
       templateId: saved.templateId,
       document: saved,
       display: {
+        showRent: input.display?.showRent,
+        showPrice: input.display?.showPrice,
         showReducedPrice: input.display?.showReducedPrice,
         showWebsiteListingButton: input.display?.showWebsiteListingButton,
         showSlideshowBrochureButton: input.display?.showSlideshowBrochureButton,

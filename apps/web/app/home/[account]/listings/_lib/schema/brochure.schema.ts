@@ -1,10 +1,12 @@
 import { z } from 'zod';
 
+import { BROCHURE_CONTENT_KINDS } from '~/lib/commercial/brochure-pdf/brochure-content';
 import {
   BROCHURE_IMAGE_FITS,
   BROCHURE_IMAGE_FOCUSES,
   BROCHURE_LAYOUT_IDS,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import { BROCHURE_LINK_BUTTON_IDS } from '~/lib/commercial/brochure-pdf/brochure-links';
 import { AMENITY_ICONS } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 
 export const BrochureOrientationSchema = z.enum(['portrait', 'landscape']);
@@ -95,13 +97,26 @@ const BrochureSlotValueSchema = z.discriminatedUnion('type', [
   }),
 ]);
 
+const SlotRecordSchema = z.record(z.string().max(40), BrochureSlotValueSchema);
+
 export const BrochurePageSchema = z.object({
   id: z.string().min(1).max(80),
   layoutId: BrochureLayoutIdSchema,
   sectionLabel: z.string().max(80).optional(),
   sectionNumber: z.string().max(10).optional(),
-  slots: z.record(z.string().max(40), BrochureSlotValueSchema),
-  stash: z.record(z.string().max(40), BrochureSlotValueSchema).optional(),
+  slots: SlotRecordSchema,
+  stash: SlotRecordSchema.optional(),
+  contentStash: z
+    .record(
+      z.enum(BROCHURE_CONTENT_KINDS),
+      z.object({
+        layoutId: BrochureLayoutIdSchema,
+        slots: SlotRecordSchema,
+        stash: SlotRecordSchema.optional(),
+      }),
+    )
+    .optional(),
+  hiddenButtons: z.array(z.enum(BROCHURE_LINK_BUTTON_IDS)).max(2).optional(),
   curated: z.boolean().optional(),
 });
 
@@ -137,6 +152,17 @@ export const RegenerateListingBrochureSchema = z.object({
   templateId: BrochureTemplateIdSchema,
   orientation: BrochureOrientationSchema,
   display: BrochureDisplayOptionsSchema.optional(),
+});
+
+/** One page of the chosen content, filled from the listing. */
+export const GetBrochurePageContentSchema = z.object({
+  listingId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  content: z.enum(BROCHURE_CONTENT_KINDS),
+  templateId: BrochureTemplateIdSchema,
+  orientation: BrochureOrientationSchema,
+  display: BrochureDisplayOptionsSchema.optional(),
+  usedMediaIds: z.array(z.string().uuid()).max(200).optional(),
 });
 
 export const LoadBrochureWizardSchema = z.object({

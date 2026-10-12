@@ -1,9 +1,17 @@
 'use client';
 
-import { type DragEvent, useState } from 'react';
+import {
+  type DragEvent,
+  type FocusEvent,
+  Fragment,
+  type ReactNode,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   AlertTriangle,
+  Braces,
   Building2,
   Car,
   GraduationCap,
@@ -20,6 +28,12 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
@@ -31,16 +45,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
-import type {
-  BrochureImageFit,
-  BrochureImageFocus,
-  BrochureImageSlot,
-  BrochurePage,
-  BrochureSlotValue,
+import {
+  type BrochureDisplayOptions,
+  type BrochureImageFit,
+  type BrochureImageFocus,
+  type BrochureImageSlot,
+  type BrochurePage,
+  type BrochureSlotValue,
+  type BrochureTemplateId,
+  isCoverLayout,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import {
+  type BrochureHeadingField,
+  headingFieldsFor,
+  isBrochureHeadingKey,
+} from '~/lib/commercial/brochure-pdf/brochure-headings';
+import {
+  BROCHURE_LINK_BUTTON_IDS,
+  type BrochureLinkButtonId,
+} from '~/lib/commercial/brochure-pdf/brochure-links';
+import {
+  BROCHURE_MERGE_FIELDS,
+  brochureMergeFieldToken,
+} from '~/lib/commercial/brochure-pdf/brochure-merge-fields';
 import {
   AMENITY_ICONS,
   type AmenityIcon,
@@ -223,6 +254,36 @@ const SLOT_LABELS: Record<string, string> = {
   branchPhone: 'Branch phone',
   branchEmail: 'Branch email',
 };
+
+const LINK_BUTTONS: Array<{
+  id: BrochureLinkButtonId;
+  label: string;
+  setupKey: 'showWebsiteListingButton' | 'showSlideshowBrochureButton';
+}> = [
+  {
+    id: 'website',
+    label: 'Website listing',
+    setupKey: 'showWebsiteListingButton',
+  },
+  {
+    id: 'slideshow',
+    label: 'Online brochure',
+    setupKey: 'showSlideshowBrochureButton',
+  },
+];
+
+/** The slot a heading's input sits above. */
+function headingAnchor(
+  field: BrochureHeadingField,
+  slots: Record<string, BrochureSlotValue>,
+): string | null {
+  if (field.key === 'officeLabel') return 'branchName';
+  if (field.key === 'noticeLabel') return 'notice';
+  return ['title', 'caption'].find((key) => key in slots) ?? null;
+}
+
+/** A text input the "Insert listing data" menu writes into. */
+type FieldTarget = { key: string; row?: number; part?: 'label' | 'value' };
 
 const MULTILINE_KEYS = new Set(['body', 'highlights', 'notice', 'headline']);
 
@@ -460,6 +521,8 @@ function ImageSlotEditor({
 /** Edits every slot on one page. Image slots accept dragged media and other slots. */
 export function BrochureSlotEditor({
   page,
+  templateId,
+  display,
   media,
   onImageError,
   drawingIds,
@@ -467,8 +530,15 @@ export function BrochureSlotEditor({
   onSelectSlot,
   onChange,
   onDropOnSlot,
+  onHiddenButtonsChange,
 }: {
   page: BrochurePage;
+  templateId: BrochureTemplateId;
+  /** Setup switches that turn link buttons off on every page. */
+  display: Pick<
+    BrochureDisplayOptions,
+    'showWebsiteListingButton' | 'showSlideshowBrochureButton'
+  >;
   media: BrochureMediaItem[];
   onImageError: () => void;
   drawingIds: ReadonlySet<string>;
@@ -476,237 +546,418 @@ export function BrochureSlotEditor({
   onSelectSlot: (key: string) => void;
   onChange: (slots: Record<string, BrochureSlotValue>) => void;
   onDropOnSlot: (key: string, payload: BrochureDragPayload) => void;
+  onHiddenButtonsChange: (hidden: BrochureLinkButtonId[]) => void;
 }) {
+  const lastField = useRef<{
+    target: FieldTarget;
+    el: HTMLInputElement | HTMLTextAreaElement;
+  } | null>(null);
+  const [canInsert, setCanInsert] = useState(false);
+  const headingFields = headingFieldsFor(page, templateId);
+  const headingsBefore = new Map<string, BrochureHeadingField[]>();
+  const unanchored: BrochureHeadingField[] = [];
+  for (const field of headingFields) {
+    const anchor = headingAnchor(field, page.slots);
+    if (anchor && anchor in page.slots) {
+      headingsBefore.set(anchor, [
+        ...(headingsBefore.get(anchor) ?? []),
+        field,
+      ]);
+    } else {
+      unanchored.push(field);
+    }
+  }
+  const hasTextFields =
+    headingFields.length > 0 ||
+    Object.values(page.slots).some(
+      (slot) => slot.type === 'text' || slot.type === 'facts',
+    );
+  const showsButtons =
+    isCoverLayout(page.layoutId) || page.layoutId === 'contact';
+  const hiddenButtons = page.hiddenButtons ?? [];
+
   function updateSlot(key: string, value: BrochureSlotValue) {
     onChange({ ...page.slots, [key]: value });
   }
 
-  return (
-    <div className="space-y-5">
-      {Object.entries(page.slots).map(([key, slot]) => {
-        if (slot.type === 'text') {
-          const label = SLOT_LABELS[key] ?? key;
-          return (
-            <div key={key} className="grid gap-1.5">
-              <Label>{label}</Label>
-              {MULTILINE_KEYS.has(key) ? (
-                <Textarea
-                  value={slot.text}
-                  rows={key === 'notice' || key === 'headline' ? 3 : 6}
-                  onChange={(e) =>
-                    updateSlot(key, { type: 'text', text: e.target.value })
-                  }
-                />
-              ) : (
-                <Input
-                  value={slot.text}
-                  onChange={(e) =>
-                    updateSlot(key, { type: 'text', text: e.target.value })
-                  }
-                />
-              )}
-            </div>
-          );
-        }
+  function setFieldText(target: FieldTarget, text: string) {
+    const slot = page.slots[target.key];
+    if (slot?.type === 'text' || (!slot && isBrochureHeadingKey(target.key))) {
+      updateSlot(target.key, { type: 'text', text });
+    } else if (slot?.type === 'facts' && target.row != null) {
+      const part = target.part ?? 'value';
+      updateSlot(target.key, {
+        type: 'facts',
+        rows: slot.rows.map((r, i) =>
+          i === target.row ? { ...r, [part]: text } : r,
+        ),
+      });
+    }
+  }
 
-        if (slot.type === 'image' && key === 'shopfront') {
-          return (
-            <div key={key} className="grid gap-1.5">
-              <Label>Shopfront</Label>
-              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                {slot.url
-                  ? 'From the branch settings for this workspace.'
-                  : 'No shopfront photo is set for this branch.'}
-              </p>
-            </div>
-          );
-        }
+  function trackField(target: FieldTarget) {
+    return {
+      onFocus: (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        lastField.current = { target, el: e.currentTarget };
+        setCanInsert(true);
+      },
+    };
+  }
 
-        if (slot.type === 'image') {
-          return (
-            <ImageSlotEditor
-              key={key}
-              pageId={page.id}
-              slotKey={key}
-              slot={slot}
-              media={media}
-              onImageError={onImageError}
-              drawingIds={drawingIds}
-              selected={selectedSlotKey === key}
-              onSelect={() => onSelectSlot(key)}
-              onChange={(next) => updateSlot(key, next)}
-              onDrop={(payload) => onDropOnSlot(key, payload)}
+  function insertMergeField(label: string) {
+    const field = lastField.current;
+    if (!field?.el.isConnected) return;
+    const { el, target } = field;
+    const token = brochureMergeFieldToken(label);
+    const start = el.selectionStart ?? el.value.length;
+    const end = el.selectionEnd ?? start;
+    setFieldText(
+      target,
+      el.value.slice(0, start) + token + el.value.slice(end),
+    );
+    const caret = start + token.length;
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(caret, caret);
+    });
+  }
+
+  function renderHeading(field: BrochureHeadingField) {
+    const slot = page.slots[field.key];
+    const id = `${page.id}-${field.key}`;
+    return (
+      <div key={field.key} className="grid gap-1.5">
+        <Label htmlFor={id}>{field.label}</Label>
+        <Input
+          id={id}
+          value={slot?.type === 'text' ? slot.text : ''}
+          placeholder={field.placeholder}
+          {...trackField({ key: field.key })}
+          onChange={(e) =>
+            updateSlot(field.key, { type: 'text', text: e.target.value })
+          }
+        />
+      </div>
+    );
+  }
+
+  function renderSlot(key: string, slot: BrochureSlotValue): ReactNode {
+    if (slot.type === 'text') {
+      const label = SLOT_LABELS[key] ?? key;
+      return (
+        <div key={key} className="grid gap-1.5">
+          <Label>{label}</Label>
+          {MULTILINE_KEYS.has(key) ? (
+            <Textarea
+              value={slot.text}
+              rows={key === 'notice' || key === 'headline' ? 3 : 6}
+              {...trackField({ key })}
+              onChange={(e) =>
+                updateSlot(key, { type: 'text', text: e.target.value })
+              }
             />
-          );
-        }
+          ) : (
+            <Input
+              value={slot.text}
+              {...trackField({ key })}
+              onChange={(e) =>
+                updateSlot(key, { type: 'text', text: e.target.value })
+              }
+            />
+          )}
+        </div>
+      );
+    }
 
-        if (slot.type === 'facts') {
-          return (
-            <div key={key} className="grid gap-2">
-              <Label>Facts</Label>
-              {slot.rows.map((row, index) => (
-                <div
-                  key={index}
-                  className="grid grid-cols-[1fr_1fr_auto] gap-2"
-                >
-                  <Input
-                    aria-label={`Fact ${index + 1} label`}
-                    value={row.label}
-                    onChange={(e) =>
-                      updateSlot(key, {
-                        type: 'facts',
-                        rows: slot.rows.map((r, i) =>
-                          i === index ? { ...r, label: e.target.value } : r,
-                        ),
-                      })
-                    }
-                  />
-                  <Input
-                    aria-label={`Fact ${index + 1} value`}
-                    value={row.value}
-                    onChange={(e) =>
-                      updateSlot(key, {
-                        type: 'facts',
-                        rows: slot.rows.map((r, i) =>
-                          i === index ? { ...r, value: e.target.value } : r,
-                        ),
-                      })
-                    }
-                  />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="h-9 w-9"
-                    aria-label={`Remove fact ${index + 1}`}
-                    onClick={() =>
-                      updateSlot(key, {
-                        type: 'facts',
-                        rows: slot.rows.filter((_, i) => i !== index),
-                      })
-                    }
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              ))}
+    if (slot.type === 'image' && key === 'shopfront') {
+      return (
+        <div key={key} className="grid gap-1.5">
+          <Label>Shopfront</Label>
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            {slot.url
+              ? 'From the branch settings for this workspace.'
+              : 'No shopfront photo is set for this branch.'}
+          </p>
+        </div>
+      );
+    }
+
+    if (slot.type === 'image') {
+      return (
+        <ImageSlotEditor
+          key={key}
+          pageId={page.id}
+          slotKey={key}
+          slot={slot}
+          media={media}
+          onImageError={onImageError}
+          drawingIds={drawingIds}
+          selected={selectedSlotKey === key}
+          onSelect={() => onSelectSlot(key)}
+          onChange={(next) => updateSlot(key, next)}
+          onDrop={(payload) => onDropOnSlot(key, payload)}
+        />
+      );
+    }
+
+    if (slot.type === 'facts') {
+      return (
+        <div key={key} className="grid gap-2">
+          <Label>Facts</Label>
+          {slot.rows.map((row, index) => (
+            <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+              <Input
+                aria-label={`Fact ${index + 1} label`}
+                value={row.label}
+                {...trackField({ key, row: index, part: 'label' })}
+                onChange={(e) =>
+                  updateSlot(key, {
+                    type: 'facts',
+                    rows: slot.rows.map((r, i) =>
+                      i === index ? { ...r, label: e.target.value } : r,
+                    ),
+                  })
+                }
+              />
+              <Input
+                aria-label={`Fact ${index + 1} value`}
+                value={row.value}
+                {...trackField({ key, row: index, part: 'value' })}
+                onChange={(e) =>
+                  updateSlot(key, {
+                    type: 'facts',
+                    rows: slot.rows.map((r, i) =>
+                      i === index ? { ...r, value: e.target.value } : r,
+                    ),
+                  })
+                }
+              />
               <Button
                 type="button"
-                size="sm"
-                variant="outline"
-                className="w-fit"
+                size="icon"
+                variant="ghost"
+                className="h-9 w-9"
+                aria-label={`Remove fact ${index + 1}`}
                 onClick={() =>
                   updateSlot(key, {
                     type: 'facts',
-                    rows: [...slot.rows, { label: 'Label', value: '' }],
+                    rows: slot.rows.filter((_, i) => i !== index),
                   })
                 }
               >
-                Add row
+                <X className="h-3.5 w-3.5" />
               </Button>
             </div>
-          );
-        }
+          ))}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="w-fit"
+            onClick={() =>
+              updateSlot(key, {
+                type: 'facts',
+                rows: [...slot.rows, { label: 'Label', value: '' }],
+              })
+            }
+          >
+            Add row
+          </Button>
+        </div>
+      );
+    }
 
-        if (slot.type === 'map') {
-          const shownCount = Math.min(
-            slot.limit ?? MAX_AMENITIES,
-            MAX_AMENITIES,
-          );
-          const hiddenCount = Math.max(0, slot.amenities.length - shownCount);
-          return (
-            <div key={key} className="grid gap-2">
-              <div className="grid gap-1.5">
-                <Label htmlFor={`${page.id}-${key}-limit`}>
-                  Places to show
-                </Label>
-                <Select
-                  value={slot.limit == null ? 'all' : String(slot.limit)}
-                  onValueChange={(value) =>
-                    updateSlot(key, {
-                      ...slot,
-                      limit: value === 'all' ? undefined : Number(value),
-                    })
-                  }
-                >
-                  <SelectTrigger id={`${page.id}-${key}-limit`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PLACE_LIMIT_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Label>Nearby places on the map</Label>
-              {slot.amenities.length === 0 ? (
-                <p className="text-muted-foreground text-xs">
-                  Left empty, the brochure lists places found near the property.
-                </p>
-              ) : null}
-              {slot.amenities.map((amenity, index) => (
-                <PlaceEditor
-                  key={index}
-                  amenity={amenity}
-                  hiddenNoteId={
-                    index >= shownCount ? `${page.id}-${key}-hidden` : null
-                  }
-                  onChange={(next) =>
-                    updateSlot(key, {
-                      ...slot,
-                      amenities: slot.amenities.map((a, i) =>
-                        i === index ? next : a,
-                      ),
-                    })
-                  }
-                  onRemove={() =>
-                    updateSlot(key, {
-                      ...slot,
-                      amenities: slot.amenities
-                        .filter((_, i) => i !== index)
-                        .map((a, i) => ({ ...a, index: i + 1 })),
-                    })
-                  }
-                />
-              ))}
-              {hiddenCount > 0 ? (
-                <p
-                  id={`${page.id}-${key}-hidden`}
-                  className="flex items-start gap-1.5 text-xs text-[var(--workspace-shell-text)]"
-                >
-                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-[var(--ozer-accent)]" />
-                  {shownCount === MAX_AMENITIES
-                    ? `A page shows up to ${MAX_AMENITIES} places, so the last ${hiddenCount === 1 ? 'one' : hiddenCount} won't appear.`
-                    : `Places to show is set to ${shownCount}, so the last ${hiddenCount === 1 ? 'one' : hiddenCount} won't appear.`}
-                </p>
-              ) : null}
+    if (slot.type === 'map') {
+      const shownCount = Math.min(slot.limit ?? MAX_AMENITIES, MAX_AMENITIES);
+      const hiddenCount = Math.max(0, slot.amenities.length - shownCount);
+      return (
+        <div key={key} className="grid gap-2">
+          <div className="grid gap-1.5">
+            <Label htmlFor={`${page.id}-${key}-limit`}>Places to show</Label>
+            <Select
+              value={slot.limit == null ? 'all' : String(slot.limit)}
+              onValueChange={(value) =>
+                updateSlot(key, {
+                  ...slot,
+                  limit: value === 'all' ? undefined : Number(value),
+                })
+              }
+            >
+              <SelectTrigger id={`${page.id}-${key}-limit`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PLACE_LIMIT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Label>Nearby places on the map</Label>
+          {slot.amenities.length === 0 ? (
+            <p className="text-muted-foreground text-xs">
+              Left empty, the brochure lists places found near the property.
+            </p>
+          ) : null}
+          {slot.amenities.map((amenity, index) => (
+            <PlaceEditor
+              key={index}
+              amenity={amenity}
+              hiddenNoteId={
+                index >= shownCount ? `${page.id}-${key}-hidden` : null
+              }
+              onChange={(next) =>
+                updateSlot(key, {
+                  ...slot,
+                  amenities: slot.amenities.map((a, i) =>
+                    i === index ? next : a,
+                  ),
+                })
+              }
+              onRemove={() =>
+                updateSlot(key, {
+                  ...slot,
+                  amenities: slot.amenities
+                    .filter((_, i) => i !== index)
+                    .map((a, i) => ({ ...a, index: i + 1 })),
+                })
+              }
+            />
+          ))}
+          {hiddenCount > 0 ? (
+            <p
+              id={`${page.id}-${key}-hidden`}
+              className="flex items-start gap-1.5 text-xs text-[var(--workspace-shell-text)]"
+            >
+              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-[var(--ozer-accent)]" />
+              {shownCount === MAX_AMENITIES
+                ? `A page shows up to ${MAX_AMENITIES} places, so the last ${hiddenCount === 1 ? 'one' : hiddenCount} won't appear.`
+                : `Places to show is set to ${shownCount}, so the last ${hiddenCount === 1 ? 'one' : hiddenCount} won't appear.`}
+            </p>
+          ) : null}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="w-fit"
+            disabled={slot.amenities.length >= MAX_AMENITIES}
+            onClick={() =>
+              updateSlot(key, {
+                ...slot,
+                amenities: [
+                  ...slot.amenities,
+                  { label: '', index: slot.amenities.length + 1 },
+                ],
+              })
+            }
+          >
+            Add place
+          </Button>
+        </div>
+      );
+    }
+
+    return null;
+  }
+
+  return (
+    <div className="space-y-5">
+      {hasTextFields ? (
+        <div className="grid gap-1.5">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                className="w-fit"
-                disabled={slot.amenities.length >= MAX_AMENITIES}
-                onClick={() =>
-                  updateSlot(key, {
-                    ...slot,
-                    amenities: [
-                      ...slot.amenities,
-                      { label: '', index: slot.amenities.length + 1 },
-                    ],
-                  })
-                }
+                className="w-fit gap-1.5"
+                disabled={!canInsert}
               >
-                Add place
+                <Braces className="h-3.5 w-3.5" />
+                Insert listing data
               </Button>
-            </div>
-          );
-        }
-
-        return null;
-      })}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              className="max-h-80 w-52 overflow-y-auto"
+              onCloseAutoFocus={(e) => e.preventDefault()}
+            >
+              {BROCHURE_MERGE_FIELDS.map((field) => (
+                <DropdownMenuItem
+                  key={field.label}
+                  className="text-xs"
+                  onSelect={() => insertMergeField(field.label)}
+                >
+                  {field.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Click into a field, then pick a detail. It shows as{' '}
+            <code className="font-mono">{'{Rent}'}</code> here and as the
+            listing&apos;s current value in the PDF.
+          </p>
+        </div>
+      ) : null}
+      {unanchored.map(renderHeading)}
+      {Object.entries(page.slots).map(([key, slot]) =>
+        isBrochureHeadingKey(key) ? null : (
+          <Fragment key={key}>
+            {(headingsBefore.get(key) ?? []).map(renderHeading)}
+            {renderSlot(key, slot)}
+          </Fragment>
+        ),
+      )}
+      {showsButtons ? (
+        <div className="grid gap-2">
+          <Label>Buttons on this page</Label>
+          <ul className="space-y-2">
+            {LINK_BUTTONS.map((button) => {
+              const allowed = display[button.setupKey];
+              const switchId = `${page.id}-button-${button.id}`;
+              return (
+                <li
+                  key={button.id}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <label
+                    htmlFor={switchId}
+                    className={cn(
+                      'text-sm text-[var(--workspace-shell-text)]',
+                      !allowed && 'opacity-50',
+                    )}
+                  >
+                    {button.label}
+                  </label>
+                  <Switch
+                    id={switchId}
+                    checked={allowed && !hiddenButtons.includes(button.id)}
+                    disabled={!allowed}
+                    onCheckedChange={(checked) =>
+                      onHiddenButtonsChange(
+                        BROCHURE_LINK_BUTTON_IDS.filter((id) =>
+                          id === button.id
+                            ? !checked
+                            : hiddenButtons.includes(id),
+                        ),
+                      )
+                    }
+                  />
+                </li>
+              );
+            })}
+          </ul>
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            {LINK_BUTTONS.some((button) => !display[button.setupKey])
+              ? 'A greyed-out button is turned off for every page in Set up. '
+              : ''}
+            Each button only appears when the listing has that link.
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }

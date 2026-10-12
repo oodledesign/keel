@@ -20,10 +20,22 @@ import { CSS } from '@dnd-kit/utilities';
 import { Copy, GripVertical, Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 import { cn } from '@kit/ui/utils';
 
+import {
+  BROCHURE_CONTENT_OPTIONS,
+  type BrochureContentKind,
+  brochureContentLabel,
+  contentOf,
+} from '~/lib/commercial/brochure-pdf/brochure-content';
 import type { BrochurePage } from '~/lib/commercial/brochure-pdf/brochure-document';
-import { brochureLayoutLabel } from '~/lib/commercial/brochure-pdf/build-brochure-document';
 
 function SortablePageRow({
   page,
@@ -84,7 +96,7 @@ function SortablePageRow({
           ) : null}
         </span>
         <span className="block truncate text-xs font-medium text-[var(--workspace-shell-text)]">
-          {brochureLayoutLabel(page.layoutId)}
+          {brochureContentLabel(contentOf(page.layoutId))}
         </span>
       </button>
       <div className="flex opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
@@ -123,6 +135,7 @@ export function BrochurePageStrip({
   onDuplicate,
   onDelete,
   onAdd,
+  adding = false,
 }: {
   pages: BrochurePage[];
   selectedPageId: string | null;
@@ -131,7 +144,9 @@ export function BrochurePageStrip({
   onReorder: (pages: BrochurePage[]) => void;
   onDuplicate: (pageId: string) => void;
   onDelete: (pageId: string) => void;
-  onAdd: () => void;
+  onAdd: (content: BrochureContentKind) => void;
+  /** A page is being added. */
+  adding?: boolean;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -155,17 +170,34 @@ export function BrochurePageStrip({
         <p className="text-xs font-medium text-[var(--workspace-shell-text)]">
           Pages ({pages.length})
         </p>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          className="h-7 gap-1 px-2 text-xs"
-          disabled={pages.length >= 30}
-          onClick={onAdd}
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Add
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 gap-1 px-2 text-xs"
+              disabled={pages.length >= 30 || adding}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuLabel className="text-xs font-normal text-[var(--workspace-shell-text-muted)]">
+              Filled from the listing
+            </DropdownMenuLabel>
+            {BROCHURE_CONTENT_OPTIONS.map((option) => (
+              <DropdownMenuItem
+                key={option.id}
+                className="text-xs"
+                onSelect={() => onAdd(option.id)}
+              >
+                {option.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <DndContext
         sensors={sensors}

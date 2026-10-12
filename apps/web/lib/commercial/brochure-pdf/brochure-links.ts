@@ -1,5 +1,9 @@
+export const BROCHURE_LINK_BUTTON_IDS = ['website', 'slideshow'] as const;
+
+export type BrochureLinkButtonId = (typeof BROCHURE_LINK_BUTTON_IDS)[number];
+
 export type BrochureLinkButton = {
-  id: 'website' | 'slideshow';
+  id: BrochureLinkButtonId;
   label: string;
   url: string;
 };

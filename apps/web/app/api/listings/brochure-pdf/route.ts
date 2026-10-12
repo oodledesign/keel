@@ -98,9 +98,11 @@ export const GET = enhanceRouteHandler(
           orientation: saved?.orientation ?? orientation,
           templateId: saved?.templateId ?? template,
           document: saved,
-          // Facts bake into saved pages; reduced sash can still apply at render.
+          // Facts bake into saved pages; the sash, link buttons and merge fields apply at render.
           display: saved
             ? {
+                showRent,
+                showPrice,
                 showReducedPrice,
                 showWebsiteListingButton,
                 showSlideshowBrochureButton,

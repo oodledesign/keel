@@ -56,12 +56,7 @@ export const POST = enhanceRouteHandler(
           pageSize: 'A4',
           pages: pages.map((page) => ({ ...page, curated: true })),
         },
-        display: {
-          showReducedPrice: body.display?.showReducedPrice,
-          showWebsiteListingButton: body.display?.showWebsiteListingButton,
-          showSlideshowBrochureButton:
-            body.display?.showSlideshowBrochureButton,
-        },
+        display: body.display,
         pageIds: [pageId],
       });
 

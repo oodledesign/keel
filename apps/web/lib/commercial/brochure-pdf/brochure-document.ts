@@ -1,6 +1,8 @@
 /**
  * Brochure document model — shared between auto PDF generation and the page editor.
  */
+import type { BrochureContentKind } from '~/lib/commercial/brochure-pdf/brochure-content';
+import type { BrochureLinkButtonId } from '~/lib/commercial/brochure-pdf/brochure-links';
 import type { AmenityIcon } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 
 export type BrochureOrientation = 'portrait' | 'landscape';
@@ -124,8 +126,18 @@ export type BrochurePage = {
   slots: Record<string, BrochureSlotValue>;
   /** Content the current layout can't show, restored on switching back to a layout that can. */
   stash?: Record<string, BrochureSlotValue>;
+  /** The page's earlier content, by content kind, restored on switching back to that content. */
+  contentStash?: Partial<Record<BrochureContentKind, BrochureStashedContent>>;
+  /** Link buttons left off this page (cover and contact). */
+  hiddenButtons?: BrochureLinkButtonId[];
   /** Edited in the wizard: render it as shown there, without filling empty frames with spare photos. */
   curated?: boolean;
+};
+
+export type BrochureStashedContent = {
+  layoutId: BrochureLayoutId;
+  slots: Record<string, BrochureSlotValue>;
+  stash?: Record<string, BrochureSlotValue>;
 };
 
 /** Problems the renderer noticed, shown as checks before approving. */

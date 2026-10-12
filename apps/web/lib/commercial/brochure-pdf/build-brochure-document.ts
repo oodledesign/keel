@@ -1,4 +1,8 @@
 import {
+  type BrochureContentKind,
+  defaultLayoutFor,
+} from '~/lib/commercial/brochure-pdf/brochure-content';
+import {
   type BrochureDisplayOptions,
   type BrochureDocument,
   type BrochureLayoutId,
@@ -9,6 +13,7 @@ import {
   DEFAULT_BROCHURE_DISPLAY_OPTIONS,
   newBrochurePageId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import { DEFAULT_CONTACT_TITLE } from '~/lib/commercial/brochure-pdf/brochure-headings';
 import { buildCoverPriceLines } from '~/lib/commercial/brochure-pdf/cover-prices';
 import {
   type BrochureAmenityItem,
@@ -45,7 +50,7 @@ function resolveDisplay(
   return { ...DEFAULT_BROCHURE_DISPLAY_OPTIONS, ...display };
 }
 
-function formatPerSqft(value: number | null): string | null {
+export function formatPerSqft(value: number | null): string | null {
   if (value == null || !Number.isFinite(value)) return null;
   return `${new Intl.NumberFormat('en-GB', {
     style: 'currency',
@@ -125,7 +130,7 @@ export function brochureSizeValue(listing: BrochureListing): string | null {
   return [sqft, sqm ? `(${sqm})` : '', basis].filter(Boolean).join(' ');
 }
 
-function formatEpc(listing: BrochureListing): string | null {
+export function formatEpc(listing: BrochureListing): string | null {
   const band = listing.epcBand?.trim().toUpperCase() || null;
   const rating =
     listing.epcRating != null && Number.isFinite(listing.epcRating)
@@ -133,6 +138,11 @@ function formatEpc(listing: BrochureListing): string | null {
       : null;
   if (band && rating) return `${band} (${rating})`;
   return band ?? rating;
+}
+
+export function formatTenure(listing: BrochureListing): string | null {
+  const tenure = listing.tenure?.trim().replace(/_/g, ' ');
+  return tenure ? tenure[0]!.toUpperCase() + tenure.slice(1) : null;
 }
 
 function formatParking(listing: BrochureListing): string | null {
@@ -159,13 +169,8 @@ function buildFactsRows(
     rows.push({ label: 'Property type', value: listing.sector.trim() });
   }
 
-  const tenure = listing.tenure?.trim().replace(/_/g, ' ');
-  if (tenure) {
-    rows.push({
-      label: 'Tenure',
-      value: tenure[0]!.toUpperCase() + tenure.slice(1),
-    });
-  }
+  const tenure = formatTenure(listing);
+  if (tenure) rows.push({ label: 'Tenure', value: tenure });
 
   if (display.showSize) {
     const size = brochureSizeValue(listing);
@@ -303,7 +308,7 @@ function contactSlots(
 ): Record<string, BrochureSlotValue> {
   const shopfront = data.branch?.shopfrontUrl?.trim() || null;
   return {
-    title: textSlot('Contact'),
+    title: textSlot(DEFAULT_CONTACT_TITLE),
     notice: textSlot(notice),
     agents: { type: 'agents' },
     branchName: textSlot(data.branch?.name ?? data.accountName ?? ''),
@@ -533,6 +538,88 @@ function floorplanPages(data: PublicBrochureData): BrochurePage[] {
   );
 }
 
+const COMPACT_NOTICE =
+  'Important notice: These particulars are for guidance only and do not constitute any part of an offer or contract. All descriptions, dimensions and other details are given in good faith but should not be relied upon as statements of fact.';
+
+const FULL_NOTICE =
+  'Important notice: These particulars are believed to be correct but their accuracy is not guaranteed and they do not form part of any contract. Interested parties should satisfy themselves by inspection or otherwise as to the correctness of each statement.';
+
+function locationSlots(
+  data: PublicBrochureData,
+  maxBody: number,
+): Record<string, BrochureSlotValue> {
+  return {
+    title: textSlot('Location'),
+    body: textSlot(clipAtSentence(brochureLocationBody(data), maxBody)),
+    map: {
+      type: 'map',
+      latitude: data.listing.latitude,
+      longitude: data.listing.longitude,
+      amenities: buildAmenities(data),
+    },
+  };
+}
+
+/**
+ * One page of `kind` filled from the listing, in that content's default
+ * layout. Content the listing has nothing for comes back blank.
+ */
+export function buildBrochurePageContent(
+  data: PublicBrochureData,
+  kind: BrochureContentKind,
+  options: BuildBrochureDocumentOptions & {
+    /** Floor plans already on other pages; the next unused one is picked. */
+    usedMediaIds?: readonly string[];
+  },
+): BrochurePage {
+  const { templateId } = options;
+  const display = resolveDisplay(options.display);
+  const layoutId = defaultLayoutFor(kind);
+
+  switch (kind) {
+    case 'cover':
+      return page(layoutId, coverSlots(data, display));
+    case 'summary':
+      return page(layoutId, {
+        facts: { type: 'facts', rows: buildFactsRows(data, display) },
+        title: textSlot(templateId === 'classic' ? 'Summary' : 'The offering'),
+      });
+    case 'description': {
+      const slots = descriptionSlots(data, templateId);
+      return slots ? page(layoutId, slots) : createBlankBrochurePage(layoutId);
+    }
+    case 'details': {
+      const slots = detailsSlots(data);
+      return slots ? page(layoutId, slots) : createBlankBrochurePage(layoutId);
+    }
+    case 'floorplan': {
+      const used = new Set(options.usedMediaIds ?? []);
+      const index = data.floorplans.findIndex((fp) => !used.has(fp.id));
+      const plan = data.floorplans[index];
+      if (!plan) return createBlankBrochurePage(layoutId);
+      return page(layoutId, {
+        plan: imageSlot(plan.id, plan.url),
+        caption: textSlot(plan.fileName ?? `Floor plan ${index + 1}`),
+      });
+    }
+    case 'location':
+      return page(
+        layoutId,
+        locationSlots(data, templateId === 'compact' ? 500 : 800),
+      );
+    case 'contact':
+      return page(
+        layoutId,
+        contactSlots(
+          data,
+          templateId === 'compact' ? COMPACT_NOTICE : FULL_NOTICE,
+        ),
+      );
+    case 'photos':
+      return createBlankBrochurePage(layoutId);
+  }
+}
+
 /**
  * Build a slot-based brochure document from listing brochure data.
  */
@@ -543,9 +630,7 @@ export function buildBrochureDocument(
   const { orientation, templateId } = options;
   const display = resolveDisplay(options.display);
   const facts = buildFactsRows(data, display);
-  const amenities = buildAmenities(data);
   const descSlots = descriptionSlots(data, templateId);
-  const locationCopy = brochureLocationBody(data);
 
   const pages: BrochurePage[] = [];
 
@@ -601,29 +686,10 @@ export function buildBrochureDocument(
     );
 
     if (data.listing.latitude != null && data.listing.longitude != null) {
-      pages.push(
-        page('map_amenities', {
-          title: textSlot('Location'),
-          body: textSlot(clipAtSentence(locationCopy, 500)),
-          map: {
-            type: 'map',
-            latitude: data.listing.latitude,
-            longitude: data.listing.longitude,
-            amenities,
-          },
-        }),
-      );
+      pages.push(page('map_amenities', locationSlots(data, 500)));
     }
 
-    pages.push(
-      page(
-        'contact',
-        contactSlots(
-          data,
-          'Important notice: These particulars are for guidance only and do not constitute any part of an offer or contract. All descriptions, dimensions and other details are given in good faith but should not be relied upon as statements of fact.',
-        ),
-      ),
-    );
+    pages.push(page('contact', contactSlots(data, COMPACT_NOTICE)));
 
     return {
       listingId: data.listing.id,
@@ -702,16 +768,7 @@ export function buildBrochureDocument(
     pages.push(
       page(
         'map_amenities',
-        {
-          title: textSlot('Location'),
-          body: textSlot(clipAtSentence(locationCopy, 800)),
-          map: {
-            type: 'map',
-            latitude: data.listing.latitude,
-            longitude: data.listing.longitude,
-            amenities,
-          },
-        },
+        locationSlots(data, 800),
         templateId === 'editorial'
           ? { sectionNumber: '04', sectionLabel: 'Location' }
           : undefined,
@@ -722,10 +779,7 @@ export function buildBrochureDocument(
   pages.push(
     page(
       'contact',
-      contactSlots(
-        data,
-        'Important notice: These particulars are believed to be correct but their accuracy is not guaranteed and they do not form part of any contract. Interested parties should satisfy themselves by inspection or otherwise as to the correctness of each statement.',
-      ),
+      contactSlots(data, FULL_NOTICE),
       templateId === 'editorial'
         ? { sectionNumber: '05', sectionLabel: 'Contact' }
         : undefined,
@@ -750,132 +804,98 @@ export function buildBrochureDocument(
   };
 }
 
-export type BrochureLayoutGroup =
-  | 'Cover'
-  | 'Text'
-  | 'Photos'
-  | 'Location'
-  | 'Contact';
-
-export const BROCHURE_LAYOUT_GROUPS: BrochureLayoutGroup[] = [
-  'Cover',
-  'Text',
-  'Photos',
-  'Location',
-  'Contact',
-];
-
 export const BROCHURE_LAYOUT_OPTIONS: Array<{
   id: BrochureLayoutId;
-  group: BrochureLayoutGroup;
   label: string;
   description: string;
 }> = [
   {
     id: 'cover_hero_band',
-    group: 'Cover',
     label: 'Cover',
     description: 'Photo with the brand band at the side',
   },
   {
     id: 'cover_photo_band',
-    group: 'Cover',
     label: 'Cover, band below',
     description: 'Full-width photo with the brand band underneath',
   },
   {
     id: 'facts_table',
-    group: 'Text',
     label: 'Facts',
     description: 'Summary facts table',
   },
   {
     id: 'description_highlights',
-    group: 'Text',
     label: 'Description',
     description: 'Copy and key points',
   },
   {
     id: 'description_photo',
-    group: 'Text',
     label: 'Description with photo',
     description: 'Copy and key points beside a photo',
   },
   {
     id: 'details_columns',
-    group: 'Text',
     label: 'Specification & terms',
     description: 'Spec list, terms and EPC in columns',
   },
   {
     id: 'photo_full',
-    group: 'Photos',
     label: 'Full-bleed photo',
     description: 'Single large photograph',
   },
   {
     id: 'photo_grid_2',
-    group: 'Photos',
     label: 'Two photos',
     description: 'Side-by-side or stacked pair',
   },
   {
     id: 'photo_grid_3',
-    group: 'Photos',
     label: 'Photo collage',
     description: '1+2 collage of three photos',
   },
   {
     id: 'photo_row_3',
-    group: 'Photos',
     label: 'Three photos in a row',
     description: 'Three equal photos side by side',
   },
   {
     id: 'photo_grid_4',
-    group: 'Photos',
     label: 'Four-photo grid',
     description: 'Two by two grid',
   },
   {
     id: 'photo_text',
-    group: 'Photos',
     label: 'Photo with text',
     description: 'Large photo with a heading and copy',
   },
   {
     id: 'floorplan',
-    group: 'Photos',
     label: 'Floor plan',
     description: 'Dedicated floor plan page',
   },
   {
     id: 'map_amenities',
-    group: 'Location',
     label: 'Map & amenities',
     description: 'Map with amenity list',
   },
   {
     id: 'map_text',
-    group: 'Location',
     label: 'Location, text-led',
     description: 'Wide copy column with a smaller map',
   },
   {
     id: 'map_top',
-    group: 'Location',
     label: 'Location, map on top',
     description: 'Map across the top, copy and places below',
   },
   {
     id: 'location_text',
-    group: 'Location',
     label: 'Location, text only',
     description: 'Copy and nearby places without a map',
   },
   {
     id: 'contact',
-    group: 'Contact',
     label: 'Contact',
     description: 'Agents and disclaimer',
   },
@@ -981,7 +1001,7 @@ export function createBlankBrochurePage(
       });
     case 'contact':
       return page(layoutId, {
-        title: textSlot('Contact'),
+        title: textSlot(DEFAULT_CONTACT_TITLE),
         notice: textSlot(''),
         agents: { type: 'agents' },
         branchName: textSlot(''),

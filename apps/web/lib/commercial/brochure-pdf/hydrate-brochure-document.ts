@@ -7,6 +7,7 @@ import {
   isCoverLayout,
   isLocationLayout,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import { DEFAULT_CONTACT_TITLE } from '~/lib/commercial/brochure-pdf/brochure-headings';
 import {
   brochureCoverImage,
   brochureLocationBody,
@@ -169,6 +170,14 @@ export function hydrateBrochureDocument(
       // listing photo on this slot. Always refresh the public URL.
       if (!lockedToListingMedia) {
         slots.shopfront = { type: 'image', mediaId: null, url: shopfront };
+      }
+      // Classic and Compact used to draw a "Contact" title as this.
+      if (
+        document.templateId !== 'editorial' &&
+        slots.title?.type === 'text' &&
+        slots.title.text.trim() === 'Contact'
+      ) {
+        slots.title = { type: 'text', text: DEFAULT_CONTACT_TITLE };
       }
     } else if (page.layoutId === 'facts_table') {
       // Optional side photos: refresh by mediaId, never back-fill.

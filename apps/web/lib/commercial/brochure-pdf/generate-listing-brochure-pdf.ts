@@ -75,6 +75,7 @@ export async function generateListingBrochurePdf(input: {
   const bytes = await renderBrochurePdf(document, data, {
     warnings: rendererWarnings,
     pageIds: input.pageIds,
+    display: input.display,
   });
   const savedNumber = new Map(
     built.pages.map((page, index) => [page.id, index + 1]),

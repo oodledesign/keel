@@ -33,6 +33,7 @@ import {
   AMENITY_ICON_VIEWBOX,
 } from '~/lib/commercial/brochure-pdf/amenity-icons';
 import type {
+  BrochureDisplayOptions,
   BrochureDocument,
   BrochureImageFit,
   BrochureImageFocus,
@@ -44,6 +45,13 @@ import type {
   BrochureSlotValue,
   BrochureTemplateId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import {
+  DEFAULT_CONTACT_TITLE,
+  DEFAULT_NOTICE_HEADING,
+  DEFAULT_OFFICE_HEADING,
+  PAGE_EYEBROWS,
+  defaultBrochureEyebrow,
+} from '~/lib/commercial/brochure-pdf/brochure-headings';
 import { fetchBrochureImageBytes } from '~/lib/commercial/brochure-pdf/brochure-image-bytes';
 import {
   type Box,
@@ -58,7 +66,11 @@ import {
   splitLeadParagraph,
   wholeImageRect,
 } from '~/lib/commercial/brochure-pdf/brochure-layout';
-import { resolveBrochureLinkButtons } from '~/lib/commercial/brochure-pdf/brochure-links';
+import {
+  type BrochureLinkButton,
+  resolveBrochureLinkButtons,
+} from '~/lib/commercial/brochure-pdf/brochure-links';
+import { resolveBrochureMergeFields } from '~/lib/commercial/brochure-pdf/brochure-merge-fields';
 import { brochureCoverImage } from '~/lib/commercial/brochure-pdf/build-brochure-document';
 import {
   CONTACT_ICON_PATHS,
@@ -855,19 +867,6 @@ function drawSectionTab(
   }
 }
 
-const PAGE_EYEBROWS: Partial<Record<BrochurePage['layoutId'], string>> = {
-  facts_table: 'The opportunity',
-  description_highlights: 'Description',
-  description_photo: 'Description',
-  details_columns: 'Particulars',
-  floorplan: 'Accommodation',
-  map_amenities: 'Location',
-  map_text: 'Location',
-  map_top: 'Location',
-  location_text: 'Location',
-  contact: 'Viewing & enquiries',
-};
-
 /** "Otford, Sevenoaks" for the location page title; null when unknown. */
 function locationHeadline(listing: BrochureListing): string | null {
   const parts = [listing.addressLine2, listing.town]
@@ -895,14 +894,17 @@ function drawPageHeader(
   const frame = contentFrame(page, ctx);
   const type = typeScale(ctx);
   const width = maxWidth ?? frame.width;
+  const custom = slotText(brochurePage.slots, 'eyebrow').trim();
   const editorialSection =
     ctx.templateId === 'editorial' && brochurePage.sectionNumber
-      ? `${brochurePage.sectionNumber}   ${brochurePage.sectionLabel ?? ''}`
+      ? `${brochurePage.sectionNumber}   ${custom || brochurePage.sectionLabel || ''}`
       : null;
   const banded = hasBands(ctx);
-  const eyebrow = banded
-    ? (PAGE_EYEBROWS[brochurePage.layoutId] ?? brochurePage.sectionLabel ?? '')
-    : (editorialSection ?? ctx.runningTitle);
+  const eyebrow =
+    editorialSection ??
+    (custom ||
+      (defaultBrochureEyebrow(brochurePage, ctx.templateId) ??
+        ctx.runningTitle));
 
   const eyebrowY = (top ?? frame.top) - 7;
   drawEyebrow(page, ctx, eyebrow, {
@@ -1375,13 +1377,14 @@ function drawLinkButtons(
   return height;
 }
 
-function brochureLinks(ctx: RenderCtx) {
+function brochureLinks(ctx: RenderCtx, brochurePage: BrochurePage) {
+  const hidden = new Set(brochurePage.hiddenButtons ?? []);
   return resolveBrochureLinkButtons({
     showWebsiteListingButton: ctx.data.showWebsiteListingButton,
     showSlideshowBrochureButton: ctx.data.showSlideshowBrochureButton,
     websiteListingUrl: ctx.data.websiteListingUrl,
     slideshowBrochureUrl: ctx.data.slideshowBrochureUrl,
-  });
+  }).filter((button) => !hidden.has(button.id));
 }
 
 function drawLogo(
@@ -1612,7 +1615,7 @@ async function renderCover(
   const reducedLabel =
     slotText(brochurePage.slots, 'reducedBadge').trim() ||
     (ctx.data.showReducedPrice ? 'REDUCED PRICE' : '');
-  const links = brochureLinks(ctx);
+  const links = brochureLinks(ctx, brochurePage);
   const titleSize =
     ctx.templateId === 'editorial'
       ? landscape
@@ -3561,9 +3564,18 @@ async function renderContact(
   const frame = contentFrame(page, ctx);
   const bandH = 84;
   const banded = hasBands(ctx);
-  const rawTitle = slotText(brochurePage.slots, 'title') || 'Contact';
   const title =
-    banded && rawTitle === 'Contact' ? 'Strictly by appointment' : rawTitle;
+    slotText(brochurePage.slots, 'title').trim() || DEFAULT_CONTACT_TITLE;
+  const eyebrow =
+    slotText(brochurePage.slots, 'eyebrow').trim() || PAGE_EYEBROWS.contact!;
+  const headings = {
+    office:
+      slotText(brochurePage.slots, 'officeLabel').trim() ||
+      DEFAULT_OFFICE_HEADING,
+    notice:
+      slotText(brochurePage.slots, 'noticeLabel').trim() ||
+      DEFAULT_NOTICE_HEADING,
+  };
 
   if (!banded) {
     page.drawRectangle({
@@ -3580,7 +3592,7 @@ async function renderContact(
       brochurePage.sectionNumber,
     );
 
-    drawEyebrow(page, ctx, 'Viewing & enquiries', {
+    drawEyebrow(page, ctx, eyebrow, {
       x: frame.left,
       y: height - 32,
       color: ctx.colors.paperMuted,
@@ -3661,6 +3673,9 @@ async function renderContact(
   if (banded && landscape) {
     renderContactSplit(page, ctx, {
       title,
+      eyebrow,
+      headings,
+      links: brochureLinks(ctx, brochurePage),
       office,
       shopfrontImg,
       notice,
@@ -3673,6 +3688,7 @@ async function renderContact(
   const noticeTop = drawContactNotice(page, ctx, notice, {
     x: frame.left,
     width: frame.width,
+    heading: headings.notice,
   });
   const bodyMinY = noticeTop + 32;
 
@@ -3684,9 +3700,10 @@ async function renderContact(
     x: frame.left,
     y: by,
     width: officeW,
+    heading: headings.office,
   });
 
-  const links = brochureLinks(ctx);
+  const links = brochureLinks(ctx, brochurePage);
   if (links.length > 0) {
     by -= 12;
     drawLinkButtons(page, ctx, links, {
@@ -3815,7 +3832,7 @@ function drawContactNotice(
   page: PDFPage,
   ctx: RenderCtx,
   notice: string,
-  opts: { x: number; width: number },
+  opts: { x: number; width: number; heading: string },
 ): number {
   if (!notice) return CONTENT_MIN_Y;
   const noticeOpts = {
@@ -3826,7 +3843,7 @@ function drawContactNotice(
     maxLines: 7,
   };
   const top = CONTENT_MIN_Y + measureWrapped(notice, noticeOpts) + 4;
-  drawEyebrow(page, ctx, 'Important notice', {
+  drawEyebrow(page, ctx, opts.heading, {
     x: opts.x,
     y: top + 6,
     color: ctx.colors.muted,
@@ -3846,11 +3863,11 @@ function drawOfficeBlock(
   page: PDFPage,
   ctx: RenderCtx,
   office: OfficeDetails,
-  opts: { x: number; y: number; width: number },
+  opts: { x: number; y: number; width: number; heading: string },
 ): number {
   const banded = hasBands(ctx);
   let by = opts.y;
-  drawEyebrow(page, ctx, 'Office', {
+  drawEyebrow(page, ctx, opts.heading, {
     x: opts.x,
     y: by,
     color: banded ? ctx.colors.accent : ctx.colors.primary,
@@ -3976,6 +3993,9 @@ function renderContactSplit(
   ctx: RenderCtx,
   opts: {
     title: string;
+    eyebrow: string;
+    headings: { office: string; notice: string };
+    links: BrochureLinkButton[];
     office: OfficeDetails;
     shopfrontImg: PDFImage | null;
     notice: string;
@@ -3991,11 +4011,13 @@ function renderContactSplit(
   const noticeTop = drawContactNotice(page, ctx, opts.notice, {
     x: frame.left,
     width: leftW,
+    heading: opts.headings.notice,
   });
   const by = drawOfficeBlock(page, ctx, opts.office, {
     x: frame.left,
     y: frame.top - 7,
     width: leftW,
+    heading: opts.headings.office,
   });
   if (opts.shopfrontImg) {
     const top = by - 6;
@@ -4021,7 +4043,7 @@ function renderContactSplit(
   const px = panelX + 40;
   const pw = frame.right - px;
   let y = frame.top - 7;
-  drawEyebrow(page, ctx, PAGE_EYEBROWS.contact ?? 'Viewing', {
+  drawEyebrow(page, ctx, opts.eyebrow, {
     x: px,
     y,
     color: ctx.colors.paperMuted,
@@ -4039,7 +4061,7 @@ function renderContactSplit(
     maxLines: 2,
   });
 
-  const links = brochureLinks(ctx);
+  const { links } = opts;
   const linksY = FOOTER_BAND_H + 28;
   const floor = links.length > 0 ? linksY + 22 + 20 : FOOTER_BAND_H + 24;
   let rowTop = y + titleSize * 1.12 - 34;
@@ -4279,14 +4301,21 @@ async function embedBrandFont(
  * Render a brochure document to PDF bytes using pdf-lib.
  */
 export async function renderBrochurePdf(
-  document: BrochureDocument,
+  input: BrochureDocument,
   data: PublicBrochureData,
   opts: {
     warnings?: BrochureRenderWarning[];
     /** Only paint these pages; numbering and totals still follow the whole document. */
     pageIds?: readonly string[];
+    /** What merge fields such as `{Rent}` may show. */
+    display?: Partial<BrochureDisplayOptions>;
   } = {},
 ): Promise<Uint8Array> {
+  const document = resolveBrochureMergeFields(
+    input,
+    data.listing,
+    opts.display,
+  );
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
   const [helvetica, helveticaBold] = await Promise.all([

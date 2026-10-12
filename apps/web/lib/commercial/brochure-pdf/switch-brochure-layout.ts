@@ -1,9 +1,17 @@
+import {
+  type BrochureContentKind,
+  brochureContentSectionLabel,
+  contentOf,
+  defaultLayoutFor,
+} from '~/lib/commercial/brochure-pdf/brochure-content';
 import type {
   BrochureImageSlot,
   BrochureLayoutId,
   BrochurePage,
   BrochureSlotValue,
+  BrochureStashedContent,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import { headingKeysFor } from '~/lib/commercial/brochure-pdf/brochure-headings';
 import { createBlankBrochurePage } from '~/lib/commercial/brochure-pdf/build-brochure-document';
 import type { BrochureMediaItem } from '~/lib/commercial/public-brochure.shared';
 
@@ -75,6 +83,9 @@ export function switchBrochurePageLayout(
       slots[key] = previous;
     }
   }
+  for (const key of headingKeysFor(layoutId)) {
+    if (kept[key]?.type === 'text') slots[key] = kept[key];
+  }
 
   const images = brochureImageSlotKeys(page.layoutId)
     .map((key) => page.slots[key])
@@ -113,6 +124,60 @@ export function switchBrochurePageLayout(
   return next;
 }
 
+/**
+ * Change what a page is about. Its current content is put aside on the page;
+ * the new content is what was put aside for it earlier, else `listingContent`,
+ * else blank. Photos carry over into the new content's empty frames.
+ */
+export function switchBrochurePageContent(
+  page: BrochurePage,
+  kind: BrochureContentKind,
+  listingContent?: Pick<BrochurePage, 'layoutId' | 'slots'> | null,
+): BrochurePage {
+  const from = contentOf(page.layoutId);
+  if (from === kind) return page;
+
+  const { [kind]: saved, ...others } = page.contentStash ?? {};
+  const current: BrochureStashedContent = {
+    layoutId: page.layoutId,
+    slots: page.slots,
+  };
+  if (page.stash) current.stash = page.stash;
+
+  const source =
+    saved ?? listingContent ?? createBlankBrochurePage(defaultLayoutFor(kind));
+  const slots = { ...source.slots };
+
+  if (!saved) {
+    const images = brochureImageSlotKeys(page.layoutId)
+      .map((key) => page.slots[key])
+      .filter(isFilledImage);
+    const placed = new Set(
+      Object.values(slots).filter(isFilledImage).map(imageKey),
+    );
+    for (const key of brochureImageSlotKeys(source.layoutId)) {
+      if (isFilledImage(slots[key])) continue;
+      const image = images.find((img) => !placed.has(imageKey(img)));
+      if (!image) break;
+      slots[key] = image;
+      placed.add(imageKey(image));
+    }
+  }
+
+  const next: BrochurePage = {
+    ...page,
+    layoutId: source.layoutId,
+    slots,
+    contentStash: { ...others, [from]: current },
+  };
+  if (saved?.stash) next.stash = saved.stash;
+  else delete next.stash;
+  if (page.sectionLabel) {
+    next.sectionLabel = brochureContentSectionLabel(kind);
+  }
+  return next;
+}
+
 function withFreshUrls(
   slots: Record<string, BrochureSlotValue>,
   urlById: ReadonlyMap<string, string>,
@@ -137,11 +202,39 @@ export function refreshBrochureMediaUrls(
   const next = pages.map((page) => {
     const slots = withFreshUrls(page.slots, urlById);
     const stash = page.stash && withFreshUrls(page.stash, urlById);
-    if (slots === page.slots && stash === page.stash) return page;
+    const contentStash =
+      page.contentStash && withFreshContentUrls(page.contentStash, urlById);
+    if (
+      slots === page.slots &&
+      stash === page.stash &&
+      contentStash === page.contentStash
+    ) {
+      return page;
+    }
     changed = true;
-    return stash ? { ...page, slots, stash } : { ...page, slots };
+    const out: BrochurePage = { ...page, slots };
+    if (stash) out.stash = stash;
+    if (contentStash) out.contentStash = contentStash;
+    return out;
   });
   return changed ? next : pages;
+}
+
+function withFreshContentUrls(
+  contentStash: NonNullable<BrochurePage['contentStash']>,
+  urlById: ReadonlyMap<string, string>,
+): NonNullable<BrochurePage['contentStash']> {
+  let out = contentStash;
+  for (const [kind, saved] of Object.entries(contentStash) as Array<
+    [BrochureContentKind, BrochureStashedContent]
+  >) {
+    const slots = withFreshUrls(saved.slots, urlById);
+    const stash = saved.stash && withFreshUrls(saved.stash, urlById);
+    if (slots === saved.slots && stash === saved.stash) continue;
+    if (out === contentStash) out = { ...contentStash };
+    out[kind] = stash ? { ...saved, slots, stash } : { ...saved, slots };
+  }
+  return out;
 }
 
 /** Put `media` in an image slot. Fit and focus belonged to the old image. */

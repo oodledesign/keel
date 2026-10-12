@@ -6,8 +6,24 @@ import { ArrowRight } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Label } from '@kit/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
+import { toast } from '@kit/ui/sonner';
 
 import {
+  BROCHURE_CONTENT_OPTIONS,
+  type BrochureContentKind,
+  contentOf,
+  defaultLayoutFor,
+  layoutsFor,
+} from '~/lib/commercial/brochure-pdf/brochure-content';
+import {
+  type BrochureDisplayOptions,
   type BrochureOrientation,
   type BrochurePage,
   type BrochureTemplateId,
@@ -17,15 +33,14 @@ import { createBlankBrochurePage } from '~/lib/commercial/brochure-pdf/build-bro
 import {
   placeBrochureMedia,
   swapBrochureImageSlots,
+  switchBrochurePageContent,
   switchBrochurePageLayout,
 } from '~/lib/commercial/brochure-pdf/switch-brochure-layout';
 import type { BrochureMediaItem } from '~/lib/commercial/public-brochure.shared';
 
+import { getBrochurePageContent } from '../../_lib/server/brochure-actions';
 import { BrochureLayoutPicker } from './brochure-layout-picker';
-import {
-  BrochureLivePage,
-  type BrochureLivePageDisplay,
-} from './brochure-live-page';
+import { BrochureLivePage } from './brochure-live-page';
 import { BrochureMediaTray } from './brochure-media-tray';
 import { BrochurePageStrip } from './brochure-page-strip';
 import {
@@ -52,7 +67,7 @@ export function BrochurePagesStep({
 }: {
   listingId: string;
   accountId: string;
-  display: BrochureLivePageDisplay;
+  display: BrochureDisplayOptions;
   doc: { templateId: BrochureTemplateId; orientation: BrochureOrientation };
   pages: BrochurePage[];
   warnedPageIds: ReadonlySet<string>;
@@ -66,6 +81,7 @@ export function BrochurePagesStep({
   onNext: () => void;
 }) {
   const [selectedSlotKey, setSelectedSlotKey] = useState<string | null>(null);
+  const [loadingContent, setLoadingContent] = useState(false);
   const page = pages.find((p) => p.id === selectedPageId) ?? pages[0] ?? null;
   const mediaById = useMemo(
     () => new Map(media.map((m) => [m.id, m])),
@@ -143,16 +159,60 @@ export function BrochurePagesStep({
     }
   }
 
-  function addPage() {
-    const blank = createBlankBrochurePage('photo_full');
-    const insertAt = page ? pages.findIndex((p) => p.id === page.id) + 1 : 0;
-    editPages((current) =>
-      current.length >= MAX_PAGES
-        ? current
-        : [...current.slice(0, insertAt), blank, ...current.slice(insertAt)],
-    );
-    selectPage(blank.id);
+  /** `content` filled from the listing; null when it couldn't be loaded. */
+  async function listingContent(
+    content: BrochureContentKind,
+  ): Promise<BrochurePage | null> {
+    if (content === 'photos') return null;
+    setLoadingContent(true);
+    try {
+      return await getBrochurePageContent({
+        listingId,
+        accountId,
+        content,
+        templateId: doc.templateId,
+        orientation: doc.orientation,
+        display,
+        usedMediaIds: [...usedIds],
+      });
+    } catch {
+      toast.error(
+        'The listing details could not be loaded, so the page starts blank.',
+      );
+      return null;
+    } finally {
+      setLoadingContent(false);
+    }
   }
+
+  async function changeContent(pageId: string, content: BrochureContentKind) {
+    const target = pages.find((p) => p.id === pageId);
+    if (!target || contentOf(target.layoutId) === content) return;
+    setSelectedSlotKey(null);
+    const filled = target.contentStash?.[content]
+      ? null
+      : await listingContent(content);
+    updatePage(pageId, (p) => switchBrochurePageContent(p, content, filled));
+  }
+
+  async function addPage(content: BrochureContentKind) {
+    const afterId = page?.id ?? null;
+    const filled = await listingContent(content);
+    const added: BrochurePage = {
+      ...(filled ?? createBlankBrochurePage(defaultLayoutFor(content))),
+      id: newBrochurePageId(),
+    };
+    editPages((current) => {
+      if (current.length >= MAX_PAGES) return current;
+      const after = current.findIndex((p) => p.id === afterId);
+      const insertAt = after >= 0 ? after + 1 : current.length;
+      return [...current.slice(0, insertAt), added, ...current.slice(insertAt)];
+    });
+    selectPage(added.id);
+  }
+
+  const content = page ? contentOf(page.layoutId) : null;
+  const layouts = content ? layoutsFor(content) : [];
 
   return (
     <div className="grid h-full min-h-0 grid-cols-[13rem_minmax(0,1fr)_20rem]">
@@ -165,7 +225,8 @@ export function BrochurePagesStep({
           onReorder={(next) => editPages(() => next)}
           onDuplicate={duplicatePage}
           onDelete={deletePage}
-          onAdd={addPage}
+          onAdd={(kind) => void addPage(kind)}
+          adding={loadingContent}
         />
       </aside>
 
@@ -173,27 +234,62 @@ export function BrochurePagesStep({
         {page ? (
           <>
             <div className="flex shrink-0 items-center gap-3 border-b border-[var(--workspace-shell-border)] px-5 py-2.5">
-              <Label htmlFor="brochure-layout" className="text-xs">
-                Layout
+              <Label htmlFor="brochure-content" className="text-xs">
+                Page content
               </Label>
-              <BrochureLayoutPicker
-                id="brochure-layout"
-                value={page.layoutId}
-                orientation={doc.orientation}
-                onChange={(layoutId) => {
-                  updatePage(page.id, (p) =>
-                    switchBrochurePageLayout(p, layoutId),
-                  );
-                  setSelectedSlotKey(null);
-                }}
-              />
-              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                Changing the layout keeps this page&apos;s text and images.
+              <Select
+                value={content ?? undefined}
+                disabled={loadingContent}
+                onValueChange={(value) =>
+                  void changeContent(page.id, value as BrochureContentKind)
+                }
+              >
+                <SelectTrigger
+                  id="brochure-content"
+                  className="h-8 w-44 text-xs"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {BROCHURE_CONTENT_OPTIONS.map((option) => (
+                    <SelectItem
+                      key={option.id}
+                      value={option.id}
+                      className="text-xs"
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {layouts.length > 1 ? (
+                <>
+                  <Label htmlFor="brochure-layout" className="text-xs">
+                    Layout
+                  </Label>
+                  <BrochureLayoutPicker
+                    id="brochure-layout"
+                    value={page.layoutId}
+                    layouts={layouts}
+                    orientation={doc.orientation}
+                    onChange={(layoutId) => {
+                      updatePage(page.id, (p) =>
+                        switchBrochurePageLayout(p, layoutId),
+                      );
+                      setSelectedSlotKey(null);
+                    }}
+                  />
+                </>
+              ) : null}
+              <p className="line-clamp-2 min-w-0 flex-1 text-xs leading-snug text-[var(--workspace-shell-text-muted)]">
+                {loadingContent
+                  ? 'Filling the page from the listing…'
+                  : 'New content is filled from the listing. Switch back and your edits return.'}
               </p>
               <Button
                 type="button"
                 size="sm"
-                className="ml-auto gap-1.5"
+                className="shrink-0 gap-1.5"
                 onClick={onNext}
               >
                 Check the PDF
@@ -248,6 +344,8 @@ export function BrochurePagesStep({
           <BrochureSlotEditor
             key={page.id}
             page={page}
+            templateId={doc.templateId}
+            display={display}
             media={media}
             onImageError={onMediaError}
             drawingIds={drawingIds}
@@ -255,6 +353,13 @@ export function BrochurePagesStep({
             onSelectSlot={setSelectedSlotKey}
             onChange={(slots) => updatePage(page.id, (p) => ({ ...p, slots }))}
             onDropOnSlot={dropOnSlot}
+            onHiddenButtonsChange={(hidden) =>
+              updatePage(page.id, (p) => {
+                const next: BrochurePage = { ...p, hiddenButtons: hidden };
+                if (hidden.length === 0) delete next.hiddenButtons;
+                return next;
+              })
+            }
           />
         ) : null}
       </aside>

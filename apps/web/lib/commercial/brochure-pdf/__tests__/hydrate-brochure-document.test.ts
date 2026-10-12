@@ -332,6 +332,33 @@ describe('hydrateBrochureDocument', () => {
     );
   });
 
+  it('renames an old "Contact" title on Classic and Compact only', () => {
+    const data = brochureData();
+    const saved = (templateId: BrochureDocument['templateId']) =>
+      hydrateBrochureDocument(
+        {
+          listingId: data.listing.id,
+          templateId,
+          pageSize: 'A4',
+          orientation: 'landscape',
+          pages: [
+            {
+              id: 'contact',
+              layoutId: 'contact',
+              slots: { title: { type: 'text', text: 'Contact' } },
+            },
+          ],
+        },
+        data,
+      ).pages[0]!.slots.title;
+
+    expect(saved('classic')).toEqual({
+      type: 'text',
+      text: 'Strictly by appointment',
+    });
+    expect(saved('editorial')).toEqual({ type: 'text', text: 'Contact' });
+  });
+
   it('refreshes a stale shopfront URL from current branch settings', () => {
     const data = brochureData();
     const saved: BrochureDocument = {

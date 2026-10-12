@@ -53,6 +53,35 @@ describe('brochure page schema', () => {
     expect(result.stash).toEqual(stash);
   });
 
+  it('keeps earlier content and hidden buttons when saving', () => {
+    const contentStash = {
+      summary: {
+        layoutId: 'facts_table' as const,
+        slots: createBlankBrochurePage('facts_table').slots,
+      },
+    };
+    const result = BrochurePageSchema.parse({
+      ...createBlankBrochurePage('contact'),
+      contentStash,
+      hiddenButtons: ['website'],
+    });
+    expect(result.contentStash).toEqual(contentStash);
+    expect(result.hiddenButtons).toEqual(['website']);
+
+    expect(
+      BrochurePageSchema.safeParse({
+        ...createBlankBrochurePage('contact'),
+        contentStash: { gallery: contentStash.summary },
+      }).success,
+    ).toBe(false);
+    expect(
+      BrochurePageSchema.safeParse({
+        ...createBlankBrochurePage('contact'),
+        hiddenButtons: ['phone'],
+      }).success,
+    ).toBe(false);
+  });
+
   it('rejects unknown layouts', () => {
     expect(
       BrochurePageSchema.safeParse({
