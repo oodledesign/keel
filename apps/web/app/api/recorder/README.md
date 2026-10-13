@@ -34,6 +34,17 @@ Mac Assistant also polls these cookie-free aliases (same `keel_` bearer token as
 
 Both return `{ "items": [thread…] }` using the native messages thread list. Optional query: `workspace` or `account_id` (defaults to the token account), `limit`, `client`. Write/send stays on `/api/native/v1/messages`.
 
+## Video folders
+
+The Mac screen-recording library mirrors the workspace's video folders (`video_folders`), so folders match the web Videos page.
+
+- `GET /api/recorder/videos/folders?account_id=…` → `{ folders: [{ id, name, parent_folder_id, created_at }] }`
+- `POST /api/recorder/videos/folders` `{ account_id, name, parent_folder_id? }` → `{ folder }`
+- `PATCH /api/recorder/videos/folders/:folderId` `{ name }` → `{ folder }`
+- `DELETE /api/recorder/videos/folders/:folderId` — videos and subfolders move up to the parent (or the library root).
+- `PATCH /api/recorder/videos/:videoId` `{ folder_id }` — move a published recording (`null` = root).
+- `POST /api/recorder/videos/create-upload` accepts optional `folder_id`; a folder that no longer exists in the account falls back to the root.
+
 ## Chrome extension
 
 The unpacked Chrome extension (`apps/ozer-extension`) uses the same `keel_` tokens. Companion routes live at `/api/extension/v1` (capture, speaker-event buffer, extract-tasks). Live speaker stamps into the current transcript still need the local Assistant HTTP endpoint documented in `apps/ozer-extension/README.md`.

@@ -283,11 +283,14 @@ async function transcribeMaster(
 > {
   const { data: master } = await client
     .from('video_masters')
-    .select('storage_path')
+    .select('storage_path, mic_storage_path')
     .eq('video_id', videoId)
     .maybeSingle();
 
-  const row = master as { storage_path?: string } | null;
+  const row = master as {
+    storage_path?: string;
+    mic_storage_path?: string | null;
+  } | null;
   if (!row?.storage_path) {
     return { ok: false, error: 'No master available for transcription' };
   }
@@ -302,14 +305,12 @@ async function transcribeMaster(
   }
 
   try {
-    const signedUrl = await createSignedMasterUrl(row.storage_path, 60 * 30);
-    const mediaRes = await fetch(signedUrl);
-    if (!mediaRes.ok) {
-      return { ok: false, error: 'Could not download master for STT' };
+    const media = await downloadTranscriptionAudio(row);
+    if (!media.ok) {
+      return media;
     }
-    const blob = await mediaRes.blob();
     const form = new FormData();
-    form.append('file', blob, 'master.mp4');
+    form.append('file', media.blob, media.filename);
     form.append('model', 'whisper-1');
     form.append('response_format', 'verbose_json');
     form.append('timestamp_granularities[]', 'word');
@@ -380,4 +381,68 @@ async function transcribeMaster(
       error: err instanceof Error ? err.message : 'Transcription failed',
     };
   }
+}
+
+/** OpenAI caps the whole request at 25 MiB; leave headroom for the multipart fields. */
+const WHISPER_MAX_BYTES = 24 * 1024 * 1024;
+
+/**
+ * Prefers the mic-only sidecar (small, voice only, same timeline as the master),
+ * falling back to the master when it fits under Whisper's upload limit.
+ */
+async function downloadTranscriptionAudio(row: {
+  storage_path?: string;
+  mic_storage_path?: string | null;
+}): Promise<
+  { ok: true; blob: Blob; filename: string } | { ok: false; error: string }
+> {
+  const candidates = [
+    row.mic_storage_path
+      ? { path: row.mic_storage_path, filename: 'mic.m4a' }
+      : null,
+    row.storage_path
+      ? { path: row.storage_path, filename: 'master.mp4' }
+      : null,
+  ].filter((c): c is { path: string; filename: string } => c !== null);
+
+  let oversizedBytes: number | null = null;
+
+  for (const candidate of candidates) {
+    let signedUrl: string;
+    try {
+      signedUrl = await createSignedMasterUrl(candidate.path, 60 * 30);
+    } catch {
+      continue;
+    }
+
+    const res = await fetch(signedUrl);
+    if (!res.ok) {
+      await res.body?.cancel();
+      continue;
+    }
+
+    const contentLength = res.headers.get('content-length');
+    const declared = contentLength === null ? null : Number(contentLength);
+    if (declared !== null && declared > WHISPER_MAX_BYTES) {
+      await res.body?.cancel();
+      oversizedBytes = declared;
+      continue;
+    }
+
+    const blob = await res.blob();
+    if (blob.size > WHISPER_MAX_BYTES) {
+      oversizedBytes = blob.size;
+      continue;
+    }
+    return { ok: true, blob, filename: candidate.filename };
+  }
+
+  if (oversizedBytes !== null) {
+    const mb = Math.round(oversizedBytes / (1024 * 1024));
+    return {
+      ok: false,
+      error: `This recording's audio source is ${mb} MB, over Whisper's 25 MB limit, and there's no smaller mic track to transcribe instead.`,
+    };
+  }
+  return { ok: false, error: 'Could not download audio for transcription' };
 }

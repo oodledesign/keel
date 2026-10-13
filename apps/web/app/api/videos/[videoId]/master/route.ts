@@ -92,8 +92,8 @@ export async function GET(_request: Request, context: RouteContext) {
       height: master.height,
       byteSize: master.byte_size,
       contentType: master.content_type,
-      hasMicAudio: Boolean(master.mic_storage_path),
-      hasSystemAudio: Boolean(master.system_storage_path),
+      hasMicAudio: micUrl !== null,
+      hasSystemAudio: systemUrl !== null,
     },
   });
 }

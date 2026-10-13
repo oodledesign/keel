@@ -7,6 +7,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { assertWorkspaceMember } from '~/lib/api-tokens/assert-workspace-member';
 import { authenticateRecorderRequest } from '~/lib/api-tokens/recorder-auth';
 import { createVideoUploadForAccount } from '~/lib/videos/server/create-video-upload';
+import { loadRecorderVideoFolder } from '~/lib/videos/server/recorder-video-folders';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,6 +30,7 @@ const bodySchema = z.object({
   original_filename: z.string().max(500).optional().nullable(),
   duration_seconds: z.number().int().positive().optional().nullable(),
   recorded_at: z.string().datetime().optional().nullable(),
+  folder_id: z.string().uuid().optional().nullable(),
 });
 
 export async function POST(request: Request) {
@@ -59,8 +61,19 @@ export async function POST(request: Request) {
   }
 
   try {
+    // A folder deleted on the web mid-edit shouldn't block the upload; land at the root instead.
+    let folderId: string | null = null;
+    if (parsed.data.folder_id) {
+      const folder = await loadRecorderVideoFolder(
+        admin,
+        parsed.data.folder_id,
+      );
+      folderId = folder?.account_id === accountId ? folder.id : null;
+    }
+
     const created = await createVideoUploadForAccount(admin, {
       accountId,
+      folderId,
       title: parsed.data.title,
       originalFilename: parsed.data.original_filename ?? null,
       durationSeconds: parsed.data.duration_seconds ?? null,
