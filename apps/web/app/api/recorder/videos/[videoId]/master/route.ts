@@ -25,6 +25,11 @@ type RouteContext = {
   params: Promise<{ videoId: string }>;
 };
 
+const AudioTrackMixSchema = z.object({
+  gain: z.number().min(0).max(2),
+  muted: z.boolean(),
+});
+
 const BodySchema = z.object({
   contentType: z.string().optional(),
   byteSize: z.number().int().positive().optional(),
@@ -49,6 +54,13 @@ const BodySchema = z.object({
   /** Request signed upload URLs for separate mic / system AAC sidecars. */
   includeMicAudio: z.boolean().optional(),
   includeSystemAudio: z.boolean().optional(),
+  /** Mic / system levels chosen in the desktop trim editor; seeds the editor's Audio mix. */
+  audioMix: z
+    .object({
+      mic: AudioTrackMixSchema,
+      system: AudioTrackMixSchema,
+    })
+    .optional(),
 });
 
 export async function POST(request: Request, context: RouteContext) {
@@ -206,6 +218,7 @@ export async function POST(request: Request, context: RouteContext) {
             endMs: trimEndMs ?? durationMs ?? 0,
           }
         : null,
+    initialAudioMix: parsed.data.audioMix ?? null,
     resetIfUntouched: true,
     userId: auth.user_id,
   });

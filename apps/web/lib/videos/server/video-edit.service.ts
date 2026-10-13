@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import {
+  type VideoAudioMix,
   type VideoClickEvent,
   type VideoEditTimeline,
   type VideoTranscriptWord,
@@ -87,8 +88,16 @@ function buildInitialTimeline(
   durationMs: number,
   clicks: VideoClickEvent[],
   initialKeepRange?: KeepRangeInput | null,
+  initialAudioMix?: VideoAudioMix | null,
 ): VideoEditTimeline {
   const timeline = createDefaultTimeline(durationMs, clicks);
+
+  if (initialAudioMix) {
+    timeline.audio = {
+      mic: { ...initialAudioMix.mic },
+      system: { ...initialAudioMix.system },
+    };
+  }
 
   if (initialKeepRange && timeline.sourceDurationMs > 0) {
     const startMs = Math.max(0, Math.round(initialKeepRange.startMs));
@@ -117,6 +126,8 @@ export async function ensureEditProject(input: {
   clicks?: VideoClickEvent[];
   /** Pre-upload trim (source ms) so the editor starts from what Stream received. */
   initialKeepRange?: KeepRangeInput | null;
+  /** Desktop recorder mic / system levels so the editor matches what Stream received. */
+  initialAudioMix?: VideoAudioMix | null;
   /** Rebuild the timeline from these inputs when nobody has edited it yet. */
   resetIfUntouched?: boolean;
   userId?: string | null;
@@ -132,6 +143,7 @@ export async function ensureEditProject(input: {
       input.durationMs ?? 0,
       input.clicks ?? [],
       input.initialKeepRange,
+      input.initialAudioMix,
     );
     const { data, error } = await input.client
       .from('video_edit_projects')
@@ -170,6 +182,7 @@ export async function ensureEditProject(input: {
     input.durationMs ?? 0,
     input.clicks ?? [],
     input.initialKeepRange,
+    input.initialAudioMix,
   );
 
   const { data, error } = await input.client
