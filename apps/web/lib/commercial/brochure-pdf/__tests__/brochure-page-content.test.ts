@@ -17,6 +17,7 @@ import {
   type BrochurePage,
   DEFAULT_BROCHURE_DISPLAY_OPTIONS,
 } from '../brochure-document';
+import { brochureOfficeLine, resolveBrochureFooter } from '../brochure-footer';
 import { headingFieldsFor } from '../brochure-headings';
 import {
   fillBrochureMergeFields,
@@ -325,5 +326,72 @@ describe('merge fields', () => {
       ],
     };
     expect(resolveBrochureMergeFields(doc, listing())).toBe(doc);
+  });
+
+  it('fills merge fields in the footer settings', () => {
+    const doc: BrochureDocument = {
+      listingId: 'l',
+      templateId: 'classic',
+      pageSize: 'A4',
+      orientation: 'landscape',
+      pages: [],
+      settings: {
+        footer: {
+          officeText: 'Letting {Town}',
+          noticeText: '{Disposal} · subject to contract',
+          showPageNumbers: false,
+        },
+      },
+    };
+    expect(resolveBrochureMergeFields(doc, listing()).settings).toEqual({
+      footer: {
+        officeText: 'Letting Crowborough',
+        noticeText: 'To let · subject to contract',
+        showPageNumbers: false,
+      },
+    });
+  });
+});
+
+describe('resolveBrochureFooter', () => {
+  const office = 'Bracketts  ·  27/29 High Street  ·  01892 526111';
+
+  it('shows the branch details, notice and page numbers by default', () => {
+    expect(resolveBrochureFooter(undefined, office)).toEqual({
+      office,
+      notice: 'Subject to contract',
+      pageNumbers: true,
+    });
+  });
+
+  it('uses custom text, and falls back when it is left blank', () => {
+    expect(
+      resolveBrochureFooter(
+        { officeText: 'Bracketts Commercial', noticeText: '  ' },
+        office,
+      ),
+    ).toMatchObject({
+      office: 'Bracketts Commercial',
+      notice: 'Subject to contract',
+    });
+  });
+
+  it('hides what is switched off', () => {
+    expect(
+      resolveBrochureFooter(
+        { showOffice: false, showNotice: false, showPageNumbers: false },
+        office,
+      ),
+    ).toEqual({ office: null, notice: null, pageNumbers: false });
+  });
+
+  it('joins the agency, branch address and phone', () => {
+    expect(
+      brochureOfficeLine('Bracketts', {
+        address: '27/29 High Street\nTunbridge Wells',
+        phone: ' 01892 526111 ',
+      }),
+    ).toBe('Bracketts  ·  27/29 High Street, Tunbridge Wells  ·  01892 526111');
+    expect(brochureOfficeLine('Bracketts', null)).toBe('Bracketts');
   });
 });

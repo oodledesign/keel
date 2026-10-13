@@ -13,6 +13,7 @@ import {
   type BrochureOrientation,
   type BrochurePage,
   type BrochureRenderWarning,
+  type BrochureSettings,
   type BrochureTemplateId,
   DEFAULT_BROCHURE_DISPLAY_OPTIONS,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
@@ -60,6 +61,7 @@ type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
 type WorkingDoc = {
   templateId: BrochureTemplateId;
   orientation: BrochureOrientation;
+  settings: BrochureSettings;
 };
 
 const RENDER_FLAGS = [
@@ -216,6 +218,7 @@ export function BrochureWizard({
           templateId: current.templateId,
           orientation: current.orientation,
           pages: pagesRef.current,
+          settings: current.settings,
         });
         savedRevision.current = rev;
         setSaveState(revision.current === rev ? 'saved' : 'dirty');
@@ -248,14 +251,28 @@ export function BrochureWizard({
     [markEdited],
   );
 
+  const editSettings = useCallback(
+    (settings: BrochureSettings) => {
+      const current = docRef.current;
+      if (!current) return;
+      const next = { ...current, settings };
+      docRef.current = next;
+      setDoc(next);
+      markEdited();
+    },
+    [markEdited],
+  );
+
   function loadDoc(next: {
     templateId: BrochureTemplateId;
     orientation: BrochureOrientation;
     pages: BrochurePage[];
+    settings?: BrochureSettings;
   }) {
     const working = {
       templateId: next.templateId,
       orientation: next.orientation,
+      settings: next.settings ?? {},
     };
     docRef.current = working;
     pagesRef.current = next.pages;
@@ -554,6 +571,13 @@ export function BrochureWizard({
             drawingIds={drawingIds}
             warnedPageIds={warnedPageIds}
             onNext={() => void goTo('preview')}
+            settings={doc.settings}
+            officeLine={data.officeLine}
+            onSettingsChange={editSettings}
+            onDisplayChange={(next) => {
+              clearPreview();
+              setDisplay(next);
+            }}
           />
         ) : step === 'preview' ? (
           <BrochurePreviewStep

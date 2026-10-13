@@ -11,6 +11,7 @@ import type {
   BrochureOrientation,
   BrochurePage,
   BrochureRenderWarning,
+  BrochureSettings,
   BrochureTemplateId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
 
@@ -44,6 +45,7 @@ export function BrochureLivePage({
   pages,
   pageId,
   display,
+  settings,
 }: {
   listingId: string;
   accountId: string;
@@ -52,6 +54,7 @@ export function BrochureLivePage({
   pages: BrochurePage[];
   pageId: string;
   display: BrochureLivePageDisplay;
+  settings: BrochureSettings;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
@@ -91,6 +94,7 @@ export function BrochureLivePage({
               showWebsiteListingButton,
               showSlideshowBrochureButton,
             },
+            settings,
           }),
         });
         if (res.status === 204) {
@@ -155,6 +159,7 @@ export function BrochureLivePage({
     showReducedPrice,
     showWebsiteListingButton,
     showSlideshowBrochureButton,
+    settings,
   ]);
 
   const showingRender = renderedPageId === pageId && status !== 'left_out';

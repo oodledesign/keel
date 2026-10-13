@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import {
   BROCHURE_CONTENT_OPTIONS,
@@ -26,7 +27,9 @@ import {
   type BrochureDisplayOptions,
   type BrochureOrientation,
   type BrochurePage,
+  type BrochureSettings,
   type BrochureTemplateId,
+  isCoverLayout,
   newBrochurePageId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
 import { createBlankBrochurePage } from '~/lib/commercial/brochure-pdf/build-brochure-document';
@@ -43,6 +46,7 @@ import { BrochureLayoutPicker } from './brochure-layout-picker';
 import { BrochureLivePage } from './brochure-live-page';
 import { BrochureMediaTray } from './brochure-media-tray';
 import { BrochurePageStrip } from './brochure-page-strip';
+import { BrochureSettingsPanel } from './brochure-settings-panel';
 import {
   type BrochureDragPayload,
   BrochureSlotEditor,
@@ -64,10 +68,19 @@ export function BrochurePagesStep({
   drawingIds,
   warnedPageIds,
   onNext,
+  settings,
+  officeLine,
+  onSettingsChange,
+  onDisplayChange,
 }: {
   listingId: string;
   accountId: string;
   display: BrochureDisplayOptions;
+  settings: BrochureSettings;
+  /** The footer's office details unless the settings replace them. */
+  officeLine: string;
+  onSettingsChange: (settings: BrochureSettings) => void;
+  onDisplayChange: (display: BrochureDisplayOptions) => void;
   doc: { templateId: BrochureTemplateId; orientation: BrochureOrientation };
   pages: BrochurePage[];
   warnedPageIds: ReadonlySet<string>;
@@ -82,7 +95,13 @@ export function BrochurePagesStep({
 }) {
   const [selectedSlotKey, setSelectedSlotKey] = useState<string | null>(null);
   const [loadingContent, setLoadingContent] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const page = pages.find((p) => p.id === selectedPageId) ?? pages[0] ?? null;
+  /** Settings preview a page with a footer; the cover has none. */
+  const previewPage =
+    showSettings && page && isCoverLayout(page.layoutId)
+      ? (pages.find((p) => !isCoverLayout(p.layoutId)) ?? page)
+      : page;
   const mediaById = useMemo(
     () => new Map(media.map((m) => [m.id, m])),
     [media],
@@ -105,6 +124,7 @@ export function BrochurePagesStep({
   function selectPage(pageId: string) {
     onSelectPage(pageId);
     setSelectedSlotKey(null);
+    setShowSettings(false);
   }
 
   function updatePage(
@@ -219,7 +239,7 @@ export function BrochurePagesStep({
       <aside className="flex min-h-0 flex-col border-r border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3">
         <BrochurePageStrip
           pages={pages}
-          selectedPageId={page?.id ?? null}
+          selectedPageId={showSettings ? null : (page?.id ?? null)}
           warnedPageIds={warnedPageIds}
           onSelect={selectPage}
           onReorder={(next) => editPages(() => next)}
@@ -227,6 +247,11 @@ export function BrochurePagesStep({
           onDelete={deletePage}
           onAdd={(kind) => void addPage(kind)}
           adding={loadingContent}
+          settingsSelected={showSettings}
+          onSelectSettings={() => {
+            setShowSettings(true);
+            setSelectedSlotKey(null);
+          }}
         />
       </aside>
 
@@ -234,58 +259,68 @@ export function BrochurePagesStep({
         {page ? (
           <>
             <div className="flex shrink-0 items-center gap-3 border-b border-[var(--workspace-shell-border)] px-5 py-2.5">
-              <Label htmlFor="brochure-content" className="text-xs">
-                Page content
-              </Label>
-              <Select
-                value={content ?? undefined}
-                disabled={loadingContent}
-                onValueChange={(value) =>
-                  void changeContent(page.id, value as BrochureContentKind)
-                }
-              >
-                <SelectTrigger
-                  id="brochure-content"
-                  className="h-8 w-44 text-xs"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BROCHURE_CONTENT_OPTIONS.map((option) => (
-                    <SelectItem
-                      key={option.id}
-                      value={option.id}
-                      className="text-xs"
-                    >
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {layouts.length > 1 ? (
+              {showSettings ? (
+                <p className="min-w-0 flex-1 text-xs leading-snug text-[var(--workspace-shell-text-muted)]">
+                  Previewing page{' '}
+                  {pages.findIndex((p) => p.id === previewPage?.id) + 1} to show
+                  the footer. Pick a page on the left to edit it.
+                </p>
+              ) : (
                 <>
-                  <Label htmlFor="brochure-layout" className="text-xs">
-                    Layout
+                  <Label htmlFor="brochure-content" className="text-xs">
+                    Page content
                   </Label>
-                  <BrochureLayoutPicker
-                    id="brochure-layout"
-                    value={page.layoutId}
-                    layouts={layouts}
-                    orientation={doc.orientation}
-                    onChange={(layoutId) => {
-                      updatePage(page.id, (p) =>
-                        switchBrochurePageLayout(p, layoutId),
-                      );
-                      setSelectedSlotKey(null);
-                    }}
-                  />
+                  <Select
+                    value={content ?? undefined}
+                    disabled={loadingContent}
+                    onValueChange={(value) =>
+                      void changeContent(page.id, value as BrochureContentKind)
+                    }
+                  >
+                    <SelectTrigger
+                      id="brochure-content"
+                      className="h-8 w-44 text-xs"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BROCHURE_CONTENT_OPTIONS.map((option) => (
+                        <SelectItem
+                          key={option.id}
+                          value={option.id}
+                          className="text-xs"
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {layouts.length > 1 ? (
+                    <>
+                      <Label htmlFor="brochure-layout" className="text-xs">
+                        Layout
+                      </Label>
+                      <BrochureLayoutPicker
+                        id="brochure-layout"
+                        value={page.layoutId}
+                        layouts={layouts}
+                        orientation={doc.orientation}
+                        onChange={(layoutId) => {
+                          updatePage(page.id, (p) =>
+                            switchBrochurePageLayout(p, layoutId),
+                          );
+                          setSelectedSlotKey(null);
+                        }}
+                      />
+                    </>
+                  ) : null}
+                  <p className="line-clamp-2 min-w-0 flex-1 text-xs leading-snug text-[var(--workspace-shell-text-muted)]">
+                    {loadingContent
+                      ? 'Filling the page from the listing…'
+                      : 'New content is filled from the listing. Switch back and your edits return.'}
+                  </p>
                 </>
-              ) : null}
-              <p className="line-clamp-2 min-w-0 flex-1 text-xs leading-snug text-[var(--workspace-shell-text-muted)]">
-                {loadingContent
-                  ? 'Filling the page from the listing…'
-                  : 'New content is filled from the listing. Switch back and your edits return.'}
-              </p>
+              )}
               <Button
                 type="button"
                 size="sm"
@@ -311,13 +346,19 @@ export function BrochurePagesStep({
                   templateId={doc.templateId}
                   orientation={doc.orientation}
                   pages={pages}
-                  pageId={page.id}
+                  pageId={(previewPage ?? page).id}
                   display={display}
+                  settings={settings}
                 />
               </div>
             </div>
 
-            <div className="shrink-0 border-t border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-5 py-3">
+            <div
+              className={cn(
+                'shrink-0 border-t border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-5 py-3',
+                showSettings && 'hidden',
+              )}
+            >
               <BrochureMediaTray
                 media={media}
                 onImageError={onMediaError}
@@ -340,7 +381,15 @@ export function BrochurePagesStep({
       </main>
 
       <aside className="min-h-0 overflow-y-auto border-l border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-        {page ? (
+        {showSettings ? (
+          <BrochureSettingsPanel
+            settings={settings}
+            officeLine={officeLine}
+            display={display}
+            onSettingsChange={onSettingsChange}
+            onDisplayChange={onDisplayChange}
+          />
+        ) : page ? (
           <BrochureSlotEditor
             key={page.id}
             page={page}

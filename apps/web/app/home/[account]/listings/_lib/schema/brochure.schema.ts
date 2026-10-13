@@ -120,6 +120,18 @@ export const BrochurePageSchema = z.object({
   curated: z.boolean().optional(),
 });
 
+export const BrochureSettingsSchema = z.object({
+  footer: z
+    .object({
+      showOffice: z.boolean().optional(),
+      officeText: z.string().max(200).optional(),
+      showNotice: z.boolean().optional(),
+      noticeText: z.string().max(100).optional(),
+      showPageNumbers: z.boolean().optional(),
+    })
+    .optional(),
+});
+
 export const GetListingBrochureDocumentSchema = z.object({
   listingId: z.string().uuid(),
   accountId: z.string().uuid(),
@@ -132,6 +144,7 @@ export const SaveListingBrochureDocumentSchema = z.object({
   templateId: BrochureTemplateIdSchema,
   orientation: BrochureOrientationSchema,
   pages: z.array(BrochurePageSchema).max(30),
+  settings: BrochureSettingsSchema.optional(),
 });
 
 export const BrochureDisplayOptionsSchema = z.object({
@@ -226,6 +239,7 @@ export const BrochurePagePreviewSchema = z.object({
   pages: z.array(BrochurePageSchema).min(1).max(30),
   pageId: z.string().min(1).max(80),
   display: BrochureDisplayOptionsSchema.optional(),
+  settings: BrochureSettingsSchema.optional(),
 });
 
 /** Publishes the saved layout someone has just previewed and approved. */

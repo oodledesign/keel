@@ -156,12 +156,28 @@ export type BrochureRenderWarning = {
   kind: BrochureRenderWarningKind;
 };
 
+/** Unset fields fall back to the defaults: everything shown, office details from the branch. */
+export type BrochureFooterSettings = {
+  showOffice?: boolean;
+  /** Replaces the agency, branch address and phone. */
+  officeText?: string;
+  showNotice?: boolean;
+  /** Replaces "Subject to contract". */
+  noticeText?: string;
+  showPageNumbers?: boolean;
+};
+
+export type BrochureSettings = {
+  footer?: BrochureFooterSettings;
+};
+
 export type BrochureDocument = {
   listingId: string;
   templateId: BrochureTemplateId;
   pageSize: 'A4';
   orientation: BrochureOrientation;
   pages: BrochurePage[];
+  settings?: BrochureSettings;
   updatedAt?: string;
 };
 

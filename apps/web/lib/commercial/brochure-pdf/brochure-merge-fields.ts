@@ -2,6 +2,7 @@ import {
   type BrochureDisplayOptions,
   type BrochureDocument,
   type BrochurePage,
+  type BrochureSettings,
   type BrochureSlotValue,
   DEFAULT_BROCHURE_DISPLAY_OPTIONS,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
@@ -58,6 +59,9 @@ export function brochureMergeFieldToken(label: string): string {
 
 const TOKEN = /\{([^{}\n]{1,40})\}/g;
 
+/** `{Field}` anywhere in a line; group 1 is the name. */
+export const BROCHURE_MERGE_TOKEN = TOKEN;
+
 function normalise(label: string): string {
   return label.trim().replace(/\s+/g, ' ').toLowerCase();
 }
@@ -65,6 +69,11 @@ function normalise(label: string): string {
 const FIELD_BY_NAME = new Map(
   BROCHURE_MERGE_FIELDS.map((field) => [normalise(field.label), field]),
 );
+
+/** The field a `{name}` token refers to, matched like the PDF does (case and spacing ignored). */
+export function findBrochureMergeField(name: string): MergeField | undefined {
+  return FIELD_BY_NAME.get(normalise(name));
+}
 
 /** Rent and price follow the listing's own "hide from marketing" settings unless the wizard says otherwise. */
 export function brochureMergeFieldDisplay(
@@ -119,7 +128,21 @@ function fillSlot(
   return slot;
 }
 
-/** The document with merge fields in page text and facts filled from the listing. */
+function fillFooter(
+  settings: BrochureSettings | undefined,
+  fill: (text: string) => string,
+): BrochureSettings | undefined {
+  const footer = settings?.footer;
+  if (!footer) return settings;
+  const officeText = footer.officeText && fill(footer.officeText);
+  const noticeText = footer.noticeText && fill(footer.noticeText);
+  if (officeText === footer.officeText && noticeText === footer.noticeText) {
+    return settings;
+  }
+  return { ...settings, footer: { ...footer, officeText, noticeText } };
+}
+
+/** The document with merge fields in page text, facts and the footer filled from the listing. */
 export function resolveBrochureMergeFields(
   document: BrochureDocument,
   listing: BrochureListing,
@@ -128,7 +151,8 @@ export function resolveBrochureMergeFields(
   const resolved = brochureMergeFieldDisplay(listing, display);
   const fill = (text: string) =>
     fillBrochureMergeFields(text, listing, resolved);
-  let changed = false;
+  const settings = fillFooter(document.settings, fill);
+  let changed = settings !== document.settings;
   const pages = document.pages.map((page): BrochurePage => {
     let slots = page.slots;
     for (const [key, slot] of Object.entries(page.slots)) {
@@ -141,5 +165,5 @@ export function resolveBrochureMergeFields(
     changed = true;
     return { ...page, slots };
   });
-  return changed ? { ...document, pages } : document;
+  return changed ? { ...document, pages, settings } : document;
 }

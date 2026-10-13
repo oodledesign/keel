@@ -125,3 +125,80 @@ describe('ListingBrochureService.recordPublished', () => {
     });
   });
 });
+
+describe('ListingBrochureService.savePages', () => {
+  /** Records each upsert; without the settings column it fails like PostgREST. */
+  function upsertClient({ hasSettingsColumn }: { hasSettingsColumn: boolean }) {
+    const upserts: Row[] = [];
+    const client = {
+      from: () => ({
+        upsert: (values: Row) => {
+          upserts.push(values);
+          const error =
+            !hasSettingsColumn && 'settings' in values
+              ? {
+                  code: 'PGRST204',
+                  message:
+                    "Could not find the 'settings' column of 'commercial_listing_brochures' in the schema cache",
+                }
+              : null;
+          return {
+            select: () => ({
+              single: async () => ({
+                data: error ? null : row('landscape', values),
+                error,
+              }),
+            }),
+          };
+        },
+      }),
+    } as unknown as SupabaseClient;
+    return { client, upserts };
+  }
+
+  const footer = { footer: { noticeText: 'Strictly subject to contract' } };
+
+  it('saves the brochure settings with the pages', async () => {
+    const { client, upserts } = upsertClient({ hasSettingsColumn: true });
+    const saved = await createListingBrochureService(client).savePages({
+      listingId: LISTING,
+      accountId: ACCOUNT,
+      orientation: 'landscape',
+      templateId: 'classic',
+      pages: [],
+      settings: footer,
+    });
+    expect(upserts).toHaveLength(1);
+    expect(upserts[0]!.settings).toEqual(footer);
+    expect(saved.settings).toEqual(footer);
+  });
+
+  it('leaves saved settings untouched when none are sent', async () => {
+    const { client, upserts } = upsertClient({ hasSettingsColumn: true });
+    await createListingBrochureService(client).savePages({
+      listingId: LISTING,
+      accountId: ACCOUNT,
+      orientation: 'landscape',
+      templateId: 'classic',
+      pages: [],
+    });
+    expect(upserts[0]).not.toHaveProperty('settings');
+  });
+
+  it('still saves the pages before the settings column exists', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { client, upserts } = upsertClient({ hasSettingsColumn: false });
+    const saved = await createListingBrochureService(client).savePages({
+      listingId: LISTING,
+      accountId: ACCOUNT,
+      orientation: 'landscape',
+      templateId: 'classic',
+      pages: [],
+      settings: footer,
+    });
+    expect(upserts).toHaveLength(2);
+    expect(upserts[1]).not.toHaveProperty('settings');
+    expect(saved.settings).toEqual({});
+    error.mockRestore();
+  });
+});

@@ -7,6 +7,7 @@ import type {
   BrochureOrientation,
   BrochurePage,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import { brochureOfficeLine } from '~/lib/commercial/brochure-pdf/brochure-footer';
 import { buildBrochurePageContent } from '~/lib/commercial/brochure-pdf/build-brochure-document';
 import { generateListingBrochurePdf } from '~/lib/commercial/brochure-pdf/generate-listing-brochure-pdf';
 import { loadListingBrochureData } from '~/lib/commercial/brochure-pdf/load-listing-brochure-data';
@@ -83,6 +84,8 @@ export const loadBrochureWizard = enhanceAction(
       images: data.images,
       floorplans: data.floorplans,
       epcs: data.epcs ?? [],
+      /** The footer's office details when brochure settings don't replace them. */
+      officeLine: brochureOfficeLine(data.accountName, data.branch),
       saved: {
         landscape: saved('landscape'),
         portrait: saved('portrait'),
@@ -133,6 +136,7 @@ export const saveListingBrochureDocument = enhanceAction(
       orientation: input.orientation,
       templateId: input.templateId,
       pages: input.pages as BrochurePage[],
+      settings: input.settings,
     });
   },
   { schema: SaveListingBrochureDocumentSchema },

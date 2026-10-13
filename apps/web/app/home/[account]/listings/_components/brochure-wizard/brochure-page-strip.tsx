@@ -17,7 +17,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Copy, GripVertical, Plus, Trash2 } from 'lucide-react';
+import { Copy, GripVertical, Plus, Settings2, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -136,6 +136,8 @@ export function BrochurePageStrip({
   onDelete,
   onAdd,
   adding = false,
+  settingsSelected,
+  onSelectSettings,
 }: {
   pages: BrochurePage[];
   selectedPageId: string | null;
@@ -147,6 +149,8 @@ export function BrochurePageStrip({
   onAdd: (content: BrochureContentKind) => void;
   /** A page is being added. */
   adding?: boolean;
+  settingsSelected: boolean;
+  onSelectSettings: () => void;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -165,7 +169,7 @@ export function BrochurePageStrip({
   }
 
   return (
-    <div className="flex min-h-0 flex-col gap-2">
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
       <div className="flex items-center justify-between">
         <p className="text-xs font-medium text-[var(--workspace-shell-text)]">
           Pages ({pages.length})
@@ -208,7 +212,7 @@ export function BrochurePageStrip({
           items={pages.map((p) => p.id)}
           strategy={verticalListSortingStrategy}
         >
-          <ol className="min-h-0 space-y-1.5 overflow-y-auto pr-1">
+          <ol className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
             {pages.map((page, index) => (
               <SortablePageRow
                 key={page.id}
@@ -224,6 +228,29 @@ export function BrochurePageStrip({
           </ol>
         </SortableContext>
       </DndContext>
+      <div className="shrink-0 border-t border-[var(--workspace-shell-border)] pt-2">
+        <button
+          type="button"
+          aria-pressed={settingsSelected}
+          onClick={onSelectSettings}
+          className={cn(
+            'flex w-full items-center gap-2 rounded-md border p-1.5 pl-2 text-left transition-colors',
+            settingsSelected
+              ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent-subtle)]'
+              : 'border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] hover:bg-[var(--workspace-shell-sidebar-accent)]',
+          )}
+        >
+          <Settings2 className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+          <span className="min-w-0">
+            <span className="block text-[10px] text-[var(--workspace-shell-text-muted)]">
+              Every page
+            </span>
+            <span className="block truncate text-xs font-medium text-[var(--workspace-shell-text)]">
+              Brochure settings
+            </span>
+          </span>
+        </button>
+      </div>
     </div>
   );
 }

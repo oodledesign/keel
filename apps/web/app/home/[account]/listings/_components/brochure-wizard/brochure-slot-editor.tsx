@@ -1,17 +1,9 @@
 'use client';
 
-import {
-  type DragEvent,
-  type FocusEvent,
-  Fragment,
-  type ReactNode,
-  useRef,
-  useState,
-} from 'react';
+import { type DragEvent, Fragment, type ReactNode, useState } from 'react';
 
 import {
   AlertTriangle,
-  Braces,
   Building2,
   Car,
   GraduationCap,
@@ -28,12 +20,6 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
@@ -46,7 +32,6 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { Switch } from '@kit/ui/switch';
-import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import {
@@ -69,10 +54,6 @@ import {
   type BrochureLinkButtonId,
 } from '~/lib/commercial/brochure-pdf/brochure-links';
 import {
-  BROCHURE_MERGE_FIELDS,
-  brochureMergeFieldToken,
-} from '~/lib/commercial/brochure-pdf/brochure-merge-fields';
-import {
   AMENITY_ICONS,
   type AmenityIcon,
   type BrochureAmenityItem,
@@ -84,6 +65,10 @@ import {
 import type { BrochureMediaItem } from '~/lib/commercial/public-brochure.shared';
 
 import { BrochureMediaImage } from './brochure-media-image';
+import {
+  BrochureMergeFieldHint,
+  BrochureMergeTextField,
+} from './brochure-merge-text-field';
 
 /** Drag payload shared by the media tray and image slots. */
 export const BROCHURE_DRAG_TYPE = 'application/x-ozer-brochure';
@@ -284,9 +269,6 @@ function headingAnchor(
   if (field.key === 'noticeLabel') return 'notice';
   return ['title', 'caption'].find((key) => key in slots) ?? null;
 }
-
-/** A text input the "Insert listing data" menu writes into. */
-type FieldTarget = { key: string; row?: number; part?: 'label' | 'value' };
 
 const MULTILINE_KEYS = new Set(['body', 'highlights', 'notice', 'headline']);
 
@@ -564,11 +546,6 @@ export function BrochureSlotEditor({
   onDropOnSlot: (key: string, payload: BrochureDragPayload) => void;
   onHiddenButtonsChange: (hidden: BrochureLinkButtonId[]) => void;
 }) {
-  const lastField = useRef<{
-    target: FieldTarget;
-    el: HTMLInputElement | HTMLTextAreaElement;
-  } | null>(null);
-  const [canInsert, setCanInsert] = useState(false);
   const headingFields = headingFieldsFor(page, templateId);
   const headingsBefore = new Map<string, BrochureHeadingField[]>();
   const unanchored: BrochureHeadingField[] = [];
@@ -596,62 +573,16 @@ export function BrochureSlotEditor({
     onChange({ ...page.slots, [key]: value });
   }
 
-  function setFieldText(target: FieldTarget, text: string) {
-    const slot = page.slots[target.key];
-    if (slot?.type === 'text' || (!slot && isBrochureHeadingKey(target.key))) {
-      updateSlot(target.key, { type: 'text', text });
-    } else if (slot?.type === 'facts' && target.row != null) {
-      const part = target.part ?? 'value';
-      updateSlot(target.key, {
-        type: 'facts',
-        rows: slot.rows.map((r, i) =>
-          i === target.row ? { ...r, [part]: text } : r,
-        ),
-      });
-    }
-  }
-
-  function trackField(target: FieldTarget) {
-    return {
-      onFocus: (e: FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        lastField.current = { target, el: e.currentTarget };
-        setCanInsert(true);
-      },
-    };
-  }
-
-  function insertMergeField(label: string) {
-    const field = lastField.current;
-    if (!field?.el.isConnected) return;
-    const { el, target } = field;
-    const token = brochureMergeFieldToken(label);
-    const start = el.selectionStart ?? el.value.length;
-    const end = el.selectionEnd ?? start;
-    setFieldText(
-      target,
-      el.value.slice(0, start) + token + el.value.slice(end),
-    );
-    const caret = start + token.length;
-    requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(caret, caret);
-    });
-  }
-
   function renderHeading(field: BrochureHeadingField) {
     const slot = page.slots[field.key];
-    const id = `${page.id}-${field.key}`;
     return (
       <div key={field.key} className="grid gap-1.5">
-        <Label htmlFor={id}>{field.label}</Label>
-        <Input
-          id={id}
+        <Label>{field.label}</Label>
+        <BrochureMergeTextField
+          label={field.label}
           value={slot?.type === 'text' ? slot.text : ''}
           placeholder={field.placeholder}
-          {...trackField({ key: field.key })}
-          onChange={(e) =>
-            updateSlot(field.key, { type: 'text', text: e.target.value })
-          }
+          onChange={(text) => updateSlot(field.key, { type: 'text', text })}
         />
       </div>
     );
@@ -663,24 +594,13 @@ export function BrochureSlotEditor({
       return (
         <div key={key} className="grid gap-1.5">
           <Label>{label}</Label>
-          {MULTILINE_KEYS.has(key) ? (
-            <Textarea
-              value={slot.text}
-              rows={key === 'notice' || key === 'headline' ? 3 : 6}
-              {...trackField({ key })}
-              onChange={(e) =>
-                updateSlot(key, { type: 'text', text: e.target.value })
-              }
-            />
-          ) : (
-            <Input
-              value={slot.text}
-              {...trackField({ key })}
-              onChange={(e) =>
-                updateSlot(key, { type: 'text', text: e.target.value })
-              }
-            />
-          )}
+          <BrochureMergeTextField
+            label={label}
+            value={slot.text}
+            multiline={MULTILINE_KEYS.has(key)}
+            rows={key === 'notice' || key === 'headline' ? 3 : 6}
+            onChange={(text) => updateSlot(key, { type: 'text', text })}
+          />
         </div>
       );
     }
@@ -721,29 +641,30 @@ export function BrochureSlotEditor({
         <div key={key} className="grid gap-2">
           <Label>Facts</Label>
           {slot.rows.map((row, index) => (
-            <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-              <Input
-                aria-label={`Fact ${index + 1} label`}
+            <div
+              key={index}
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-start gap-2"
+            >
+              <BrochureMergeTextField
+                label={`Fact ${index + 1} label`}
                 value={row.label}
-                {...trackField({ key, row: index, part: 'label' })}
-                onChange={(e) =>
+                onChange={(text) =>
                   updateSlot(key, {
                     type: 'facts',
                     rows: slot.rows.map((r, i) =>
-                      i === index ? { ...r, label: e.target.value } : r,
+                      i === index ? { ...r, label: text } : r,
                     ),
                   })
                 }
               />
-              <Input
-                aria-label={`Fact ${index + 1} value`}
+              <BrochureMergeTextField
+                label={`Fact ${index + 1} value`}
                 value={row.value}
-                {...trackField({ key, row: index, part: 'value' })}
-                onChange={(e) =>
+                onChange={(text) =>
                   updateSlot(key, {
                     type: 'facts',
                     rows: slot.rows.map((r, i) =>
-                      i === index ? { ...r, value: e.target.value } : r,
+                      i === index ? { ...r, value: text } : r,
                     ),
                   })
                 }
@@ -880,44 +801,7 @@ export function BrochureSlotEditor({
 
   return (
     <div className="space-y-5">
-      {hasTextFields ? (
-        <div className="grid gap-1.5">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="w-fit gap-1.5"
-                disabled={!canInsert}
-              >
-                <Braces className="h-3.5 w-3.5" />
-                Insert listing data
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              className="max-h-80 w-52 overflow-y-auto"
-              onCloseAutoFocus={(e) => e.preventDefault()}
-            >
-              {BROCHURE_MERGE_FIELDS.map((field) => (
-                <DropdownMenuItem
-                  key={field.label}
-                  className="text-xs"
-                  onSelect={() => insertMergeField(field.label)}
-                >
-                  {field.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-            Click into a field, then pick a detail. It shows as{' '}
-            <code className="font-mono">{'{Rent}'}</code> here and as the
-            listing&apos;s current value in the PDF.
-          </p>
-        </div>
-      ) : null}
+      {hasTextFields ? <BrochureMergeFieldHint /> : null}
       {unanchored.map(renderHeading)}
       {Object.entries(page.slots).map(([key, slot]) =>
         isBrochureHeadingKey(key) ? null : (

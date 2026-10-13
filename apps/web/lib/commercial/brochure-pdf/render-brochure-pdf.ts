@@ -36,6 +36,7 @@ import {
 import type {
   BrochureDisplayOptions,
   BrochureDocument,
+  BrochureFooterSettings,
   BrochureImageFit,
   BrochureImageFocus,
   BrochureImageSlot,
@@ -46,6 +47,10 @@ import type {
   BrochureSlotValue,
   BrochureTemplateId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
+import {
+  brochureOfficeLine,
+  resolveBrochureFooter,
+} from '~/lib/commercial/brochure-pdf/brochure-footer';
 import {
   DEFAULT_CONTACT_TITLE,
   DEFAULT_NOTICE_HEADING,
@@ -867,6 +872,8 @@ type RenderCtx = {
   runningTitle: string;
   /** Listing photos no page slot uses (for the facts page). */
   spareImageUrls: string[];
+  /** Merge fields already filled. */
+  footerSettings: BrochureFooterSettings | undefined;
   pageNumber: number;
   totalPages: number;
 };
@@ -1147,38 +1154,47 @@ function drawBands(page: PDFPage, ctx: RenderCtx) {
     color: ctx.colors.soft,
   });
   const footY = FOOTER_BAND_H / 2 - CHROME_SIZE * 0.36;
-  const pageNo = String(ctx.pageNumber).padStart(2, '0');
-  const pageNoW = trackedWidth(pageNo, ctx.fontBold, PAGE_NUMBER_SIZE, 0.6);
-  drawText(page, pageNo, {
-    x: right - pageNoW,
-    y: footY,
-    size: PAGE_NUMBER_SIZE,
-    font: ctx.fontBold,
-    color: ctx.colors.ink,
-    tracking: 0.6,
-  });
-  const notice = 'Subject to contract';
-  const noticeW = trackedWidth(notice, ctx.font, CHROME_SIZE, 0.2);
-  const noticeX = right - pageNoW - 18 - noticeW;
-  drawText(page, notice, {
-    x: noticeX,
-    y: footY,
-    size: CHROME_SIZE,
-    font: ctx.font,
-    color: ctx.colors.muted,
-    tracking: 0.2,
-  });
-  const office = [
-    ctx.data.accountName?.trim(),
-    branch?.address?.replace(/\s*\n\s*/g, ', ').trim(),
-    branch?.phone?.trim(),
-  ]
-    .filter(Boolean)
-    .join('  ·  ');
-  if (office) {
+  const footer = resolveBrochureFooter(
+    ctx.footerSettings,
+    brochureOfficeLine(ctx.data.accountName, branch),
+  );
+  let rightEdge = right;
+  if (footer.pageNumbers) {
+    const pageNo = String(ctx.pageNumber).padStart(2, '0');
+    const pageNoW = trackedWidth(pageNo, ctx.fontBold, PAGE_NUMBER_SIZE, 0.6);
+    drawText(page, pageNo, {
+      x: right - pageNoW,
+      y: footY,
+      size: PAGE_NUMBER_SIZE,
+      font: ctx.fontBold,
+      color: ctx.colors.ink,
+      tracking: 0.6,
+    });
+    rightEdge -= pageNoW + 18;
+  }
+  if (footer.notice) {
+    const notice = fitLine(
+      footer.notice,
+      ctx.font,
+      CHROME_SIZE,
+      (rightEdge - margin) / 2,
+    );
+    const noticeW = trackedWidth(notice, ctx.font, CHROME_SIZE, 0.2);
+    rightEdge -= noticeW;
+    drawText(page, notice, {
+      x: rightEdge,
+      y: footY,
+      size: CHROME_SIZE,
+      font: ctx.font,
+      color: ctx.colors.muted,
+      tracking: 0.2,
+    });
+    rightEdge -= 24;
+  }
+  if (footer.office) {
     drawText(
       page,
-      fitLine(office, ctx.font, CHROME_SIZE, noticeX - 24 - margin),
+      fitLine(footer.office, ctx.font, CHROME_SIZE, rightEdge - margin),
       {
         x: margin,
         y: footY,
@@ -1197,30 +1213,42 @@ function drawFooter(page: PDFPage, ctx: RenderCtx) {
   }
   const frame = contentFrame(page, ctx);
   drawHairline(page, ctx, frame.left, frame.right, FOOTER_BASELINE + 12);
+  const footer = resolveBrochureFooter(
+    ctx.footerSettings,
+    ctx.data.accountName?.trim() ?? '',
+  );
 
-  const left = [ctx.data.accountName?.trim(), 'Subject to contract']
-    .filter(Boolean)
-    .join('  ·  ');
-  drawText(page, left, {
-    x: frame.left,
-    y: FOOTER_BASELINE,
-    size: CHROME_SIZE,
-    font: ctx.font,
-    color: ctx.colors.muted,
-    tracking: 0.2,
-  });
+  let rightEdge = frame.right;
+  if (footer.pageNumbers) {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const right = `${pad(ctx.pageNumber)} / ${pad(ctx.totalPages)}`;
+    const w = trackedWidth(right, ctx.fontBold, CHROME_SIZE, 0.6);
+    drawText(page, right, {
+      x: frame.right - w,
+      y: FOOTER_BASELINE,
+      size: CHROME_SIZE,
+      font: ctx.fontBold,
+      color: ctx.colors.muted,
+      tracking: 0.6,
+    });
+    rightEdge -= w + 24;
+  }
 
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const right = `${pad(ctx.pageNumber)} / ${pad(ctx.totalPages)}`;
-  const w = trackedWidth(right, ctx.fontBold, CHROME_SIZE, 0.6);
-  drawText(page, right, {
-    x: frame.right - w,
-    y: FOOTER_BASELINE,
-    size: CHROME_SIZE,
-    font: ctx.fontBold,
-    color: ctx.colors.muted,
-    tracking: 0.6,
-  });
+  const left = [footer.office, footer.notice].filter(Boolean).join('  ·  ');
+  if (left) {
+    drawText(
+      page,
+      fitLine(left, ctx.font, CHROME_SIZE, rightEdge - frame.left),
+      {
+        x: frame.left,
+        y: FOOTER_BASELINE,
+        size: CHROME_SIZE,
+        font: ctx.font,
+        color: ctx.colors.muted,
+        tracking: 0.2,
+      },
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -4627,6 +4655,7 @@ export async function renderBrochurePdf(
     logo,
     runningTitle: runningTitleFor(data),
     spareImageUrls: spareImageUrls(document, data),
+    footerSettings: document.settings?.footer,
     pageNumber: 0,
     totalPages: document.pages.length,
   };

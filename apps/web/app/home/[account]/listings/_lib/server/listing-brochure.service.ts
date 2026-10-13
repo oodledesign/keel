@@ -7,6 +7,7 @@ import type {
   BrochureDocument,
   BrochureOrientation,
   BrochurePage,
+  BrochureSettings,
   BrochureTemplateId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
 import { buildBrochureDocument } from '~/lib/commercial/brochure-pdf/build-brochure-document';
@@ -21,6 +22,8 @@ type BrochureRow = {
   page_size: string;
   orientation: string;
   pages: unknown;
+  /** Absent until the brochure settings migration is applied. */
+  settings?: unknown;
   storage_path: string | null;
   updated_at: string;
   approved_at: string | null;
@@ -43,11 +46,22 @@ function mapRow(row: BrochureRow): ListingBrochureRecord {
     pageSize: 'A4',
     orientation: row.orientation as BrochureOrientation,
     pages: (Array.isArray(row.pages) ? row.pages : []) as BrochurePage[],
+    settings:
+      row.settings && typeof row.settings === 'object'
+        ? (row.settings as BrochureSettings)
+        : {},
     updatedAt: row.updated_at,
     approvedAt: row.approved_at ?? null,
     approvedBy: row.approved_by ?? null,
     publishedMediaId: row.published_media_id ?? null,
   };
+}
+
+function isMissingSettingsColumn(error: { code?: string; message?: string }) {
+  return (
+    (error.code === 'PGRST204' || error.code === '42703') &&
+    Boolean(error.message?.includes('settings'))
+  );
 }
 
 export function createListingBrochureService(client: SupabaseClient) {
@@ -151,23 +165,33 @@ class ListingBrochureService {
     accountId: string;
     document: BrochureDocument;
   }): Promise<ListingBrochureRecord> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (this.client as any)
-      .from('commercial_listing_brochures')
-      .upsert(
-        {
-          account_id: input.accountId,
-          listing_id: input.listingId,
-          template_id: input.document.templateId,
-          page_size: 'A4',
-          orientation: input.document.orientation,
-          pages: input.document.pages,
-          storage_path: null,
-        },
-        { onConflict: 'listing_id,orientation' },
-      )
-      .select('*')
-      .single();
+    const row = {
+      account_id: input.accountId,
+      listing_id: input.listingId,
+      template_id: input.document.templateId,
+      page_size: 'A4',
+      orientation: input.document.orientation,
+      pages: input.document.pages,
+      storage_path: null,
+    };
+    const upsert = (values: Record<string, unknown>) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (this.client as any)
+        .from('commercial_listing_brochures')
+        .upsert(values, { onConflict: 'listing_id,orientation' })
+        .select('*')
+        .single();
+
+    // Left out when unset so rebuilding the pages keeps the saved settings.
+    const settings = input.document.settings;
+    let { data, error } = await upsert(settings ? { ...row, settings } : row);
+
+    if (error && settings && isMissingSettingsColumn(error)) {
+      console.error(
+        '[brochure] settings column missing; saved the pages without brochure settings',
+      );
+      ({ data, error } = await upsert(row));
+    }
 
     if (error) {
       console.error('[brochure] upsert error:', error.message);
@@ -183,6 +207,7 @@ class ListingBrochureService {
     orientation: BrochureOrientation;
     templateId: BrochureTemplateId;
     pages: BrochurePage[];
+    settings?: BrochureSettings;
   }): Promise<ListingBrochureRecord> {
     return this.upsertDocument({
       listingId: input.listingId,
@@ -193,6 +218,7 @@ class ListingBrochureService {
         pageSize: 'A4',
         orientation: input.orientation,
         pages: input.pages.map((page) => ({ ...page, curated: true })),
+        settings: input.settings,
       },
     });
   }
