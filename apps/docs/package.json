@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next --turbopack --port 3012",
-    "build": "next build --webpack",
-    "postbuild": "pagefind --site .next/server/app --output-path public/_pagefind || echo '[docs] pagefind skipped (no static HTML in this build)'",
+    "dev": "pnpm run search:index && next --turbopack --port 3012",
+    "build": "pnpm run search:index && next build --webpack",
+    "search:index": "node scripts/build-search-index.mjs",
     "start": "next start --port 3012",
     "typecheck": "tsc --noEmit",
     "clean": "git clean -xdf .next .turbo node_modules public/_pagefind"

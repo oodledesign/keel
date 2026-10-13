@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-10-11T12:58:37.727Z",
-  "chunkCount": 142,
+  "generatedAt": "2026-10-13T15:54:24.554Z",
+  "chunkCount": 151,
   "chunks": [
     {
       "id": "42c411100896",
@@ -117,10 +117,64 @@
       "text": "Disposals\n\nDisposals are your commercial listings — to let, for sale, or investment. Open the list at /app/[account]/listings.\n\nYou need a billable seat to create or edit disposals. Support seats can view.\n\nDisposal types\n\n| Type | Typical use |\n| --- | --- |\n| To let | Occupational letting |\n| For sale | Occupational / freehold sale |\n| Investment | Investment disposal |\n\nStatus lifecycle\n\nStatuses move a disposal from draft through marketing to let, sold, or withdrawn:\n\n1. Draft — capture address and basics before instruction is confirmed\n2. Instructed — terms of engagement in place; not yet on the market\n3. Marketing — live for marketing / portals (when publishing is configured)\n4. Under offer — negotiation in progress\n5. Let or Sold — completed outcome\n6. Withdrawn — off the market without a deal\n\nCreate a disposal\n\n1. Go to /app/[account]/listings.\n2. Choose New disposal (or the create action shown on the page).\n3."
     },
     {
-      "id": "0ebfaf17ca6d",
-      "path": "/commercial-property/disposals/listing-detail",
-      "title": "Listing detail",
-      "text": "iator / team ownership.\n4. Add co-agents when jointly instructed.\n5. Attach landlord and other parties from Contacts.\n6. Capture advanced attributes (for example BREEAM) when required for marketing or portals.\n7. Upload private media that must not publish.\n8. Share a landlord-only interest schedule when needed. Channel go-live lives on Publishing.\n\nYou need a billable seat to mutate management fields. Support seats remain view / notes limited — see Seats & billing."
+      "id": "0c0429c32712",
+      "path": "/commercial-property/disposals/brochures",
+      "title": "Brochures",
+      "text": "ff to remove it from the footer. The office details and notice fields accept listing data pills too, for example {Town}. The cover page never has a footer.\n\nButtons and badges\n\n1. Reduced price badge adds a Reduced price badge to the cover. Switch it on only when the price has come down.\n2. Website listing button adds a link to the disposal on your website.\n3. Online brochure button adds a link to the online brochure.\n\nButtons only appear when the disposal has that link. To hide a button on one page only, use Buttons on this page in that page's fields.\n\nCheck the PDF\n\n1. Choose Check the PDF to build the full PDF.\n2. Step through each page. The Checks panel lists anything that needs a look:\n - an image is low resolution and may look blurry when printed\n - an image space is empty\n - some text did not fit and was cut short\n - a page has nothing on it, so it was left out\n - some nearby places were left out of a crowded map\n3."
+    },
+    {
+      "id": "1cedd516b307",
+      "path": "/commercial-property/disposals/brochures",
+      "title": "Brochures",
+      "text": "d from the disposal\n\nA new brochure includes these pages, depending on what the disposal has:\n\n| Page | What it shows |\n| --------------------- | ---------------------------------------------------------------------------------------------------------- |\n| Cover | Hero photo, disposal badge, address, and size, use, tenure and rent or price |\n| Summary | Key facts table with photos |\n| Description | Copy from Marketing with key points |\n| Specification & terms | Amenities, marketing sections and terms |\n| Photos | Photos from Media, in several grid layouts |\n| Floor plan | Floor plans from Media |\n| Energy performance | The EPC rating on an A+ to G scale beside the certificate, when an EPC is uploaded |\n| Location | Location copy, nearest stations, motorway junctions and towns with distances, and a map with numbered pins |\n| Contact | Office details, shopfront photo, agents and the important notice |\n\nDistances are straight-line, for guidance only."
+    },
+    {
+      "id": "28bb8fef77e5",
+      "path": "/commercial-property/disposals/brochures",
+      "title": "Brochures",
+      "text": "automatically as you work. The PDF brochure panel on Publishing shows where the brochure stands:\n\n| Status | Meaning |\n| ----------------------- | ----------------------------------------------------------------------------------- |\n| Not created | No brochure yet. |\n| Draft | Pages are saved but not published. Feeds do not have it. |\n| Published | The date and who published it. |\n| Edited since publishing | Pages or settings changed after publishing. Feeds still have the published version. |\n\nUse Download draft to get a PDF of unpublished changes. To update the feeds, choose Review brochure, check the PDF and publish again.\n\nHave your own designed PDF instead? Upload it on Media → Brochure."
+    },
+    {
+      "id": "2d43e5462429",
+      "path": "/commercial-property/disposals/brochures",
+      "title": "Brochures",
+      "text": "ion map\n\nOn a location page, use Places to show to show all nearby places, up to 8, 5 or 3, or none (property pin only). You can rename places, change their distance or icon, and remove ones you do not want.\n\nBrochure settings\n\nBrochure settings is pinned at the bottom of the page list. Its options apply to every page. While it is open, the preview shows a page with the footer so you can see your changes.\n\nFooter\n\n| Setting | What it does |\n| -------------- | ------------------------------------------------------------------------------------------------ |\n| Office details | Shows the agency, branch address and phone. Type your own text to replace it, or leave it blank. |\n| Notice | Shows Subject to contract by default. Type your own wording to replace it. |\n| Page numbers | Shows the page number on each page. |\n\nSwitch any of them off to remove it from the footer. The office details and notice fields accept listing data pills too, for example {Town}."
+    },
+    {
+      "id": "8c7e22068dee",
+      "path": "/commercial-property/disposals/brochures",
+      "title": "Brochures",
+      "text": "ct | Office details, shopfront photo, agents and the important notice |\n\nDistances are straight-line, for guidance only. Agency logo and colours come from the workspace brand settings. Office details and the shopfront photo come from the disposal's branch.\n\nReview pages\n\nThe left column lists the pages. The middle shows a live preview of the selected page, and the right column has its fields.\n\nArrange pages\n\n1. Drag a page by its handle to reorder it.\n2. Hover a page to duplicate or delete it.\n3. Choose Add to insert a new page after the selected one. New pages are filled from the disposal. A brochure can have up to 30 pages.\n4. Use Page content at the top to change what a page shows, and Layout to pick a different arrangement, for example a two-photo or four-photo grid. If you switch content and then switch back, your edits return.\n\nEdit text\n\n1. Select a page and edit its heading, body, key points or facts on the right.\n2. Key points take one point per line.\n3."
+    },
+    {
+      "id": "9895b9dc2083",
+      "path": "/commercial-property/disposals/brochures",
+      "title": "Brochures",
+      "text": "1. Select a page and edit its heading, body, key points or facts on the right.\n2. Key points take one point per line.\n3. On the summary page, add or remove fact rows as needed.\n\nListing data in text\n\nText fields can show live listing data, such as the rent or size, so the brochure stays right when the disposal changes.\n\n1. Click the braces button { } at the top-right of any text field.\n2. Choose the detail to insert, for example Rent, Size, Town or EPC. It appears as a small coloured pill where your cursor was.\n3. You can also type the name in braces, for example {rent}, and it turns into a pill.\n\nThe PDF shows the disposal's current value in place of each pill. Rent and price follow the Show on the brochure toggles and the disposal's POA settings. Text in braces that is not a known detail stays as you typed it."
+    },
+    {
+      "id": "aff2074d30e5",
+      "path": "/commercial-property/disposals/brochures",
+      "title": "Brochures",
+      "text": "Brochures\n\nEvery disposal can have a PDF brochure built from its own details: the marketing copy, photos, floor plans, EPC, location and branch. You can then edit any page before you publish it. Building, editing, publishing and downloading a brochure uses no AI credits.\n\nYou need a billable seat to create or edit a brochure, as for editing disposals.\n\nCreate a brochure\n\n1. Open the disposal and go to Publishing.\n2. Under PDF brochure, choose Create brochure (or Review brochure if one exists).\n3. The brochure editor opens with four steps: Set up, Review pages, Check the PDF and Approve.\n\nBefore you start, check the disposal's Marketing copy and Media. The brochure fills in from them, so it is quicker to fix a description or upload a better photo there first.\n\nSet up\n\n1. Pick an orientation. Landscape is the default; choose Portrait for traditional particulars. Each orientation keeps its own saved pages.\n2. If pages are already saved for that orientation, choose:"
+    },
+    {
+      "id": "c3f7412d701a",
+      "path": "/commercial-property/disposals/brochures",
+      "title": "Brochures",
+      "text": "al particulars. Each orientation keeps its own saved pages.\n2. If pages are already saved for that orientation, choose:\n - Continue where you left off to keep your edited pages.\n - Start fresh to rebuild every page from the disposal. Your page edits are replaced; your brochure settings are kept.\n3. Under Show on the brochure, switch off anything that should not appear, such as rent, price, size, business rates, service charge or estate charge. Rent and price start from the disposal's own POA settings on Marketing.\n4. Choose Build pages (or Continue).\n\nWhen you continue with saved pages, the rent, price and charges toggles are locked because those figures are already on your pages. Edit them on the pages, or start fresh to rebuild them.\n\nPages filled from the disposal\n\nA new brochure includes these pages, depending on what the disposal has:\n\n| Page | What it shows |"
+    },
+    {
+      "id": "cd16dfcc66e0",
+      "path": "/commercial-property/disposals/brochures",
+      "title": "Brochures",
+      "text": "the brochure toggles and the disposal's POA settings. Text in braces that is not a known detail stays as you typed it.\n\nAvailable details: Disposal, Rent, Price, Size, Tenure, Use class, Business rates, Service charge, Estate charge, EPC, Available from, Property name, Address, Town and Postcode.\n\nImages\n\n1. The media tray under the preview shows every photo, floor plan and EPC on the disposal. Labels show whether each image is In use or Unused.\n2. Drag an image onto any image space, or select a space and click an image in the tray.\n3. For each image, choose how it fits: Auto, Fill frame or Whole image. Auto shows floor plans and drawings whole, and lets photos fill the frame.\n4. When a photo fills the frame, choose which part to keep in view: Top, Centre or Bottom.\n\nTo add new images, upload them on the disposal's Media tab and reopen the brochure.\n\nLocation map\n\nOn a location page, use Places to show to show all nearby places, up to 8, 5 or 3, or none (property pin only)."
+    },
+    {
+      "id": "e48f4f0c56bf",
+      "path": "/commercial-property/disposals/brochures",
+      "title": "Brochures",
+      "text": "nd was cut short\n - a page has nothing on it, so it was left out\n - some nearby places were left out of a crowded map\n3. Choose Show to jump to the page, or Fix (or Fix this page) to go straight back to editing it.\n\nEven with no problems found, look through every page before you approve.\n\nApprove and publish\n\n1. Choose Approve.\n2. Tick I've checked every page of the PDF.\n3. Choose Download PDF for a copy, or Publish.\n4. Confirm. The dialog lists the feeds the brochure will be sent to.\n\nPublishing saves the PDF to the disposal's media and replaces any brochure published before, including one in the other orientation. Only a published brochure is sent to your website and portals. If no feeds are switched on yet, the brochure is saved and sent once a feed is on.\n\nAfter publishing\n\nYour edits save automatically as you work. The PDF brochure panel on Publishing shows where the brochure stands:\n\n| Status | Meaning |"
     },
     {
       "id": "1c7d46bd916f",
@@ -135,28 +189,28 @@
       "text": "private media |\n\nOverview\n\n1. Open the disposal from Disposals.\n2. Confirm address, disposal type, and status badge.\n3. Use the summary widgets (for example upcoming viewings) as a jump-off point into other tabs.\n4. Switch tabs from the listing nav — do not create a second disposal for the same instruction.\n\nMarketing\n\n1. Open Marketing.\n2. Complete headline particulars, description, amenities, and any AI-assisted draft fields you use.\n - Generate with AI drafts the summary, description, location paragraph and key points. The location paragraph only uses measured distances to nearby stations, motorway junctions and towns. Each generation uses 3 AI credits from the workspace pool, and nothing is saved until you save.\n3. Hide rent or price as POA when figures should not appear on particulars.\n4. Align marketing text with the physical Availability schedule before going live.\n5. Team, co-agents, and channel toggles are not on this tab — use Management and Publishing.\n\nPublishing\n\n1."
     },
     {
-      "id": "54a88df23dcc",
+      "id": "3d881fe5bf17",
       "path": "/commercial-property/disposals/listing-detail",
       "title": "Listing detail",
-      "text": "wns with distances, and a map with numbered pins for each nearby place. Distances are straight-line, for guidance only.\n - Contact: office details, shopfront photo, agents and the important notice.\n4. Use the Details to include toggles to hide rent, price, size, rates, service or estate charges, or to add a reduced-price badge and website or online brochure buttons.\n5. Agency logo and colours come from workspace brand settings. Office details and the shopfront photo come from the disposal's branch.\n\nMedia\n\n1. Open Media.\n2. Upload public images and documents intended for brochures and portals.\n3. Set a primary image so list views and feeds look correct.\n4. Keep sensitive files (keys, reports, solicitor packs) on Management → private media, not here.\n\nInterest\n\n1. Open Interest.\n2. Review suggested fits, then Circulate to email matching applicants via SES (workspace brand).\n3. Add or attach interest from contacts and requirements.\n4."
+      "text": "each row through the interest schedule (for example new → viewing arranged → viewed → offer → under offer → agreed).\n5. Cross-check with Viewings so diary and interest stay aligned.\n6. When interest becomes a serious negotiation, also update WIP / HoTs as appropriate.\n\nAvailability\n\n1. Open Availability.\n2. Record total size or break down floor-by-floor / unit-by-unit.\n3. Mark units available, under offer, or let/sold so marketing matches stock.\n4. Revisit after each letting or sales completion.\n\nManagement\n\n1. Open Management.\n2. Complete instruction fields (terms of engagement, control, sizing accuracy, and related attributes).\n3. Assign internal negotiator / team ownership.\n4. Add co-agents when jointly instructed.\n5. Attach landlord and other parties from Contacts.\n6. Capture advanced attributes (for example BREEAM) when required for marketing or portals.\n7. Upload private media that must not publish.\n8. Share a landlord-only interest schedule when needed."
     },
     {
       "id": "92c4a15e1de4",
       "path": "/commercial-property/disposals/listing-detail",
       "title": "Listing detail",
-      "text": "going live.\n5. Team, co-agents, and channel toggles are not on this tab — use Management and Publishing.\n\nPublishing\n\n1. Open Publishing.\n2. Check marketing readiness (missing EPC warns before enabling a live channel; it does not hard-block).\n3. Toggle Website to include or exclude this disposal from the website XML feed (included by default when on-market).\n4. Toggle EACH to include or exclude this disposal from the EACH XML feed.\n5. Rightmove is visible but not live yet.\n6. Share the online brochure or generate a PDF, and post to LinkedIn from this tab. Generate with AI for a LinkedIn post uses 3 AI credits per draft; writing your own or using the listing description is free.\n7. Workspace feed URLs and credentials stay under Website & portals.\n\nBrochure\n\nThe PDF brochure is built from the disposal itself. Building, editing, publishing and downloading it uses no AI credits.\n\n1."
+      "text": "going live.\n5. Team, co-agents, and channel toggles are not on this tab — use Management and Publishing.\n\nPublishing\n\n1. Open Publishing.\n2. Check marketing readiness (missing EPC warns before enabling a live channel; it does not hard-block).\n3. Toggle Website to include or exclude this disposal from the website XML feed (included by default when on-market).\n4. Toggle EACH to include or exclude this disposal from the EACH XML feed.\n5. Rightmove is visible but not live yet.\n6. Share the online brochure or generate a PDF, and post to LinkedIn from this tab. Generate with AI for a LinkedIn post uses 3 AI credits per draft; writing your own or using the listing description is free.\n7. Workspace feed URLs and credentials stay under Website & portals.\n\nBrochure\n\nThe PDF brochure is built from the disposal itself, and every page can be edited before you publish. Building, editing, publishing and downloading it uses no AI credits.\n\n1."
     },
     {
-      "id": "df7e157d14e6",
+      "id": "d5805f995724",
       "path": "/commercial-property/disposals/listing-detail",
       "title": "Listing detail",
-      "text": "ate to email matching applicants via SES (workspace brand).\n3. Add or attach interest from contacts and requirements.\n4. Progress each row through the interest schedule (for example new → viewing arranged → viewed → offer → under offer → agreed).\n5. Cross-check with Viewings so diary and interest stay aligned.\n6. When interest becomes a serious negotiation, also update WIP / HoTs as appropriate.\n\nAvailability\n\n1. Open Availability.\n2. Record total size or break down floor-by-floor / unit-by-unit.\n3. Mark units available, under offer, or let/sold so marketing matches stock.\n4. Revisit after each letting or sales completion.\n\nManagement\n\n1. Open Management.\n2. Complete instruction fields (terms of engagement, control, sizing accuracy, and related attributes).\n3. Assign internal negotiator / team ownership.\n4. Add co-agents when jointly instructed.\n5. Attach landlord and other parties from Contacts.\n6."
+      "text": "eting or portals.\n7. Upload private media that must not publish.\n8. Share a landlord-only interest schedule when needed. Channel go-live lives on Publishing.\n\nYou need a billable seat to mutate management fields. Support seats remain view / notes limited — see Seats & billing."
     },
     {
-      "id": "e29a434b90fc",
+      "id": "faa406abcd9a",
       "path": "/commercial-property/disposals/listing-detail",
       "title": "Listing detail",
-      "text": "PDF brochure is built from the disposal itself. Building, editing, publishing and downloading it uses no AI credits.\n\n1. From Publishing, choose Brochure PDF… to preview or publish to Media, or open the brochure editor to edit pages.\n2. Pick a template (Classic, Editorial or Compact) and an orientation. Landscape is the default; choose Portrait for traditional particulars. Each orientation keeps its own saved pages.\n3. Pages fill in automatically:\n - Cover: hero photo, disposal badge, address, and a grid of size, use, tenure and rent or price.\n - Summary: key facts table with photos.\n - Description: copy from Marketing, with key features.\n - Specification & terms: amenities, marketing sections and an EPC scale.\n - Photos and floor plans from Media.\n - Location: location copy, nearest stations, motorway junctions and towns with distances, and a map with numbered pins for each nearby place. Distances are straight-line, for guidance only."
+      "text": "nd every page can be edited before you publish. Building, editing, publishing and downloading it uses no AI credits.\n\n1. From Publishing, choose Create brochure (or Review brochure) under PDF brochure.\n2. Pick an orientation, build the pages, edit them, check the PDF and publish.\n\nThe full guide, including listing data pills, images, footer settings and publishing, is in Brochures.\n\nMedia\n\n1. Open Media.\n2. Upload public images and documents intended for brochures and portals.\n3. Set a primary image so list views and feeds look correct.\n4. Keep sensitive files (keys, reports, solicitor packs) on Management → private media, not here.\n\nInterest\n\n1. Open Interest.\n2. Review suggested fits, then Circulate to email matching applicants via SES (workspace brand).\n3. Add or attach interest from contacts and requirements.\n4. Progress each row through the interest schedule (for example new → viewing arranged → viewed → offer → under offer → agreed).\n5."
     },
     {
       "id": "efe0009b25a2",
