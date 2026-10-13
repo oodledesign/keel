@@ -1,4 +1,4 @@
-import { PDFDocument } from 'pdf-lib';
+import { PDFDict, PDFDocument, PDFName, degrees } from 'pdf-lib';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { PublicBrochureData } from '~/lib/commercial/public-brochure.shared';
@@ -7,10 +7,14 @@ import type {
   BrochureDocument,
   BrochureRenderWarning,
 } from '../brochure-document';
+import { fetchBrochureImageBytes } from '../brochure-image-bytes';
 import { createBlankBrochurePage } from '../build-brochure-document';
 import { renderBrochurePdf } from '../render-brochure-pdf';
 
 vi.mock('server-only', () => ({}));
+vi.mock('../brochure-image-bytes', () => ({
+  fetchBrochureImageBytes: vi.fn(async () => null),
+}));
 
 const data = {
   token: '',
@@ -76,6 +80,12 @@ function document(): BrochureDocument {
   };
 }
 
+function serveCertificate(bytes: Uint8Array) {
+  vi.mocked(fetchBrochureImageBytes).mockImplementation(async (url) =>
+    url?.includes('.pdf') ? bytes : null,
+  );
+}
+
 describe('renderBrochurePdf', () => {
   it('renders every page of the document', async () => {
     const bytes = await renderBrochurePdf(document(), data);
@@ -133,4 +143,94 @@ describe('renderBrochurePdf', () => {
     expect(await cut(8)).toBe(false);
     expect(await cut(10, 5)).toBe(false);
   }, 30_000);
+
+  it.each([0, 90])(
+    'embeds the first page of a PDF certificate (rotation %i)',
+    async (rotation) => {
+      const certificate = await PDFDocument.create();
+      const first = certificate.addPage([595, 842]);
+      first.drawRectangle({ x: 40, y: 600, width: 300, height: 120 });
+      first.setRotation(degrees(rotation));
+      certificate.addPage([595, 842]).drawText('Page 2');
+      serveCertificate(await certificate.save());
+
+      const base = createBlankBrochurePage('epc');
+      const warnings: BrochureRenderWarning[] = [];
+      const bytes = await renderBrochurePdf(
+        {
+          ...document(),
+          pages: [
+            {
+              ...base,
+              id: 'energy',
+              slots: {
+                ...base.slots,
+                epc: { type: 'text', text: 'A+ (-4)' },
+                certificate: {
+                  type: 'image',
+                  mediaId: null,
+                  url: 'https://cdn.example.com/epc.pdf',
+                },
+              },
+            },
+          ],
+        },
+        data,
+        { warnings },
+      );
+
+      expect(warnings).toEqual([]);
+      const rendered = await PDFDocument.load(bytes);
+      expect(rendered.getPageCount()).toBe(1);
+      const xObjects = rendered
+        .getPage(0)
+        .node.Resources()
+        ?.lookup(PDFName.of('XObject'), PDFDict);
+      expect(xObjects?.keys()).toHaveLength(1);
+    },
+    30_000,
+  );
+
+  it.each([
+    ['is not a readable PDF', async () => new TextEncoder().encode('%PDF-1.7')],
+    [
+      'has a blank first page',
+      async () => {
+        const blank = await PDFDocument.create();
+        blank.addPage([595, 842]);
+        return blank.save();
+      },
+    ],
+  ])(
+    'flags a certificate that %s',
+    async (_case, makeBytes) => {
+      serveCertificate(await makeBytes());
+      const base = createBlankBrochurePage('epc');
+      const warnings: BrochureRenderWarning[] = [];
+      const bytes = await renderBrochurePdf(
+        {
+          ...document(),
+          pages: [
+            {
+              ...base,
+              id: 'energy',
+              slots: {
+                ...base.slots,
+                certificate: {
+                  type: 'image',
+                  mediaId: null,
+                  url: 'https://cdn.example.com/broken.pdf',
+                },
+              },
+            },
+          ],
+        },
+        data,
+        { warnings },
+      );
+      expect(warnings.map((w) => w.kind)).toEqual(['missing_image']);
+      expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
+    },
+    30_000,
+  );
 });

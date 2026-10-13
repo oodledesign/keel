@@ -88,7 +88,9 @@ export async function fetchBrochureImageBytes(
   try {
     const res = await fetch(normalized, {
       cache: 'no-store',
-      headers: { Accept: 'image/png,image/jpeg,image/webp,image/*,*/*' },
+      headers: {
+        Accept: 'image/png,image/jpeg,image/webp,image/*,application/pdf,*/*',
+      },
       signal: AbortSignal.timeout(12000),
     });
     if (res.ok) {
@@ -96,6 +98,7 @@ export async function fetchBrochureImageBytes(
       if (
         contentType &&
         !contentType.startsWith('image/') &&
+        !contentType.startsWith('application/pdf') &&
         !contentType.includes('octet-stream')
       ) {
         console.error(

@@ -8,6 +8,7 @@ export const BROCHURE_CONTENT_KINDS = [
   'details',
   'photos',
   'floorplan',
+  'epc',
   'location',
   'contact',
 ] as const;
@@ -64,6 +65,12 @@ export const BROCHURE_CONTENT_OPTIONS: Array<{
     label: 'Floor plan',
     layouts: ['floorplan'],
     sectionLabel: 'Floor plans',
+  },
+  {
+    id: 'epc',
+    label: 'Energy performance',
+    layouts: ['epc'],
+    sectionLabel: 'Energy',
   },
   {
     id: 'location',

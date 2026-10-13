@@ -524,4 +524,64 @@ describe('hydrateBrochureDocument', () => {
       'https://cdn.example.com/int-2.jpg',
     );
   });
+
+  it('refreshes the EPC certificate and drops energy pages with nothing to show', () => {
+    const data = brochureData({
+      epcs: [
+        {
+          id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+          mediaType: 'epc',
+          url: 'https://cdn.example.com/epc.pdf?token=new',
+          fileName: 'EPC.pdf',
+          isCover: false,
+          isPdf: true,
+        },
+      ],
+    });
+    const doc: BrochureDocument = {
+      listingId: data.listing.id,
+      templateId: 'classic',
+      pageSize: 'A4',
+      orientation: 'landscape',
+      pages: [
+        {
+          id: 'certificate',
+          layoutId: 'epc',
+          slots: {
+            epc: { type: 'text', text: '' },
+            certificate: {
+              type: 'image',
+              mediaId: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+              url: 'https://cdn.example.com/epc.pdf?token=old',
+            },
+          },
+        },
+        {
+          id: 'rating',
+          layoutId: 'epc',
+          curated: true,
+          slots: {
+            epc: { type: 'text', text: 'C (62)' },
+            certificate: { type: 'image', mediaId: null, url: null },
+          },
+        },
+        {
+          id: 'empty',
+          layoutId: 'epc',
+          curated: true,
+          slots: {
+            epc: { type: 'text', text: ' ' },
+            certificate: { type: 'image', mediaId: null, url: null },
+          },
+        },
+      ],
+    };
+
+    const hydrated = hydrateBrochureDocument(doc, data);
+    expect(hydrated.pages.map((p) => p.id)).toEqual(['certificate', 'rating']);
+    expect(imageUrl(hydrated.pages[0]!.slots, 'certificate')).toBe(
+      'https://cdn.example.com/epc.pdf?token=new',
+    );
+    expect(imageUrl(hydrated.pages[1]!.slots, 'certificate')).toBeNull();
+  });
 });

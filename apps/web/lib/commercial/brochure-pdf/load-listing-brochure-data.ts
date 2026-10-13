@@ -34,6 +34,7 @@ import {
   type BrochureMarketingSection,
   type BrochureMediaItem,
   type PublicBrochureData,
+  isPdfMedia,
   resolveBrochureBranch,
 } from '~/lib/commercial/public-brochure.shared';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
@@ -276,7 +277,7 @@ export async function loadListingBrochureData(
       )
       .eq('listing_id', listing.id)
       .eq('is_private', false)
-      .in('media_type', ['image', 'floorplan'])
+      .in('media_type', ['image', 'floorplan', 'epc'])
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true })
       .order('id', { ascending: true }),
@@ -411,7 +412,7 @@ export async function loadListingBrochureData(
         created_at: string | null;
         is_cover: boolean | null;
       }>,
-    ).map(async (item) => {
+    ).map(async (item): Promise<BrochureMediaItem | null> => {
       const url = await signMediaUrl(
         admin,
         item.storage_path,
@@ -419,21 +420,21 @@ export async function loadListingBrochureData(
       );
       if (!url) return null;
 
-      const mediaType = item.media_type === 'floorplan' ? 'floorplan' : 'image';
-      if (
-        mediaType === 'floorplan' &&
-        item.mime_type?.toLowerCase().includes('pdf')
-      ) {
-        return null;
-      }
+      const mediaType: BrochureMediaItem['mediaType'] =
+        item.media_type === 'floorplan' || item.media_type === 'epc'
+          ? item.media_type
+          : 'image';
+      const isPdf = isPdfMedia(item.mime_type, item.file_name);
+      if (mediaType === 'image' && isPdf) return null;
 
       return {
         id: item.id,
-        mediaType: mediaType as 'image' | 'floorplan',
+        mediaType,
         url,
         fileName: item.file_name,
         isCover: Boolean(item.is_cover),
-      } satisfies BrochureMediaItem;
+        ...(isPdf ? { isPdf } : {}),
+      };
     }),
   );
 
@@ -515,6 +516,7 @@ export async function loadListingBrochureData(
     agents,
     images: media.filter((m) => m.mediaType === 'image'),
     floorplans: media.filter((m) => m.mediaType === 'floorplan'),
+    epcs: media.filter((m) => m.mediaType === 'epc'),
     branch,
     nearbyAmenities,
     localArea,

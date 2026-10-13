@@ -17,11 +17,7 @@ import {
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
 
-import {
-  BROCHURE_TEMPLATE_OPTIONS,
-  type BrochureOrientation,
-  type BrochureTemplateId,
-} from '~/lib/commercial/brochure-pdf/brochure-document';
+import type { BrochureOrientation } from '~/lib/commercial/brochure-pdf/brochure-document';
 
 import type {
   BrochurePreviewResult,
@@ -49,7 +45,7 @@ export function BrochureApproveStep({
   onPublish,
 }: {
   preview: BrochurePreviewResult;
-  doc: { templateId: BrochureTemplateId; orientation: BrochureOrientation };
+  doc: { orientation: BrochureOrientation };
   pageCount: number;
   approved: boolean;
   onApprovedChange: (approved: boolean) => void;
@@ -59,9 +55,6 @@ export function BrochureApproveStep({
   onPublish: () => void;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const style =
-    BROCHURE_TEMPLATE_OPTIONS.find((t) => t.id === doc.templateId)?.label ??
-    doc.templateId;
   const liveChannels = channels.filter((c) => c.on);
   const checks = preview.warnings.length;
 
@@ -74,8 +67,7 @@ export function BrochureApproveStep({
           </h3>
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             {doc.orientation === 'landscape' ? 'Landscape' : 'Portrait'},{' '}
-            {style} style, {preview.pageIds.length} of {pageCount} pages in the
-            PDF.{' '}
+            {preview.pageIds.length} of {pageCount} pages in the PDF.{' '}
             {checks > 0
               ? `${checks} ${checks === 1 ? 'check needs' : 'checks need'} a look.`
               : 'No problems found.'}

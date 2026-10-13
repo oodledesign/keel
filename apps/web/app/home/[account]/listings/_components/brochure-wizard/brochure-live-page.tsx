@@ -15,22 +15,8 @@ import type {
 } from '~/lib/commercial/brochure-pdf/brochure-document';
 
 import { BrochureLayoutThumb } from './brochure-layout-thumb';
+import { loadPdfJs } from './brochure-pdfjs';
 import { WARNING_TEXT } from './brochure-preview-step';
-
-type PdfJs = typeof import('pdfjs-dist');
-
-let pdfJs: Promise<PdfJs> | null = null;
-
-function loadPdfJs(): Promise<PdfJs> {
-  pdfJs ??= import('pdfjs-dist').then((lib) => {
-    lib.GlobalWorkerOptions.workerPort = new Worker(
-      new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url),
-      { type: 'module' },
-    );
-    return lib;
-  });
-  return pdfJs;
-}
 
 type Status = 'loading' | 'ready' | 'left_out' | 'error';
 
@@ -206,7 +192,9 @@ export function BrochureLivePage({
       </div>
       <p className="mt-2 text-center text-[11px] text-[var(--workspace-shell-text-muted)]">
         {status === 'left_out'
-          ? 'This page has no photos, so it will be left out of the PDF.'
+          ? layoutId === 'epc'
+            ? 'This page has no EPC rating or certificate, so it will be left out of the PDF.'
+            : 'This page has no photos, so it will be left out of the PDF.'
           : status === 'error'
             ? 'Preview unavailable. The next step still shows the PDF.'
             : showSkeleton

@@ -21,6 +21,7 @@ import {
   type BrochureListing,
   type BrochureMediaItem,
   type PublicBrochureData,
+  isPdfMedia,
   resolveBrochureBranch,
 } from '~/lib/commercial/public-brochure.shared';
 
@@ -283,7 +284,7 @@ async function loadPublicBrochureByTokenUncached(
         created_at: string | null;
         is_cover: boolean | null;
       }>,
-    ).map(async (item) => {
+    ).map(async (item): Promise<BrochureMediaItem | null> => {
       const url = await signMediaUrl(
         admin,
         item.storage_path,
@@ -293,21 +294,16 @@ async function loadPublicBrochureByTokenUncached(
 
       const mediaType = item.media_type === 'floorplan' ? 'floorplan' : 'image';
 
-      // Floorplan PDFs aren't useful as slideshow slides
-      if (
-        mediaType === 'floorplan' &&
-        item.mime_type?.toLowerCase().includes('pdf')
-      ) {
-        return null;
-      }
+      // PDFs aren't useful as slideshow slides
+      if (isPdfMedia(item.mime_type, item.file_name)) return null;
 
       return {
         id: item.id,
-        mediaType: mediaType as 'image' | 'floorplan',
+        mediaType,
         url,
         fileName: item.file_name,
         isCover: Boolean(item.is_cover),
-      } satisfies BrochureMediaItem;
+      };
     }),
   );
 

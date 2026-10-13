@@ -4,11 +4,18 @@ import { cn } from '@kit/ui/utils';
 
 import type { BrochureMediaItem } from '~/lib/commercial/public-brochure.shared';
 
+import { BrochureMediaImage } from './brochure-media-image';
 import { writeBrochureDrag } from './brochure-slot-editor';
 
+const KIND_LABELS: Record<BrochureMediaItem['mediaType'], string> = {
+  image: 'Photo',
+  floorplan: 'Floor plan',
+  epc: 'EPC',
+};
+
 /**
- * Every listing photo and floor plan. Drag one onto an image slot, or click
- * it to fill the selected slot.
+ * Every listing photo, floor plan and EPC. Drag one onto an image slot, or
+ * click it to fill the selected slot.
  */
 export function BrochureMediaTray({
   media,
@@ -28,8 +35,8 @@ export function BrochureMediaTray({
   if (media.length === 0) {
     return (
       <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-        This listing has no photos or floor plans yet. Add them on the Media
-        tab.
+        This listing has no photos, floor plans or EPC yet. Add them on the
+        Media tab.
       </p>
     );
   }
@@ -44,10 +51,7 @@ export function BrochureMediaTray({
       <ul className="flex gap-2 overflow-x-auto pb-1">
         {media.map((item, index) => {
           const label =
-            item.fileName ??
-            (item.mediaType === 'floorplan'
-              ? `Floor plan ${index + 1}`
-              : `Photo ${index + 1}`);
+            item.fileName ?? `${KIND_LABELS[item.mediaType]} ${index + 1}`;
           return (
             <li key={item.id} className="shrink-0">
               <button
@@ -71,10 +75,9 @@ export function BrochureMediaTray({
                     : 'border-[var(--ozer-accent)]/40',
                 )}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <BrochureMediaImage
                   src={item.url}
-                  alt=""
+                  isPdf={item.isPdf}
                   onError={onImageError}
                   className={cn(
                     'h-full w-full',
@@ -82,8 +85,8 @@ export function BrochureMediaTray({
                   )}
                 />
                 <span className="absolute inset-x-0 bottom-0 bg-black/55 px-1 py-0.5 text-left text-[9px] text-white">
-                  {item.mediaType === 'floorplan'
-                    ? 'Floor plan'
+                  {item.mediaType !== 'image'
+                    ? KIND_LABELS[item.mediaType]
                     : drawingIds.has(item.id)
                       ? 'Drawing'
                       : usedIds.has(item.id)

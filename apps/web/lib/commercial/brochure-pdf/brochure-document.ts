@@ -89,6 +89,7 @@ export const BROCHURE_LAYOUT_IDS = [
   'photo_grid_4',
   'photo_text',
   'floorplan',
+  'epc',
   'map_amenities',
   'map_text',
   'map_top',

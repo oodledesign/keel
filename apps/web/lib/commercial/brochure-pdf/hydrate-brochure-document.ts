@@ -25,7 +25,10 @@ import type {
   PublicBrochureData,
 } from '~/lib/commercial/public-brochure.shared';
 
-/** Photo-only pages; dropped from the PDF when none of their photos resolve. */
+/**
+ * Photo-only pages; dropped from the PDF when none of their photos resolve.
+ * Energy pages likewise go when they have neither a rating nor a certificate.
+ */
 const PHOTO_LAYOUTS = new Set<BrochureLayoutId>([
   'photo_full',
   'photo_grid_2',
@@ -105,11 +108,13 @@ export function hydrateBrochureDocument(
 ): BrochureDocument {
   const images = data.images;
   const floorplans = data.floorplans;
+  const epcs = data.epcs ?? [];
   const cover = brochureCoverImage(images);
   const imageById = new Map(images.map((item) => [item.id, item]));
   const floorplanById = new Map(floorplans.map((item) => [item.id, item]));
-  // The wizard can place any photo or plan in any image slot.
-  const mediaById = new Map([...floorplanById, ...imageById]);
+  const epcById = new Map(epcs.map((item) => [item.id, item]));
+  // The wizard can place any photo, plan or EPC in any image slot.
+  const mediaById = new Map([...epcById, ...floorplanById, ...imageById]);
   const used = new Set<string>();
 
   const takeNext = (pool: BrochureMediaItem[]): BrochureMediaItem | null => {
@@ -161,6 +166,9 @@ export function hydrateBrochureDocument(
           : null) ?? fill(floorplans[0] ?? null);
       const resolved = resolve(slots.plan, preferred);
       if (resolved) slots.plan = resolved;
+    } else if (page.layoutId === 'epc') {
+      const resolved = resolve(slots.certificate, fill(epcs[0] ?? null));
+      if (resolved) slots.certificate = resolved;
     } else if (page.layoutId === 'contact') {
       const shopfront = data.branch?.shopfrontUrl?.trim() || null;
       const existing = slots.shopfront;
@@ -231,6 +239,13 @@ export function hydrateBrochureDocument(
   });
 
   const filtered = pages.filter((page) => {
+    if (page.layoutId === 'epc') {
+      const rating = page.slots.epc;
+      return (
+        hasImageUrl(page.slots.certificate) ||
+        (rating?.type === 'text' && Boolean(rating.text.trim()))
+      );
+    }
     if (!PHOTO_LAYOUTS.has(page.layoutId)) return true;
     return (BACKFILL_SLOT_KEYS[page.layoutId] ?? []).some((key) =>
       hasImageUrl(page.slots[key]),

@@ -10,7 +10,7 @@ import type {
 type Box = { x: number; y: number; w: number; h: number };
 
 type Shape =
-  | ({ kind: 'photo' | 'map' | 'band' | 'panel' | 'plan' } & Box)
+  | ({ kind: 'photo' | 'map' | 'band' | 'panel' | 'plan' | 'scale' } & Box)
   | ({ kind: 'lines' | 'rows' | 'places'; dark?: boolean } & Box)
   | { kind: 'heading'; x: number; y: number; w: number; dark?: boolean };
 
@@ -260,6 +260,27 @@ function layoutShapes(
 
     case 'floorplan':
       return [heading(W * 0.3), { kind: 'plan', ...body }];
+
+    case 'epc':
+      if (landscape) {
+        const split = W * 0.42;
+        return [
+          heading(W * 0.28),
+          { kind: 'scale', x: MARGIN, y: BODY_Y, w: split - MARGIN - 2, h: 13 },
+          { kind: 'panel', x: split + 2, y: MARGIN, w: W * 0.36, h: page.h },
+        ];
+      }
+      return [
+        heading(W * 0.5),
+        { kind: 'scale', x: MARGIN, y: BODY_Y, w: inner * 0.7, h: 13 },
+        {
+          kind: 'panel',
+          x: MARGIN + inner * 0.15,
+          y: BODY_Y + 15,
+          w: inner * 0.7,
+          h: H - BODY_Y - 15 - MARGIN,
+        },
+      ];
 
     case 'map_amenities':
       if (landscape) {
@@ -523,6 +544,32 @@ function ShapeView({
           />
           <path
             d={`M${x + w * 0.5} ${y + h * 0.05} V${y + h * 0.6} M${x + w * 0.1} ${y + h * 0.6} H${x + w * 0.9} M${x + w * 0.7} ${y + h * 0.6} V${y + h * 0.95}`}
+          />
+        </g>
+      );
+    }
+    case 'scale': {
+      const { x, y, w, h } = shape;
+      const rows = 8;
+      const rowH = h / rows - 0.3;
+      return (
+        <g fill={MUTED}>
+          {Array.from({ length: rows }, (_, i) => (
+            <rect
+              key={`${id}-${i}`}
+              x={x}
+              y={y + i * (h / rows)}
+              width={w * (0.35 + (0.4 * i) / (rows - 1))}
+              height={rowH}
+              opacity={0.55}
+            />
+          ))}
+          <rect
+            x={x + w * 0.8}
+            y={y + 2 * (h / rows)}
+            width={w * 0.2}
+            height={rowH}
+            fill={ACCENT}
           />
         </g>
       );

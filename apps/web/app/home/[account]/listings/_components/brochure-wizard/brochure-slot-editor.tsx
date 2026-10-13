@@ -83,6 +83,8 @@ import {
 } from '~/lib/commercial/brochure-pdf/nearby-amenities.shared';
 import type { BrochureMediaItem } from '~/lib/commercial/public-brochure.shared';
 
+import { BrochureMediaImage } from './brochure-media-image';
+
 /** Drag payload shared by the media tray and image slots. */
 export const BROCHURE_DRAG_TYPE = 'application/x-ozer-brochure';
 
@@ -235,6 +237,7 @@ const SLOT_LABELS: Record<string, string> = {
   photo3: 'Photo 3',
   photo4: 'Photo 4',
   plan: 'Floor plan',
+  certificate: 'Certificate',
   title: 'Title',
   address: 'Address',
   disposal: 'Disposal label',
@@ -246,7 +249,7 @@ const SLOT_LABELS: Record<string, string> = {
   brandName: 'Brand name',
   body: 'Body',
   highlights: 'Key points (one per line)',
-  epc: 'EPC',
+  epc: 'EPC rating, e.g. B (47)',
   caption: 'Caption',
   notice: 'Important notice',
   branchName: 'Branch name',
@@ -365,6 +368,10 @@ function ImageSlotEditor({
   const fills = fit === 'fill' || (fit === 'auto' && !isDrawing);
   const photos = media.filter((item) => item.mediaType === 'image');
   const plans = media.filter((item) => item.mediaType === 'floorplan');
+  const epcs = media.filter((item) => item.mediaType === 'epc');
+  const isPdf = Boolean(
+    slot.mediaId && media.find((item) => item.id === slot.mediaId)?.isPdf,
+  );
 
   return (
     <div className="grid gap-2">
@@ -408,10 +415,9 @@ function ImageSlotEditor({
         )}
       >
         {slot.url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <BrochureMediaImage
             src={slot.url}
-            alt=""
+            isPdf={isPdf}
             onError={onImageError}
             className="h-full w-full"
             style={{
@@ -462,6 +468,16 @@ function ImageSlotEditor({
                 {plans.map((item, index) => (
                   <SelectItem key={item.id} value={item.id}>
                     {item.fileName ?? `Floor plan ${index + 1}`}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ) : null}
+            {epcs.length > 0 ? (
+              <SelectGroup>
+                <SelectLabel>EPC</SelectLabel>
+                {epcs.map((item, index) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.fileName ?? `EPC ${index + 1}`}
                   </SelectItem>
                 ))}
               </SelectGroup>

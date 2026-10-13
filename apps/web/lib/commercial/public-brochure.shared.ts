@@ -17,13 +17,20 @@ import {
 
 export type BrochureMediaItem = {
   id: string;
-  mediaType: 'image' | 'floorplan';
+  mediaType: 'image' | 'floorplan' | 'epc';
   url: string;
   fileName: string | null;
   isCover: boolean;
   /** Floor plan, site plan or elevation detected from the pixels. */
   isDrawing?: boolean;
+  /** A PDF file; the brochure shows its first page. */
+  isPdf?: boolean;
 };
+
+export function isPdfMedia(mimeType: string | null, fileName: string | null) {
+  if (mimeType) return mimeType.toLowerCase().includes('pdf');
+  return /\.pdf$/i.test(fileName ?? '');
+}
 
 export type BrochureAgent = {
   userId: string;
@@ -153,6 +160,8 @@ export type PublicBrochureData = {
   agents: BrochureAgent[];
   images: BrochureMediaItem[];
   floorplans: BrochureMediaItem[];
+  /** Energy Performance Certificates; only the PDF brochure loader fills these. */
+  epcs?: BrochureMediaItem[];
   /** Workspace office used on the contact page (listing branch, else default). */
   branch?: BrochureBranch | null;
   /** Real nearby places (datasets + Mapbox); omit or empty to fall back to town centre. */

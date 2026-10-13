@@ -8,11 +8,9 @@ import { Button } from '@kit/ui/button';
 import { Switch } from '@kit/ui/switch';
 import { cn } from '@kit/ui/utils';
 
-import {
-  BROCHURE_TEMPLATE_OPTIONS,
-  type BrochureDisplayOptions,
-  type BrochureOrientation,
-  type BrochureTemplateId,
+import type {
+  BrochureDisplayOptions,
+  BrochureOrientation,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
 
 import type { BrochureWizardData } from './brochure-wizard';
@@ -88,21 +86,17 @@ function OptionCard({
 export function BrochureSetupStep({
   data,
   orientation,
-  templateId,
   display,
   busy,
   onOrientationChange,
-  onTemplateChange,
   onDisplayChange,
   onStart,
 }: {
   data: BrochureWizardData;
   orientation: BrochureOrientation;
-  templateId: BrochureTemplateId;
   display: BrochureDisplayOptions;
   busy: boolean;
   onOrientationChange: (orientation: BrochureOrientation) => void;
-  onTemplateChange: (templateId: BrochureTemplateId) => void;
   onDisplayChange: (display: BrochureDisplayOptions) => void;
   onStart: (mode: 'continue' | 'fresh') => void;
 }) {
@@ -113,6 +107,7 @@ export function BrochureSetupStep({
   const effectiveMode = saved ? mode : 'fresh';
   const photoCount = data.images.length;
   const planCount = data.floorplans.length;
+  const hasEpc = data.epcs.length > 0;
 
   return (
     <div className="h-full overflow-y-auto">
@@ -167,24 +162,6 @@ export function BrochureSetupStep({
         ) : null}
 
         <section className="space-y-3">
-          <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-            Style
-          </h3>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {BROCHURE_TEMPLATE_OPTIONS.map((t) => (
-              <OptionCard
-                key={t.id}
-                selected={templateId === t.id}
-                title={t.label}
-                description={t.description}
-                disabled={busy}
-                onClick={() => onTemplateChange(t.id)}
-              />
-            ))}
-          </div>
-        </section>
-
-        <section className="space-y-3">
           <div>
             <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
               Show on the brochure
@@ -229,8 +206,10 @@ export function BrochureSetupStep({
 
         <div className="flex items-center justify-between gap-4 border-t border-[var(--workspace-shell-border)] pt-5">
           <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-            {photoCount} {photoCount === 1 ? 'photo' : 'photos'} and {planCount}{' '}
-            {planCount === 1 ? 'floor plan' : 'floor plans'} available
+            {photoCount} {photoCount === 1 ? 'photo' : 'photos'}
+            {hasEpc ? ', ' : ' and '}
+            {planCount} {planCount === 1 ? 'floor plan' : 'floor plans'}
+            {hasEpc ? ' and the EPC' : ''} available
           </p>
           <Button
             type="button"

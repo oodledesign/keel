@@ -82,6 +82,7 @@ export const loadBrochureWizard = enhanceAction(
       },
       images: data.images,
       floorplans: data.floorplans,
+      epcs: data.epcs ?? [],
       saved: {
         landscape: saved('landscape'),
         portrait: saved('portrait'),

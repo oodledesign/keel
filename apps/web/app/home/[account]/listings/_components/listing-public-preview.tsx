@@ -216,7 +216,8 @@ export function ListingPublicPreview({
   onClose,
   openFullPageHref,
 }: ListingPublicPreviewProps) {
-  const { listing, agents, images, floorplans, accountName, brand } = data;
+  const { listing, agents, images, accountName, brand } = data;
+  const floorplans = data.floorplans.filter((plan) => !plan.isPdf);
   const address = formatBrochureAddress(listing);
   const rent = formatBrochureRent(listing);
   const price = formatBrochurePrice(listing);

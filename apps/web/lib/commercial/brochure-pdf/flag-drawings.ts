@@ -34,14 +34,14 @@ async function detect(item: BrochureMediaItem): Promise<boolean> {
 }
 
 /**
- * Sets `isDrawing` on listing media. Floor plans are drawings by definition;
- * photos are classified from their pixels.
+ * Sets `isDrawing` on listing media. Floor plans and EPCs are drawings by
+ * definition; photos are classified from their pixels.
  */
 export async function flagBrochureDrawings(
   items: BrochureMediaItem[],
 ): Promise<BrochureMediaItem[]> {
   const out = items.map((item) =>
-    item.mediaType === 'floorplan' ? { ...item, isDrawing: true } : item,
+    item.mediaType === 'image' ? item : { ...item, isDrawing: true },
   );
   const pending = out
     .map((item, index) => ({ item, index }))

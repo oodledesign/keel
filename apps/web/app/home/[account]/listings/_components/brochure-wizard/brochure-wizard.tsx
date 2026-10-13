@@ -105,7 +105,6 @@ export function BrochureWizard({
 
   const [orientation, setOrientation] =
     useState<BrochureOrientation>(initialOrientation);
-  const [templateId, setTemplateId] = useState<BrochureTemplateId>('classic');
   const [display, setDisplay] = useState<BrochureDisplayOptions>({
     ...DEFAULT_BROCHURE_DISPLAY_OPTIONS,
     showRent: defaultShowRent,
@@ -146,7 +145,10 @@ export function BrochureWizard({
     if (!result) return;
     setData(result);
     const urlById = new Map(
-      [...result.images, ...result.floorplans].map((m) => [m.id, m.url]),
+      [...result.images, ...result.floorplans, ...result.epcs].map((m) => [
+        m.id,
+        m.url,
+      ]),
     );
     const next = refreshBrochureMediaUrls(pagesRef.current, urlById);
     if (next !== pagesRef.current) {
@@ -165,10 +167,7 @@ export function BrochureWizard({
     mediaLoadedAt.current = Date.now();
     loadBrochureWizard({ listingId, accountId })
       .then((result) => {
-        if (cancelled) return;
-        setData(result);
-        const saved = result.saved[initialOrientation];
-        if (saved) setTemplateId(saved.templateId);
+        if (!cancelled) setData(result);
       })
       .catch((err: unknown) => {
         if (!cancelled) {
@@ -280,17 +279,12 @@ export function BrochureWizard({
           orientation,
         });
         loadDoc(saved);
-        if (saved.templateId !== templateId) {
-          docRef.current = { templateId, orientation: saved.orientation };
-          setDoc(docRef.current);
-          markEdited();
-        }
       } else {
         const fresh = await regenerateListingBrochure({
           listingId,
           accountId,
           orientation,
-          templateId,
+          templateId: 'classic',
           display,
         });
         loadDoc(fresh);
@@ -413,7 +407,7 @@ export function BrochureWizard({
   }
 
   const media = useMemo(
-    () => (data ? [...data.images, ...data.floorplans] : []),
+    () => (data ? [...data.images, ...data.floorplans, ...data.epcs] : []),
     [data],
   );
   const drawingIds = useMemo(
@@ -533,18 +527,11 @@ export function BrochureWizard({
           <BrochureSetupStep
             data={data}
             orientation={orientation}
-            templateId={templateId}
             display={display}
             busy={busy}
             onOrientationChange={(next) => {
               clearPreview();
               setOrientation(next);
-              const saved = data.saved[next];
-              if (saved) setTemplateId(saved.templateId);
-            }}
-            onTemplateChange={(next) => {
-              clearPreview();
-              setTemplateId(next);
             }}
             onDisplayChange={(next) => {
               clearPreview();

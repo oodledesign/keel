@@ -405,6 +405,62 @@ describe('buildBrochureDocument', () => {
       (page) => page.layoutId === 'details_columns',
     );
     expect(text(details!.slots, 'epc')).toBe('C');
+    expect(rich.pages.some((page) => page.layoutId === 'epc')).toBe(false);
+  });
+
+  it('puts a rating with no specification page on its own energy page', () => {
+    const doc = buildBrochureDocument(
+      brochureData({ listing: listing({ epcBand: 'b', epcRating: 47 }) }),
+      { orientation: 'landscape', templateId: 'classic' },
+    );
+    const layouts = doc.pages.map((page) => page.layoutId);
+    expect(layouts).not.toContain('details_columns');
+    expect(layouts.slice(-2)).toEqual(['epc', 'contact']);
+    const energy = doc.pages.at(-2)!;
+    expect(text(energy.slots, 'epc')).toBe('B (47)');
+    expect(energy.slots.certificate).toEqual({
+      type: 'image',
+      mediaId: null,
+      url: null,
+    });
+  });
+
+  it('shows the EPC file on the energy page and takes the scale off the specification page', () => {
+    const doc = buildBrochureDocument(
+      brochureData({
+        listing: listing({ amenities: ['Air conditioning'], epcBand: 'C' }),
+        epcs: [
+          {
+            id: 'epc-file',
+            mediaType: 'epc',
+            url: 'https://cdn.example.com/epc.pdf',
+            fileName: 'EPC.pdf',
+            isCover: false,
+            isPdf: true,
+          },
+        ],
+      }),
+      { orientation: 'portrait', templateId: 'classic' },
+    );
+    const details = doc.pages.find(
+      (page) => page.layoutId === 'details_columns',
+    );
+    const energy = doc.pages.find((page) => page.layoutId === 'epc');
+    expect(text(details!.slots, 'epc')).toBe('');
+    expect(text(energy!.slots, 'epc')).toBe('C');
+    expect(energy!.slots.certificate).toMatchObject({
+      mediaId: 'epc-file',
+      url: 'https://cdn.example.com/epc.pdf',
+    });
+    expect(doc.pages.at(-1)!.layoutId).toBe('contact');
+  });
+
+  it('leaves the energy page out when the listing has no EPC', () => {
+    const doc = buildBrochureDocument(brochureData(), {
+      orientation: 'landscape',
+      templateId: 'classic',
+    });
+    expect(doc.pages.some((page) => page.layoutId === 'epc')).toBe(false);
   });
 });
 

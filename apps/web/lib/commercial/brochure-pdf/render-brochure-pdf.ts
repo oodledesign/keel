@@ -4,6 +4,7 @@ import fontkit from '@pdf-lib/fontkit';
 import {
   LineCapStyle,
   PDFDocument,
+  type PDFEmbeddedPage,
   type PDFFont,
   type PDFImage,
   type PDFPage,
@@ -417,6 +418,124 @@ async function embedImage(
   }
 }
 
+/** First page of a listing PDF, sized as a viewer shows it. */
+type PdfPageGraphic = {
+  kind: 'pdf';
+  page: PDFEmbeddedPage;
+  /** Clockwise turn from the page's /Rotate. */
+  rotation: 0 | 90 | 180 | 270;
+  width: number;
+  height: number;
+};
+
+/** A listing photo, or the first page of a listing PDF (floor plan, EPC). */
+type ListingGraphic = PDFImage | PdfPageGraphic;
+
+function isPdfGraphic(graphic: ListingGraphic): graphic is PdfPageGraphic {
+  return (graphic as PdfPageGraphic).kind === 'pdf';
+}
+
+function isPdfBytes(bytes: Uint8Array): boolean {
+  return new TextDecoder('latin1')
+    .decode(bytes.subarray(0, 1024))
+    .includes('%PDF-');
+}
+
+async function embedPdfFirstPage(
+  pdf: PDFDocument,
+  bytes: Uint8Array,
+): Promise<PdfPageGraphic | null> {
+  try {
+    const source = await PDFDocument.load(bytes, {
+      ignoreEncryption: true,
+      updateMetadata: false,
+    });
+    // pdf-lib can't decrypt, so an encrypted page would draw as garbage.
+    if (source.isEncrypted) {
+      console.error('[brochure-pdf] skipped an encrypted PDF');
+      return null;
+    }
+    const first = source.getPage(0);
+    const crop = first.getCropBox();
+    const box = {
+      left: crop.x,
+      bottom: crop.y,
+      right: crop.x + crop.width,
+      top: crop.y + crop.height,
+    };
+    // pdf-lib defers the real embed to save(), where an unreadable page
+    // would fail the whole brochure, so prove it embeds on a scratch doc.
+    const scratch = await PDFDocument.create();
+    await (await scratch.embedPage(first, box)).embed();
+    const embedded = await pdf.embedPage(first, box);
+    const angle = ((first.getRotation().angle % 360) + 360) % 360;
+    const rotation: PdfPageGraphic['rotation'] =
+      angle === 90 || angle === 180 || angle === 270 ? angle : 0;
+    const turned = rotation === 90 || rotation === 270;
+    return {
+      kind: 'pdf',
+      page: embedded,
+      rotation,
+      width: turned ? embedded.height : embedded.width,
+      height: turned ? embedded.width : embedded.height,
+    };
+  } catch (error) {
+    console.error('[brochure-pdf] failed to embed PDF page', error);
+    return null;
+  }
+}
+
+async function embedListingGraphic(
+  pdf: PDFDocument,
+  bytes: Uint8Array | null,
+): Promise<ListingGraphic | null> {
+  if (!bytes || bytes.length === 0) return null;
+  return isPdfBytes(bytes)
+    ? embedPdfFirstPage(pdf, bytes)
+    : embedImage(pdf, bytes);
+}
+
+/** Paint `graphic` stretched to `rect`, turning PDF pages upright. */
+function drawGraphic(page: PDFPage, graphic: ListingGraphic, rect: Box) {
+  if (!isPdfGraphic(graphic)) {
+    page.drawImage(graphic, rect);
+    return;
+  }
+  const { x, y, width: w, height: h } = rect;
+  switch (graphic.rotation) {
+    case 0:
+      page.drawPage(graphic.page, { x, y, width: w, height: h });
+      break;
+    case 90:
+      page.drawPage(graphic.page, {
+        x,
+        y: y + h,
+        width: h,
+        height: w,
+        rotate: degrees(-90),
+      });
+      break;
+    case 180:
+      page.drawPage(graphic.page, {
+        x: x + w,
+        y: y + h,
+        width: w,
+        height: h,
+        rotate: degrees(180),
+      });
+      break;
+    case 270:
+      page.drawPage(graphic.page, {
+        x: x + w,
+        y,
+        width: h,
+        height: w,
+        rotate: degrees(90),
+      });
+      break;
+  }
+}
+
 function clipToBox(page: PDFPage, box: Box) {
   page.pushOperators(
     pushGraphicsState(),
@@ -433,34 +552,38 @@ function clipToBox(page: PDFPage, box: Box) {
 /** Fill `box` completely, cropping the overflow away from `focus`. */
 function drawImageCover(
   page: PDFPage,
-  image: PDFImage,
+  image: ListingGraphic,
   box: Box,
   focus: BrochureImageFocus = 'center',
 ) {
   if (box.width <= 0 || box.height <= 0) return;
   clipToBox(page, box);
-  page.drawImage(image, coverImageRect(image.width, image.height, box, focus));
+  drawGraphic(
+    page,
+    image,
+    coverImageRect(image.width, image.height, box, focus),
+  );
   page.pushOperators(popGraphicsState());
 }
 
 /** The whole image centred in `box`, with `background` behind the gaps. */
 function drawImageWhole(
   page: PDFPage,
-  image: PDFImage,
+  image: ListingGraphic,
   box: Box,
   background: RGB | null,
 ) {
   if (box.width <= 0 || box.height <= 0) return;
   if (background) page.drawRectangle({ ...box, color: background });
-  page.drawImage(image, wholeImageRect(image.width, image.height, box));
+  drawGraphic(page, image, wholeImageRect(image.width, image.height, box));
 }
 
 type ImagePlacement = { fit?: BrochureImageFit; focus?: BrochureImageFocus };
-type PlacedImage = { image: PDFImage; placement: ImagePlacement | null };
+type PlacedImage = { image: ListingGraphic; placement: ImagePlacement | null };
 
 function showsWhole(
   ctx: RenderCtx,
-  image: PDFImage,
+  image: ListingGraphic,
   placement: ImagePlacement | null | undefined,
 ): boolean {
   const fit = placement?.fit ?? 'auto';
@@ -471,7 +594,7 @@ function showsWhole(
 function drawSlotImage(
   page: PDFPage,
   ctx: RenderCtx,
-  image: PDFImage,
+  image: ListingGraphic,
   box: Box,
   placement: ImagePlacement | null | undefined,
   background: RGB | null = ctx.colors.soft,
@@ -501,7 +624,7 @@ function drawPlaceholder(page: PDFPage, ctx: RenderCtx, box: Box) {
 function drawPhoto(
   page: PDFPage,
   ctx: RenderCtx,
-  image: PDFImage | null,
+  image: ListingGraphic | null,
   area: Box,
   opts: {
     maxCrop?: number;
@@ -733,11 +856,12 @@ type RenderCtx = {
   headingBold: PDFFont;
   orientation: BrochureOrientation;
   templateId: BrochureTemplateId;
-  imageCache: Map<string, PDFImage | null>;
-  /** Embedded images detected as drawings (floor plans, site plans). */
-  drawingImages: Set<PDFImage>;
+  imageCache: Map<string, ListingGraphic | null>;
+  /** Embedded images detected as drawings (floor plans, site plans, EPCs). */
+  drawingImages: Set<ListingGraphic>;
   imageById: Map<string, string>;
   floorplanById: Map<string, string>;
+  epcById: Map<string, string>;
   logo: PDFImage | null;
   /** "10 High Street, Otford" — eyebrow on inner pages. */
   runningTitle: string;
@@ -1109,7 +1233,11 @@ function knownDrawingFlag(
   url: string,
   mediaId: string | null | undefined,
 ): boolean | undefined {
-  const media = [...ctx.data.images, ...ctx.data.floorplans];
+  const media = [
+    ...ctx.data.images,
+    ...ctx.data.floorplans,
+    ...(ctx.data.epcs ?? []),
+  ];
   const byId = mediaId ? media.find((item) => item.id === mediaId) : undefined;
   if (byId?.isDrawing !== undefined) return byId.isDrawing;
   const path = url.split('?')[0];
@@ -1120,15 +1248,16 @@ async function resolveImage(
   ctx: RenderCtx,
   url: string | null,
   mediaId?: string | null,
-): Promise<PDFImage | null> {
+): Promise<ListingGraphic | null> {
   if (!url) return null;
   if (ctx.imageCache.has(url)) return ctx.imageCache.get(url) ?? null;
   const bytes = await fetchBrochureImageBytes(url);
-  const img = await embedImage(ctx.pdf, bytes);
+  const img = await embedListingGraphic(ctx.pdf, bytes);
   ctx.imageCache.set(url, img);
   if (img && bytes) {
     const drawing =
-      knownDrawingFlag(ctx, url, mediaId) ?? (await isDrawingImage(bytes));
+      isPdfGraphic(img) ||
+      (knownDrawingFlag(ctx, url, mediaId) ?? (await isDrawingImage(bytes)));
     if (drawing) ctx.drawingImages.add(img);
   }
   return img;
@@ -1138,11 +1267,12 @@ async function resolveListingImage(
   ctx: RenderCtx,
   slot: { mediaId: string | null; url: string | null } | null,
   fallbackUrl?: string | null,
-): Promise<PDFImage | null> {
+): Promise<ListingGraphic | null> {
   const tried = new Set<string>();
   const fromId = slot?.mediaId
     ? (ctx.imageById.get(slot.mediaId) ??
       ctx.floorplanById.get(slot.mediaId) ??
+      ctx.epcById.get(slot.mediaId) ??
       null)
     : null;
   for (const url of [slot?.url, fromId, fallbackUrl]) {
@@ -2115,7 +2245,7 @@ async function factsPhotos(
     .filter((slot): slot is BrochureImageSlot => slot != null);
   if (slots.length === 0 && ctx.templateId === 'editorial') return [];
   const placed: Array<{
-    image: PDFImage | null;
+    image: ListingGraphic | null;
     placement: ImagePlacement | null;
   }> =
     slots.length > 0
@@ -2454,7 +2584,9 @@ async function renderDescription(
   drawFooter(page, ctx);
 }
 
+/** Non-domestic certificates add A+ (net zero) above A. */
 const EPC_BANDS: Array<[string, RGB]> = [
+  ['A+', rgb(0, 0.42, 0.27)],
   ['A', rgb(0, 0.5, 0.33)],
   ['B', rgb(0.1, 0.71, 0.35)],
   ['C', rgb(0.55, 0.81, 0.27)],
@@ -2465,18 +2597,23 @@ const EPC_BANDS: Array<[string, RGB]> = [
 ];
 const EPC_ROW_H = 11;
 const EPC_ROW_GAP = 2.5;
-const EPC_HEIGHT = EPC_BANDS.length * (EPC_ROW_H + EPC_ROW_GAP);
+const EPC_HEIGHT = epcScaleHeight(EPC_ROW_H, EPC_ROW_GAP);
+
+function epcScaleHeight(rowH: number, gap: number) {
+  return EPC_BANDS.length * (rowH + gap);
+}
 
 function parseEpc(text: string): {
   band: string | null;
   rating: string | null;
 } {
-  const band = /\b([A-G])\b/i.exec(text)?.[1]?.toUpperCase() ?? null;
-  const rating = /\b(\d{1,3})\b/.exec(text)?.[1] ?? null;
+  const band =
+    /(?<![A-Z])(A\+|[A-G])(?![A-Z])/i.exec(text)?.[1]?.toUpperCase() ?? null;
+  const rating = /(?<!\d)(-?\d{1,3})(?!\d)/.exec(text)?.[1] ?? null;
   return { band, rating };
 }
 
-/** A–G energy rating bars with a pointer at the property's band. */
+/** A+ to G energy rating bars with a pointer at the property's band. */
 function drawEpcScale(
   page: PDFPage,
   ctx: RenderCtx,
@@ -2486,40 +2623,154 @@ function drawEpcScale(
     width: number;
     band: string | null;
     rating: string | null;
+    rowH?: number;
+    gap?: number;
   },
 ) {
-  const pointerW = 40;
+  const rowH = opts.rowH ?? EPC_ROW_H;
+  const gap = opts.gap ?? EPC_ROW_GAP;
+  const size = rowH * 0.68;
+  const inset = rowH * 0.55;
+  const pointerW = rowH * 3.6;
   const maxBar = opts.width - pointerW - 8;
   const minBar = maxBar * 0.4;
   EPC_BANDS.forEach(([letter, color], i) => {
     const barW = minBar + ((maxBar - minBar) * i) / (EPC_BANDS.length - 1);
-    const y = opts.top - (i + 1) * EPC_ROW_H - i * EPC_ROW_GAP;
-    page.drawRectangle({ x: opts.x, y, width: barW, height: EPC_ROW_H, color });
+    const y = opts.top - (i + 1) * rowH - i * gap;
+    const textY = y + (rowH - size * 0.72) / 2;
+    page.drawRectangle({ x: opts.x, y, width: barW, height: rowH, color });
     const textColor =
       letter === 'D' || letter === 'E' ? ctx.colors.ink : ctx.colors.paper;
     page.drawText(letter, {
-      x: opts.x + barW - 10,
-      y: y + 2.6,
-      size: 7.5,
+      x:
+        opts.x +
+        barW -
+        inset * 0.7 -
+        ctx.fontBold.widthOfTextAtSize(letter, size),
+      y: textY,
+      size,
       font: ctx.fontBold,
       color: textColor,
     });
     if (opts.band === letter) {
       const px = opts.x + maxBar + 8;
       page.drawSvgPath(
-        `M 0 ${EPC_ROW_H / 2} L 6 0 H ${pointerW} V ${EPC_ROW_H} H 6 Z`,
-        { x: px, y: y + EPC_ROW_H, color },
+        `M 0 ${rowH / 2} L ${inset} 0 H ${pointerW} V ${rowH} H ${inset} Z`,
+        { x: px, y: y + rowH, color },
       );
       const label = opts.rating ? `${opts.rating} ${letter}` : letter;
       page.drawText(label, {
-        x: px + 10,
-        y: y + 2.6,
-        size: 7.5,
+        x: px + inset + rowH * 0.35,
+        y: textY,
+        size,
         font: ctx.fontBold,
         color: textColor,
       });
     }
   });
+}
+
+/** "Energy rating" and a large scale; returns the scale's bottom edge. */
+function drawEpcRating(
+  page: PDFPage,
+  ctx: RenderCtx,
+  epc: { band: string | null; rating: string | null },
+  opts: { x: number; top: number; width: number },
+): number {
+  drawEyebrow(page, ctx, 'Energy rating', {
+    x: opts.x,
+    y: opts.top,
+    color: ctx.colors.primary,
+  });
+  const rowH = 18;
+  const gap = 4;
+  const scaleTop = opts.top - 12;
+  drawEpcScale(page, ctx, { ...opts, top: scaleTop, ...epc, rowH, gap });
+  return scaleTop - epcScaleHeight(rowH, gap);
+}
+
+/** The certificate's first page whole, top-aligned in `area`, with a hairline frame. */
+function drawCertificate(
+  page: PDFPage,
+  ctx: RenderCtx,
+  certificate: ListingGraphic | null,
+  area: Box,
+) {
+  if (area.width <= 0 || area.height < 60) return;
+  if (!certificate) {
+    drawPlaceholder(page, ctx, area);
+    return;
+  }
+  const fitted = wholeImageRect(certificate.width, certificate.height, area);
+  const rect = { ...fitted, y: area.y + area.height - fitted.height };
+  drawGraphic(page, certificate, rect);
+  page.drawRectangle({
+    ...rect,
+    borderColor: ctx.colors.hairline,
+    borderWidth: 0.75,
+  });
+}
+
+/** Energy rating scale beside (landscape) or above (portrait) the certificate. */
+async function renderEpc(
+  page: PDFPage,
+  brochurePage: BrochurePage,
+  ctx: RenderCtx,
+) {
+  drawSectionTab(
+    page,
+    ctx,
+    brochurePage.sectionLabel,
+    brochurePage.sectionNumber,
+  );
+  const frame = contentFrame(page, ctx);
+  const title =
+    slotText(brochurePage.slots, 'title').trim() || 'Energy performance';
+  const epc = parseEpc(slotText(brochurePage.slots, 'epc'));
+  const slot = slotImage(brochurePage.slots, 'certificate');
+  const hasCertificate = Boolean(slot?.mediaId || slot?.url);
+  const certificate = hasCertificate
+    ? await resolveListingImage(ctx, slot)
+    : null;
+
+  if (ctx.orientation === 'landscape') {
+    const leftW = hasCertificate
+      ? Math.min(300, frame.width * 0.4)
+      : frame.width * 0.5;
+    const top = drawPageHeader(page, ctx, brochurePage, title, leftW);
+    if (epc.band) {
+      drawEpcRating(page, ctx, epc, { x: frame.left, top, width: leftW });
+    }
+    if (hasCertificate) {
+      const x = frame.left + leftW + 36;
+      drawCertificate(page, ctx, certificate, {
+        x,
+        y: CONTENT_MIN_Y,
+        width: frame.right - x,
+        height: frame.top - CONTENT_MIN_Y,
+      });
+    }
+  } else {
+    let y = drawPageHeader(page, ctx, brochurePage, title);
+    if (epc.band) {
+      y =
+        drawEpcRating(page, ctx, epc, {
+          x: frame.left,
+          top: y,
+          width: Math.min(frame.width, 300),
+        }) - 28;
+    }
+    if (hasCertificate) {
+      drawCertificate(page, ctx, certificate, {
+        x: frame.left,
+        y: CONTENT_MIN_Y,
+        width: frame.width,
+        height: y - CONTENT_MIN_Y,
+      });
+    }
+  }
+
+  drawFooter(page, ctx);
 }
 
 type FlowItem =
@@ -3938,7 +4189,7 @@ async function loadAgentPhotos(ctx: RenderCtx): Promise<Map<string, PDFImage>> {
   await Promise.all(
     ctx.data.agents.slice(0, 4).map(async (agent) => {
       const img = await resolveImage(ctx, agent.pictureUrl);
-      if (img) photos.set(agent.userId, img);
+      if (img && !isPdfGraphic(img)) photos.set(agent.userId, img);
     }),
   );
   return photos;
@@ -3997,7 +4248,7 @@ function renderContactSplit(
     headings: { office: string; notice: string };
     links: BrochureLinkButton[];
     office: OfficeDetails;
-    shopfrontImg: PDFImage | null;
+    shopfrontImg: ListingGraphic | null;
     notice: string;
     agentPhotos: Map<string, PDFImage>;
   },
@@ -4215,6 +4466,9 @@ async function renderPage(
     case 'floorplan':
       await renderFloorplan(page, brochurePage, ctx);
       break;
+    case 'epc':
+      await renderEpc(page, brochurePage, ctx);
+      break;
     case 'map_amenities':
       await renderMap(page, brochurePage, ctx);
       break;
@@ -4369,6 +4623,7 @@ export async function renderBrochurePdf(
     drawingImages: new Set(),
     imageById: new Map(data.images.map((item) => [item.id, item.url])),
     floorplanById: new Map(data.floorplans.map((item) => [item.id, item.url])),
+    epcById: new Map((data.epcs ?? []).map((item) => [item.id, item.url])),
     logo,
     runningTitle: runningTitleFor(data),
     spareImageUrls: spareImageUrls(document, data),

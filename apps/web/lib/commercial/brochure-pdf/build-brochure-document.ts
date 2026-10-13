@@ -511,7 +511,7 @@ export function buildDetailsBody(data: PublicBrochureData): string {
   return blocks.join('\n\n');
 }
 
-/** Only when there is real spec / terms copy; an EPC alone stays in the facts table. */
+/** Only when there is real spec / terms copy; an EPC alone gets the energy page. */
 function detailsSlots(
   data: PublicBrochureData,
 ): Record<string, BrochureSlotValue> | null {
@@ -523,6 +523,37 @@ function detailsSlots(
     body: textSlot(body),
     epc: textSlot(epc),
   };
+}
+
+/** Rating scale plus the certificate's first page; null when the listing has neither. */
+function epcSlots(
+  data: PublicBrochureData,
+): Record<string, BrochureSlotValue> | null {
+  const rating = formatEpc(data.listing);
+  const file = data.epcs?.[0] ?? null;
+  if (!rating && !file) return null;
+  return {
+    title: textSlot('Energy performance'),
+    epc: textSlot(rating ?? ''),
+    certificate: imageSlot(file?.id ?? null, file?.url ?? null),
+  };
+}
+
+/**
+ * The energy page when the listing has a certificate to show, or a rating
+ * with no specification page to carry the scale. It then takes the scale off
+ * the specification page so it isn't drawn twice.
+ */
+function epcPageSlots(
+  data: PublicBrochureData,
+  details: Record<string, BrochureSlotValue> | null,
+): Record<string, BrochureSlotValue> | null {
+  const slots = epcSlots(data);
+  if (!slots) return null;
+  const hasCertificate = Boolean(data.epcs?.length);
+  if (details && !hasCertificate) return null;
+  if (details) details.epc = textSlot('');
+  return slots;
 }
 
 function floorplanPages(data: PublicBrochureData): BrochurePage[] {
@@ -590,6 +621,10 @@ export function buildBrochurePageContent(
     }
     case 'details': {
       const slots = detailsSlots(data);
+      return slots ? page(layoutId, slots) : createBlankBrochurePage(layoutId);
+    }
+    case 'epc': {
+      const slots = epcSlots(data);
       return slots ? page(layoutId, slots) : createBlankBrochurePage(layoutId);
     }
     case 'floorplan': {
@@ -689,6 +724,9 @@ export function buildBrochureDocument(
       pages.push(page('map_amenities', locationSlots(data, 500)));
     }
 
+    const epc = epcPageSlots(data, null);
+    if (epc) pages.push(page('epc', epc));
+
     pages.push(page('contact', contactSlots(data, COMPACT_NOTICE)));
 
     return {
@@ -736,6 +774,7 @@ export function buildBrochureDocument(
   }
 
   const details = detailsSlots(data);
+  const epc = epcPageSlots(data, details);
   if (details) {
     pages.push(
       page(
@@ -772,6 +811,16 @@ export function buildBrochureDocument(
         templateId === 'editorial'
           ? { sectionNumber: '04', sectionLabel: 'Location' }
           : undefined,
+      ),
+    );
+  }
+
+  if (epc) {
+    pages.push(
+      page(
+        'epc',
+        epc,
+        templateId === 'editorial' ? { sectionLabel: 'Energy' } : undefined,
       ),
     );
   }
@@ -873,6 +922,11 @@ export const BROCHURE_LAYOUT_OPTIONS: Array<{
     id: 'floorplan',
     label: 'Floor plan',
     description: 'Dedicated floor plan page',
+  },
+  {
+    id: 'epc',
+    label: 'Energy performance',
+    description: 'EPC rating scale beside the certificate',
   },
   {
     id: 'map_amenities',
@@ -984,6 +1038,12 @@ export function createBlankBrochurePage(
       return page(layoutId, {
         plan: emptyImage,
         caption: textSlot('Floor plan'),
+      });
+    case 'epc':
+      return page(layoutId, {
+        title: textSlot('Energy performance'),
+        epc: textSlot(''),
+        certificate: emptyImage,
       });
     case 'map_amenities':
     case 'map_text':
