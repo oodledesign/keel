@@ -81,8 +81,9 @@ const config = {
     '/api/listings/brochure-pdf': ['./lib/brand/fonts/*.ttf'],
     '/home/[account]/listings/**': ['./lib/brand/fonts/*.ttf'],
     // ffmpeg binary for Instagram voice-note transcoding (and TTS post-processing).
+    // Point at the real pnpm store path: Vercel rejects function bundles whose
+    // includes resolve through symlinked dirs like ./node_modules/ffmpeg-static.
     '/api/instagram-autoreply/assets/**': [
-      './node_modules/ffmpeg-static/ffmpeg',
       '../../node_modules/.pnpm/ffmpeg-static@*/node_modules/ffmpeg-static/ffmpeg',
     ],
   },
