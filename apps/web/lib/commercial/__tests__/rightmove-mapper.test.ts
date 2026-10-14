@@ -476,6 +476,80 @@ describe('mapListingToRightmovePayload', () => {
     );
   });
 
+  it('sends a per sq ft rent as rate × size per year', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        hideRentFromMarketing: false,
+        askingRentPence: 1300,
+        rentFrequency: 'per_sqft',
+        sizeMinSqft: 3264,
+        sizeMaxSqft: 3264,
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.pricing).toEqual({
+      price: 42432,
+      frequency: 'YEARLY',
+    });
+  });
+
+  it('marks a per sq ft rent across a size range as From the lowest total', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        hideRentFromMarketing: false,
+        askingRentPence: 2600,
+        rentFrequency: 'per_sqft',
+        sizeMinSqft: 2152,
+        sizeMaxSqft: 7350,
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.pricing).toEqual({
+      price: 55952,
+      displayQualifier: 'FROM',
+      frequency: 'YEARLY',
+    });
+  });
+
+  it('keeps the yearly total behind POA for a hidden per sq ft rent', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        askingRentPence: 1075,
+        rentFrequency: 'per_sqft',
+        sizeMinSqft: 15794,
+        sizeMaxSqft: 15794,
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.pricing).toEqual({
+      price: 169786,
+      displayQualifier: 'PRICE_ON_APPLICATION',
+      frequency: 'YEARLY',
+    });
+  });
+
+  it('falls back to POA when a per sq ft rent has no size', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        hideRentFromMarketing: false,
+        askingRentPence: 1300,
+        rentFrequency: 'per_sqft',
+        sizeMinSqft: null,
+        sizeMaxSqft: null,
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.pricing).toEqual({
+      price: RIGHTMOVE_POA_PLACEHOLDER_PRICE,
+      displayQualifier: 'PRICE_ON_APPLICATION',
+      frequency: 'YEARLY',
+    });
+  });
+
   it('emits a valid Rightmove useClasses enum for descriptive Class E', () => {
     const { payload } = mapListingToRightmovePayload({
       listing: baseListing({
@@ -837,6 +911,16 @@ describe('mapListingToRightmovePayload', () => {
         askingPricePence: 0,
       }),
     ).toEqual({ rent: false, sale: true });
+    expect(
+      rightmovePoaFiguresMissing({
+        disposalType: 'to_let',
+        askingRentPence: 1300,
+        askingPricePence: null,
+        rentFrequency: 'per_sqft',
+        sizeMinSqft: null,
+        sizeMaxSqft: null,
+      }),
+    ).toEqual({ rent: true, sale: false });
   });
 
   it('omits let terms for sale-only disposals', () => {
@@ -897,6 +981,42 @@ describe('mapListingToRightmovePayload', () => {
     expect(space?.condition).toBe('SHELL_SPACE');
     expect(space?.status).toBe('AVAILABLE');
     expect(space?.primaryPropertyClassification.subType).toBe('WAREHOUSE');
+  });
+
+  it('prices a space from the disposal per sq ft rate when the unit has no rent', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        hideRentFromMarketing: false,
+        askingRentPence: 1450,
+        rentFrequency: 'per_sqft',
+      }),
+      agentId: 283634,
+      units: [
+        {
+          id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          label: 'Unit 9',
+          floorOrUnit: null,
+          sizeSqft: 4822,
+          measurementStandard: 'gia',
+          sortOrder: 0,
+          externalId: null,
+          askingRentPence: null,
+          rentPerSqft: null,
+          description: null,
+          sector: null,
+          status: 'Available',
+          serviceChargePerSqft: null,
+          ratesPayablePerSqft: null,
+          fittedSpace: null,
+        },
+      ],
+    });
+
+    if (!('spaces' in payload.building)) throw new Error('expected spaces');
+    expect(payload.building.spaces[0]?.pricing).toEqual({
+      price: 69919,
+      frequency: 'YEARLY',
+    });
   });
 
   it('omits absurd unit £/sqft charges and falls back to listing rates', () => {

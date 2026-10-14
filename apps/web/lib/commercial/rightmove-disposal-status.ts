@@ -32,7 +32,7 @@ export async function listRightmoveDisposalStatuses(
     client
       .from('commercial_listings')
       .select(
-        'id, name, status, updated_at, disposal_type, asking_rent_pence, asking_price_pence',
+        'id, name, status, updated_at, disposal_type, asking_rent_pence, asking_rent_to_pence, rent_frequency, size_min_sqft, size_max_sqft, asking_price_pence',
       )
       .eq('account_id', accountId)
       .order('name', { ascending: true }),
@@ -115,6 +115,10 @@ export async function listRightmoveDisposalStatuses(
           ? rightmovePoaFiguresMissing({
               disposalType: String(listing.disposal_type ?? '') as never,
               askingRentPence: toNumber(listing.asking_rent_pence),
+              askingRentToPence: toNumber(listing.asking_rent_to_pence),
+              rentFrequency: (listing.rent_frequency as string | null) ?? null,
+              sizeMinSqft: toNumber(listing.size_min_sqft),
+              sizeMaxSqft: toNumber(listing.size_max_sqft),
               askingPricePence: toNumber(listing.asking_price_pence),
               units: (unitsByListing.get(String(listing.id)) ?? []).map(
                 (u) => ({

@@ -23,4 +23,10 @@ describe('listing-money', () => {
     expect(formatListingRentAmount(55000, null)).toBe('£550');
     expect(formatListingRent(55000, null, 'per_annum')).toBe('£550 pa');
   });
+
+  it('keeps pence on per sq ft rates', () => {
+    expect(rentFrequencySuffix('per_sqft')).toBe('psf');
+    expect(formatListingRentAmount(1075, null, 'per_sqft')).toBe('£10.75');
+    expect(formatListingRent(150, 300, 'per_sqft')).toBe('£1.50–£3.00 psf');
+  });
 });

@@ -13,6 +13,13 @@ import {
 import { rightmoveSaleDisplayQualifier } from './asking-price';
 import { sortListingMedia } from './listing-media-order';
 import { RIGHTMOVE_MEDIA_URL_MAX_LENGTH } from './listing-media-public-url';
+import {
+  type ListingRentInput,
+  annualRentPounds,
+  rentBasis,
+  rightmoveRent,
+  unitRentFromListing,
+} from './listing-rent';
 import type {
   RightmoveAreaSizeUnit,
   RightmoveBuildingPriceDisplayQualifier,
@@ -44,6 +51,8 @@ export type RightmoveMapperListing = {
   disposalType: DisposalType;
   status: ListingStatus;
   askingRentPence: number | null;
+  /** Top of a rent range; per sq ft ranges are sent as "From". */
+  askingRentToPence?: number | null;
   askingPricePence: number | null;
   askingPriceQualifier?: string | null;
   rentFrequency: string | null;
@@ -268,17 +277,25 @@ function positivePounds(pence: number | null | undefined): number | null {
  * Which sides of a disposal would go to Rightmove as POA with only the
  * placeholder figure, so the team can add a real (still hidden) one.
  */
-export function rightmovePoaFiguresMissing(input: {
-  disposalType: DisposalType;
-  askingRentPence: number | null;
-  askingPricePence: number | null;
-  units?: Array<
-    Pick<RightmoveMapperUnit, 'askingRentPence' | 'rentPerSqft' | 'sizeSqft'>
-  >;
-}): { rent: boolean; sale: boolean } {
+export function rightmovePoaFiguresMissing(
+  input: {
+    disposalType: DisposalType;
+    askingPricePence: number | null;
+    units?: Array<
+      Pick<RightmoveMapperUnit, 'askingRentPence' | 'rentPerSqft' | 'sizeSqft'>
+    >;
+  } & Pick<ListingRentInput, 'askingRentPence'> &
+    Partial<Omit<ListingRentInput, 'askingRentPence'>>,
+): { rent: boolean; sale: boolean } {
   const rent =
     disposalIncludesToLet(input.disposalType) &&
-    positivePounds(input.askingRentPence) == null &&
+    annualRentPounds({
+      askingRentPence: input.askingRentPence,
+      askingRentToPence: input.askingRentToPence,
+      rentFrequency: input.rentFrequency,
+      sizeMinSqft: input.sizeMinSqft,
+      sizeMaxSqft: input.sizeMaxSqft,
+    }) == null &&
     deriveAskingRentPenceFromUnits(input.units ?? []) == null;
   const sale =
     disposalIncludesForSale(input.disposalType) &&
@@ -361,6 +378,7 @@ function narrowListingToTransaction(
       ...listing,
       disposalType: 'for_sale',
       askingRentPence: null,
+      askingRentToPence: null,
       hideRentFromMarketing: false,
     };
   }
@@ -410,25 +428,6 @@ export function mapListingStatusToRightmove(
 
 export function isRightmoveMarketableStatus(status: ListingStatus): boolean {
   return status === 'marketing' || status === 'under_offer';
-}
-
-function mapRentFrequency(
-  frequency: string | null,
-): RightmoveRentFrequency | undefined {
-  if (!frequency) return undefined;
-  const normalized = frequency.trim().toLowerCase();
-  if (
-    normalized.includes('year') ||
-    normalized.includes('annual') ||
-    normalized === 'pa' ||
-    normalized === 'p.a.'
-  ) {
-    return 'YEARLY';
-  }
-  if (normalized.includes('month') || normalized === 'pcm') {
-    return 'MONTHLY';
-  }
-  return 'YEARLY';
 }
 
 function mapTenure(
@@ -578,11 +577,16 @@ function buildSpacePricing(input: {
       rentPounds = Math.round(psf * size * 100) / 100;
     }
   }
+  let frequency: RightmoveRentFrequency =
+    rentBasis(listing.rentFrequency) === 'per_month' ? 'MONTHLY' : 'YEARLY';
   if (rentPounds == null) {
-    rentPounds = positivePounds(listing.askingRentPence);
+    const fromListing = unitRentFromListing({
+      ...listing,
+      unitSizeSqft: unit.sizeSqft,
+    });
+    rentPounds = fromListing?.price ?? null;
+    frequency = fromListing?.frequency ?? 'YEARLY';
   }
-
-  const frequency = mapRentFrequency(listing.rentFrequency) ?? 'YEARLY';
 
   if (hideRent || rentPounds == null) {
     return {
@@ -707,25 +711,28 @@ function buildBuildingPricing(listing: RightmoveMapperListing): {
 } {
   const isLettings = disposalIncludesToLet(listing.disposalType);
   const isSales = disposalIncludesForSale(listing.disposalType);
-  const hideRent = listing.hideRentFromMarketing && isLettings;
   const hidePrice = listing.hidePriceFromMarketing && isSales;
-  const rent = positivePounds(listing.askingRentPence);
   const price = positivePounds(listing.askingPricePence);
 
   // Lettings pricing: rent, or POA when hidden / missing. Dual disposals are
   // narrowed to one side before they get here.
   if (isLettings) {
-    if (hideRent || (rent == null && !isSales)) {
+    const rent = rightmoveRent({
+      ...listing,
+      hideRent: listing.hideRentFromMarketing,
+    });
+    if (listing.hideRentFromMarketing || (rent.price == null && !isSales)) {
       return {
-        price: rent ?? RIGHTMOVE_POA_PLACEHOLDER_PRICE,
+        price: rent.price ?? RIGHTMOVE_POA_PLACEHOLDER_PRICE,
         displayQualifier: 'PRICE_ON_APPLICATION',
-        frequency: mapRentFrequency(listing.rentFrequency) ?? 'YEARLY',
+        frequency: rent.frequency,
       };
     }
-    if (rent != null) {
+    if (rent.price != null) {
       return {
-        price: rent,
-        frequency: mapRentFrequency(listing.rentFrequency) ?? 'YEARLY',
+        price: rent.price,
+        ...(rent.from ? { displayQualifier: 'FROM' as const } : {}),
+        frequency: rent.frequency,
       };
     }
   }

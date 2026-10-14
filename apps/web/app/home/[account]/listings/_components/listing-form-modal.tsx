@@ -53,17 +53,18 @@ import {
 } from '~/lib/commercial/listing-epc';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
+import { useNotifyBoardCompanyPrompt } from '../_lib/client/notify-board-company';
 import {
   type ListingFormState,
   formStateToListingPayload,
   listingEmptyForm,
   listingToFormState,
 } from '../_lib/listing-form-shared';
-import { useNotifyBoardCompanyPrompt } from '../_lib/client/notify-board-company';
 import type { CommercialListing } from '../_lib/server/listings.service';
 import { createListing, updateListing } from '../_lib/server/server-actions';
 import { useDisposalAccess } from './disposal-access-context';
 import { ListingEpcPanel } from './listing-epc-panel';
+import { ListingRentFields } from './listing-rent-fields';
 
 const emptyForm = listingEmptyForm;
 
@@ -487,54 +488,63 @@ function ListingFormFields({
         <h3 className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
           Pricing & size
         </h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1.5">
             <Label className="text-[var(--workspace-shell-text)]/70">
-              Asking rent from (£)
+              Min sq ft
             </Label>
             <Input
               type="number"
               min={0}
-              step={0.01}
-              value={form.askingRent}
-              onChange={(e) => field('askingRent', e.target.value)}
+              step="any"
+              value={form.sizeMinSqft}
+              onChange={(e) => field('sizeMinSqft', e.target.value)}
               className={inputClass}
             />
           </div>
           <div className="space-y-1.5">
             <Label className="text-[var(--workspace-shell-text)]/70">
-              Asking rent to (£)
+              Max sq ft
             </Label>
             <Input
               type="number"
               min={0}
-              step={0.01}
-              value={form.askingRentTo}
-              onChange={(e) => field('askingRentTo', e.target.value)}
+              step="any"
+              value={form.sizeMaxSqft}
+              onChange={(e) => field('sizeMaxSqft', e.target.value)}
               className={inputClass}
             />
           </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-[var(--workspace-shell-text)]/70">
-              Rent frequency
+              Measurement
             </Label>
             <Select
-              value={form.rentFrequency}
-              onValueChange={(v) => field('rentFrequency', v)}
+              value={form.measurementStandard}
+              onValueChange={(v) => field('measurementStandard', v)}
             >
               <SelectTrigger className={inputClass}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="per_annum">Per annum</SelectItem>
-                <SelectItem value="per_month">Per month</SelectItem>
-                <SelectItem value="per_sqft">Per sq ft</SelectItem>
+                <SelectItem value="gia">GIA</SelectItem>
+                <SelectItem value="nia">NIA</SelectItem>
+                <SelectItem value="gea">GEA</SelectItem>
+                <SelectItem value="ipms">IPMS</SelectItem>
+                <SelectItem value="site">Site area</SelectItem>
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <ListingRentFields
+          values={form}
+          showRightmove={disposalIncludesToLet(form.disposalType)}
+          inputClassName={inputClass}
+          onChange={(patch) => updateForm((prev) => ({ ...prev, ...patch }))}
+        />
+
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-[var(--workspace-shell-text)]/70">
               Asking price (£)
@@ -548,6 +558,20 @@ function ListingFormFields({
               className={inputClass}
             />
           </div>
+          <label className="flex items-center gap-2 self-end pb-2 text-sm text-[var(--workspace-shell-text)]/70">
+            <input
+              type="checkbox"
+              checked={form.hidePriceFromMarketing}
+              onChange={(e) =>
+                updateForm((prev) => ({
+                  ...prev,
+                  hidePriceFromMarketing: e.target.checked,
+                }))
+              }
+              className="rounded border-[color:var(--workspace-shell-border)]"
+            />
+            Hide price from marketing (POA)
+          </label>
         </div>
 
         {disposalIncludesForSale(form.disposalType) ? (
@@ -634,86 +658,6 @@ function ListingFormFields({
               onChange={(e) => field('estateChargePerSqft', e.target.value)}
               className={inputClass}
             />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:gap-6">
-          <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]/70">
-            <input
-              type="checkbox"
-              checked={form.hideRentFromMarketing}
-              onChange={(e) =>
-                updateForm((prev) => ({
-                  ...prev,
-                  hideRentFromMarketing: e.target.checked,
-                }))
-              }
-              className="rounded border-[color:var(--workspace-shell-border)]"
-            />
-            Hide rent from marketing (POA)
-          </label>
-          <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]/70">
-            <input
-              type="checkbox"
-              checked={form.hidePriceFromMarketing}
-              onChange={(e) =>
-                updateForm((prev) => ({
-                  ...prev,
-                  hidePriceFromMarketing: e.target.checked,
-                }))
-              }
-              className="rounded border-[color:var(--workspace-shell-border)]"
-            />
-            Hide price from marketing (POA)
-          </label>
-        </div>
-
-        <div className="grid grid-cols-3 gap-4">
-          <div className="space-y-1.5">
-            <Label className="text-[var(--workspace-shell-text)]/70">
-              Min sq ft
-            </Label>
-            <Input
-              type="number"
-              min={0}
-              step="any"
-              value={form.sizeMinSqft}
-              onChange={(e) => field('sizeMinSqft', e.target.value)}
-              className={inputClass}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-[var(--workspace-shell-text)]/70">
-              Max sq ft
-            </Label>
-            <Input
-              type="number"
-              min={0}
-              step="any"
-              value={form.sizeMaxSqft}
-              onChange={(e) => field('sizeMaxSqft', e.target.value)}
-              className={inputClass}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-[var(--workspace-shell-text)]/70">
-              Measurement
-            </Label>
-            <Select
-              value={form.measurementStandard}
-              onValueChange={(v) => field('measurementStandard', v)}
-            >
-              <SelectTrigger className={inputClass}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="gia">GIA</SelectItem>
-                <SelectItem value="nia">NIA</SelectItem>
-                <SelectItem value="gea">GEA</SelectItem>
-                <SelectItem value="ipms">IPMS</SelectItem>
-                <SelectItem value="site">Site area</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
 

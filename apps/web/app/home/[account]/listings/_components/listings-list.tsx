@@ -224,12 +224,13 @@ function formatUpdatedAt(iso: string | null | undefined) {
 /** Rent and/or sale price for list/card — show both when dual. */
 function formatListingMoneyParts(listing: CommercialListing): {
   rent: string | null;
-  rentSuffix: 'pcm' | 'pa' | null;
+  rentSuffix: ReturnType<typeof rentFrequencySuffix> | null;
   price: string | null;
 } {
   const rent = formatListingRentAmount(
     listing.askingRentPence,
     listing.askingRentToPence,
+    listing.rentFrequency,
   );
   return {
     rent,

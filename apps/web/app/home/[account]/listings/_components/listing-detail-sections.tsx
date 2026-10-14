@@ -39,12 +39,21 @@ import {
   ENQUIRY_SOURCE_LABELS,
   type EnquirySource,
   type EnquiryStatus,
+  disposalIncludesToLet,
   formatCommercialUseClassLabel,
 } from '~/lib/commercial/commercial-constants';
 import {
   listingEpcLookupFromAddress,
   listingToEpcAttachment,
 } from '~/lib/commercial/listing-epc';
+import {
+  annualRentPounds,
+  describeRightmoveRent,
+  formatAnnualRent,
+  formatRent,
+  rentBasis,
+  rightmoveRent,
+} from '~/lib/commercial/listing-rent';
 import type { WebsiteUrlHealth } from '~/lib/commercial/listing-website-url-health';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
@@ -89,12 +98,19 @@ function formatMoney(pence: number | null) {
   }).format(pence / 100);
 }
 
-function formatRentRange(fromPence: number | null, toPence: number | null) {
-  if (fromPence == null && toPence == null) return '—';
-  if (fromPence != null && toPence != null && fromPence !== toPence) {
-    return `${formatMoney(fromPence)} – ${formatMoney(toPence)}`;
+/** "£55,952–£191,100 per annum · Rightmove: From £55,952 per annum". */
+function rentSummaryHint(listing: CommercialListing): string | null {
+  if (!disposalIncludesToLet(listing.disposalType)) return null;
+  const parts: string[] = [];
+  const annual = annualRentPounds(listing);
+  if (annual && rentBasis(listing.rentFrequency) !== 'per_annum') {
+    parts.push(formatAnnualRent(annual));
   }
-  return formatMoney(fromPence ?? toPence);
+  const rightmove = describeRightmoveRent(
+    rightmoveRent({ ...listing, hideRent: listing.hideRentFromMarketing }),
+  );
+  parts.push(`Rightmove: ${rightmove}`);
+  return parts.join(' · ');
 }
 
 function formatPerSqft(value: number | null) {
@@ -109,7 +125,15 @@ function daysOnMarket(onMarketAt: string | null) {
   return Math.max(0, Math.floor((Date.now() - start) / (1000 * 60 * 60 * 24)));
 }
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
+function SummaryCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string | null;
+}) {
   return (
     <Card className={workspacePanelCard}>
       <CardContent className="p-4">
@@ -119,6 +143,11 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
         <p className="mt-1 text-lg font-semibold text-[var(--workspace-shell-text)]">
           {value}
         </p>
+        {hint ? (
+          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+            {hint}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -271,11 +300,13 @@ export function ListingOverviewSection({
           value={
             listing.hideRentFromMarketing
               ? 'On application'
-              : formatRentRange(
+              : (formatRent(
                   listing.askingRentPence,
                   listing.askingRentToPence,
-                )
+                  rentBasis(listing.rentFrequency),
+                ) ?? '—')
           }
+          hint={rentSummaryHint(listing)}
         />
         <SummaryCard
           label="Asking price"

@@ -14,6 +14,11 @@ import {
   disposalIncludesForSale,
   disposalIncludesToLet,
 } from '~/lib/commercial/commercial-constants';
+import {
+  formatRent,
+  rentBasis,
+  rentBasisShortUnit,
+} from '~/lib/commercial/listing-rent';
 
 export type BrochureMediaItem = {
   id: string;
@@ -205,20 +210,21 @@ export function formatBrochureRent(listing: BrochureListing): string | null {
   if (listing.hideRentFromMarketing) return 'POA';
   if (!disposalIncludesToLet(listing.disposalType)) return null;
 
+  const basis = rentBasis(listing.rentFrequency);
+  if (basis === 'per_sqft') {
+    return (
+      formatRent(listing.askingRentPence, listing.askingRentToPence, basis) ??
+      'POA'
+    );
+  }
+
   const from = formatBrochureMoney(listing.askingRentPence);
   const to = formatBrochureMoney(listing.askingRentToPence);
   if (!from && !to) return 'POA';
 
   const range =
     from && to && from !== to ? `${from} – ${to}` : (from ?? to ?? 'POA');
-  const freq = listing.rentFrequency?.trim();
-  if (!freq || freq === 'pa' || freq === 'per_annum') {
-    return `${range} pa`;
-  }
-  if (freq === 'pcm' || freq === 'per_month') {
-    return `${range} pcm`;
-  }
-  return `${range} ${freq}`;
+  return `${range} ${rentBasisShortUnit(basis)}`;
 }
 
 export function formatBrochurePrice(listing: BrochureListing): string | null {
