@@ -2,6 +2,7 @@
 
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
@@ -17,6 +18,7 @@ import {
   type VideoEditTimeline,
   editedMsToSourceMs,
   normalizeTimeline,
+  sourceMsToEditedMsClamped,
 } from '~/lib/videos/edit-timeline';
 import type { VideoPlayerConfigValues } from '~/lib/videos/player-config-types';
 
@@ -34,6 +36,8 @@ type Props = {
   aspectRatio: string;
   config: VideoPlayerConfigValues;
   onUnsupported?: () => void;
+  /** Playback (edited) milliseconds as the video plays. */
+  onPlaybackTime?: (ms: number) => void;
 };
 
 export type PublicTimelineWatchPlayerHandle = {
@@ -89,6 +93,20 @@ export const PublicTimelineWatchPlayer = forwardRef<
     return () => controller.abort();
   }, [props.mediaUrl]);
 
+  const keepRanges = media?.timeline.keepRanges;
+  const onPlaybackTime = props.onPlaybackTime;
+  const onPlayheadChange = useCallback(
+    (sourceMs: number) => {
+      if (!onPlaybackTime || !keepRanges) return;
+      onPlaybackTime(
+        keepRanges.length > 0
+          ? sourceMsToEditedMsClamped(keepRanges, sourceMs)
+          : sourceMs,
+      );
+    },
+    [onPlaybackTime, keepRanges],
+  );
+
   if (error) {
     return (
       <div
@@ -122,6 +140,7 @@ export const PublicTimelineWatchPlayer = forwardRef<
         controls={props.config}
         captions={media.captions}
         onUnsupported={props.onUnsupported}
+        onPlayheadChange={onPlayheadChange}
         className="absolute inset-0"
       />
     </div>

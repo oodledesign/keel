@@ -64,7 +64,9 @@ import {
 } from '~/lib/videos/edit-timeline';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
+import { EditorShareMenu } from './editor-share-menu';
 import { TimelineWaveform } from './timeline-waveform';
+import { TranscribeProgress } from './transcribe-progress';
 
 type Props = {
   accountSlug: string;
@@ -80,6 +82,8 @@ type Props = {
   } | null;
   initialHasChapters: boolean;
   initialHasSummary: boolean;
+  videoReady: boolean;
+  initialPublicUrl: string | null;
 };
 
 function formatMs(ms: number) {
@@ -120,6 +124,9 @@ export function VideoEditorClient(props: Props) {
   >(null);
   const [savingTranscriptText, setSavingTranscriptText] = useState(false);
   const savingTranscriptTextRef = useRef(false);
+  const [transcribeStartedAt, setTranscribeStartedAt] = useState<number | null>(
+    null,
+  );
   const [isPending, startTransition] = useTransition();
   const [publishing, setPublishing] = useState(false);
   const [publishProgress, setPublishProgress] = useState<string | null>(null);
@@ -518,24 +525,24 @@ export function VideoEditorClient(props: Props) {
   }
 
   async function handleTranscribe() {
-    startTransition(async () => {
-      try {
-        toast.message('Transcribing…');
-        const res = await fetch(
-          `/api/videos/${props.videoId}/edit/transcript`,
-          { method: 'POST' },
-        );
-        const json = await res.json();
-        if (!json.ok) throw new Error(json.error ?? 'Transcription failed');
-        setTranscript({
-          plainText: json.transcript.plainText,
-          words: json.transcript.words,
-        });
-        toast.success('Transcript ready');
-      } catch (err) {
-        toast.error(getErrorMessage(err));
-      }
-    });
+    if (transcribeStartedAt !== null) return;
+    setTranscribeStartedAt(Date.now());
+    try {
+      const res = await fetch(`/api/videos/${props.videoId}/edit/transcript`, {
+        method: 'POST',
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error ?? 'Transcription failed');
+      setTranscript({
+        plainText: json.transcript.plainText,
+        words: json.transcript.words,
+      });
+      toast.success('Transcript ready');
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setTranscribeStartedAt(null);
+    }
   }
 
   const selectionIsContiguous =
@@ -952,6 +959,12 @@ export function VideoEditorClient(props: Props) {
             <Sparkles className="mr-1.5 h-4 w-4" />
             Suggest zooms
           </Button>
+          <EditorShareMenu
+            videoId={props.videoId}
+            videoTitle={props.videoTitle}
+            videoReady={props.videoReady}
+            initialPublicUrl={props.initialPublicUrl}
+          />
           <Button
             type="button"
             size="sm"
@@ -1519,12 +1532,26 @@ export function VideoEditorClient(props: Props) {
                 variant="outline"
                 size="sm"
                 onClick={() => void handleTranscribe()}
-                disabled={isPending}
+                disabled={isPending || transcribeStartedAt !== null}
               >
-                <Scissors className="mr-1.5 h-4 w-4" />
-                {transcript ? 'Re-time with Whisper' : 'Generate'}
+                {transcribeStartedAt !== null ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Scissors className="mr-1.5 h-4 w-4" />
+                )}
+                {transcribeStartedAt !== null
+                  ? 'Transcribing…'
+                  : transcript
+                    ? 'Re-time with Whisper'
+                    : 'Generate'}
               </Button>
             </div>
+            {transcribeStartedAt !== null ? (
+              <TranscribeProgress
+                startedAt={transcribeStartedAt}
+                sourceDurationMs={timeline.sourceDurationMs}
+              />
+            ) : null}
             {transcript?.words?.length ? (
               <>
                 <div className="mt-3 max-h-64 flex-1 overflow-y-auto text-sm leading-relaxed text-[var(--workspace-shell-text)]">

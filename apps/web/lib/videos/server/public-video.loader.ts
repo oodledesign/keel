@@ -6,11 +6,17 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { transcriptHasRealTimings } from '../captions';
+import { type VideoTranscriptWord, normalizeTimeline } from '../edit-timeline';
 import type { VideoPlayerConfigValues } from '../player-config-types';
 import {
   resolveVideoThumbnailCandidates,
   resolveVideoThumbnailUrl,
 } from '../thumbnail';
+import {
+  type TranscriptSegment,
+  buildTranscriptSegments,
+} from '../transcript-segments';
 import type { VideoChapter, VideoRow } from '../types';
 import { normalizeVideoChapters } from './generate-video-chapters';
 import { normalizeVideoSummary } from './generate-video-summary';
@@ -28,6 +34,8 @@ export type PublicVideoPageData = {
   chapters: VideoChapter[];
   publishedAt: string | null;
   transcriptPlainText: string | null;
+  /** Timed paragraphs in playback time; empty when timings are estimates. */
+  transcriptSegments: TranscriptSegment[];
   summary: string | null;
 };
 
@@ -86,14 +94,27 @@ export async function buildPublicVideoPageData(
 
   const { data: transcript } = await admin
     .from('video_transcripts')
-    .select('plain_text, status')
+    .select('plain_text, words, provider, status')
     .eq('video_id', video.id)
     .maybeSingle();
 
-  const transcriptPlainText =
-    transcript?.status === 'ready'
-      ? String(transcript.plain_text ?? '').trim() || null
-      : null;
+  const transcriptReady = transcript?.status === 'ready';
+  const transcriptPlainText = transcriptReady
+    ? String(transcript.plain_text ?? '').trim() || null
+    : null;
+
+  const words = (transcript?.words ?? []) as VideoTranscriptWord[];
+  const playbackIsEdited = useTimelinePlayer || streamMatchesPublishedEdit;
+  const transcriptSegments =
+    transcriptReady &&
+    transcriptHasRealTimings(transcript.provider as string | null, words)
+      ? buildTranscriptSegments(
+          words,
+          playbackIsEdited && video.published_timeline
+            ? normalizeTimeline(video.published_timeline).keepRanges
+            : null,
+        )
+      : [];
 
   return {
     video: {
@@ -110,6 +131,7 @@ export async function buildPublicVideoPageData(
       video.created_at ??
       null,
     transcriptPlainText,
+    transcriptSegments,
     summary: normalizeVideoSummary(video.summary),
   };
 }

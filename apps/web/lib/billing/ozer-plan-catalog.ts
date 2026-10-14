@@ -43,6 +43,12 @@ export type OzerPlanLimits = {
    */
   clientRequestCreditAllowance?: number | null;
   meetingCoachingEnabled?: boolean;
+  /** Instagram automations. NULL = unlimited. */
+  maxIgAutomations?: number | null;
+  /** Automated Instagram messages per calendar month. NULL = unlimited. */
+  maxIgSendsPerMonth?: number | null;
+  /** Per-account hourly Instagram send cap. NULL = env default. */
+  igHourlySendCap?: number | null;
 };
 
 /** Binary MiB/GiB — matches existing `N * 1024 * 1024` storage limits in the app. */
@@ -78,6 +84,9 @@ export function accountPlanLimitColumnsFromCatalog(
   max_portal_storage_bytes: number | null;
   client_request_credit_allowance: number | null;
   meeting_coaching_enabled: boolean;
+  max_ig_automations: number | null;
+  max_ig_sends_per_month: number | null;
+  ig_hourly_send_cap: number | null;
 } {
   return {
     max_members: overrides?.maxMembers ?? limits.maxMembers,
@@ -92,6 +101,9 @@ export function accountPlanLimitColumnsFromCatalog(
     client_request_credit_allowance:
       limits.clientRequestCreditAllowance ?? null,
     meeting_coaching_enabled: limits.meetingCoachingEnabled ?? false,
+    max_ig_automations: limits.maxIgAutomations ?? null,
+    max_ig_sends_per_month: limits.maxIgSendsPerMonth ?? null,
+    ig_hourly_send_cap: limits.igHourlySendCap ?? null,
   };
 }
 

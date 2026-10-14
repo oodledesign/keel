@@ -1,10 +1,10 @@
-import Link from 'next/link';
-
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
 import { loadIgTriggers } from '~/lib/instagram-autoreply/assert-access';
 
+import { TRIGGER_TYPE_LABELS } from '../../(instagram-autoreply)/_components/builder/builder-model';
+import { InstagramSubnav } from '../../(instagram-autoreply)/_components/instagram-subnav';
 import { InstagramTriggersList } from '../../(instagram-autoreply)/_components/instagram-triggers-list';
 import {
   deleteIgTrigger,
@@ -16,7 +16,6 @@ import {
   ADDON_APPS_SPACE_TYPES,
   redirectIfSpaceNotIn,
 } from '../../_lib/server/workspace-route-guard';
-import { workAccountPath, workPaths } from '../../_lib/work-account-path';
 
 type InstagramTriggersPageProps = {
   params: Promise<{ account: string }>;
@@ -37,29 +36,24 @@ export default async function InstagramTriggersPage({
     <>
       <TeamAccountLayoutPageHeader
         account={account}
-        title="Instagram triggers"
-        description="Keyword rules that fire public replies, DMs, and optional CRM leads."
+        title="Instagram automations"
+        description="What starts each automation, and the messages it sends."
       />
       <PageBody className="space-y-6 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
-        <div className="mx-4 lg:mx-0">
-          <Link
-            href={workAccountPath(workPaths.accountInstagramAutoreply, account)}
-            className="text-sm text-[color:var(--ozer-accent)] hover:underline"
-          >
-            ← Back to Instagram
-          </Link>
-        </div>
+        <InstagramSubnav account={account} />
         <InstagramTriggersList
           accountSlug={account}
           accountId={accountId}
-          triggers={
-            triggers as Array<{
-              id: string;
-              name: string;
-              keywords: string[];
-              is_active: boolean;
-            }>
-          }
+          triggers={triggers.map((t) => ({
+            id: t.id,
+            name: t.name,
+            keywords: t.keywords ?? [],
+            is_active: t.is_active,
+            typeLabel:
+              TRIGGER_TYPE_LABELS[
+                t.trigger_type as keyof typeof TRIGGER_TYPE_LABELS
+              ] ?? 'Comment keyword',
+          }))}
           onToggle={toggleIgTrigger}
           onDelete={deleteIgTrigger}
         />

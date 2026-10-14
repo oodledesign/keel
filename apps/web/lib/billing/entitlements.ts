@@ -39,6 +39,12 @@ export type AccountPlanLimitsRow = {
    */
   client_request_credit_allowance?: number | null;
   meeting_coaching_enabled?: boolean;
+  /** NULL = unlimited. */
+  max_ig_automations?: number | null;
+  /** NULL = unlimited. Automated sends per calendar month (UTC). */
+  max_ig_sends_per_month?: number | null;
+  /** NULL = use the IG_HOURLY_SEND_CAP env default. */
+  ig_hourly_send_cap?: number | null;
 };
 
 const ACTIVE_SUB_STATUSES = new Set(['active', 'trialing']);
@@ -66,7 +72,7 @@ export async function loadAccountPlanLimits(
   )
     .from('account_plan_limits')
     .select(
-      'account_id, plan_product_id, plan_id, plan_family, max_members, max_properties, max_videos, max_project_guests, pending_billable_seats, pending_seats_effective_at, max_active_clients, max_invoices_per_month, max_open_tasks, max_bookings_per_month, max_portal_storage_bytes, client_request_credit_allowance, meeting_coaching_enabled',
+      'account_id, plan_product_id, plan_id, plan_family, max_members, max_properties, max_videos, max_project_guests, pending_billable_seats, pending_seats_effective_at, max_active_clients, max_invoices_per_month, max_open_tasks, max_bookings_per_month, max_portal_storage_bytes, client_request_credit_allowance, meeting_coaching_enabled, max_ig_automations, max_ig_sends_per_month, ig_hourly_send_cap',
     )
     .eq('account_id', accountId)
     .maybeSingle();
@@ -582,6 +588,68 @@ export async function assertVideoCreateAllowed(
   }
 
   return { allowed: true };
+}
+
+export async function assertIgAutomationAllowed(
+  client: SupabaseClient,
+  accountId: string,
+  currentAutomationCount: number,
+): Promise<{ allowed: boolean; reason?: string }> {
+  if (await isAccountBillingExempt(client, accountId)) {
+    return { allowed: true };
+  }
+
+  const limits = await loadAccountPlanLimits(client, accountId);
+  const max = limits?.max_ig_automations;
+
+  if (max == null || currentAutomationCount < max) {
+    return { allowed: true };
+  }
+
+  return {
+    allowed: false,
+    reason: `Your plan includes up to ${max} Instagram automations. Upgrade or delete one to add another.`,
+  };
+}
+
+/**
+ * Monthly cap on automated Instagram sends. `countSentThisMonth` is only
+ * called when the plan sets a cap. Also returns the plan's hourly cap
+ * override (null = use the env default).
+ */
+export async function assertIgSendAllowed(
+  client: SupabaseClient,
+  accountId: string,
+  countSentThisMonth: () => Promise<number>,
+): Promise<{
+  allowed: boolean;
+  reason?: string;
+  hourlyCap: number | null;
+  remainingThisMonth: number | null;
+}> {
+  if (await isAccountBillingExempt(client, accountId)) {
+    return { allowed: true, hourlyCap: null, remainingThisMonth: null };
+  }
+
+  const limits = await loadAccountPlanLimits(client, accountId);
+  const hourlyCap = limits?.ig_hourly_send_cap ?? null;
+  const max = limits?.max_ig_sends_per_month;
+
+  if (max == null) {
+    return { allowed: true, hourlyCap, remainingThisMonth: null };
+  }
+
+  const remaining = Math.max(0, max - (await countSentThisMonth()));
+  if (remaining === 0) {
+    return {
+      allowed: false,
+      reason: `Your plan's ${max} Instagram messages for this month have been used. Upgrade to keep automations sending.`,
+      hourlyCap,
+      remainingThisMonth: 0,
+    };
+  }
+
+  return { allowed: true, hourlyCap, remainingThisMonth: remaining };
 }
 
 /**

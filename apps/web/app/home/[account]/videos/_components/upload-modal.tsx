@@ -471,8 +471,8 @@ export function UploadModal(props: {
         <DialogHeader>
           <DialogTitle>Upload videos</DialogTitle>
           <DialogDescription>
-            Add one or more videos. Uploads finish here; Bunny encodes in the
-            background and the library updates when each video is ready.
+            Add one or more videos to upload. Please keep this window open until
+            the uploads finish.
           </DialogDescription>
         </DialogHeader>
 

@@ -72,6 +72,8 @@ type Props = {
   playerRef?: React.Ref<TimelinePlaybackPlayerHandle>;
   /** The browser can't decode the master (e.g. HEVC in Firefox). */
   onUnsupported?: () => void;
+  /** Playhead in source (original recording) time, on every update. */
+  onPlayheadChange?: (sourceMs: number) => void;
 };
 
 const CONTROLS_IDLE_HIDE_MS = 2500;
@@ -193,6 +195,11 @@ export function TimelinePlaybackPlayer(props: Props) {
     }),
     [seekSource],
   );
+
+  const onPlayheadChange = props.onPlayheadChange;
+  useEffect(() => {
+    onPlayheadChange?.(playheadMs);
+  }, [onPlayheadChange, playheadMs]);
 
   const updateFrameBox = useCallback(() => {
     const stage = stageRef.current;

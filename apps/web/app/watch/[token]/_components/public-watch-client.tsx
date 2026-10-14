@@ -5,16 +5,20 @@ import { useCallback, useRef, useState } from 'react';
 import {
   VideoChaptersList,
   VideoSummaryCard,
-  VideoTranscriptCard,
 } from '~/components/videos/video-watch-meta-panel';
 import { formatPublishedAt, formatViewCount } from '~/lib/videos/format';
 import type { VideoPlayerConfigValues } from '~/lib/videos/player-config-types';
+import {
+  type TranscriptSegment,
+  activeSegmentIndex,
+} from '~/lib/videos/transcript-segments';
 import type { VideoChapter, VideoRow } from '~/lib/videos/types';
 
 import {
   PublicTimelineWatchPlayer,
   type PublicTimelineWatchPlayerHandle,
 } from './public-timeline-watch-player';
+import { PublicTranscriptPanel } from './public-transcript-panel';
 import {
   SeekableBunnyEmbed,
   type SeekableBunnyEmbedHandle,
@@ -30,6 +34,7 @@ type Props = {
   chapters: VideoChapter[];
   publishedAt: string | null;
   transcriptPlainText: string | null;
+  transcriptSegments: TranscriptSegment[];
   summary: string | null;
   aspectRatio: string;
   embedReady: boolean;
@@ -48,6 +53,12 @@ export function PublicWatchClient(props: Props) {
   const playerAnchorRef = useRef<HTMLDivElement>(null);
   const [masterUnsupported, setMasterUnsupported] = useState(false);
   const onMasterUnsupported = useCallback(() => setMasterUnsupported(true), []);
+  const [activeSegment, setActiveSegment] = useState(-1);
+  const segments = props.transcriptSegments;
+  const onPlaybackTime = useCallback(
+    (ms: number) => setActiveSegment(activeSegmentIndex(segments, ms)),
+    [segments],
+  );
 
   const playTimeline = props.useTimelinePlayer && !masterUnsupported;
   const timelineUnplayable =
@@ -57,30 +68,33 @@ export function PublicWatchClient(props: Props) {
 
   const onSeek = useCallback(
     (ms: number) => {
-      playerAnchorRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
+      const anchor = playerAnchorRef.current;
+      if (anchor) {
+        const rect = anchor.getBoundingClientRect();
+        if (rect.top < 0 || rect.bottom > window.innerHeight) {
+          anchor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+      onPlaybackTime(ms);
       if (playTimeline) {
         timelineRef.current?.seekToPlaybackMs(ms);
       } else {
         bunnyRef.current?.seekToPlaybackMs(ms);
       }
     },
-    [playTimeline],
+    [playTimeline, onPlaybackTime],
   );
 
   const publishedLabel = formatPublishedAt(props.publishedAt);
   const hasSummary = Boolean(props.summary?.trim());
   const hasChapters = props.chapters.length > 0;
-  const hasSideMeta = hasSummary || hasChapters;
+  const hasTranscript =
+    props.transcriptSegments.length > 0 ||
+    Boolean(props.transcriptPlainText?.trim());
 
   return (
     <>
       <header className="mb-6 space-y-2 lg:mb-8">
-        <p className="text-sm font-medium tracking-wide text-[var(--ozer-text-on-light-muted)] uppercase">
-          Hosted video
-        </p>
         <h1 className="font-heading text-3xl font-semibold tracking-tight text-[var(--ozer-plum-900)] sm:text-4xl">
           {props.video.title}
         </h1>
@@ -104,78 +118,95 @@ export function PublicWatchClient(props: Props) {
       </header>
 
       <div
-        ref={playerAnchorRef}
-        className="mx-auto w-full min-w-0 overflow-hidden rounded-2xl border border-[color:var(--ozer-border-on-light)] bg-black shadow-lg shadow-[color:var(--ozer-plum-900)]/10"
-        style={{ maxWidth: viewportFitMaxWidth(props.aspectRatio) }}
+        className={
+          hasTranscript
+            ? 'grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)] lg:gap-8'
+            : 'grid gap-5'
+        }
       >
-        {playTimeline ? (
-          <PublicTimelineWatchPlayer
-            ref={timelineRef}
-            mediaUrl={props.mediaUrl}
-            aspectRatio={props.aspectRatio}
-            config={props.config}
-            onUnsupported={onMasterUnsupported}
-          />
-        ) : timelineUnplayable ? (
+        <div className="min-w-0 space-y-5 lg:space-y-8">
           <div
-            className="flex w-full items-center justify-center bg-black/60 px-6 text-center text-base text-[var(--ozer-text-on-dark)]/80"
-            style={{ aspectRatio: props.aspectRatio }}
+            ref={playerAnchorRef}
+            className="mx-auto w-full min-w-0 overflow-hidden rounded-2xl border border-[color:var(--ozer-border-on-light)] bg-black shadow-lg shadow-[color:var(--ozer-plum-900)]/10"
+            style={{ maxWidth: viewportFitMaxWidth(props.aspectRatio) }}
           >
-            This browser can&apos;t play this video yet. Try again shortly, or
-            open it in Safari or Chrome.
-          </div>
-        ) : props.embedReady ? (
-          <SeekableBunnyEmbed
-            ref={bunnyRef}
-            libraryId={props.video.bunny_library_id}
-            bunnyVideoId={props.video.bunny_video_id}
-            config={props.config}
-            title={props.video.title}
-          />
-        ) : (
-          <div
-            className="relative flex w-full items-center justify-center bg-black/60"
-            style={{ aspectRatio: props.aspectRatio }}
-          >
-            {props.video.thumbnail_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={props.video.thumbnail_url}
-                alt={props.video.title}
-                className="absolute inset-0 h-full w-full object-cover opacity-40"
+            {playTimeline ? (
+              <PublicTimelineWatchPlayer
+                ref={timelineRef}
+                mediaUrl={props.mediaUrl}
+                aspectRatio={props.aspectRatio}
+                config={props.config}
+                onUnsupported={onMasterUnsupported}
+                onPlaybackTime={onPlaybackTime}
               />
-            ) : null}
-            <p className="relative z-10 px-6 text-center text-base text-[var(--ozer-text-on-dark)]/80">
-              {props.video.status === 'failed'
-                ? 'This video failed to process.'
-                : 'This video is still processing. Check back soon.'}
-            </p>
+            ) : timelineUnplayable ? (
+              <div
+                className="flex w-full items-center justify-center bg-black/60 px-6 text-center text-base text-[var(--ozer-text-on-dark)]/80"
+                style={{ aspectRatio: props.aspectRatio }}
+              >
+                This browser can&apos;t play this video yet. Try again shortly,
+                or open it in Safari or Chrome.
+              </div>
+            ) : props.embedReady ? (
+              <SeekableBunnyEmbed
+                ref={bunnyRef}
+                libraryId={props.video.bunny_library_id}
+                bunnyVideoId={props.video.bunny_video_id}
+                config={props.config}
+                title={props.video.title}
+                onPlaybackTime={onPlaybackTime}
+              />
+            ) : (
+              <div
+                className="relative flex w-full items-center justify-center bg-black/60"
+                style={{ aspectRatio: props.aspectRatio }}
+              >
+                {props.video.thumbnail_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={props.video.thumbnail_url}
+                    alt={props.video.title}
+                    className="absolute inset-0 h-full w-full object-cover opacity-40"
+                  />
+                ) : null}
+                <p className="relative z-10 px-6 text-center text-base text-[var(--ozer-text-on-dark)]/80">
+                  {props.video.status === 'failed'
+                    ? 'This video failed to process.'
+                    : 'This video is still processing. Check back soon.'}
+                </p>
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {hasSideMeta ? (
-        <div
-          className={
-            hasSummary && hasChapters
-              ? 'mt-5 grid items-start gap-5 lg:mt-8 lg:grid-cols-2 lg:gap-8'
-              : 'mt-5 grid gap-5 lg:mt-8'
-          }
-        >
-          <VideoSummaryCard summary={props.summary} variant="public" />
-          <VideoChaptersList
-            chapters={props.chapters}
-            onSeek={onSeek}
-            variant="public"
-          />
+          {hasSummary || hasChapters ? (
+            <div
+              className={
+                hasSummary && hasChapters
+                  ? 'grid items-start gap-5 xl:grid-cols-2 xl:gap-8'
+                  : 'grid gap-5'
+              }
+            >
+              <VideoSummaryCard summary={props.summary} variant="public" />
+              <VideoChaptersList
+                chapters={props.chapters}
+                onSeek={onSeek}
+                variant="public"
+              />
+            </div>
+          ) : null}
         </div>
-      ) : null}
 
-      <div className="mt-5 lg:mt-8">
-        <VideoTranscriptCard
-          plainText={props.transcriptPlainText}
-          variant="public"
-        />
+        {hasTranscript ? (
+          <aside className="lg:sticky lg:top-6">
+            <PublicTranscriptPanel
+              segments={props.transcriptSegments}
+              plainText={props.transcriptPlainText}
+              activeIndex={activeSegment}
+              onSeek={onSeek}
+              className="h-[28rem] lg:h-[calc(100svh-3rem)]"
+            />
+          </aside>
+        ) : null}
       </div>
     </>
   );

@@ -11,12 +11,12 @@ import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 
-import type { IgTriggerRow } from '~/lib/instagram-autoreply/types';
 import {
   DEFAULT_IG_DM_FLOW,
   type IgDmFlowConfig,
   parseIgDmFlow,
 } from '~/lib/instagram-autoreply/dm-flow-types';
+import type { IgTriggerRow } from '~/lib/instagram-autoreply/types';
 
 import type { upsertIgTriggerActionSchema } from '../_lib/schema/instagram-autoreply.schema';
 
@@ -50,8 +50,7 @@ export function InstagramTriggerEditor({
   const [publicTier, setPublicTier] = useState(
     trigger?.public_reply_ai_tier ?? 'standard',
   );
-  const initialFlow =
-    parseIgDmFlow(trigger?.dm_flow) ?? DEFAULT_IG_DM_FLOW;
+  const initialFlow = parseIgDmFlow(trigger?.dm_flow) ?? DEFAULT_IG_DM_FLOW;
   const [dmUseFlow, setDmUseFlow] = useState(Boolean(trigger?.dm_flow));
   const [confirmMessage, setConfirmMessage] = useState(
     initialFlow.steps[0]?.message ?? DEFAULT_IG_DM_FLOW.steps[0]!.message,
@@ -99,7 +98,9 @@ export function InstagramTriggerEditor({
                   {
                     id: 'confirm',
                     message: confirmMessage.trim(),
-                    buttons: [{ label: confirmButton.trim(), type: 'postback' }],
+                    buttons: [
+                      { label: confirmButton.trim(), type: 'postback' },
+                    ],
                   },
                   {
                     id: 'deliver',

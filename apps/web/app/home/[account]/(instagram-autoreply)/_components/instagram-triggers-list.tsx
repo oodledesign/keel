@@ -15,6 +15,7 @@ type TriggerRow = {
   name: string;
   keywords: string[];
   is_active: boolean;
+  typeLabel: string;
 };
 
 type InstagramTriggersListProps = {
@@ -47,15 +48,16 @@ export function InstagramTriggersList({
   return (
     <div className="mx-4 space-y-4 lg:mx-0">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">Triggers</h2>
+        <h2 className="text-lg font-semibold">Automations</h2>
         <Button asChild size="sm">
-          <Link href={newHref}>New trigger</Link>
+          <Link href={newHref}>New automation</Link>
         </Button>
       </div>
 
       {triggers.length === 0 ? (
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          No triggers yet. Create one to start auto-replying to comments.
+          No automations yet. Create one to reply to comments and DMs
+          automatically.
         </p>
       ) : (
         <ul className="divide-y divide-[color:var(--workspace-shell-border)] rounded-lg border border-[color:var(--workspace-shell-border)]">
@@ -75,7 +77,10 @@ export function InstagramTriggersList({
                     {trigger.name}
                   </Link>
                   <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                    {trigger.keywords.join(', ')}
+                    {trigger.typeLabel}
+                    {trigger.keywords.length
+                      ? ` · ${trigger.keywords.join(', ')}`
+                      : ''}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -109,7 +114,7 @@ export function InstagramTriggersList({
                             accountId,
                             triggerId: trigger.id,
                           });
-                          toast.success('Trigger deleted');
+                          toast.success('Automation deleted');
                         } catch (e) {
                           toast.error(
                             e instanceof Error ? e.message : 'Delete failed',

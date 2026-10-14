@@ -34,6 +34,23 @@ export function getMetaWebhookVerifyToken(): string | null {
 }
 
 /**
+ * Features that need Meta App Review (Advanced Access) before they work for
+ * non-tester accounts: Ice Breakers, persistent menu and story mentions.
+ * Everything else works in development mode for app testers.
+ */
+export function isIgAppReviewApproved(): boolean {
+  return process.env.IG_APP_REVIEW_APPROVED?.trim().toLowerCase() === 'true';
+}
+
+const DEFAULT_IG_HOURLY_SEND_CAP = 200;
+
+/** Per connected account, across all automations. Plan limits can only lower it. */
+export function getIgHourlySendCap(): number {
+  const raw = Number(process.env.IG_HOURLY_SEND_CAP);
+  return Number.isInteger(raw) && raw > 0 ? raw : DEFAULT_IG_HOURLY_SEND_CAP;
+}
+
+/**
  * App secret for Meta webhook HMAC (X-Hub-Signature-256).
  * Use the main App Secret from App settings → Basic, not the Instagram-only secret.
  */

@@ -10,6 +10,7 @@ import {
   insufficientCreditsResponse,
   isInsufficientCreditsError,
 } from '~/lib/ai/router';
+import { assertIgAutomationAllowed } from '~/lib/billing/entitlements';
 import { assertInstagramAutoreplyAccess } from '~/lib/instagram-autoreply/assert-access';
 import { resolveIgVoiceSettings } from '~/lib/instagram-autoreply/build-reply-prompt';
 import { generateIgReply } from '~/lib/instagram-autoreply/generate-reply';
@@ -206,6 +207,21 @@ export const upsertIgTrigger = enhanceAction(
         throw new Error(error.message);
       }
     } else {
+      const { count } = await client
+        .from('ig_triggers')
+        .select('id', { count: 'exact', head: true })
+        .eq('account_id', input.accountId);
+      const entitlement = await assertIgAutomationAllowed(
+        client,
+        input.accountId,
+        count ?? 0,
+      );
+      if (!entitlement.allowed) {
+        throw new Error(
+          entitlement.reason ?? 'Instagram automation limit reached',
+        );
+      }
+
       const { error } = await client.from('ig_triggers').insert(payload);
       if (error) {
         throw new Error(error.message);

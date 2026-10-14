@@ -48,9 +48,9 @@ export const igDmFlowConfigSchema = z
         path: ['steps'],
       });
     }
-    const nonLastPostbacks = data.steps.slice(0, -1).every((step) =>
-      step.buttons.some((b) => b.type === 'postback'),
-    );
+    const nonLastPostbacks = data.steps
+      .slice(0, -1)
+      .every((step) => step.buttons.some((b) => b.type === 'postback'));
     if (data.steps.length > 1 && !nonLastPostbacks) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

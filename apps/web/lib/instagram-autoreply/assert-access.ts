@@ -53,6 +53,25 @@ export async function assertInstagramAutoreplyAccess(
   return { client, slug };
 }
 
+/**
+ * Required before anything that messages a real person or exposes their
+ * data, since those paths use the admin client and bypass RLS.
+ */
+export async function assertIgManagePermission(
+  client: SupabaseClient,
+  accountId: string,
+  userId: string,
+) {
+  const { data: canManage } = await client.rpc('has_permission', {
+    user_id: userId,
+    account_id: accountId,
+    permission_name: 'settings.manage',
+  });
+  if (!canManage) {
+    throw new Error('You need permission to manage settings to do this');
+  }
+}
+
 export async function loadIgConnectedAccount(
   client: SupabaseClient,
   accountId: string,
@@ -60,7 +79,7 @@ export async function loadIgConnectedAccount(
   const { data, error } = await client
     .from('ig_connected_accounts')
     .select(
-      'id, account_id, ig_business_account_id, ig_username, facebook_page_id, token_expires_at, voice_settings, is_active, created_at, updated_at',
+      'id, account_id, ig_business_account_id, ig_username, facebook_page_id, token_expires_at, voice_settings, messenger_profile, is_active, created_at, updated_at',
     )
     .eq('account_id', accountId)
     .maybeSingle();

@@ -132,7 +132,7 @@ export function buildWorkAppLinks(
       label: 'Instagram',
       path: createPath(pathsConfig.app.accountInstagramAutoreply, account),
       Icon: <Instagram className={iconClasses} />,
-      description: 'Keyword-triggered comment replies and DMs.',
+      description: 'Comment and DM automations with voice notes.',
     });
   }
 

@@ -129,6 +129,18 @@ export function estimateJobCost(
   return recipe.unitsPerSecond * seconds;
 }
 
+/** Instagram voice-note TTS: ElevenLabs Multilingual v2 on fal (~$0.10 per 1,000 characters). */
+export const IG_TTS_MODEL_ID = 'fal-ai/elevenlabs/tts/multilingual-v2';
+export const IG_TTS_UNITS_PER_1000_CHARS = 10;
+
+/** Units for a TTS voice note — UI preview and server debit must both call this. */
+export function estimateTtsCost(characters: number): number {
+  return Math.max(
+    1,
+    Math.ceil((Math.max(0, characters) / 1000) * IG_TTS_UNITS_PER_1000_CHARS),
+  );
+}
+
 /** Total units for an image batch — UI and debit must both call this. */
 export function estimateImageBatchCost(params: {
   hasRefs: boolean;

@@ -74,16 +74,22 @@ export async function getMediaBalance(accountId: string): Promise<number> {
   return Math.max(0, (data as { balance?: number } | null)?.balance ?? 0);
 }
 
+/**
+ * Debit the soonest-expiring batches first. `jobId` links the debit to a
+ * media_generation_jobs row; pass null for debits outside the media library
+ * (e.g. Instagram TTS voice notes).
+ */
 export async function debitMediaCredits(
   accountId: string,
   amount: number,
-  jobId: string,
+  jobId: string | null,
 ): Promise<DebitResult> {
   const supabase = mediaCreditsDb();
   const { data, error } = await supabase.rpc('debit_media_credits', {
     p_account_id: accountId,
     p_amount: amount,
-    p_job_id: jobId,
+    // related_job_id is nullable; the generated RPC args type omits that.
+    p_job_id: jobId as string,
   });
 
   if (error) {

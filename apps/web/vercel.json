@@ -158,6 +158,10 @@
       "schedule": "0 2 * * *"
     },
     {
+      "path": "/api/cron/instagram-sequence-worker",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/linkedin-token-refresh",
       "schedule": "0 2 * * *"
     },

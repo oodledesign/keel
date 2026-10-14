@@ -6,6 +6,7 @@ import {
   assertTopupWorseThanStarter,
   estimateImageBatchCost,
   estimateJobCost,
+  estimateTtsCost,
 } from './media-unit-pricing';
 
 describe('media unit pricing', () => {
@@ -50,5 +51,12 @@ describe('media unit pricing', () => {
         variations: 1,
       }),
     ).toBe(15);
+  });
+
+  it('prices TTS voice notes per 1,000 characters with a 1-unit minimum', () => {
+    expect(estimateTtsCost(0)).toBe(1);
+    expect(estimateTtsCost(40)).toBe(1);
+    expect(estimateTtsCost(250)).toBe(3);
+    expect(estimateTtsCost(1000)).toBe(10);
   });
 });

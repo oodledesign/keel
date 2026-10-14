@@ -35,6 +35,8 @@ async function VideoEditorPage({ params }: Props) {
           initialTranscript={data.transcript}
           initialHasChapters={data.video.hasChapters}
           initialHasSummary={data.video.hasSummary}
+          videoReady={data.video.ready}
+          initialPublicUrl={data.video.publicShareUrl}
         />
       </PageBody>
     </>

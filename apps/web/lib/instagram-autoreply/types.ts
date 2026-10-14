@@ -1,4 +1,6 @@
+import type { Json } from '../database.types';
 import type { IgDmFlowConfig } from './dm-flow-types';
+import type { IgTriggerType } from './sequence/step-types';
 
 export type IgVoiceSettings = {
   tone: 'friendly' | 'professional' | 'casual' | 'playful';
@@ -32,6 +34,8 @@ export type IgConnectedAccountRow = {
   access_token: string;
   token_expires_at: string | null;
   voice_settings: IgVoiceSettings;
+  /** Parse with `parseIgMessengerProfile`. */
+  messenger_profile: Json;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -103,6 +107,108 @@ export type IgDmSessionRow = {
   status: 'active' | 'completed';
   created_at: string;
   updated_at: string;
+};
+
+export type IgTriggerV2Fields = {
+  trigger_type: IgTriggerType;
+  match_mode: 'contains' | 'exact' | 'any';
+  media_scope: 'any_post' | 'specific_post' | 'reels' | 'stories';
+  media_id: string | null;
+  require_follow: boolean;
+  once_per_contact: boolean;
+  cooldown_minutes: number | null;
+  entry_payload: string | null;
+};
+
+export type IgTriggerFullRow = IgTriggerRow & IgTriggerV2Fields;
+
+export type IgContactConsentRecord = {
+  purpose: string;
+  wording: string;
+  granted: boolean;
+  recorded_at: string;
+  source_message_id: string | null;
+};
+
+export type IgContactRow = {
+  id: string;
+  account_id: string;
+  ig_account_id: string;
+  igsid: string;
+  username: string | null;
+  display_name: string | null;
+  last_inbound_at: string | null;
+  opted_out_at: string | null;
+  tags: string[];
+  custom_fields: Record<string, string>;
+  linked_client_id: string | null;
+  is_follower: boolean | null;
+  is_follower_checked_at: string | null;
+  handoff_at: string | null;
+  consent: IgContactConsentRecord[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type IgRunStatus =
+  | 'active'
+  | 'waiting_delay'
+  | 'waiting_reply'
+  | 'completed'
+  | 'handed_off'
+  | 'stopped'
+  | 'failed'
+  | 'window_expired';
+
+export type IgRunSource =
+  | 'comment'
+  | 'message'
+  | 'postback'
+  | 'story_reply'
+  | 'story_mention'
+  | 'ice_breaker'
+  | 'menu'
+  | 'test';
+
+export type IgRunAwaiting =
+  | { kind: 'quick_reply'; position: number }
+  | { kind: 'button'; position: number }
+  | { kind: 'any_reply'; position: number }
+  | { kind: 'follow'; position: number }
+  | { kind: 'collect_data'; position: number; retries: number };
+
+export type IgRunRow = {
+  id: string;
+  account_id: string;
+  ig_account_id: string;
+  contact_id: string;
+  trigger_id: string;
+  source: IgRunSource;
+  source_event_id: string;
+  source_comment_id: string | null;
+  private_reply_used: boolean;
+  follow_gate_passed: boolean;
+  current_position: number;
+  status: IgRunStatus;
+  awaiting: IgRunAwaiting | null;
+  next_step_at: string | null;
+  attempts: number;
+  steps_executed: number;
+  locked_until: string | null;
+  last_error: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type IgStepRow = {
+  id: string;
+  account_id: string;
+  trigger_id: string;
+  position: number;
+  step_type: string;
+  config: unknown;
+  asset_id: string | null;
 };
 
 export function parseIgVoiceSettings(value: unknown): IgVoiceSettings {

@@ -37,7 +37,7 @@ export function VideoProcessingState(props: {
       role="status"
       aria-live="polite"
     >
-      <div className="flex h-full w-full flex-col items-center justify-center gap-[3cqw] bg-[var(--workspace-shell-sidebar-accent)] px-[6cqw] text-center">
+      <div className="flex h-full w-full flex-col items-center justify-center gap-[3cqw] bg-[var(--ozer-surface-panel-hover)] px-[6cqw] text-center text-[var(--workspace-shell-text)]">
         {props.stalled ? (
           <AlertTriangle className="size-[clamp(1rem,10cqw,2rem)] text-amber-500" />
         ) : (
@@ -56,10 +56,10 @@ export function VideoProcessingState(props: {
             {percent != null && !props.stalled ? (
               <Progress
                 value={percent}
-                className="h-1 w-3/5 max-w-40 bg-black/20 [&>div]:bg-[var(--ozer-accent)]"
+                className="h-1 w-3/5 max-w-40 bg-[var(--workspace-shell-border)] [&>div]:bg-[var(--ozer-accent)]"
               />
             ) : null}
-            <p className="text-muted-foreground text-[clamp(0.6rem,3.6cqw,0.75rem)] leading-tight">
+            <p className="text-[clamp(0.6rem,3.6cqw,0.75rem)] leading-tight text-[var(--workspace-shell-text-muted)]">
               {props.stalled
                 ? 'Delete it and upload again'
                 : (eta ??

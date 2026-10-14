@@ -7,13 +7,19 @@ import {
   loadIgConnectedAccount,
   loadIgTriggers,
 } from '~/lib/instagram-autoreply/assert-access';
-import { getOptionalMetaInstagram } from '~/lib/instagram-autoreply/env';
+import {
+  getOptionalMetaInstagram,
+  isIgAppReviewApproved,
+} from '~/lib/instagram-autoreply/env';
+import { parseIgMessengerProfile } from '~/lib/instagram-autoreply/messenger-profile';
 import { parseIgVoiceSettings } from '~/lib/instagram-autoreply/types';
 
 import {
   InstagramConnectPanel,
   InstagramOauthBanner,
 } from '../(instagram-autoreply)/_components/instagram-connect-panel';
+import { InstagramMessengerProfilePanel } from '../(instagram-autoreply)/_components/instagram-messenger-profile-panel';
+import { InstagramSubnav } from '../(instagram-autoreply)/_components/instagram-subnav';
 import { InstagramVoiceSettingsForm } from '../(instagram-autoreply)/_components/instagram-voice-settings-form';
 import {
   disconnectIgAccount,
@@ -67,10 +73,11 @@ export default async function InstagramHomePage({
     <>
       <TeamAccountLayoutPageHeader
         account={account}
-        title="Instagram Auto-Reply"
-        description="Connect your account, set your voice, and manage keyword triggers."
+        title="Instagram"
+        description="Connect your account, set your voice, and automate comment and DM replies."
       />
       <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
+        <InstagramSubnav account={account} />
         <InstagramOauthBanner
           error={oauthError}
           success={Boolean(sp.instagram_connected)}
@@ -104,7 +111,22 @@ export default async function InstagramHomePage({
           />
         ) : null}
 
-        <div className="mx-4 flex flex-wrap gap-3 text-sm lg:mx-0">
+        {connected?.is_active ? (
+          <InstagramMessengerProfilePanel
+            accountId={accountId}
+            initial={parseIgMessengerProfile(
+              (connected as { messenger_profile?: unknown }).messenger_profile,
+            )}
+            triggers={triggers.map((t) => ({
+              id: t.id as string,
+              name: t.name as string,
+              trigger_type: t.trigger_type as string,
+            }))}
+            appReviewApproved={isIgAppReviewApproved()}
+          />
+        ) : null}
+
+        <div className="mx-4 text-sm lg:mx-0">
           <Link
             href={workAccountPath(
               workPaths.accountInstagramAutoreplyTriggers,
@@ -112,16 +134,7 @@ export default async function InstagramHomePage({
             )}
             className="rounded-lg border border-[color:var(--workspace-shell-border)] px-4 py-2"
           >
-            Triggers ({triggers.length})
-          </Link>
-          <Link
-            href={workAccountPath(
-              workPaths.accountInstagramAutoreplyActivity,
-              account,
-            )}
-            className="rounded-lg border border-[color:var(--workspace-shell-border)] px-4 py-2"
-          >
-            Activity log
+            Automations ({triggers.length})
           </Link>
         </div>
       </PageBody>

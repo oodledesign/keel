@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.4"
   }
   public: {
     Tables: {
@@ -443,6 +443,106 @@ export type Database = {
           },
         ]
       }
+      account_credit_settings: {
+        Row: {
+          account_id: string
+          created_at: string
+          topup_packs: Json | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          topup_packs?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          topup_packs?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_credit_settings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_credit_settings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_credit_settings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      account_deletions: {
+        Row: {
+          cancelled_at: string | null
+          completed_at: string | null
+          contact_email: string | null
+          deleted_team_account_ids: string[]
+          email_sha256: string | null
+          error: string | null
+          id: string
+          left_team_account_ids: string[]
+          personal_account_name: string | null
+          requested_at: string
+          requested_by: string | null
+          rows_affected: number | null
+          scheduled_for: string
+          source: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          completed_at?: string | null
+          contact_email?: string | null
+          deleted_team_account_ids?: string[]
+          email_sha256?: string | null
+          error?: string | null
+          id?: string
+          left_team_account_ids?: string[]
+          personal_account_name?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          rows_affected?: number | null
+          scheduled_for: string
+          source: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          completed_at?: string | null
+          contact_email?: string | null
+          deleted_team_account_ids?: string[]
+          email_sha256?: string | null
+          error?: string | null
+          id?: string
+          left_team_account_ids?: string[]
+          personal_account_name?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          rows_affected?: number | null
+          scheduled_for?: string
+          source?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       account_entitlements: {
         Row: {
           account_id: string
@@ -648,8 +748,11 @@ export type Database = {
         Row: {
           account_id: string
           client_request_credit_allowance: number | null
+          ig_hourly_send_cap: number | null
           max_active_clients: number | null
           max_bookings_per_month: number | null
+          max_ig_automations: number | null
+          max_ig_sends_per_month: number | null
           max_invoices_per_month: number | null
           max_members: number | null
           max_open_tasks: number | null
@@ -668,8 +771,11 @@ export type Database = {
         Insert: {
           account_id: string
           client_request_credit_allowance?: number | null
+          ig_hourly_send_cap?: number | null
           max_active_clients?: number | null
           max_bookings_per_month?: number | null
+          max_ig_automations?: number | null
+          max_ig_sends_per_month?: number | null
           max_invoices_per_month?: number | null
           max_members?: number | null
           max_open_tasks?: number | null
@@ -688,8 +794,11 @@ export type Database = {
         Update: {
           account_id?: string
           client_request_credit_allowance?: number | null
+          ig_hourly_send_cap?: number | null
           max_active_clients?: number | null
           max_bookings_per_month?: number | null
+          max_ig_automations?: number | null
+          max_ig_sends_per_month?: number | null
           max_invoices_per_month?: number | null
           max_members?: number | null
           max_open_tasks?: number | null
@@ -3779,6 +3888,87 @@ export type Database = {
           },
         ]
       }
+      chat_message_reports: {
+        Row: {
+          account_id: string
+          created_at: string
+          details: string | null
+          id: string
+          message_body: string | null
+          message_id: string | null
+          reason: string
+          reported_user_id: string | null
+          reporter_user_id: string
+          resolved_at: string | null
+          status: string
+          thread_id: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          message_body?: string | null
+          message_id?: string | null
+          reason: string
+          reported_user_id?: string | null
+          reporter_user_id: string
+          resolved_at?: string | null
+          status?: string
+          thread_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          message_body?: string | null
+          message_id?: string | null
+          reason?: string
+          reported_user_id?: string | null
+          reporter_user_id?: string
+          resolved_at?: string | null
+          status?: string
+          thread_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_message_reports_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_message_reports_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_message_reports_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_message_reports_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_message_reports_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           body: string
@@ -3968,6 +4158,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      chat_user_blocks: {
+        Row: {
+          blocked_user_id: string
+          blocker_user_id: string
+          created_at: string
+        }
+        Insert: {
+          blocked_user_id: string
+          blocker_user_id: string
+          created_at?: string
+        }
+        Update: {
+          blocked_user_id?: string
+          blocker_user_id?: string
+          created_at?: string
+        }
+        Relationships: []
       }
       circulation_credit_pools: {
         Row: {
@@ -5007,6 +5215,7 @@ export type Database = {
           country: string | null
           created_at: string | null
           created_by: string | null
+          custom_fields: Json
           display_name: string
           email: string | null
           first_name: string | null
@@ -5037,6 +5246,7 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           created_by?: string | null
+          custom_fields?: Json
           display_name: string
           email?: string | null
           first_name?: string | null
@@ -5067,6 +5277,7 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           created_by?: string | null
+          custom_fields?: Json
           display_name?: string
           email?: string | null
           first_name?: string | null
@@ -5170,6 +5381,58 @@ export type Database = {
           },
           {
             foreignKeyName: "commercial_account_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_circulation_contact_state: {
+        Row: {
+          account_id: string
+          circulation_claimed_at: string | null
+          created_at: string
+          email: string
+          id: string
+          last_circulated_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          circulation_claimed_at?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          last_circulated_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          circulation_claimed_at?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          last_circulated_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_circulation_contact_state_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_circulation_contact_state_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_circulation_contact_state_account_id_fkey"
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "user_accounts"
@@ -5449,6 +5712,8 @@ export type Database = {
           auto_send_enabled: boolean
           created_at: string
           min_gap_days: number
+          rematch_on_price_drop: boolean
+          rematch_on_relist: boolean
           updated_at: string
         }
         Insert: {
@@ -5456,6 +5721,8 @@ export type Database = {
           auto_send_enabled?: boolean
           created_at?: string
           min_gap_days?: number
+          rematch_on_price_drop?: boolean
+          rematch_on_relist?: boolean
           updated_at?: string
         }
         Update: {
@@ -5463,6 +5730,8 @@ export type Database = {
           auto_send_enabled?: boolean
           created_at?: string
           min_gap_days?: number
+          rematch_on_price_drop?: boolean
+          rematch_on_relist?: boolean
           updated_at?: string
         }
         Relationships: [
@@ -5597,6 +5866,64 @@ export type Database = {
             columns: ["requirement_id"]
             isOneToOne: false
             referencedRelation: "commercial_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_export_snapshots: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          previous_snapshot: Json | null
+          previous_taken_at: string | null
+          snapshot: Json
+          snapshot_key: string
+          taken_at: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          previous_snapshot?: Json | null
+          previous_taken_at?: string | null
+          snapshot: Json
+          snapshot_key: string
+          taken_at?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          previous_snapshot?: Json | null
+          previous_taken_at?: string | null
+          snapshot?: Json
+          snapshot_key?: string
+          taken_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_export_snapshots_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_export_snapshots_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_export_snapshots_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -5771,6 +6098,7 @@ export type Database = {
           page_size: string
           pages: Json
           published_media_id: string | null
+          settings: Json
           storage_path: string | null
           template_id: string
           updated_at: string
@@ -5786,6 +6114,7 @@ export type Database = {
           page_size?: string
           pages?: Json
           published_media_id?: string | null
+          settings?: Json
           storage_path?: string | null
           template_id?: string
           updated_at?: string
@@ -5801,6 +6130,7 @@ export type Database = {
           page_size?: string
           pages?: Json
           published_media_id?: string | null
+          settings?: Json
           storage_path?: string | null
           template_id?: string
           updated_at?: string
@@ -5828,17 +6158,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "commercial_listing_brochures_published_media_id_fkey"
-            columns: ["published_media_id"]
-            isOneToOne: false
-            referencedRelation: "commercial_listing_media"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "commercial_listing_brochures_listing_id_fkey"
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "commercial_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_listing_brochures_published_media_id_fkey"
+            columns: ["published_media_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_listing_media"
             referencedColumns: ["id"]
           },
         ]
@@ -6355,6 +6685,9 @@ export type Database = {
           description: string | null
           disposal_type: string
           epc_band: string | null
+          epc_certificate_number: string | null
+          epc_fetched_at: string | null
+          epc_pulled_json: Json | null
           epc_rating: number | null
           estate_charge_per_sqft: number | null
           external_id: string | null
@@ -6391,10 +6724,12 @@ export type Database = {
           planning_status: string | null
           possession: string | null
           postcode: string | null
+          price_dropped_at: string | null
           project_code: string | null
           rates_payable_per_sqft: number | null
           record_owner_user_id: string | null
           reference_number: string | null
+          relisted_at: string | null
           rent_frequency: string | null
           restrict_access_to_assigned: boolean
           sector: string | null
@@ -6446,6 +6781,9 @@ export type Database = {
           description?: string | null
           disposal_type?: string
           epc_band?: string | null
+          epc_certificate_number?: string | null
+          epc_fetched_at?: string | null
+          epc_pulled_json?: Json | null
           epc_rating?: number | null
           estate_charge_per_sqft?: number | null
           external_id?: string | null
@@ -6482,10 +6820,12 @@ export type Database = {
           planning_status?: string | null
           possession?: string | null
           postcode?: string | null
+          price_dropped_at?: string | null
           project_code?: string | null
           rates_payable_per_sqft?: number | null
           record_owner_user_id?: string | null
           reference_number?: string | null
+          relisted_at?: string | null
           rent_frequency?: string | null
           restrict_access_to_assigned?: boolean
           sector?: string | null
@@ -6537,6 +6877,9 @@ export type Database = {
           description?: string | null
           disposal_type?: string
           epc_band?: string | null
+          epc_certificate_number?: string | null
+          epc_fetched_at?: string | null
+          epc_pulled_json?: Json | null
           epc_rating?: number | null
           estate_charge_per_sqft?: number | null
           external_id?: string | null
@@ -6573,10 +6916,12 @@ export type Database = {
           planning_status?: string | null
           possession?: string | null
           postcode?: string | null
+          price_dropped_at?: string | null
           project_code?: string | null
           rates_payable_per_sqft?: number | null
           record_owner_user_id?: string | null
           reference_number?: string | null
+          relisted_at?: string | null
           rent_frequency?: string | null
           restrict_access_to_assigned?: boolean
           sector?: string | null
@@ -7141,6 +7486,85 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "commercial_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_report_schedules: {
+        Row: {
+          account_id: string
+          attachments: string[]
+          created_at: string
+          created_by: string | null
+          days_of_week: number[]
+          enabled: boolean
+          id: string
+          last_error: string | null
+          last_run_at: string | null
+          last_status: string | null
+          name: string
+          only_when_changed: boolean
+          options: Json
+          recipients: string[]
+          send_hour: number
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          attachments?: string[]
+          created_at?: string
+          created_by?: string | null
+          days_of_week?: number[]
+          enabled?: boolean
+          id?: string
+          last_error?: string | null
+          last_run_at?: string | null
+          last_status?: string | null
+          name: string
+          only_when_changed?: boolean
+          options: Json
+          recipients: string[]
+          send_hour?: number
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          attachments?: string[]
+          created_at?: string
+          created_by?: string | null
+          days_of_week?: number[]
+          enabled?: boolean
+          id?: string
+          last_error?: string | null
+          last_run_at?: string | null
+          last_status?: string | null
+          name?: string
+          only_when_changed?: boolean
+          options?: Json
+          recipients?: string[]
+          send_hour?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_report_schedules_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_report_schedules_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_report_schedules_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -8355,6 +8779,64 @@ export type Database = {
           stripe_event_id?: string
         }
         Relationships: []
+      }
+      contact_custom_fields: {
+        Row: {
+          account_id: string
+          created_at: string
+          field_type: string
+          id: string
+          key: string
+          label: string
+          options: Json
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          field_type?: string
+          id?: string
+          key: string
+          label: string
+          options?: Json
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          field_type?: string
+          id?: string
+          key?: string
+          label?: string
+          options?: Json
+          position?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_custom_fields_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_custom_fields_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_custom_fields_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contact_email_addresses: {
         Row: {
@@ -11975,6 +12457,343 @@ export type Database = {
           },
         ]
       }
+      ig_automation_assets: {
+        Row: {
+          account_id: string
+          consenting_user_id: string | null
+          created_at: string
+          created_by: string | null
+          delivery_path: string | null
+          duration_ms: number | null
+          id: string
+          kind: string
+          label: string
+          media_credits_charged: number
+          meta_attachment_ids: Json
+          mime_type: string | null
+          original_mime_type: string | null
+          original_path: string | null
+          size_bytes: number | null
+          source: string
+          transcode_error: string | null
+          transcode_status: string
+          updated_at: string
+          voice_clone_consent_at: string | null
+          waveform: Json | null
+        }
+        Insert: {
+          account_id: string
+          consenting_user_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          delivery_path?: string | null
+          duration_ms?: number | null
+          id?: string
+          kind: string
+          label: string
+          media_credits_charged?: number
+          meta_attachment_ids?: Json
+          mime_type?: string | null
+          original_mime_type?: string | null
+          original_path?: string | null
+          size_bytes?: number | null
+          source?: string
+          transcode_error?: string | null
+          transcode_status?: string
+          updated_at?: string
+          voice_clone_consent_at?: string | null
+          waveform?: Json | null
+        }
+        Update: {
+          account_id?: string
+          consenting_user_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          delivery_path?: string | null
+          duration_ms?: number | null
+          id?: string
+          kind?: string
+          label?: string
+          media_credits_charged?: number
+          meta_attachment_ids?: Json
+          mime_type?: string | null
+          original_mime_type?: string | null
+          original_path?: string | null
+          size_bytes?: number | null
+          source?: string
+          transcode_error?: string | null
+          transcode_status?: string
+          updated_at?: string
+          voice_clone_consent_at?: string | null
+          waveform?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ig_automation_assets_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_automation_assets_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_automation_assets_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ig_automation_runs: {
+        Row: {
+          account_id: string
+          attempts: number
+          awaiting: Json | null
+          completed_at: string | null
+          contact_id: string
+          created_at: string
+          current_position: number
+          follow_gate_passed: boolean
+          id: string
+          ig_account_id: string
+          last_error: string | null
+          locked_until: string | null
+          next_step_at: string | null
+          private_reply_used: boolean
+          source: string
+          source_comment_id: string | null
+          source_event_id: string
+          status: string
+          steps_executed: number
+          trigger_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          attempts?: number
+          awaiting?: Json | null
+          completed_at?: string | null
+          contact_id: string
+          created_at?: string
+          current_position?: number
+          follow_gate_passed?: boolean
+          id?: string
+          ig_account_id: string
+          last_error?: string | null
+          locked_until?: string | null
+          next_step_at?: string | null
+          private_reply_used?: boolean
+          source: string
+          source_comment_id?: string | null
+          source_event_id: string
+          status?: string
+          steps_executed?: number
+          trigger_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          attempts?: number
+          awaiting?: Json | null
+          completed_at?: string | null
+          contact_id?: string
+          created_at?: string
+          current_position?: number
+          follow_gate_passed?: boolean
+          id?: string
+          ig_account_id?: string
+          last_error?: string | null
+          locked_until?: string | null
+          next_step_at?: string | null
+          private_reply_used?: boolean
+          source?: string
+          source_comment_id?: string | null
+          source_event_id?: string
+          status?: string
+          steps_executed?: number
+          trigger_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ig_automation_runs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_automation_runs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_automation_runs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_automation_runs_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "ig_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_automation_runs_ig_account_id_fkey"
+            columns: ["ig_account_id"]
+            isOneToOne: false
+            referencedRelation: "ig_connected_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_automation_runs_trigger_id_fkey"
+            columns: ["trigger_id"]
+            isOneToOne: false
+            referencedRelation: "ig_triggers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ig_automation_stats_erased: {
+        Row: {
+          account_id: string
+          count: number
+          day: string
+          metric: string
+          step_position: number
+          trigger_id: string
+        }
+        Insert: {
+          account_id: string
+          count?: number
+          day: string
+          metric: string
+          step_position?: number
+          trigger_id: string
+        }
+        Update: {
+          account_id?: string
+          count?: number
+          day?: string
+          metric?: string
+          step_position?: number
+          trigger_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ig_automation_stats_erased_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_automation_stats_erased_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_automation_stats_erased_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_automation_stats_erased_trigger_id_fkey"
+            columns: ["trigger_id"]
+            isOneToOne: false
+            referencedRelation: "ig_triggers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ig_automation_steps: {
+        Row: {
+          account_id: string
+          asset_id: string | null
+          config: Json
+          created_at: string
+          id: string
+          position: number
+          step_type: string
+          trigger_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          asset_id?: string | null
+          config?: Json
+          created_at?: string
+          id?: string
+          position: number
+          step_type: string
+          trigger_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          asset_id?: string | null
+          config?: Json
+          created_at?: string
+          id?: string
+          position?: number
+          step_type?: string
+          trigger_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ig_automation_steps_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_automation_steps_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_automation_steps_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_automation_steps_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "ig_automation_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_automation_steps_trigger_id_fkey"
+            columns: ["trigger_id"]
+            isOneToOne: false
+            referencedRelation: "ig_triggers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ig_comment_events: {
         Row: {
           account_id: string
@@ -12097,6 +12916,7 @@ export type Database = {
           ig_business_account_id: string
           ig_username: string | null
           is_active: boolean
+          messenger_profile: Json
           token_expires_at: string | null
           updated_at: string
           voice_settings: Json
@@ -12110,6 +12930,7 @@ export type Database = {
           ig_business_account_id: string
           ig_username?: string | null
           is_active?: boolean
+          messenger_profile?: Json
           token_expires_at?: string | null
           updated_at?: string
           voice_settings?: Json
@@ -12123,6 +12944,7 @@ export type Database = {
           ig_business_account_id?: string
           ig_username?: string | null
           is_active?: boolean
+          messenger_profile?: Json
           token_expires_at?: string | null
           updated_at?: string
           voice_settings?: Json
@@ -12147,6 +12969,102 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: true
             referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ig_contacts: {
+        Row: {
+          account_id: string
+          consent: Json
+          created_at: string
+          custom_fields: Json
+          display_name: string | null
+          handoff_at: string | null
+          id: string
+          ig_account_id: string
+          igsid: string
+          is_follower: boolean | null
+          is_follower_checked_at: string | null
+          last_inbound_at: string | null
+          linked_client_id: string | null
+          opted_out_at: string | null
+          tags: string[]
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          account_id: string
+          consent?: Json
+          created_at?: string
+          custom_fields?: Json
+          display_name?: string | null
+          handoff_at?: string | null
+          id?: string
+          ig_account_id: string
+          igsid: string
+          is_follower?: boolean | null
+          is_follower_checked_at?: string | null
+          last_inbound_at?: string | null
+          linked_client_id?: string | null
+          opted_out_at?: string | null
+          tags?: string[]
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          account_id?: string
+          consent?: Json
+          created_at?: string
+          custom_fields?: Json
+          display_name?: string | null
+          handoff_at?: string | null
+          id?: string
+          ig_account_id?: string
+          igsid?: string
+          is_follower?: boolean | null
+          is_follower_checked_at?: string | null
+          last_inbound_at?: string | null
+          linked_client_id?: string | null
+          opted_out_at?: string | null
+          tags?: string[]
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ig_contacts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_contacts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_contacts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_contacts_ig_account_id_fkey"
+            columns: ["ig_account_id"]
+            isOneToOne: false
+            referencedRelation: "ig_connected_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_contacts_linked_client_id_fkey"
+            columns: ["linked_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
@@ -12233,9 +13151,132 @@ export type Database = {
           },
         ]
       }
+      ig_message_events: {
+        Row: {
+          account_id: string
+          agent_user_id: string | null
+          body: string | null
+          contact_id: string | null
+          created_at: string
+          direction: string
+          error_message: string | null
+          event_type: string
+          id: string
+          idempotency_key: string
+          ig_account_id: string
+          meta_error_code: number | null
+          meta_error_subcode: number | null
+          meta_message_id: string | null
+          payload: string | null
+          run_id: string | null
+          send_status: string
+          step_position: number | null
+          step_type: string | null
+          trigger_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          agent_user_id?: string | null
+          body?: string | null
+          contact_id?: string | null
+          created_at?: string
+          direction: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          idempotency_key: string
+          ig_account_id: string
+          meta_error_code?: number | null
+          meta_error_subcode?: number | null
+          meta_message_id?: string | null
+          payload?: string | null
+          run_id?: string | null
+          send_status?: string
+          step_position?: number | null
+          step_type?: string | null
+          trigger_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          agent_user_id?: string | null
+          body?: string | null
+          contact_id?: string | null
+          created_at?: string
+          direction?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          idempotency_key?: string
+          ig_account_id?: string
+          meta_error_code?: number | null
+          meta_error_subcode?: number | null
+          meta_message_id?: string | null
+          payload?: string | null
+          run_id?: string | null
+          send_status?: string
+          step_position?: number | null
+          step_type?: string | null
+          trigger_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ig_message_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_message_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_message_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_message_events_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "ig_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_message_events_ig_account_id_fkey"
+            columns: ["ig_account_id"]
+            isOneToOne: false
+            referencedRelation: "ig_connected_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_message_events_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "ig_automation_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_message_events_trigger_id_fkey"
+            columns: ["trigger_id"]
+            isOneToOne: false
+            referencedRelation: "ig_triggers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ig_triggers: {
         Row: {
           account_id: string
+          cooldown_minutes: number | null
           create_deal_on_match: boolean
           created_at: string
           deal_stage: string | null
@@ -12244,23 +13285,31 @@ export type Database = {
           dm_flow: Json | null
           dm_mode: string
           dm_template: string | null
+          entry_payload: string | null
           id: string
           ig_account_id: string
           is_active: boolean
           keywords: string[]
+          match_mode: string
           match_type: string
+          media_id: string | null
+          media_scope: string
           name: string
+          once_per_contact: boolean
           public_reply_ai_tier: string | null
           public_reply_enabled: boolean
           public_reply_mode: string
           public_reply_template: string | null
+          require_follow: boolean
           scope: string
           target_media_ids: string[] | null
+          trigger_type: string
           updated_at: string
           voice_settings_override: Json | null
         }
         Insert: {
           account_id: string
+          cooldown_minutes?: number | null
           create_deal_on_match?: boolean
           created_at?: string
           deal_stage?: string | null
@@ -12269,23 +13318,31 @@ export type Database = {
           dm_flow?: Json | null
           dm_mode?: string
           dm_template?: string | null
+          entry_payload?: string | null
           id?: string
           ig_account_id: string
           is_active?: boolean
           keywords: string[]
+          match_mode?: string
           match_type?: string
+          media_id?: string | null
+          media_scope?: string
           name: string
+          once_per_contact?: boolean
           public_reply_ai_tier?: string | null
           public_reply_enabled?: boolean
           public_reply_mode?: string
           public_reply_template?: string | null
+          require_follow?: boolean
           scope?: string
           target_media_ids?: string[] | null
+          trigger_type?: string
           updated_at?: string
           voice_settings_override?: Json | null
         }
         Update: {
           account_id?: string
+          cooldown_minutes?: number | null
           create_deal_on_match?: boolean
           created_at?: string
           deal_stage?: string | null
@@ -12294,18 +13351,25 @@ export type Database = {
           dm_flow?: Json | null
           dm_mode?: string
           dm_template?: string | null
+          entry_payload?: string | null
           id?: string
           ig_account_id?: string
           is_active?: boolean
           keywords?: string[]
+          match_mode?: string
           match_type?: string
+          media_id?: string | null
+          media_scope?: string
           name?: string
+          once_per_contact?: boolean
           public_reply_ai_tier?: string | null
           public_reply_enabled?: boolean
           public_reply_mode?: string
           public_reply_template?: string | null
+          require_follow?: boolean
           scope?: string
           target_media_ids?: string[] | null
+          trigger_type?: string
           updated_at?: string
           voice_settings_override?: Json | null
         }
@@ -13709,6 +14773,261 @@ export type Database = {
           },
         ]
       }
+      meeting_poll_invitees: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          email: string
+          id: string
+          invited_at: string | null
+          last_reminded_at: string | null
+          name: string | null
+          poll_id: string
+          responded_at: string | null
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          invited_at?: string | null
+          last_reminded_at?: string | null
+          name?: string | null
+          poll_id: string
+          responded_at?: string | null
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          invited_at?: string | null
+          last_reminded_at?: string | null
+          name?: string | null
+          poll_id?: string
+          responded_at?: string | null
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_poll_invitees_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_poll_invitees_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_poll_responses: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          invitee_id: string
+          slot_id: string
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          invitee_id: string
+          slot_id: string
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          invitee_id?: string
+          slot_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_poll_responses_invitee_id_fkey"
+            columns: ["invitee_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_poll_invitees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_poll_responses_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_poll_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_poll_slots: {
+        Row: {
+          created_at: string
+          ends_at: string
+          id: string
+          poll_id: string
+          source: string
+          starts_at: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          ends_at: string
+          id?: string
+          poll_id: string
+          source?: string
+          starts_at: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string
+          id?: string
+          poll_id?: string
+          source?: string
+          starts_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_poll_slots_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_polls: {
+        Row: {
+          account_id: string
+          calendar_event_id: string | null
+          calendar_provider: string | null
+          chosen_slot_id: string | null
+          client_id: string | null
+          conferencing_url: string | null
+          confirmed_at: string | null
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          host_user_id: string
+          id: string
+          location: string | null
+          project_id: string | null
+          range_end: string
+          range_start: string
+          results_token: string | null
+          show_voter_names: boolean
+          status: string
+          timezone: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          calendar_event_id?: string | null
+          calendar_provider?: string | null
+          chosen_slot_id?: string | null
+          client_id?: string | null
+          conferencing_url?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          description?: string | null
+          duration_minutes: number
+          host_user_id: string
+          id?: string
+          location?: string | null
+          project_id?: string | null
+          range_end: string
+          range_start: string
+          results_token?: string | null
+          show_voter_names?: boolean
+          status?: string
+          timezone?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          calendar_event_id?: string | null
+          calendar_provider?: string | null
+          chosen_slot_id?: string | null
+          client_id?: string | null
+          conferencing_url?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          host_user_id?: string
+          id?: string
+          location?: string | null
+          project_id?: string | null
+          range_end?: string
+          range_start?: string
+          results_token?: string | null
+          show_voter_names?: boolean
+          status?: string
+          timezone?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_polls_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_polls_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_polls_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_polls_chosen_slot_id_fkey"
+            columns: ["chosen_slot_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_poll_slots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_polls_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_polls_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_summaries: {
         Row: {
           account_id: string
@@ -15022,19 +16341,16 @@ export type Database = {
       }
       pipeline_deals: {
         Row: {
+          account_id: string | null
           address_line_1: string | null
           address_line_2: string | null
+          aml_done: boolean
+          aml_done_at: string | null
+          aml_done_by: string | null
+          archived_at: string | null
+          archived_by: string | null
           asking_price_pence: number | null
           asking_rent_pence: number | null
-          county: string | null
-          disposal_type: string | null
-          latitude: number | null
-          longitude: number | null
-          postcode: string | null
-          property_type: string | null
-          size_sqft: number | null
-          town: string | null
-          account_id: string | null
           board_position: number
           business_id: string | null
           client_id: string | null
@@ -15046,7 +16362,9 @@ export type Database = {
           contact_email: string | null
           contact_name: string | null
           contact_phone: string | null
+          county: string | null
           created_at: string | null
+          disposal_type: string | null
           email_thread_id: string | null
           expected_close: string | null
           follow_up_call: boolean
@@ -15059,39 +16377,37 @@ export type Database = {
           hots_target_exchange_date: string | null
           id: string
           ladder_position: number
+          latitude: number | null
+          longitude: number | null
           lost_at: string | null
           lost_reason: string | null
           name: string
           next_action: string | null
           next_action_date: string | null
           notes: string | null
+          postcode: string | null
           probability: number | null
+          property_type: string | null
+          size_sqft: number | null
           source: string | null
           stage: string | null
+          town: string | null
           updated_at: string | null
           value: number | null
           won_at: string | null
           work_type: string | null
-          aml_done: boolean
-          aml_done_at: string | null
-          aml_done_by: string | null
-          archived_at: string | null
-          archived_by: string | null
         }
         Insert: {
+          account_id?: string | null
           address_line_1?: string | null
           address_line_2?: string | null
+          aml_done?: boolean
+          aml_done_at?: string | null
+          aml_done_by?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           asking_price_pence?: number | null
           asking_rent_pence?: number | null
-          county?: string | null
-          disposal_type?: string | null
-          latitude?: number | null
-          longitude?: number | null
-          postcode?: string | null
-          property_type?: string | null
-          size_sqft?: number | null
-          town?: string | null
-          account_id?: string | null
           board_position?: number
           business_id?: string | null
           client_id?: string | null
@@ -15103,7 +16419,9 @@ export type Database = {
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
+          county?: string | null
           created_at?: string | null
+          disposal_type?: string | null
           email_thread_id?: string | null
           expected_close?: string | null
           follow_up_call?: boolean
@@ -15116,39 +16434,37 @@ export type Database = {
           hots_target_exchange_date?: string | null
           id?: string
           ladder_position?: number
+          latitude?: number | null
+          longitude?: number | null
           lost_at?: string | null
           lost_reason?: string | null
           name: string
           next_action?: string | null
           next_action_date?: string | null
           notes?: string | null
+          postcode?: string | null
           probability?: number | null
+          property_type?: string | null
+          size_sqft?: number | null
           source?: string | null
           stage?: string | null
+          town?: string | null
           updated_at?: string | null
           value?: number | null
           won_at?: string | null
           work_type?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          address_line_1?: string | null
+          address_line_2?: string | null
           aml_done?: boolean
           aml_done_at?: string | null
           aml_done_by?: string | null
           archived_at?: string | null
           archived_by?: string | null
-        }
-        Update: {
-          address_line_1?: string | null
-          address_line_2?: string | null
           asking_price_pence?: number | null
           asking_rent_pence?: number | null
-          county?: string | null
-          disposal_type?: string | null
-          latitude?: number | null
-          longitude?: number | null
-          postcode?: string | null
-          property_type?: string | null
-          size_sqft?: number | null
-          town?: string | null
-          account_id?: string | null
           board_position?: number
           business_id?: string | null
           client_id?: string | null
@@ -15160,7 +16476,9 @@ export type Database = {
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
+          county?: string | null
           created_at?: string | null
+          disposal_type?: string | null
           email_thread_id?: string | null
           expected_close?: string | null
           follow_up_call?: boolean
@@ -15173,24 +16491,25 @@ export type Database = {
           hots_target_exchange_date?: string | null
           id?: string
           ladder_position?: number
+          latitude?: number | null
+          longitude?: number | null
           lost_at?: string | null
           lost_reason?: string | null
           name?: string
           next_action?: string | null
           next_action_date?: string | null
           notes?: string | null
+          postcode?: string | null
           probability?: number | null
+          property_type?: string | null
+          size_sqft?: number | null
           source?: string | null
           stage?: string | null
+          town?: string | null
           updated_at?: string | null
           value?: number | null
           won_at?: string | null
           work_type?: string | null
-          aml_done?: boolean
-          aml_done_at?: string | null
-          aml_done_by?: string | null
-          archived_at?: string | null
-          archived_by?: string | null
         }
         Relationships: [
           {
@@ -15807,18 +17126,21 @@ export type Database = {
       project_assignments: {
         Row: {
           account_id: string | null
+          description: string | null
           project_id: string
           role_on_project: string | null
           user_id: string
         }
         Insert: {
           account_id?: string | null
+          description?: string | null
           project_id: string
           role_on_project?: string | null
           user_id: string
         }
         Update: {
           account_id?: string | null
+          description?: string | null
           project_id?: string
           role_on_project?: string | null
           user_id?: string
@@ -15847,6 +17169,228 @@ export type Database = {
           },
           {
             foreignKeyName: "project_assignments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_audit_log: {
+        Row: {
+          account_id: string
+          action: string
+          actor_user_id: string | null
+          changes: Json
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          project_id: string
+          summary: string
+        }
+        Insert: {
+          account_id: string
+          action: string
+          actor_user_id?: string | null
+          changes?: Json
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          project_id: string
+          summary: string
+        }
+        Update: {
+          account_id?: string
+          action?: string
+          actor_user_id?: string | null
+          changes?: Json
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          project_id?: string
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_audit_log_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_audit_log_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_audit_log_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_audit_log_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_canvas_comments: {
+        Row: {
+          account_id: string
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          item_id: string
+          mentions: string[]
+          project_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          author_id?: string
+          body: string
+          created_at?: string
+          id?: string
+          item_id: string
+          mentions?: string[]
+          project_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          item_id?: string
+          mentions?: string[]
+          project_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_canvas_comments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_canvas_comments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_canvas_comments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_canvas_comments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_canvas_items: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          data: Json
+          h: number | null
+          id: string
+          kind: string
+          project_id: string
+          ref_id: string | null
+          updated_at: string
+          updated_by: string | null
+          w: number | null
+          x: number
+          y: number
+          z_index: number
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          data?: Json
+          h?: number | null
+          id?: string
+          kind: string
+          project_id: string
+          ref_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          w?: number | null
+          x?: number
+          y?: number
+          z_index?: number
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          data?: Json
+          h?: number | null
+          id?: string
+          kind?: string
+          project_id?: string
+          ref_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          w?: number | null
+          x?: number
+          y?: number
+          z_index?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_canvas_items_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_canvas_items_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_canvas_items_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_canvas_items_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -15913,6 +17457,158 @@ export type Database = {
           },
           {
             foreignKeyName: "project_client_field_values_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_contacts: {
+        Row: {
+          account_id: string
+          contact_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          project_id: string
+          role: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          contact_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          project_id: string
+          role?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          contact_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          project_id?: string
+          role?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_contacts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_contacts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_contacts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_contacts_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_contacts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_content_posts: {
+        Row: {
+          account_id: string
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          link_url: string | null
+          platforms: string[]
+          post_date: string
+          post_time: string | null
+          posted_at: string | null
+          project_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          link_url?: string | null
+          platforms?: string[]
+          post_date: string
+          post_time?: string | null
+          posted_at?: string | null
+          project_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          link_url?: string | null
+          platforms?: string[]
+          post_date?: string
+          post_time?: string | null
+          posted_at?: string | null
+          project_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_content_posts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_content_posts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_content_posts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_content_posts_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -16111,6 +17807,71 @@ export type Database = {
           },
           {
             foreignKeyName: "project_guests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_period_notes: {
+        Row: {
+          account_id: string
+          body: string
+          created_at: string
+          id: string
+          period_kind: string
+          period_start: string
+          project_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          body?: string
+          created_at?: string
+          id?: string
+          period_kind: string
+          period_start: string
+          project_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          period_kind?: string
+          period_start?: string
+          project_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_period_notes_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_period_notes_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_period_notes_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_period_notes_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -17145,15 +18906,25 @@ export type Database = {
           sent_at: string | null
           sent_to_email: string | null
           status: string
+          survey_accommodation: Json | null
+          survey_cover_focus: Json | null
+          survey_cover_photo_doc_id: string | null
+          survey_drone_billing: string
+          survey_drone_fee_pence: number | null
+          survey_drone_used: boolean
           survey_flood_fetched_at: string | null
           survey_flood_raw_json: Json | null
           survey_flood_risk_band: string | null
           survey_flood_risk_summary: string | null
           survey_flood_source: string | null
+          survey_inspection_date: string | null
           survey_level: number | null
           survey_property_address: string | null
           survey_property_postcode: string | null
+          survey_report_reference: string | null
+          survey_services: Json | null
           survey_template_id: string | null
+          survey_terms_received_date: string | null
           survey_type: string | null
           survey_uprn: string | null
           title: string
@@ -17189,15 +18960,25 @@ export type Database = {
           sent_at?: string | null
           sent_to_email?: string | null
           status?: string
+          survey_accommodation?: Json | null
+          survey_cover_focus?: Json | null
+          survey_cover_photo_doc_id?: string | null
+          survey_drone_billing?: string
+          survey_drone_fee_pence?: number | null
+          survey_drone_used?: boolean
           survey_flood_fetched_at?: string | null
           survey_flood_raw_json?: Json | null
           survey_flood_risk_band?: string | null
           survey_flood_risk_summary?: string | null
           survey_flood_source?: string | null
+          survey_inspection_date?: string | null
           survey_level?: number | null
           survey_property_address?: string | null
           survey_property_postcode?: string | null
+          survey_report_reference?: string | null
+          survey_services?: Json | null
           survey_template_id?: string | null
+          survey_terms_received_date?: string | null
           survey_type?: string | null
           survey_uprn?: string | null
           title?: string
@@ -17233,15 +19014,25 @@ export type Database = {
           sent_at?: string | null
           sent_to_email?: string | null
           status?: string
+          survey_accommodation?: Json | null
+          survey_cover_focus?: Json | null
+          survey_cover_photo_doc_id?: string | null
+          survey_drone_billing?: string
+          survey_drone_fee_pence?: number | null
+          survey_drone_used?: boolean
           survey_flood_fetched_at?: string | null
           survey_flood_raw_json?: Json | null
           survey_flood_risk_band?: string | null
           survey_flood_risk_summary?: string | null
           survey_flood_source?: string | null
+          survey_inspection_date?: string | null
           survey_level?: number | null
           survey_property_address?: string | null
           survey_property_postcode?: string | null
+          survey_report_reference?: string | null
+          survey_services?: Json | null
           survey_template_id?: string | null
+          survey_terms_received_date?: string | null
           survey_type?: string | null
           survey_uprn?: string | null
           title?: string
@@ -17292,6 +19083,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "proposals_survey_cover_photo_doc_id_fkey"
+            columns: ["survey_cover_photo_doc_id"]
+            isOneToOne: false
+            referencedRelation: "docs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "proposals_survey_template_id_fkey"
             columns: ["survey_template_id"]
             isOneToOne: false
@@ -17299,6 +19097,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      protected_users: {
+        Row: {
+          created_at: string
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          reason: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          reason?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       push_subscriptions: {
         Row: {
@@ -18534,6 +20350,52 @@ export type Database = {
           },
         ]
       }
+      survey_account_settings: {
+        Row: {
+          account_id: string
+          cover_image_path: string | null
+          created_at: string
+          drone_fee_pence: number
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          cover_image_path?: string | null
+          created_at?: string
+          drone_fee_pence?: number
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          cover_image_path?: string | null
+          created_at?: string
+          drone_fee_pence?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "survey_account_settings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_account_settings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "survey_account_settings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       survey_epc: {
         Row: {
           account_id: string
@@ -18988,6 +20850,73 @@ export type Database = {
           },
         ]
       }
+      surveyor_profiles: {
+        Row: {
+          account_id: string
+          address: string | null
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          phone: string | null
+          qualifications: Json
+          rics_number: string | null
+          updated_at: string
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          account_id: string
+          address?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          phone?: string | null
+          qualifications?: Json
+          rics_number?: string | null
+          updated_at?: string
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          account_id?: string
+          address?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          phone?: string | null
+          qualifications?: Json
+          rics_number?: string | null
+          updated_at?: string
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "surveyor_profiles_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "surveyor_profiles_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "surveyor_profiles_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tags: {
         Row: {
           colour: string | null
@@ -19082,6 +21011,7 @@ export type Database = {
         Row: {
           account_id: string | null
           area_id: string | null
+          assignee_user_id: string | null
           client_id: string | null
           created_at: string
           day_of_month: number | null
@@ -19094,6 +21024,7 @@ export type Database = {
           next_create_at: string
           notes: string | null
           occurrences_created: number
+          phase_id: string | null
           priority: string
           project_id: string | null
           status: string
@@ -19104,6 +21035,7 @@ export type Database = {
         Insert: {
           account_id?: string | null
           area_id?: string | null
+          assignee_user_id?: string | null
           client_id?: string | null
           created_at?: string
           day_of_month?: number | null
@@ -19116,6 +21048,7 @@ export type Database = {
           next_create_at: string
           notes?: string | null
           occurrences_created?: number
+          phase_id?: string | null
           priority?: string
           project_id?: string | null
           status?: string
@@ -19126,6 +21059,7 @@ export type Database = {
         Update: {
           account_id?: string | null
           area_id?: string | null
+          assignee_user_id?: string | null
           client_id?: string | null
           created_at?: string
           day_of_month?: number | null
@@ -19138,6 +21072,7 @@ export type Database = {
           next_create_at?: string
           notes?: string | null
           occurrences_created?: number
+          phase_id?: string | null
           priority?: string
           project_id?: string | null
           status?: string
@@ -19179,6 +21114,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_recurring_series_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "project_phases"
             referencedColumns: ["id"]
           },
           {
@@ -19522,6 +21464,8 @@ export type Database = {
           accessibility_high_contrast: boolean
           accessibility_simplified_mode: boolean
           accessibility_text_size: string
+          ai_processing_consent: string | null
+          ai_processing_consent_at: string | null
           completed_product_tours: Json
           created_at: string | null
           default_landing_catalog_id: string | null
@@ -19553,6 +21497,8 @@ export type Database = {
           accessibility_high_contrast?: boolean
           accessibility_simplified_mode?: boolean
           accessibility_text_size?: string
+          ai_processing_consent?: string | null
+          ai_processing_consent_at?: string | null
           completed_product_tours?: Json
           created_at?: string | null
           default_landing_catalog_id?: string | null
@@ -19584,6 +21530,8 @@ export type Database = {
           accessibility_high_contrast?: boolean
           accessibility_simplified_mode?: boolean
           accessibility_text_size?: string
+          ai_processing_consent?: string | null
+          ai_processing_consent_at?: string | null
           completed_product_tours?: Json
           created_at?: string | null
           default_landing_catalog_id?: string | null
@@ -19888,6 +21836,8 @@ export type Database = {
           name: string
           parent_folder_id: string | null
           public_share_allow_download: boolean
+          public_share_enabled: boolean
+          public_share_token: string | null
         }
         Insert: {
           account_id: string
@@ -19896,6 +21846,8 @@ export type Database = {
           name: string
           parent_folder_id?: string | null
           public_share_allow_download?: boolean
+          public_share_enabled?: boolean
+          public_share_token?: string | null
         }
         Update: {
           account_id?: string
@@ -19904,6 +21856,8 @@ export type Database = {
           name?: string
           parent_folder_id?: string | null
           public_share_allow_download?: boolean
+          public_share_enabled?: boolean
+          public_share_token?: string | null
         }
         Relationships: [
           {
@@ -21033,6 +22987,54 @@ export type Database = {
           },
         ]
       }
+      wip_position_backup_20270117: {
+        Row: {
+          board_position: number
+          id: string
+          ladder_position: number
+        }
+        Insert: {
+          board_position: number
+          id: string
+          ladder_position: number
+        }
+        Update: {
+          board_position?: number
+          id?: string
+          ladder_position?: number
+        }
+        Relationships: []
+      }
+      wip_stage_move_log_20260929: {
+        Row: {
+          account_id: string
+          deal_id: string
+          moved_at: string
+          new_stage: string
+          old_stage: string
+          old_updated_at: string | null
+          rule: string
+        }
+        Insert: {
+          account_id: string
+          deal_id: string
+          moved_at?: string
+          new_stage: string
+          old_stage: string
+          old_updated_at?: string | null
+          rule: string
+        }
+        Update: {
+          account_id?: string
+          deal_id?: string
+          moved_at?: string
+          new_stage?: string
+          old_stage?: string
+          old_updated_at?: string | null
+          rule?: string
+        }
+        Relationships: []
+      }
       workspace_dashboard_shortcuts: {
         Row: {
           account_id: string
@@ -21256,6 +23258,8 @@ export type Database = {
           bounce_type: string | null
           bounced_at: string | null
           campaign_id: string
+          claim_expires_at: string | null
+          claim_token: string | null
           click_count: number
           clicked_at: string | null
           client_id: string | null
@@ -21283,6 +23287,8 @@ export type Database = {
           bounce_type?: string | null
           bounced_at?: string | null
           campaign_id: string
+          claim_expires_at?: string | null
+          claim_token?: string | null
           click_count?: number
           clicked_at?: string | null
           client_id?: string | null
@@ -21310,6 +23316,8 @@ export type Database = {
           bounce_type?: string | null
           bounced_at?: string | null
           campaign_id?: string
+          claim_expires_at?: string | null
+          claim_token?: string | null
           click_count?: number
           clicked_at?: string | null
           client_id?: string | null
@@ -21498,6 +23506,7 @@ export type Database = {
           complaint_count: number
           created_at: string
           created_by: string | null
+          credits_debited_at: string | null
           delivered_count: number
           failed_count: number
           from_email: string | null
@@ -21513,6 +23522,7 @@ export type Database = {
           reply_to: string | null
           scheduled_at: string | null
           scheduled_timezone: string
+          send_locked_until: string | null
           sent_at: string | null
           sent_count: number
           series_id: string | null
@@ -21536,6 +23546,7 @@ export type Database = {
           complaint_count?: number
           created_at?: string
           created_by?: string | null
+          credits_debited_at?: string | null
           delivered_count?: number
           failed_count?: number
           from_email?: string | null
@@ -21551,6 +23562,7 @@ export type Database = {
           reply_to?: string | null
           scheduled_at?: string | null
           scheduled_timezone?: string
+          send_locked_until?: string | null
           sent_at?: string | null
           sent_count?: number
           series_id?: string | null
@@ -21574,6 +23586,7 @@ export type Database = {
           complaint_count?: number
           created_at?: string
           created_by?: string | null
+          credits_debited_at?: string | null
           delivered_count?: number
           failed_count?: number
           from_email?: string | null
@@ -21589,6 +23602,7 @@ export type Database = {
           reply_to?: string | null
           scheduled_at?: string | null
           scheduled_timezone?: string
+          send_locked_until?: string | null
           sent_at?: string | null
           sent_count?: number
           series_id?: string | null
@@ -22377,6 +24391,14 @@ export type Database = {
         Args: { token: string; user_id: string }
         Returns: string
       }
+      acquire_campaign_send_lock: {
+        Args: {
+          p_account_id: string
+          p_campaign_id: string
+          p_lock_seconds: number
+        }
+        Returns: boolean
+      }
       add_contact_to_client_wide_threads: {
         Args: { p_client_id: string; p_contact_id: string; p_user_id: string }
         Returns: undefined
@@ -22388,6 +24410,15 @@ export type Database = {
           invited_by: string
         }
         Returns: Database["public"]["Tables"]["invitations"]["Row"][]
+      }
+      add_project_canvas_comment: {
+        Args: {
+          p_body: string
+          p_item_id: string
+          p_mentions?: string[]
+          p_project_id: string
+        }
+        Returns: string
       }
       adjust_project_retainer_credits: {
         Args: {
@@ -22415,8 +24446,46 @@ export type Database = {
         Args: { account_slug: string; links: Json }
         Returns: undefined
       }
+      campaign_recipient_status_counts: {
+        Args: { p_account_id: string; p_campaign_id: string }
+        Returns: {
+          failed_count: number
+          pending_count: number
+          sent_count: number
+          skipped_count: number
+          unsubscribed_count: number
+        }[]
+      }
+      can_access_project_canvas_object: {
+        Args: { p_edit: boolean; p_name: string }
+        Returns: boolean
+      }
       can_action_account_member: {
         Args: { target_team_account_id: string; target_user_id: string }
+        Returns: boolean
+      }
+      can_broadcast_project_canvas_topic: {
+        Args: { p_topic: string }
+        Returns: boolean
+      }
+      can_edit_project_canvas: {
+        Args: { p_account_id: string }
+        Returns: boolean
+      }
+      can_guest_edit_project_canvas: {
+        Args: { p_account_id: string; p_project_id: string }
+        Returns: boolean
+      }
+      can_guest_edit_project_content: {
+        Args: { p_account_id: string; p_phase_id: string; p_project_id: string }
+        Returns: boolean
+      }
+      can_guest_view_project_content: {
+        Args: { p_account_id: string; p_phase_id: string; p_project_id: string }
+        Returns: boolean
+      }
+      can_join_project_canvas_topic: {
+        Args: { p_topic: string }
         Returns: boolean
       }
       can_read_community_member_note: {
@@ -22428,10 +24497,31 @@ export type Database = {
         }
         Returns: boolean
       }
+      can_view_project_canvas: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
       chat_contact_ids_for_auth_user: {
         Args: never
         Returns: {
           contact_id: string
+        }[]
+      }
+      claim_campaign_recipients: {
+        Args: {
+          p_account_id: string
+          p_campaign_id: string
+          p_claim_token: string
+          p_lease_seconds: number
+          p_limit: number
+        }
+        Returns: {
+          recipient_ab_variant: string
+          recipient_display_name: string
+          recipient_email: string
+          recipient_id: string
+          recipient_preference_id: string
+          recipient_unsubscribe_token: string
         }[]
       }
       claim_commercial_circulation_contact: {
@@ -22523,8 +24613,16 @@ export type Database = {
           user_id: string
         }[]
       }
+      claim_ig_automation_runs: {
+        Args: { p_limit?: number; p_lock_seconds?: number }
+        Returns: string[]
+      }
       clamp_client_credit_balance: {
         Args: { p_cap: number; p_client_org_id: string }
+        Returns: number
+      }
+      complete_account_deletion: {
+        Args: { target_deletion_id: string }
         Returns: number
       }
       consume_client_credits: {
@@ -22570,6 +24668,10 @@ export type Database = {
       contractor_assigned_to_project: {
         Args: { project_id: string }
         Returns: boolean
+      }
+      count_campaign_contacts_used: {
+        Args: { p_account_id: string }
+        Returns: number
       }
       create_invitation: {
         Args: { account_id: string; email: string; role: string }
@@ -22748,6 +24850,8 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: string
       }
+      erase_ig_contact: { Args: { p_contact_id: string }; Returns: undefined }
+      expire_stale_campaign_credit_batches: { Args: never; Returns: number }
       expire_stale_client_credit_batches: { Args: never; Returns: number }
       expire_stale_media_credit_batches: { Args: never; Returns: number }
       family_household_member_is_accessible: {
@@ -22942,6 +25046,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      ig_automation_funnel: {
+        Args: { p_account_id: string; p_since: string }
+        Returns: {
+          count: number
+          metric: string
+          step_position: number
+          trigger_id: string
+        }[]
+      }
       is_aal2: { Args: never; Returns: boolean }
       is_accepted_project_guest: {
         Args: { target_project_id: string }
@@ -22994,6 +25107,22 @@ export type Database = {
       is_super_admin: { Args: never; Returns: boolean }
       is_team_member: {
         Args: { account_id: string; user_id: string }
+        Returns: boolean
+      }
+      is_user_deletion_protected: {
+        Args: { target_user_id: string }
+        Returns: boolean
+      }
+      latest_wip_update_by_deal: {
+        Args: { p_account_id: string }
+        Returns: {
+          latest_at: string
+          latest_content: string
+          pipeline_deal_id: string
+        }[]
+      }
+      lock_ig_automation_run: {
+        Args: { p_lock_seconds?: number; p_run_id: string }
         Returns: boolean
       }
       match_brain_chunks: {
@@ -23061,12 +25190,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      reorder_wip_requirements: {
+        Args: { p_account_id: string; p_ids: string[] }
+        Returns: undefined
+      }
       reorder_workspace_project_statuses: {
         Args: { ordered_ids: string[]; target_account_id: string }
         Returns: undefined
       }
       replace_contact_email_addresses: {
         Args: { p_account_id: string; p_addresses: Json; p_contact_id: string }
+        Returns: undefined
+      }
+      replace_ig_automation_steps: {
+        Args: { p_steps: Json; p_trigger_id: string }
         Returns: undefined
       }
       reset_ai_credits_if_expired: {
@@ -23091,9 +25228,46 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      restore_account_deletion: {
+        Args: { target_user_id: string }
+        Returns: undefined
+      }
       restore_project_retainer_credits: {
         Args: { p_actor_id?: string; p_reason?: string; p_task_id: string }
         Returns: Json
+      }
+      schedule_account_deletion: {
+        Args: {
+          grace_period?: string
+          target_contact_email: string
+          target_requested_by: string
+          target_source: string
+          target_user_id: string
+        }
+        Returns: {
+          cancelled_at: string | null
+          completed_at: string | null
+          contact_email: string | null
+          deleted_team_account_ids: string[]
+          email_sha256: string | null
+          error: string | null
+          id: string
+          left_team_account_ids: string[]
+          personal_account_name: string | null
+          requested_at: string
+          requested_by: string | null
+          rows_affected: number | null
+          scheduled_for: string
+          source: string
+          status: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "account_deletions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       seed_account_module_settings: {
         Args: {

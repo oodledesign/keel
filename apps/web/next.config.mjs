@@ -59,6 +59,7 @@ const config = {
     'zeptomail',
     'fflate',
     'sharp',
+    'ffmpeg-static',
     // Keep OT/Sentry Node instrumentation out of the webpack server graph —
     // they inflate RSS during "Collecting page data" on 8 GB builders.
     '@opentelemetry/sdk-node',
@@ -79,6 +80,11 @@ const config = {
     // Brochure PDFs render in these API routes and the listings server actions.
     '/api/listings/brochure-pdf': ['./lib/brand/fonts/*.ttf'],
     '/home/[account]/listings/**': ['./lib/brand/fonts/*.ttf'],
+    // ffmpeg binary for Instagram voice-note transcoding (and TTS post-processing).
+    '/api/instagram-autoreply/assets/**': [
+      './node_modules/ffmpeg-static/ffmpeg',
+      '../../node_modules/.pnpm/ffmpeg-static@*/node_modules/ffmpeg-static/ffmpeg',
+    ],
   },
   redirects: getRedirects,
   rewrites: getRewrites,

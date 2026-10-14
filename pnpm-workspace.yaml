@@ -47,4 +47,5 @@ catalog:
 onlyBuiltDependencies:
   - '@tailwindcss/oxide'
   - '@sentry/cli'
+  - ffmpeg-static
   - supabase

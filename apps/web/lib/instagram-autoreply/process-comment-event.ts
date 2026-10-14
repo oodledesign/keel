@@ -4,6 +4,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { resolveIgVoiceSettings } from './build-reply-prompt';
 import { createPipelineLeadFromComment } from './create-pipeline-lead-from-comment';
+import {
+  getEntryStepForTrigger,
+  sendFlowStepToComment,
+  triggerUsesInteractiveDm,
+} from './dm-flow';
 import { generateIgReply } from './generate-reply';
 import {
   isDmWindowExpiredError,
@@ -11,40 +16,59 @@ import {
   postPublicCommentReply,
 } from './graph-api';
 import {
-  getEntryStepForTrigger,
-  sendFlowStepToComment,
-  triggerUsesInteractiveDm,
-} from './dm-flow';
-import { findMatchingTrigger } from './match-trigger';
+  type IgInboundTriggerEvent,
+  findMatchingTrigger,
+  findMatchingV2Triggers,
+} from './match-trigger';
+import { upsertIgContact } from './sequence/contacts';
+import { startMatchingAutomation } from './sequence/inbound';
+import { recordInboundEvent } from './sequence/message-events';
 import { decryptIgToken } from './token-crypto';
 import {
   type IgConnectedAccountRow,
-  type IgTriggerRow,
+  type IgTriggerFullRow,
   parseIgVoiceSettings,
 } from './types';
 
 export type MetaCommentWebhookValue = {
   id?: string;
   text?: string;
-  media?: { id?: string };
+  media?: { id?: string; media_product_type?: string };
   from?: { id?: string; username?: string };
+};
+
+type TriggerWithSteps = IgTriggerFullRow & {
+  ig_automation_steps?: Array<{ count: number }>;
 };
 
 async function loadActiveTriggers(
   admin: SupabaseClient,
   igAccountId: string,
-): Promise<IgTriggerRow[]> {
+): Promise<{ sequence: IgTriggerFullRow[]; legacy: IgTriggerFullRow[] }> {
   const { data, error } = await admin
     .from('ig_triggers')
-    .select('*')
+    .select('*, ig_automation_steps(count)')
     .eq('ig_account_id', igAccountId)
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .order('created_at', { ascending: true });
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return (data ?? []) as IgTriggerRow[];
+  const sequence: IgTriggerFullRow[] = [];
+  const legacy: IgTriggerFullRow[] = [];
+  for (const row of (data ?? []) as TriggerWithSteps[]) {
+    const { ig_automation_steps: steps, ...trigger } = row;
+    if ((steps?.[0]?.count ?? 0) > 0) {
+      sequence.push(trigger as IgTriggerFullRow);
+    } else if (
+      (trigger.trigger_type ?? 'comment_keyword') === 'comment_keyword'
+    ) {
+      legacy.push(trigger as IgTriggerFullRow);
+    }
+  }
+  return { sequence, legacy };
 }
 
 export async function processInstagramCommentEvent(
@@ -62,8 +86,29 @@ export async function processInstagramCommentEvent(
   const commenterUsername = params.comment.from?.username?.trim() ?? null;
   const commenterIgId = params.comment.from?.id?.trim() ?? null;
 
+  // Our own replies also arrive as comment webhooks; never react to them.
+  if (
+    commenterIgId &&
+    commenterIgId === params.igAccount.ig_business_account_id
+  ) {
+    return;
+  }
+
   const triggers = await loadActiveTriggers(admin, params.igAccount.id);
-  const matchedTrigger = findMatchingTrigger(triggers, commentText, mediaId);
+  const commentEvent: IgInboundTriggerEvent = {
+    kind: 'comment',
+    text: commentText,
+    mediaId,
+    mediaProductType: params.comment.media?.media_product_type ?? null,
+  };
+  const sequenceMatches = findMatchingV2Triggers(
+    triggers.sequence,
+    commentEvent,
+  );
+  const matchedTrigger =
+    sequenceMatches[0] ??
+    findMatchingTrigger(triggers.legacy, commentText, mediaId);
+  const usesSequence = sequenceMatches.length > 0;
 
   const { data: inserted, error: insertError } = await admin
     .from('ig_comment_events')
@@ -79,7 +124,8 @@ export async function processInstagramCommentEvent(
       public_reply_status: matchedTrigger?.public_reply_enabled
         ? 'pending'
         : 'skipped',
-      dm_status: matchedTrigger?.dm_enabled ? 'pending' : 'skipped',
+      dm_status:
+        usesSequence || matchedTrigger?.dm_enabled ? 'pending' : 'skipped',
     })
     .select('id')
     .single();
@@ -193,7 +239,19 @@ export async function processInstagramCommentEvent(
     }
   }
 
-  if (matchedTrigger.dm_enabled) {
+  if (usesSequence) {
+    const dmError = await startSequenceForComment(admin, {
+      igAccount: params.igAccount,
+      triggers: sequenceMatches,
+      commentEvent,
+      commentId,
+      commentText,
+      commenterIgId,
+      commenterUsername,
+      eventId,
+    });
+    if (dmError) errors.push(`DM: ${dmError}`);
+  } else if (matchedTrigger.dm_enabled) {
     if (triggerUsesInteractiveDm(matchedTrigger)) {
       const entryStep = getEntryStepForTrigger(matchedTrigger);
       if (!entryStep) {
@@ -335,4 +393,115 @@ export async function processInstagramCommentEvent(
       })
       .eq('id', eventId);
   }
+}
+
+/**
+ * Start a v2 automation for a matched comment and mirror the outcome onto the
+ * comment event row. Returns an error message for the activity log, if any.
+ */
+async function startSequenceForComment(
+  admin: SupabaseClient,
+  params: {
+    igAccount: IgConnectedAccountRow;
+    triggers: IgTriggerFullRow[];
+    commentEvent: IgInboundTriggerEvent;
+    commentId: string;
+    commentText: string;
+    commenterIgId: string | null;
+    commenterUsername: string | null;
+    eventId: string;
+  },
+): Promise<string | null> {
+  const markDm = (patch: Record<string, unknown>) =>
+    admin.from('ig_comment_events').update(patch).eq('id', params.eventId);
+
+  if (!params.commenterIgId) {
+    await markDm({
+      dm_status: 'failed',
+      error_message: 'Missing commenter ID',
+    });
+    return 'Missing commenter Instagram ID';
+  }
+
+  const contact = await upsertIgContact(admin, {
+    igAccount: params.igAccount,
+    igsid: params.commenterIgId,
+    username: params.commenterUsername,
+  });
+
+  await recordInboundEvent(
+    admin,
+    {
+      accountId: params.igAccount.account_id,
+      igAccountId: params.igAccount.id,
+      contactId: contact.id,
+    },
+    {
+      idempotencyKey: `in:comment:${params.commentId}`,
+      eventType: 'comment',
+      body: params.commentText,
+    },
+  );
+
+  if (contact.opted_out_at) {
+    await markDm({ dm_status: 'skipped', error_message: 'Contact opted out' });
+    return null;
+  }
+
+  const started = await startMatchingAutomation(admin, {
+    igAccount: params.igAccount,
+    contact,
+    event: params.commentEvent,
+    source: 'comment',
+    sourceEventId: params.commentId,
+    sourceCommentId: params.commentId,
+    triggers: params.triggers,
+  });
+
+  if (!started) {
+    await markDm({
+      dm_status: 'skipped',
+      error_message:
+        'Already messaged this person (once per person or cooldown)',
+    });
+    return null;
+  }
+  if (!started.runId) return null;
+
+  const [{ data: run }, { data: firstSend }] = await Promise.all([
+    admin
+      .from('ig_automation_runs')
+      .select('status, last_error')
+      .eq('id', started.runId)
+      .maybeSingle(),
+    admin
+      .from('ig_message_events')
+      .select('body')
+      .eq('run_id', started.runId)
+      .eq('direction', 'outbound')
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  const status = (run as { status: string } | null)?.status;
+  const lastError = (run as { last_error: string | null } | null)?.last_error;
+  const dmContent = (firstSend as { body: string | null } | null)?.body ?? null;
+
+  if (status === 'failed' || status === 'window_expired') {
+    await markDm({
+      dm_status: status === 'failed' ? 'failed' : 'window_expired',
+      dm_content: dmContent,
+      matched_trigger_id: started.triggerId,
+    });
+    return lastError ?? 'Automation failed';
+  }
+
+  await markDm({
+    dm_status: 'sent',
+    dm_sent_at: new Date().toISOString(),
+    dm_content: dmContent,
+    matched_trigger_id: started.triggerId,
+  });
+  return null;
 }

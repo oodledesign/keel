@@ -169,3 +169,33 @@ export function mapNameToId(
   if (exactMatches.length === 1) return exactMatches[0]!.id;
   return null;
 }
+
+/**
+ * Match an inbound lead to an existing client: email first, then phone.
+ * `normalisePhone` lets callers compare numbers stored in different formats.
+ */
+export function findClientByEmailThenPhone<
+  T extends { id: string; email: string | null; phone: string | null },
+>(
+  lead: { email: string | null; phone: string | null },
+  existing: T[],
+  normalisePhone: (value: string) => string | null,
+): { client: T; matchReason: 'email' | 'phone' } | null {
+  const email = normalizeImportEmail(lead.email);
+  if (email) {
+    const byEmail = existing.find(
+      (c) => normalizeImportEmail(c.email) === email,
+    );
+    if (byEmail) return { client: byEmail, matchReason: 'email' };
+  }
+
+  const phone = lead.phone ? normalisePhone(lead.phone) : null;
+  if (phone) {
+    const byPhone = existing.find(
+      (c) => c.phone && normalisePhone(c.phone) === phone,
+    );
+    if (byPhone) return { client: byPhone, matchReason: 'phone' };
+  }
+
+  return null;
+}

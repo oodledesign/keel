@@ -14,6 +14,7 @@ import {
   createDefaultTimeline,
   normalizeTimeline,
 } from '~/lib/videos/edit-timeline';
+import { buildPublicVideoWatchUrl } from '~/lib/videos/public-share';
 import { normalizeVideoChapters } from '~/lib/videos/server/generate-video-chapters';
 import { normalizeVideoSummary } from '~/lib/videos/server/generate-video-summary';
 import {
@@ -96,6 +97,11 @@ export async function loadVideoEditorPage(
       publishedRevision: Number(video.published_revision ?? 0),
       hasChapters: normalizeVideoChapters(video.chapters).length > 0,
       hasSummary: Boolean(normalizeVideoSummary(video.summary)),
+      ready: video.status === 'ready',
+      publicShareUrl:
+        video.public_share_enabled && video.public_share_token
+          ? buildPublicVideoWatchUrl(String(video.public_share_token))
+          : null,
     },
     timeline: normalizeTimeline(timeline, Number(durationMs) || 0),
     revision: Number(project.revision ?? 1),

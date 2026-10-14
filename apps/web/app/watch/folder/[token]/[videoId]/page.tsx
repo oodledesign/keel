@@ -56,6 +56,7 @@ export default async function PublicFolderVideoPage({
     chapters,
     publishedAt,
     transcriptPlainText,
+    transcriptSegments,
     summary,
   } = data.page;
 
@@ -91,6 +92,7 @@ export default async function PublicFolderVideoPage({
           chapters={chapters}
           publishedAt={publishedAt}
           transcriptPlainText={transcriptPlainText}
+          transcriptSegments={transcriptSegments}
           summary={summary}
           aspectRatio={aspectRatioCss(config.aspect_ratio)}
           embedReady={video.status === 'ready'}

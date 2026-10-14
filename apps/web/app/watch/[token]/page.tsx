@@ -58,6 +58,7 @@ export default async function PublicWatchPage({
     chapters,
     publishedAt,
     transcriptPlainText,
+    transcriptSegments,
     summary,
   } = data;
   const ratio = aspectRatioCss(config.aspect_ratio);
@@ -75,6 +76,7 @@ export default async function PublicWatchPage({
           chapters={chapters}
           publishedAt={publishedAt}
           transcriptPlainText={transcriptPlainText}
+          transcriptSegments={transcriptSegments}
           summary={summary}
           aspectRatio={ratio}
           embedReady={isReady}
