@@ -131,7 +131,102 @@ function rewriteAgencyPortalRequest(request: NextRequest) {
   return response;
 }
 
+/**
+ * Static marketing / legacy redirects that used to live in next.config.
+ * Kept here so they do not count toward Vercel's 2048 deployment-route limit.
+ * Behaviour must stay in sync with the former getRedirects() entries.
+ */
+function redirectStaticConfigPaths(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  const origin = request.nextUrl.origin;
+
+  const exact: Record<string, { to: string; permanent?: boolean }> = {
+    '/early-access': { to: '/pricing', permanent: true },
+    '/assistant': { to: '/download', permanent: true },
+    '/downloads/OzerAssistant-latest.zip': {
+      to: '/downloads/OzerAssistant-1.0.zip',
+    },
+    '/server-sitemap.xml': { to: '/sitemap.xml', permanent: true },
+    '/features/freeagent': { to: '/features/finances', permanent: true },
+    '/about': { to: '/' },
+    '/careers': { to: '/' },
+    '/changelog': { to: '/' },
+    '/property': { to: '/#coming-soon' },
+    '/community': { to: '/#coming-soon' },
+    '/apps/rankly': { to: '/#coming-soon' },
+    '/apps/feedflow': { to: '/#coming-soon' },
+    '/apps/videos': { to: '/#coming-soon' },
+  };
+
+  const exactHit = exact[pathname];
+  if (exactHit) {
+    return NextResponse.redirect(
+      new URL(`${exactHit.to}${search}`, origin),
+      exactHit.permanent ? 308 : 307,
+    );
+  }
+
+  if (pathname.startsWith('/changelog/')) {
+    return NextResponse.redirect(new URL(`/${search}`, origin), 307);
+  }
+
+  if (pathname.startsWith('/property/') || pathname.startsWith('/community/')) {
+    return NextResponse.redirect(new URL('/#coming-soon', origin), 307);
+  }
+
+  const docsOrigin = (
+    process.env.NEXT_PUBLIC_DOCS_URL || 'https://docs.ozer.so'
+  ).replace(/\/$/, '');
+
+  if (pathname === '/docs') {
+    return NextResponse.redirect(`${docsOrigin}/`, 308);
+  }
+
+  if (pathname.startsWith('/docs/')) {
+    return NextResponse.redirect(
+      `${docsOrigin}${pathname.slice('/docs'.length)}${search}`,
+      308,
+    );
+  }
+
+  // Legacy portal support → services
+  const portalSupport = pathname.match(
+    /^\/portal\/([^/]+)\/support(?:\/(new|[^/]+))?$/,
+  );
+  if (portalSupport) {
+    const clientSlug = portalSupport[1]!;
+    const rest = portalSupport[2] ? `/${portalSupport[2]}` : '';
+    return NextResponse.redirect(
+      new URL(`/portal/${clientSlug}/services${rest}${search}`, origin),
+      308,
+    );
+  }
+
+  // Legacy oodle-1 workspace slug
+  if (pathname === '/app/work/oodle-1' || pathname === '/home/oodle-1') {
+    return NextResponse.redirect(new URL(`/app/oodle${search}`, origin), 308);
+  }
+  if (
+    pathname.startsWith('/app/work/oodle-1/') ||
+    pathname.startsWith('/home/oodle-1/')
+  ) {
+    const suffix = pathname.replace(/^\/(app\/work|home)\/oodle-1/, '');
+    return NextResponse.redirect(
+      new URL(`/app/oodle${suffix}${search}`, origin),
+      308,
+    );
+  }
+
+  return null;
+}
+
 export async function proxy(request: NextRequest) {
+  const staticRedirect = redirectStaticConfigPaths(request);
+
+  if (staticRedirect) {
+    return staticRedirect;
+  }
+
   const appHostRedirect = redirectAppSubdomainRequest(request);
 
   if (appHostRedirect) {

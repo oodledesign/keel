@@ -468,73 +468,12 @@ async function getRedirects() {
     },
   ];
 
-  // Legacy marketing pages still disabled; segment landings, pricing, contact, FAQ, and legal stay public.
-  const comingSoonRedirects = [
-    '/property',
-    '/property/:path*',
-    '/community',
-    '/community/:path*',
-    '/apps/rankly',
-    '/apps/feedflow',
-    '/apps/videos',
-  ].map((source) => ({
-    source,
-    destination: '/#coming-soon',
-    permanent: false,
-  }));
-
-  // Keep in sync with apps/web/lib/docs-url.ts (next.config cannot import that module).
-  const docsOrigin = (
-    process.env.NEXT_PUBLIC_DOCS_URL ||
-    (process.env.NODE_ENV === 'development'
-      ? 'http://localhost:3012'
-      : 'https://docs.ozer.so')
-  ).replace(/\/$/, '');
-
-  const docsRedirects = [
-    {
-      source: '/docs',
-      destination: docsOrigin,
-      permanent: true,
-    },
-    {
-      source: '/docs/:path*',
-      destination: `${docsOrigin}/:path*`,
-      permanent: true,
-    },
-  ];
-
-  const marketingRedirects = [
-    '/changelog',
-    '/changelog/:path*',
-    '/about',
-    '/careers',
-  ].map((source) => ({
-    source,
-    destination: '/',
-    permanent: false,
-  }));
-
-  const assistantDownloadRedirects = [
-    {
-      source: '/assistant',
-      destination: '/download',
-      permanent: true,
-    },
-    {
-      source: '/downloads/OzerAssistant-latest.zip',
-      destination: '/downloads/OzerAssistant-1.0.zip',
-      permanent: false,
-    },
-  ];
+  // Marketing / docs / coming-soon / oodle-1 / portal-support redirects live in
+  // proxy.ts (redirectStaticConfigPaths) so they do not count toward Vercel's
+  // 2048 deployment-route limit.
 
   return [
     ...legacyHomeRedirects,
-    {
-      source: '/early-access',
-      destination: '/pricing',
-      permanent: true,
-    },
     {
       source: '/app/:account/jobs',
       destination: '/app/:account/projects',
@@ -580,55 +519,6 @@ async function getRedirects() {
       destination: '/app/:account',
       permanent: true,
     },
-    {
-      source: '/app/work/oodle-1',
-      destination: '/app/oodle',
-      permanent: true,
-    },
-    {
-      source: '/app/work/oodle-1/:path*',
-      destination: '/app/oodle/:path*',
-      permanent: true,
-    },
-    {
-      source: '/home/oodle-1',
-      destination: '/app/oodle',
-      permanent: true,
-    },
-    {
-      source: '/home/oodle-1/:path*',
-      destination: '/app/oodle/:path*',
-      permanent: true,
-    },
-    {
-      source: '/portal/:clientSlug/support',
-      destination: '/portal/:clientSlug/services',
-      permanent: true,
-    },
-    {
-      source: '/portal/:clientSlug/support/new',
-      destination: '/portal/:clientSlug/services/new',
-      permanent: true,
-    },
-    {
-      source: '/portal/:clientSlug/support/:id',
-      destination: '/portal/:clientSlug/services/:id',
-      permanent: true,
-    },
-    {
-      source: '/server-sitemap.xml',
-      destination: '/sitemap.xml',
-      permanent: true,
-    },
-    {
-      source: '/features/freeagent',
-      destination: '/features/finances',
-      permanent: true,
-    },
-    ...comingSoonRedirects,
-    ...docsRedirects,
-    ...marketingRedirects,
-    ...assistantDownloadRedirects,
   ];
 }
 
