@@ -1,6 +1,26 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { getOptionalInstagram } from './env';
+import {
+  getFeedflowServerEnv,
+  getOptionalInstagram,
+  resetFeedflowServerEnvCacheForTests,
+} from './env';
+
+describe('getFeedflowServerEnv', () => {
+  afterEach(() => {
+    resetFeedflowServerEnvCacheForTests();
+    vi.unstubAllEnvs();
+  });
+
+  it('only requires TOKEN_ENCRYPTION_KEY (Makerkit Supabase names are separate)', () => {
+    vi.stubEnv(
+      'TOKEN_ENCRYPTION_KEY',
+      '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+    );
+
+    expect(getFeedflowServerEnv().TOKEN_ENCRYPTION_KEY).toHaveLength(64);
+  });
+});
 
 describe('getOptionalInstagram', () => {
   afterEach(() => {

@@ -16,6 +16,11 @@ TOKEN_ENCRYPTION_KEY=                       # existing AES-256-GCM key (32+ byte
 CRON_SECRET=                                # existing Vercel cron bearer secret
 ```
 
+Supabase keys are the usual Makerkit ones (`NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_PUBLIC_KEY`, `SUPABASE_SECRET_KEY`). Feedflow does not
+require the legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` /
+`SUPABASE_SERVICE_ROLE_KEY` names.
+
 **Callback URL (exact):**
 
 ```text

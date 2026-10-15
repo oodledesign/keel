@@ -35,6 +35,14 @@ function friendlyError(raw: string): { title: string; description: string } {
     };
   }
 
+  if (lower.includes('invalid feedflow environment')) {
+    return {
+      title: 'Feedflow isn’t configured',
+      description:
+        'A required server setting is missing (usually TOKEN_ENCRYPTION_KEY). Ask an admin to check the environment configuration.',
+    };
+  }
+
   if (lower.includes('oauth state') || lower.includes('expired')) {
     return {
       title: 'Connection timed out',
