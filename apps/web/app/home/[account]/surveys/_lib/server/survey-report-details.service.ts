@@ -26,11 +26,16 @@ import {
   mapSurveyorProfileRow,
   parseSurveyAccommodation,
 } from '~/lib/building-surveyor/survey-report-details';
+import {
+  type SurveyorPipelineSettings,
+  normalizeSurveyorPipelineSettings,
+} from '~/lib/building-surveyor/surveyor-lead';
 import type { Database } from '~/lib/database.types';
 
 import type {
   SaveCoverDefaultImageInput,
   SaveDroneDefaultFeeInput,
+  SaveSurveyorPipelineSettingsInput,
   SaveSurveyorProfileInput,
   UpdateSurveyAccommodationInput,
   UpdateSurveyCoverInput,
@@ -159,6 +164,29 @@ class SurveyReportDetailsService {
       );
     if (error) throw new Error(error.message ?? 'Could not save drone fee');
     return input.feePence;
+  }
+
+  async saveSurveyorPipelineSettings(
+    input: SaveSurveyorPipelineSettingsInput,
+  ): Promise<SurveyorPipelineSettings> {
+    const surveys = this.surveys();
+    await surveys.assertBuildingSurveyorAccount(input.accountId);
+    await surveys.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const row = {
+      account_id: input.accountId,
+      lead_amber_days: input.leadAmberDays,
+      lead_red_days: input.leadRedDays,
+      lead_archive_days: input.leadArchiveDays,
+      quote_reminder_days: input.quoteReminderDays,
+      quote_reminder_client_email: input.quoteReminderClientEmail,
+    };
+    const { error } = await this.db
+      .from('survey_account_settings')
+      .upsert(row, { onConflict: 'account_id' });
+    if (error) {
+      throw new Error(error.message ?? 'Could not save pipeline settings');
+    }
+    return normalizeSurveyorPipelineSettings(row);
   }
 
   /**

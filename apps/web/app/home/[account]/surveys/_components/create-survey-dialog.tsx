@@ -31,11 +31,16 @@ import {
   documentDetailPath,
   titleForRecipient,
 } from '~/lib/building-surveyor/document-kind';
-import { penceFromInput } from '~/lib/building-surveyor/survey-drone';
+import {
+  type SurveyDrone,
+  inputFromPence,
+  penceFromInput,
+} from '~/lib/building-surveyor/survey-drone';
 import {
   HOME_SURVEY_LEVEL_OPTIONS,
   type SurveyLevel,
 } from '~/lib/building-surveyor/survey-types';
+import { surveyLevelForLeadType } from '~/lib/building-surveyor/surveyor-lead';
 import type { AddressSuggestion } from '~/lib/commercial/address-suggest.types';
 import {
   workspaceBtnPrimaryMd,
@@ -53,6 +58,12 @@ export type CreateSurveyDealOption = {
   id: string;
   contactName: string;
   companyName: string;
+  /** Lead details that pre-fill the survey when the lead is chosen. */
+  clientId?: string | null;
+  address?: string;
+  postcode?: string;
+  surveyType?: string | null;
+  drone?: SurveyDrone | null;
 };
 
 function toClientOptions(result: unknown): ClientOption[] {
@@ -132,6 +143,31 @@ export function CreateSurveyDialog({
   }, [accountId, open, preloadedClients]);
 
   const canSubmit = Boolean(address.trim() || clientId || dealId) && !creating;
+
+  /** Choosing a lead pre-fills the survey from it; the lead is the source of truth. */
+  const selectDeal = (nextDealId: string) => {
+    setDealId(nextDealId);
+    const deal = deals.find((item) => item.id === nextDealId);
+    if (!deal) return;
+    if (deal.address?.trim()) {
+      setAddress(deal.address.trim());
+      setPostcode(deal.postcode?.trim() ?? '');
+      setManualEntry(false);
+    }
+    if (deal.clientId) setClientId(deal.clientId);
+    const level = surveyLevelForLeadType(deal.surveyType);
+    if (level) setSurveyLevel(level);
+    if (deal.drone) {
+      setDrone({
+        used: deal.drone.used,
+        billing: deal.drone.billing,
+        fee:
+          deal.drone.feePence === null
+            ? ''
+            : inputFromPence(deal.drone.feePence),
+      });
+    }
+  };
 
   const handleCreate = async () => {
     if (!canSubmit) {
@@ -353,7 +389,7 @@ export function CreateSurveyDialog({
               <select
                 id="survey-create-deal"
                 value={dealId}
-                onChange={(event) => setDealId(event.target.value)}
+                onChange={(event) => selectDeal(event.target.value)}
                 className="w-full rounded-md border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] px-3 py-2 text-sm text-[var(--workspace-shell-text)]"
               >
                 <option value="">None</option>

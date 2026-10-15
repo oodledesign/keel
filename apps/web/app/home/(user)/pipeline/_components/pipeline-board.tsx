@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  type ComponentProps,
   type ReactNode,
   useCallback,
   useEffect,
@@ -60,7 +61,20 @@ import {
 } from '@kit/ui/tooltip';
 
 import pathsConfig from '~/config/paths.config';
+import { pickDefaultPipelineTargetId } from '~/home/(user)/_lib/pipeline-constants';
 import { CustomizePipelinePhasesDialog } from '~/home/[account]/pipeline/_components/customize-pipeline-phases-dialog';
+import { SurveyorArchivePrompt } from '~/home/[account]/pipeline/_components/surveyor/surveyor-archive-prompt';
+import {
+  type SurveyorBoardContext,
+  SurveyorBoardToolbar,
+  type SurveyorBoardView,
+  SurveyorCardExtras,
+  SurveyorCardMenu,
+  useSurveyorLeadActions,
+} from '~/home/[account]/pipeline/_components/surveyor/surveyor-board-extras';
+import { SurveyorLeadDialog } from '~/home/[account]/pipeline/_components/surveyor/surveyor-lead-dialog';
+import type { SurveyorLeadContext } from '~/home/[account]/pipeline/_components/surveyor/surveyor-lead-panel';
+import { SurveyorLeadSheet } from '~/home/[account]/pipeline/_components/surveyor/surveyor-lead-sheet';
 import type { ClientOption } from '~/home/[account]/projects/_components/client-combobox';
 import {
   BUILDING_SURVEYOR_PIPELINE_BOARD_STAGES,
@@ -302,6 +316,8 @@ type Props = {
   onRequestCreateDisposal?: (deal: PipelineDeal) => void;
   /** Prefer the team page header for title/description. */
   hideBoardTitle?: boolean;
+  /** Building-surveyor extras: thresholds, members and the current user. */
+  surveyorContext?: SurveyorBoardContext;
 };
 
 export function PipelineBoard({
@@ -317,6 +333,7 @@ export function PipelineBoard({
   boardName = 'WIP',
   onRequestCreateDisposal,
   hideBoardTitle = false,
+  surveyorContext,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -330,8 +347,22 @@ export function PipelineBoard({
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const kanbanScrollRef = useRef<HTMLDivElement>(null);
+  /** A drop ends with a click on the card; ignore it so the lead doesn't open. */
+  const dragEndedAtRef = useRef(0);
   const isCommercial = variant === 'commercial';
   const isSurveyor = variant === 'surveyor';
+  const [showLost, setShowLost] = useState(false);
+  const [surveyorView, setSurveyorView] = useState<SurveyorBoardView>('board');
+  const [leadDialog, setLeadDialog] = useState<{
+    open: boolean;
+    deal: PipelineDeal | null;
+  }>({ open: false, deal: null });
+  const surveyorActions = useSurveyorLeadActions({
+    setDeals,
+    accountId: workspaceAccountId,
+    accountSlug: workspaceAccountSlug,
+    currentUserId: surveyorContext?.currentUserId ?? null,
+  });
 
   const clearCreateQuery = useCallback(() => {
     if (!createRequested) return;
@@ -349,7 +380,10 @@ export function PipelineBoard({
 
   const STAGES = useMemo(() => {
     if (variant === 'surveyor') {
-      return BUILDING_SURVEYOR_PIPELINE_BOARD_STAGES.map((stage) => ({
+      return BUILDING_SURVEYOR_PIPELINE_BOARD_STAGES.filter(
+        (stage) =>
+          showLost || stage.key !== BUILDING_SURVEYOR_PIPELINE_LOST_STAGE,
+      ).map((stage) => ({
         key: stage.key,
         label: stage.label,
         icon:
@@ -376,9 +410,15 @@ export function PipelineBoard({
       label: stage.label,
       icon: commercialStageIcon(stage.key),
     }));
-  }, [variant, stageConfig, deals]);
+  }, [variant, stageConfig, deals, showLost]);
 
   const selectableStages = useMemo(() => {
+    if (variant === 'surveyor') {
+      return BUILDING_SURVEYOR_PIPELINE_BOARD_STAGES.map((stage) => ({
+        key: stage.key,
+        label: stage.label,
+      }));
+    }
     if (variant !== 'commercial') {
       return STAGES.map((stage) => ({ key: stage.key, label: stage.label }));
     }
@@ -420,10 +460,77 @@ export function PipelineBoard({
     };
   }, []);
 
-  const handleEditDeal = useCallback((deal: PipelineDeal) => {
-    setDealToEdit(deal);
-    setEditOpen(true);
+  const handleEditDeal = useCallback(
+    (deal: PipelineDeal) => {
+      if (isSurveyor) {
+        if (Date.now() - dragEndedAtRef.current < 300) return;
+        setLeadDialog({ open: true, deal });
+        return;
+      }
+      setDealToEdit(deal);
+      setEditOpen(true);
+    },
+    [isSurveyor],
+  );
+
+  const surveyorLeadContext = useMemo<SurveyorLeadContext | null>(() => {
+    if (!isSurveyor || !workspaceAccountId || !workspaceAccountSlug) {
+      return null;
+    }
+    const businessId = pickDefaultPipelineTargetId(initialData.businesses, {
+      workspaceScoped: true,
+    });
+    const business = initialData.businesses.find((b) => b.id === businessId);
+    return {
+      accountId: workspaceAccountId,
+      accountSlug: workspaceAccountSlug,
+      businessId,
+      businessName: business?.name ?? '',
+      businessColor: business?.color ?? null,
+      members: surveyorContext?.members ?? [],
+      stages: selectableStages,
+      currentUserId: surveyorContext?.currentUserId ?? null,
+    };
+  }, [
+    isSurveyor,
+    workspaceAccountId,
+    workspaceAccountSlug,
+    initialData.businesses,
+    surveyorContext,
+    selectableStages,
+  ]);
+
+  const handleLeadSaved = useCallback(
+    (saved: PipelineDeal, created: boolean) => {
+      if (created) {
+        setDeals((prev) => [saved, ...prev]);
+        setLeadDialog({ open: false, deal: null });
+        clearCreateQuery();
+        return;
+      }
+      setDeals((prev) => prev.map((d) => (d.id === saved.id ? saved : d)));
+      setLeadDialog((current) => ({ ...current, deal: saved }));
+      if (saved.stage === terminalWonStage) {
+        onDealWon?.(saved);
+      }
+    },
+    [clearCreateQuery, onDealWon, terminalWonStage],
+  );
+
+  const handleLeadChange = useCallback((changed: PipelineDeal) => {
+    setDeals((prev) => prev.map((d) => (d.id === changed.id ? changed : d)));
+    setLeadDialog((current) =>
+      current.deal?.id === changed.id ? { ...current, deal: changed } : current,
+    );
   }, []);
+
+  const sheetDeals = useMemo(
+    () =>
+      isSurveyor && !showLost
+        ? deals.filter((d) => d.stage !== BUILDING_SURVEYOR_PIPELINE_LOST_STAGE)
+        : deals,
+    [deals, isSurveyor, showLost],
+  );
 
   const handleToggleFollowUp = useCallback(
     (deal: PipelineDeal, followUpCall: boolean) => {
@@ -552,6 +659,7 @@ export function PipelineBoard({
   const onDragEnd = useCallback(
     (event: DragEndEvent) => {
       setActiveDeal(null);
+      dragEndedAtRef.current = Date.now();
       const { active, over } = event;
       if (!over) return;
 
@@ -589,6 +697,9 @@ export function PipelineBoard({
               d.id === dealId ? { ...d, stage: currentDeal.stage } : d,
             ),
           );
+          if (isSurveyor) {
+            toast.error(result.error ?? 'Could not move the lead');
+          }
         } else if (
           newStage === 'won' ||
           newStage === COMMERCIAL_PIPELINE_WON_STAGE ||
@@ -602,7 +713,7 @@ export function PipelineBoard({
         }
       });
     },
-    [deals, startTransition, onDealWon, workspaceAccountSlug],
+    [deals, startTransition, onDealWon, workspaceAccountSlug, isSurveyor],
   );
 
   return (
@@ -656,7 +767,16 @@ export function PipelineBoard({
             </div>
           ) : null}
           {!isCommercial ? customizePhasesSlot : null}
-          {workspaceAccountSlug && !isCommercial ? (
+          {isSurveyor && surveyorLeadContext ? (
+            <SurveyorBoardToolbar
+              view={surveyorView}
+              onViewChange={setSurveyorView}
+              showLost={showLost}
+              onShowLostChange={setShowLost}
+              onNewLead={() => setLeadDialog({ open: true, deal: null })}
+            />
+          ) : null}
+          {workspaceAccountSlug && !isCommercial && !isSurveyor ? (
             <Button
               asChild
               variant="outline"
@@ -709,24 +829,54 @@ export function PipelineBoard({
               </DropdownMenuContent>
             </DropdownMenu>
           ) : null}
-          <AddDealDialog
-            businesses={initialData.businesses}
-            onDealCreated={(deal) => setDeals((prev) => [deal, ...prev])}
-            accountSlug={workspaceAccountSlug}
-            accountId={workspaceAccountId}
-            initialClients={initialClients}
-            stages={selectableStages}
-            defaultStage={selectableStages[0]?.key}
-            listings={listings}
-            commercial={isCommercial}
-            open={addDealOpen || createRequested}
-            onOpenChange={(open) => {
-              setAddDealOpen(open);
-              if (!open) clearCreateQuery();
-            }}
-          />
+          {!surveyorLeadContext ? (
+            <AddDealDialog
+              businesses={initialData.businesses}
+              onDealCreated={(deal) => setDeals((prev) => [deal, ...prev])}
+              accountSlug={workspaceAccountSlug}
+              accountId={workspaceAccountId}
+              initialClients={initialClients}
+              stages={selectableStages}
+              defaultStage={selectableStages[0]?.key}
+              listings={listings}
+              commercial={isCommercial}
+              open={addDealOpen || createRequested}
+              onOpenChange={(open) => {
+                setAddDealOpen(open);
+                if (!open) clearCreateQuery();
+              }}
+            />
+          ) : null}
         </div>
       </div>
+
+      {surveyorLeadContext ? (
+        <SurveyorLeadDialog
+          open={leadDialog.open || (createRequested && !leadDialog.deal)}
+          onOpenChange={(open) => {
+            setLeadDialog((current) =>
+              open ? { ...current, open } : { open: false, deal: null },
+            );
+            if (!open) clearCreateQuery();
+          }}
+          context={surveyorLeadContext}
+          deal={leadDialog.deal}
+          defaultStage={selectableStages[0]?.key}
+          onSaved={handleLeadSaved}
+          onDealChange={handleLeadChange}
+        />
+      ) : null}
+
+      {surveyorLeadContext && surveyorContext ? (
+        <SurveyorArchivePrompt
+          deals={deals}
+          archiveDays={surveyorContext.settings.leadArchiveDays}
+          accountId={surveyorLeadContext.accountId}
+          accountSlug={surveyorLeadContext.accountSlug}
+          currentUserId={surveyorContext.currentUserId}
+          onArchived={surveyorActions.applyLost}
+        />
+      ) : null}
 
       {isCommercial && workspaceAccountId && workspaceAccountSlug ? (
         <CustomizePipelinePhasesDialog
@@ -767,57 +917,76 @@ export function PipelineBoard({
         }
       />
 
-      {/* Kanban — full-bleed scrollport so columns aren't clipped by page padding */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
-      >
-        <div
-          ref={kanbanScrollRef}
-          className="min-h-0 w-full min-w-0 flex-1 overflow-x-auto overscroll-x-contain pb-4"
+      {isSurveyor && surveyorContext && surveyorView === 'sheet' ? (
+        <SurveyorLeadSheet
+          deals={sheetDeals}
+          stages={selectableStages}
+          settings={surveyorContext.settings}
+          members={surveyorContext.members}
+          includeLost={showLost}
+          onIncludeLostChange={setShowLost}
+          onOpen={handleEditDeal}
+          onMoveStage={surveyorActions.moveStage}
+          onTicks={surveyorActions.changeTicks}
+          onPatch={surveyorActions.patchLead}
+        />
+      ) : (
+        /* Kanban — full-bleed scrollport so columns aren't clipped by page padding */
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
         >
-          <div className="flex w-max min-w-full gap-4 px-4 md:px-6 lg:px-8">
-            {STAGES.map((stage) => {
-              const stageDeals = dealsByStage.get(stage.key) ?? [];
-              const stageValue = stageDeals.reduce((s, d) => s + d.value, 0);
-              return (
-                <StageColumn
-                  key={stage.key}
-                  stageKey={stage.key}
-                  label={stage.label}
-                  deals={stageDeals}
-                  value={stageValue}
-                  onEditDeal={handleEditDeal}
-                  listingById={listingById}
-                  commercial={isCommercial}
-                  surveyor={isSurveyor}
-                  onToggleFollowUp={handleToggleFollowUp}
-                />
-              );
-            })}
+          <div
+            ref={kanbanScrollRef}
+            className="min-h-0 w-full min-w-0 flex-1 overflow-x-auto overscroll-x-contain pb-4"
+          >
+            <div className="flex w-max min-w-full gap-4 px-4 md:px-6 lg:px-8">
+              {STAGES.map((stage) => {
+                const stageDeals = dealsByStage.get(stage.key) ?? [];
+                const stageValue = stageDeals.reduce((s, d) => s + d.value, 0);
+                return (
+                  <StageColumn
+                    key={stage.key}
+                    stageKey={stage.key}
+                    label={stage.label}
+                    deals={stageDeals}
+                    value={stageValue}
+                    onEditDeal={handleEditDeal}
+                    listingById={listingById}
+                    commercial={isCommercial}
+                    surveyor={isSurveyor}
+                    onToggleFollowUp={handleToggleFollowUp}
+                    surveyorContext={surveyorContext}
+                    onSurveyorTicks={surveyorActions.changeTicks}
+                    onMarkLost={surveyorActions.markLost}
+                  />
+                );
+              })}
+            </div>
           </div>
-        </div>
 
-        <DragOverlay dropAnimation={null}>
-          {activeDeal && (
-            <DealCard
-              deal={activeDeal}
-              stageColor={STAGE_COLORS[activeDeal.stage]}
-              isOverlay
-              onEdit={() => {}}
-              listing={
-                activeDeal.commercialListingId
-                  ? (listingById.get(activeDeal.commercialListingId) ?? null)
-                  : null
-              }
-              commercial={isCommercial}
-              surveyor={isSurveyor}
-            />
-          )}
-        </DragOverlay>
-      </DndContext>
+          <DragOverlay dropAnimation={null}>
+            {activeDeal && (
+              <DealCard
+                deal={activeDeal}
+                stageColor={STAGE_COLORS[activeDeal.stage]}
+                isOverlay
+                onEdit={() => {}}
+                listing={
+                  activeDeal.commercialListingId
+                    ? (listingById.get(activeDeal.commercialListingId) ?? null)
+                    : null
+                }
+                commercial={isCommercial}
+                surveyor={isSurveyor}
+                surveyorContext={surveyorContext}
+              />
+            )}
+          </DragOverlay>
+        </DndContext>
+      )}
     </div>
   );
 }
@@ -834,6 +1003,9 @@ function StageColumn({
   commercial,
   surveyor = false,
   onToggleFollowUp,
+  surveyorContext,
+  onSurveyorTicks,
+  onMarkLost,
 }: {
   stageKey: string;
   label: string;
@@ -844,6 +1016,9 @@ function StageColumn({
   commercial: boolean;
   surveyor?: boolean;
   onToggleFollowUp?: (deal: PipelineDeal, followUpCall: boolean) => void;
+  surveyorContext?: SurveyorBoardContext;
+  onSurveyorTicks?: ComponentProps<typeof SurveyorCardExtras>['onTicks'];
+  onMarkLost?: (deal: PipelineDeal) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `stage-${stageKey}`,
@@ -897,6 +1072,9 @@ function StageColumn({
                 commercial={commercial}
                 surveyor={surveyor}
                 onToggleFollowUp={onToggleFollowUp}
+                surveyorContext={surveyorContext}
+                onSurveyorTicks={onSurveyorTicks}
+                onMarkLost={onMarkLost}
               />
             ))
           )}
@@ -917,6 +1095,9 @@ function DealCard({
   commercial = false,
   surveyor = false,
   onToggleFollowUp,
+  surveyorContext,
+  onSurveyorTicks,
+  onMarkLost,
 }: {
   deal: PipelineDeal;
   stageColor: { dot: string; bar: string; tint: string } | undefined;
@@ -926,6 +1107,9 @@ function DealCard({
   commercial?: boolean;
   surveyor?: boolean;
   onToggleFollowUp?: (deal: PipelineDeal, followUpCall: boolean) => void;
+  surveyorContext?: SurveyorBoardContext;
+  onSurveyorTicks?: ComponentProps<typeof SurveyorCardExtras>['onTicks'];
+  onMarkLost?: (deal: PipelineDeal) => void;
 }) {
   const {
     attributes,
@@ -979,6 +1163,7 @@ function DealCard({
       style={isOverlay ? undefined : style}
       className={`${panelClass} cursor-grab p-4 active:cursor-grabbing ${isOverlay ? 'scale-105 rotate-2 shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)]' : ''}`}
       {...(isOverlay ? {} : { ...attributes, ...listeners })}
+      onClick={surveyor && !isOverlay ? onEdit : undefined}
     >
       {stageColor && !isOverlay && (
         <div
@@ -1025,17 +1210,25 @@ function DealCard({
             ) : null}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit();
-          }}
-          className="shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text-muted)]"
-          aria-label="Edit lead"
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
+        {surveyor ? (
+          <SurveyorCardMenu
+            deal={deal}
+            onOpen={onEdit}
+            onMarkLost={isOverlay ? undefined : onMarkLost}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text-muted)]"
+            aria-label="Edit lead"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+        )}
       </div>
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold text-[color:var(--ozer-accent)]">
@@ -1073,6 +1266,7 @@ function DealCard({
         <label
           className="mt-2 flex items-center gap-2 border-t border-[color:var(--workspace-shell-border)] pt-2 text-xs text-[var(--workspace-shell-text)]"
           onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
         >
           <Checkbox
             checked={deal.followUpCall}
@@ -1082,6 +1276,13 @@ function DealCard({
           />
           Follow-up call
         </label>
+      ) : null}
+      {surveyor && surveyorContext ? (
+        <SurveyorCardExtras
+          deal={deal}
+          context={surveyorContext}
+          onTicks={isOverlay ? undefined : onSurveyorTicks}
+        />
       ) : null}
       {deal.nextAction && (
         <div className="mt-2 border-t border-[color:var(--workspace-shell-border)] pt-2">

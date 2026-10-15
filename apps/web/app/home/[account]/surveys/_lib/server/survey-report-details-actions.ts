@@ -13,6 +13,7 @@ import pathsConfig from '~/config/paths.config';
 import {
   SaveCoverDefaultImageSchema,
   SaveDroneDefaultFeeSchema,
+  SaveSurveyorPipelineSettingsSchema,
   SaveSurveyorProfileSchema,
   UpdateSurveyAccommodationSchema,
   UpdateSurveyCoverSchema,
@@ -88,6 +89,28 @@ export const saveDroneDefaultFeeAction = enhanceAction(
     return result;
   },
   { schema: SaveDroneDefaultFeeSchema },
+);
+
+export const saveSurveyorPipelineSettingsAction = enhanceAction(
+  async (data, user) => {
+    const logger = await getLogger();
+    logger.info(
+      { name: 'save-surveyor-pipeline-settings', userId: user.id },
+      'Saving surveyor pipeline settings',
+    );
+    const result = await getService().saveSurveyorPipelineSettings(data);
+    revalidatePath(
+      pathsConfig.app.accountSurveyorProfileSettings.replace(
+        '[account]',
+        data.accountSlug,
+      ),
+    );
+    revalidatePath(
+      pathsConfig.app.accountPipeline.replace('[account]', data.accountSlug),
+    );
+    return result;
+  },
+  { schema: SaveSurveyorPipelineSettingsSchema },
 );
 
 export const getDroneDefaultFeeAction = enhanceAction(

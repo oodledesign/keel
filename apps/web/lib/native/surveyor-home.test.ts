@@ -55,7 +55,7 @@ describe('loadNativeSurveyorHome', () => {
           {
             id: 'deal-done',
             name: 'Finished',
-            stage: 'reported',
+            stage: 'survey_sent',
             contact_name: null,
             company_name: null,
             clients: null,

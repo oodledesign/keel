@@ -37,6 +37,23 @@ export const SaveDroneDefaultFeeSchema = z.object({
   feePence: DroneFeePenceSchema,
 });
 
+const PipelineDaysSchema = z.number().int().min(1).max(365);
+
+export const SaveSurveyorPipelineSettingsSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    accountSlug: z.string().min(1).max(200),
+    leadAmberDays: PipelineDaysSchema,
+    leadRedDays: PipelineDaysSchema,
+    leadArchiveDays: PipelineDaysSchema,
+    quoteReminderDays: PipelineDaysSchema,
+    quoteReminderClientEmail: z.boolean(),
+  })
+  .refine((value) => value.leadRedDays >= value.leadAmberDays, {
+    message: 'Red must be at least as many days as amber',
+    path: ['leadRedDays'],
+  });
+
 export const CoverFocusSchema = z.object({
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),
@@ -76,6 +93,9 @@ export type UpdateSurveyReportDetailsInput = z.infer<
 export type UpdateSurveyDroneInput = z.infer<typeof UpdateSurveyDroneSchema>;
 export type SaveDroneDefaultFeeInput = z.infer<
   typeof SaveDroneDefaultFeeSchema
+>;
+export type SaveSurveyorPipelineSettingsInput = z.infer<
+  typeof SaveSurveyorPipelineSettingsSchema
 >;
 export type UpdateSurveyCoverInput = z.infer<typeof UpdateSurveyCoverSchema>;
 export type SaveCoverDefaultImageInput = z.infer<

@@ -7,6 +7,17 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import type {
+  SurveyorLeadInput,
+  SurveyorTickInput,
+} from '~/lib/building-surveyor/surveyor-lead';
+import { surveyorLeadInputToColumns } from '~/lib/building-surveyor/surveyor-lead';
+import {
+  logSurveyorTickEvents,
+  resolveSurveyorLeadPatch,
+  surveyorStageColumns,
+  surveyorTobGateError,
+} from '~/lib/building-surveyor/surveyor-lead.server';
 import { normalizeDisposalType } from '~/lib/commercial/instruction-to-disposal';
 import type { Database } from '~/lib/database.types';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
@@ -116,7 +127,19 @@ export async function moveDealToStage(
       }
     }
 
-    const updates: Record<string, unknown> = { stage: newStage };
+    const gateError = await surveyorTobGateError({
+      client,
+      dealId,
+      stage: newStage,
+    });
+    if (gateError) {
+      return { success: false as const, error: gateError };
+    }
+
+    const updates: Record<string, unknown> = {
+      stage: newStage,
+      ...(await surveyorStageColumns({ client, dealId, stage: newStage })),
+    };
     // The ladder, board and sheet share one manual order, so the two position
     // columns always move together: either value sets both.
     const movedTo = options?.ladderPosition ?? options?.boardPosition;
@@ -282,6 +305,8 @@ export type CreateDealInput = {
   commercialListingId?: string | null;
   /** Property details (commercial instructions). */
   property?: InstructionPropertyInput;
+  /** Building-surveyor instruction sheet fields. */
+  lead?: SurveyorLeadInput;
 };
 
 /** Property / asking terms captured on an instruction. Pence, not pounds. */
@@ -361,6 +386,8 @@ export async function createDeal(input: CreateDealInput) {
       client_id: input.clientId || null,
       commercial_listing_id: input.commercialListingId || null,
       ...propertyInputToColumns(input.property),
+      // Surveyor lead columns may lag generated Database types
+      ...(surveyorLeadInputToColumns(input.lead) as Record<string, never>),
     })
     .select('id')
     .single();
@@ -400,6 +427,10 @@ export type UpdateDealInput = {
   followUpCall?: boolean;
   /** Instruction AML tick. Audit columns are set on the server. */
   amlDone?: boolean;
+  /** Building-surveyor instruction sheet fields. */
+  lead?: SurveyorLeadInput;
+  /** Building-surveyor stage ticks. Audit columns are set on the server. */
+  ticks?: SurveyorTickInput;
 };
 
 export async function updateDeal(dealId: string, input: UpdateDealInput) {
@@ -514,6 +545,33 @@ export async function updateDeal(dealId: string, input: UpdateDealInput) {
       (input.companyName ?? '').trim() || (input.contactName ?? '').trim();
   }
 
+  if (input.stage !== undefined) {
+    const gateError = await surveyorTobGateError({
+      client,
+      dealId,
+      stage: input.stage,
+      tobSignedOverride: input.ticks?.tobSigned,
+    });
+    if (gateError) {
+      return { success: false, error: gateError };
+    }
+    Object.assign(
+      updates,
+      await surveyorStageColumns({ client, dealId, stage: input.stage }),
+    );
+  }
+
+  const surveyorPatch = await resolveSurveyorLeadPatch({
+    client,
+    dealId,
+    userId: user.id,
+    lead: input.lead,
+    ticks: input.ticks,
+  });
+  if (surveyorPatch) {
+    Object.assign(updates, surveyorPatch.columns);
+  }
+
   if (Object.keys(updates).length === 0) {
     return { success: true, error: null };
   }
@@ -525,6 +583,23 @@ export async function updateDeal(dealId: string, input: UpdateDealInput) {
 
   if (error) {
     return { success: false, error: error.message };
+  }
+
+  if (surveyorPatch) {
+    await logSurveyorTickEvents({
+      client,
+      accountId: surveyorPatch.accountId,
+      dealId,
+      actorId: user.id,
+      changes: surveyorPatch.changes,
+    });
+    try {
+      const { syncLeadToLinkedDrafts } =
+        await import('~/lib/building-surveyor/lead-sync.server');
+      await syncLeadToLinkedDrafts(surveyorPatch.accountId, dealId);
+    } catch (syncError) {
+      console.error('[pipeline] surveyor lead sync failed', syncError);
+    }
   }
 
   revalidatePipelinePaths(input.accountSlug);

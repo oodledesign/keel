@@ -7,7 +7,9 @@ import {
   canOpenSurveyorAcceptedGate,
   displayBuildingSurveyorBoardName,
   isBuildingSurveyorPipelineStage,
+  isBuildingSurveyorTerminalStage,
   publicFormPipelineStage,
+  surveyorStageBlockedByTob,
   surveyorStageOnAccepted,
   surveyorStageOnEnquiry,
   surveyorStageOnQuoteSent,
@@ -35,7 +37,11 @@ describe('building surveyor pipeline helpers', () => {
       'quoted',
       'accepted',
       'booked',
+      'tob_sent',
       'surveyed',
+      'reported',
+      'invoice_sent',
+      'survey_sent',
     ]);
     expect(isBuildingSurveyorPipelineStage('quoted')).toBe(true);
     expect(isBuildingSurveyorPipelineStage('lead')).toBe(false);
@@ -53,5 +59,30 @@ describe('building surveyor pipeline helpers', () => {
     expect(canOpenSurveyorAcceptedGate({})).toBe(false);
     expect(canOpenSurveyorAcceptedGate({ quoteAccepted: true })).toBe(true);
     expect(canOpenSurveyorAcceptedGate({ termsSigned: true })).toBe(true);
+  });
+});
+
+describe('surveyorStageBlockedByTob', () => {
+  it('blocks Report drafted and later until the terms are signed', () => {
+    expect(surveyorStageBlockedByTob('reported', false)).toBe(true);
+    expect(surveyorStageBlockedByTob('invoice_sent', false)).toBe(true);
+    expect(surveyorStageBlockedByTob('survey_sent', false)).toBe(true);
+    expect(surveyorStageBlockedByTob('reported', true)).toBe(false);
+    expect(surveyorStageBlockedByTob('surveyed', false)).toBe(false);
+  });
+
+  it('never blocks non-surveyor stage keys', () => {
+    for (const stage of ['won', 'lost', 'billed', 'completed', 'lead']) {
+      expect(surveyorStageBlockedByTob(stage, false)).toBe(false);
+    }
+  });
+});
+
+describe('isBuildingSurveyorTerminalStage', () => {
+  it('treats Survey sent and Lost as terminal', () => {
+    expect(isBuildingSurveyorTerminalStage('survey_sent')).toBe(true);
+    expect(isBuildingSurveyorTerminalStage('lost')).toBe(true);
+    expect(isBuildingSurveyorTerminalStage('reported')).toBe(false);
+    expect(isBuildingSurveyorTerminalStage('won')).toBe(false);
   });
 });

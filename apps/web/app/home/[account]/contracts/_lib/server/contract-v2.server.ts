@@ -247,9 +247,9 @@ export async function finalizeContractIfFullySigned(
   }
 
   try {
-    const { maybeMoveSurveyorDealOnAccepted } =
+    const { maybeMarkSurveyorTermsSigned } =
       await import('~/lib/building-surveyor/surveyor-pipeline-sync');
-    await maybeMoveSurveyorDealOnAccepted(
+    await maybeMarkSurveyorTermsSigned(
       accountId,
       (updated as { deal_id?: string | null }).deal_id ??
         (contract as { deal_id?: string | null }).deal_id,

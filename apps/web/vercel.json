@@ -98,6 +98,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/surveyor-quote-reminders",
+      "schedule": "30 8 * * *"
+    },
+    {
       "path": "/api/cron/invoices-recurring",
       "schedule": "15 8 * * *"
     },

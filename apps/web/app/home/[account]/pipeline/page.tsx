@@ -14,16 +14,23 @@ import {
   displayBuildingSurveyorBoardName,
 } from '~/lib/building-surveyor/pipeline-stages';
 import { isBuildingSurveyorTerminalStage } from '~/lib/building-surveyor/pipeline-stages';
+import {
+  loadSurveyorLeadsForAccount,
+  loadSurveyorMemberOptions,
+  loadSurveyorPipelineSettings,
+} from '~/lib/building-surveyor/surveyor-lead.server';
 import { DEFAULT_COMMERCIAL_WIP_BOARD_NAME } from '~/lib/commercial/commercial-constants';
 import { isCommercialTerminalStage } from '~/lib/commercial/pipeline-stage-config';
 import type { WipLatestUpdate } from '~/lib/commercial/wip-latest-update';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { getDefaultAccountPath } from '../_lib/role-access';
 import { isWorkModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
+import type { SurveyorBoardContext } from './_components/surveyor/surveyor-board-extras';
 import { WorkspacePipelineBoardWrapper } from './_components/workspace-pipeline-board-wrapper';
 import { loadLatestCareLogByInstruction } from './_lib/server/instruction-care-compliance.actions';
 import { loadPipelineBoardSettings } from './_lib/server/pipeline-stage-settings.loader';
@@ -220,6 +227,24 @@ async function TeamAccountPipelinePage({
     boardName = boardSettings.boardName;
   }
 
+  let boardData = data;
+  let surveyorContext: SurveyorBoardContext | undefined;
+  if (isSurveyor) {
+    const [leads, settings, members, user] = await Promise.all([
+      loadSurveyorLeadsForAccount(client, accountId),
+      loadSurveyorPipelineSettings(client, accountId),
+      loadSurveyorMemberOptions(client, accountId),
+      requireUserInServerComponent(),
+    ]);
+    boardData = {
+      ...data,
+      deals: data.deals.map((deal) =>
+        leads[deal.id] ? { ...deal, surveyorLead: leads[deal.id] } : deal,
+      ),
+    };
+    surveyorContext = { settings, members, currentUserId: user.id };
+  }
+
   const activeDeals = data.deals.filter((d) => {
     if (isCommercial) {
       return !isCommercialTerminalStage(d.stage);
@@ -253,7 +278,7 @@ async function TeamAccountPipelinePage({
       />
       <PageBody className="flex min-h-0 flex-1 flex-col bg-[var(--workspace-shell-canvas)] p-0 lg:px-0">
         <WorkspacePipelineBoardWrapper
-          initialData={data}
+          initialData={boardData}
           accountSlug={accountSlug}
           accountId={accountId}
           initialClients={initialClients}
@@ -269,6 +294,7 @@ async function TeamAccountPipelinePage({
           latestCareByDealId={latestCareByDealId}
           latestUpdateByDealId={latestUpdateByDealId}
           hideBoardTitle
+          surveyorContext={surveyorContext}
         />
       </PageBody>
     </>

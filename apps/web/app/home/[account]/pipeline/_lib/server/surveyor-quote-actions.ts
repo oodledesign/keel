@@ -10,19 +10,27 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import { createProposalsService } from '~/home/[account]/proposals/_lib/server/proposals.service';
 import { createSurveyReportDetailsService } from '~/home/[account]/surveys/_lib/server/survey-report-details.service';
+import { hashQuoteHtml } from '~/lib/building-surveyor/lead-sync';
+import {
+  loadFirmName,
+  loadLeadSyncSource,
+} from '~/lib/building-surveyor/lead-sync.server';
 import {
   DroneBillingSchema,
   DroneFeePenceSchema,
-  droneQuoteLine,
+  mapSurveyDrone,
 } from '~/lib/building-surveyor/survey-drone';
-import { buildSurveyorQuoteHtml } from '~/lib/building-surveyor/survey-quote';
-import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
+import {
+  quoteAddressForLead,
+  renderSurveyorQuoteHtml,
+} from '~/lib/building-surveyor/surveyor-quote-content.server';
 
 const CreateSurveyorQuoteSchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1).max(200),
   dealId: z.string().uuid(),
-  address: z.string().min(1).max(500),
+  /** Omit to use the lead's property address. */
+  address: z.string().max(500).optional(),
   clientName: z.string().max(200).optional(),
   firmName: z.string().max(200).optional(),
   droneUsed: z.boolean().optional(),
@@ -31,22 +39,55 @@ const CreateSurveyorQuoteSchema = z.object({
   droneFeePence: DroneFeePenceSchema.optional(),
 });
 
+// Quote-hash columns are newer than the generated types.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function db(): any {
+  return getSupabaseServerClient();
+}
+
+async function assertBuildingSurveyor(accountId: string) {
+  const { data: account } = await db()
+    .from('accounts')
+    .select('space_type')
+    .eq('id', accountId)
+    .maybeSingle();
+  if (
+    (account as { space_type?: string } | null)?.space_type !==
+    'building-surveyor'
+  ) {
+    throw new Error(
+      'Quotes of this type are only available in a building-surveyor workspace',
+    );
+  }
+}
+
+function revalidateQuotePaths(accountSlug: string) {
+  revalidatePath(
+    pathsConfig.app.accountPipeline.replace('[account]', accountSlug),
+  );
+  revalidatePath(
+    pathsConfig.app.accountProposals.replace('[account]', accountSlug),
+  );
+  revalidatePath(
+    pathsConfig.app.accountContracts.replace('[account]', accountSlug),
+  );
+}
+
 export const createSurveyorQuoteAction = enhanceAction(
   async (data) => {
     const client = getSupabaseServerClient();
-    const { data: account } = await client
-      .from('accounts')
-      .select('name, space_type')
-      .eq('id', data.accountId)
-      .maybeSingle();
-    if (
-      (account as { space_type?: string } | null)?.space_type !==
-      'building-surveyor'
-    ) {
-      throw new Error(
-        'Quotes of this type are only available in a building-surveyor workspace',
-      );
+    await assertBuildingSurveyor(data.accountId);
+
+    const lead = await loadLeadSyncSource(data.accountId, data.dealId);
+    if (!lead) throw new Error('Lead not found');
+    const address = data.address?.trim() || quoteAddressForLead(lead);
+    if (!address) {
+      throw new Error('Add the property address to the lead first');
     }
+    const quoteLead = {
+      ...lead,
+      contactName: data.clientName?.trim() || lead.contactName,
+    };
 
     const droneUsed = data.droneUsed === true;
     const droneBilling = data.droneBilling ?? 'separate';
@@ -61,52 +102,129 @@ export const createSurveyorQuoteAction = enhanceAction(
       droneBilling === 'separate'
         ? (data.droneFeePence ?? defaultFeePence)
         : null;
-    const currency = droneUsed
-      ? await getWorkspaceCurrencyWithClient(client, data.accountId)
-      : undefined;
-    const droneLine = droneQuoteLine({
-      currency,
+
+    const html = await renderSurveyorQuoteHtml({
+      client,
+      accountId: data.accountId,
+      firmName: data.firmName?.trim() || (await loadFirmName(data.accountId)),
+      lead: quoteLead,
+      address: data.address,
       drone: {
         used: droneUsed,
         billing: droneBilling,
         feePence: droneFeePence,
       },
-      defaultFeePence,
-    });
-
-    const html = buildSurveyorQuoteHtml({
-      address: data.address,
-      clientName: data.clientName?.trim() || 'Client',
-      firmName:
-        data.firmName?.trim() ||
-        (account as { name?: string | null } | null)?.name?.trim() ||
-        'Surveyor',
-      extraLines: droneLine ? [droneLine] : [],
+      defaultDroneFeePence: defaultFeePence,
     });
 
     const proposal = await createProposalsService(client).createProposal({
       accountId: data.accountId,
       deal_id: data.dealId,
-      title: `Quote — ${data.address.trim()}`,
+      title: `Quote — ${address}`,
       content_html: html,
       kind: 'proposal',
-      survey_property_address: data.address.trim(),
+      recipient_name: quoteLead.contactName?.trim() || null,
+      recipient_email: lead.contactEmail?.trim() || null,
+      total_pence:
+        lead.value !== null && lead.value > 0
+          ? Math.round(lead.value * 100)
+          : null,
       survey_drone_used: droneUsed,
       survey_drone_billing: droneBilling,
       survey_drone_fee_pence: droneFeePence,
     });
 
-    revalidatePath(
-      pathsConfig.app.accountPipeline.replace('[account]', data.accountSlug),
-    );
-    revalidatePath(
-      pathsConfig.app.accountProposals.replace('[account]', data.accountSlug),
-    );
-    revalidatePath(
-      pathsConfig.app.accountContracts.replace('[account]', data.accountSlug),
-    );
+    // Only a quote generated from the lead tracks it; a typed address is the
+    // legacy path and keeps the body as written.
+    const { error: hashError } = await db()
+      .from('proposals')
+      .update({
+        survey_property_address: address,
+        survey_property_postcode: lead.postcode?.trim() || null,
+        survey_type: lead.surveyType,
+        quote_html_hash: data.address?.trim() ? null : hashQuoteHtml(html),
+      })
+      .eq('id', proposal.id)
+      .eq('account_id', data.accountId);
+    if (hashError) {
+      console.error('[surveyor-quote] lead link failed', hashError.message);
+    }
+
+    revalidateQuotePaths(data.accountSlug);
 
     return { proposalId: proposal.id };
   },
   { schema: CreateSurveyorQuoteSchema },
+);
+
+const ResolveQuoteSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1).max(200),
+  proposalId: z.string().uuid(),
+  /** Regenerate from the lead, or keep the edited body and clear the banner. */
+  resolution: z.enum(['regenerate', 'keep']),
+});
+
+/** Answers the "Lead details changed since this quote was drafted" banner. */
+export const resolveSurveyorQuoteLeadChangeAction = enhanceAction(
+  async (data) => {
+    const client = getSupabaseServerClient();
+    await assertBuildingSurveyor(data.accountId);
+
+    const { data: row, error } = await db()
+      .from('proposals')
+      .select(
+        'id, deal_id, status, kind, survey_drone_used, survey_drone_billing, survey_drone_fee_pence',
+      )
+      .eq('id', data.proposalId)
+      .eq('account_id', data.accountId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    const proposal = row as
+      | (Record<string, unknown> & {
+          deal_id: string | null;
+          status: string;
+          kind: string;
+        })
+      | null;
+    if (!proposal?.deal_id || proposal.kind === 'survey_report') {
+      throw new Error('Quote not found');
+    }
+    if (proposal.status !== 'draft') {
+      throw new Error('This quote has been sent and can no longer change');
+    }
+
+    const lead = await loadLeadSyncSource(data.accountId, proposal.deal_id);
+    if (!lead) throw new Error('Lead not found');
+    const html = await renderSurveyorQuoteHtml({
+      client,
+      accountId: data.accountId,
+      firmName: await loadFirmName(data.accountId),
+      lead,
+      drone: mapSurveyDrone(proposal),
+    });
+
+    const patch: Record<string, unknown> = {
+      quote_html_hash: hashQuoteHtml(html),
+      lead_changed_at: null,
+    };
+    if (data.resolution === 'regenerate') patch.content_html = html;
+
+    const { error: updateError } = await db()
+      .from('proposals')
+      .update(patch)
+      .eq('id', data.proposalId)
+      .eq('account_id', data.accountId)
+      .eq('status', 'draft');
+    if (updateError) throw new Error(updateError.message);
+
+    revalidateQuotePaths(data.accountSlug);
+    revalidatePath(
+      pathsConfig.app.accountProposalEdit
+        .replace('[account]', data.accountSlug)
+        .replace('[id]', data.proposalId),
+    );
+    return { ok: true as const };
+  },
+  { schema: ResolveQuoteSchema },
 );

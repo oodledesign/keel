@@ -33,6 +33,17 @@ function revalidateSurveyHub(accountSlug: string, proposalId: string) {
   );
 }
 
+/** Draft survey edits flow back to the linked lead, then to the other drafts. */
+async function writeBackToLead(accountId: string, proposalId: string) {
+  try {
+    const { writeSurveyBackToLead } =
+      await import('~/lib/building-surveyor/lead-sync.server');
+    await writeSurveyBackToLead({ accountId, proposalId });
+  } catch (error) {
+    console.error('[survey-prep] lead write-through failed', error);
+  }
+}
+
 function getService() {
   return createSurveyPrepService(getSupabaseServerClient());
 }
@@ -57,6 +68,7 @@ export const confirmSurveyAddressAction = enhanceAction(
     );
     try {
       const result = await getService().confirmAddress(data);
+      await writeBackToLead(data.accountId, data.proposalId);
       revalidateSurveyHub(data.accountSlug, data.proposalId);
       return result;
     } catch (error) {
@@ -119,6 +131,7 @@ export const updateSurveyLevelAction = enhanceAction(
       'Saving survey level',
     );
     const result = await getService().updateLevel(data);
+    await writeBackToLead(data.accountId, data.proposalId);
     revalidateSurveyHub(data.accountSlug, data.proposalId);
     return result;
   },

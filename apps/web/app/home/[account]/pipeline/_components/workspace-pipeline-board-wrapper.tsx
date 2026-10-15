@@ -25,6 +25,7 @@ import { instructionTitle } from '../_lib/instruction-title';
 import type { WipDeskActivityItem } from '../_lib/server/wip-attachments.actions';
 import type { WipAttentionDigest } from '../_lib/server/wip-attention.loader';
 import { CompleteInstructionRegisterDialog } from './complete-instruction-register-dialog';
+import type { SurveyorBoardContext } from './surveyor/surveyor-board-extras';
 
 const PipelineBoard = dynamic(
   () =>
@@ -55,6 +56,7 @@ type Props = {
   latestUpdateByDealId?: Record<string, WipLatestUpdate>;
   /** When true, rely on the page header for title/description. */
   hideBoardTitle?: boolean;
+  surveyorContext?: SurveyorBoardContext;
 };
 
 export function WorkspacePipelineBoardWrapper({
@@ -72,6 +74,7 @@ export function WorkspacePipelineBoardWrapper({
   latestCareByDealId = {},
   latestUpdateByDealId = {},
   hideBoardTitle = false,
+  surveyorContext,
 }: Props) {
   const router = useRouter();
   const [promptDeal, setPromptDeal] = useState<PipelineDeal | null>(null);
@@ -159,6 +162,7 @@ export function WorkspacePipelineBoardWrapper({
           initialClients={initialClients}
           variant={variant === 'surveyor' ? 'surveyor' : 'work'}
           hideBoardTitle={hideBoardTitle}
+          surveyorContext={variant === 'surveyor' ? surveyorContext : undefined}
         />
       )}
 

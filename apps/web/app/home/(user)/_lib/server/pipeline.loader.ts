@@ -10,6 +10,7 @@ import {
   loadTeamAccountIdsForUser,
   loadUserWorkspaceAccounts,
 } from '~/home/_lib/server/workspace-scope';
+import type { SurveyorLeadFields } from '~/lib/building-surveyor/surveyor-lead';
 import type { InstructionPropertyFields } from '~/lib/commercial/instruction-to-disposal';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
@@ -53,6 +54,8 @@ export type PipelineDeal = InstructionPropertyFields & {
   amlDone: boolean;
   amlDoneAt: string | null;
   amlDoneBy: string | null;
+  /** Instruction sheet and ticks. Only loaded for building-surveyor workspaces. */
+  surveyorLead?: SurveyorLeadFields;
 };
 
 export type PipelineData = {

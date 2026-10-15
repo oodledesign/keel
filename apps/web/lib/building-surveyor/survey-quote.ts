@@ -15,6 +15,8 @@ export type SurveyorQuoteInput = {
   includeTermsOfBusiness?: boolean;
   /** Extra quote lines such as the drone, shown as "Drone £150". */
   extraLines?: DroneQuoteLine[];
+  /** Survey fee, e.g. "£650 plus VAT". Omitted when empty. */
+  feeLabel?: string | null;
 };
 
 export function surveyorQuoteLevels(
@@ -73,6 +75,9 @@ export function buildSurveyorQuoteHtml(input: SurveyorQuoteInput): string {
     `<p>${address}</p>`,
     `<h2>Survey type</h2>`,
     `<p>${escapeHtml(levels)}. Level 2 and Level 3 are quoted together so the instruction can be confirmed at either level.</p>`,
+    input.feeLabel?.trim()
+      ? `<h2>Fee</h2><p>${escapeHtml(input.feeLabel.trim())}</p>`
+      : '',
     extraLinesHtml(input.extraLines),
     includeAppointment
       ? `<h2>Form of appointment</h2><p>This quotation is the form of appointment for the inspection. Instruction is confirmed when you accept this quote and sign the Terms of Business.</p>`

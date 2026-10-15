@@ -7,38 +7,71 @@ export const BUILDING_SURVEYOR_PIPELINE_STAGES = [
   'quoted',
   'accepted',
   'booked',
+  'tob_sent',
   'surveyed',
   'reported',
+  'invoice_sent',
+  'survey_sent',
   'lost',
 ] as const;
 
 export type BuildingSurveyorPipelineStage =
   (typeof BUILDING_SURVEYOR_PIPELINE_STAGES)[number];
 
-export const BUILDING_SURVEYOR_PIPELINE_WON_STAGE = 'reported' as const;
+export const BUILDING_SURVEYOR_PIPELINE_WON_STAGE = 'survey_sent' as const;
 export const BUILDING_SURVEYOR_PIPELINE_LOST_STAGE = 'lost' as const;
 
 export const BUILDING_SURVEYOR_PIPELINE_LABELS: Record<
   BuildingSurveyorPipelineStage,
   string
 > = {
-  enquiry: 'Enquiry',
+  enquiry: 'Inquiry',
   quoted: 'Quote sent',
   accepted: 'Accepted',
   booked: 'Booked',
+  tob_sent: 'Terms of business sent',
   surveyed: 'Surveyed',
   reported: 'Report drafted',
+  invoice_sent: 'Invoice sent',
+  survey_sent: 'Survey sent',
   lost: 'Lost',
 };
 
-/** Ben Carey flow. Follow-up call is a card flag, not a stage. */
+/** Bracketts flow. Follow-up call is a card flag, not a stage. */
 export const BUILDING_SURVEYOR_CORE_FLOW_STAGES = [
   'enquiry',
   'quoted',
   'accepted',
   'booked',
+  'tob_sent',
   'surveyed',
+  'reported',
+  'invoice_sent',
+  'survey_sent',
 ] as const;
+
+/** Stages a lead can only reach once the Terms of business are signed. */
+export const SURVEYOR_STAGES_REQUIRING_TOB: readonly BuildingSurveyorPipelineStage[] =
+  ['reported', 'invoice_sent', 'survey_sent'];
+
+export const SURVEYOR_TOB_REQUIRED_MESSAGE =
+  'Terms of business must be signed first';
+
+/**
+ * True when moving to `stage` is blocked because the Terms of business are not
+ * signed. Only surveyor stage keys are ever blocked.
+ */
+export function surveyorStageBlockedByTob(
+  stage: string | null | undefined,
+  tobSigned: boolean,
+): boolean {
+  if (tobSigned || !stage) return false;
+  return (SURVEYOR_STAGES_REQUIRING_TOB as readonly string[]).includes(stage);
+}
+
+/** Leads in these stages can be offered for archiving when idle. */
+export const SURVEYOR_ARCHIVABLE_STAGES: readonly BuildingSurveyorPipelineStage[] =
+  ['enquiry', 'quoted'];
 
 export function isBuildingSurveyorPipelineStage(
   stage: string | null | undefined,
