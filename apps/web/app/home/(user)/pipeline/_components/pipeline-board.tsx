@@ -72,7 +72,9 @@ import {
   SurveyorCardMenu,
   useSurveyorLeadActions,
 } from '~/home/[account]/pipeline/_components/surveyor/surveyor-board-extras';
+import { SurveyorBookedDialog } from '~/home/[account]/pipeline/_components/surveyor/surveyor-booked-dialog';
 import { SurveyorLeadDialog } from '~/home/[account]/pipeline/_components/surveyor/surveyor-lead-dialog';
+import { CreateSurveyDialog } from '~/home/[account]/surveys/_components/create-survey-dialog';
 import type { SurveyorLeadContext } from '~/home/[account]/pipeline/_components/surveyor/surveyor-lead-panel';
 import { SurveyorLeadSheet } from '~/home/[account]/pipeline/_components/surveyor/surveyor-lead-sheet';
 import type { ClientOption } from '~/home/[account]/projects/_components/client-combobox';
@@ -357,11 +359,20 @@ export function PipelineBoard({
     open: boolean;
     deal: PipelineDeal | null;
   }>({ open: false, deal: null });
+  const [bookedDialog, setBookedDialog] = useState<{
+    open: boolean;
+    deal: PipelineDeal | null;
+  }>({ open: false, deal: null });
+  const [createSurveyOpen, setCreateSurveyOpen] = useState(false);
+  const [createSurveyDealId, setCreateSurveyDealId] = useState<string | null>(
+    null,
+  );
   const surveyorActions = useSurveyorLeadActions({
     setDeals,
     accountId: workspaceAccountId,
     accountSlug: workspaceAccountSlug,
     currentUserId: surveyorContext?.currentUserId ?? null,
+    onBooked: (deal) => setBookedDialog({ open: true, deal }),
   });
 
   const clearCreateQuery = useCallback(() => {
@@ -700,6 +711,8 @@ export function PipelineBoard({
           if (isSurveyor) {
             toast.error(result.error ?? 'Could not move the lead');
           }
+        } else if (isSurveyor && newStage === 'booked') {
+          setBookedDialog({ open: true, deal: updatedDeal });
         } else if (
           newStage === 'won' ||
           newStage === COMMERCIAL_PIPELINE_WON_STAGE ||
@@ -876,6 +889,54 @@ export function PipelineBoard({
           currentUserId={surveyorContext.currentUserId}
           onArchived={surveyorActions.applyLost}
         />
+      ) : null}
+
+      {surveyorLeadContext ? (
+        <>
+          <SurveyorBookedDialog
+            open={bookedDialog.open}
+            onOpenChange={(open) =>
+              setBookedDialog((current) =>
+                open ? { ...current, open } : { open: false, deal: null },
+              )
+            }
+            deal={bookedDialog.deal}
+            accountId={surveyorLeadContext.accountId}
+            accountSlug={surveyorLeadContext.accountSlug}
+            onCreateSurvey={(dealId) => {
+              setCreateSurveyDealId(dealId);
+              setCreateSurveyOpen(true);
+            }}
+          />
+          <CreateSurveyDialog
+            accountId={surveyorLeadContext.accountId}
+            accountSlug={surveyorLeadContext.accountSlug}
+            deals={deals.map((deal) => ({
+              id: deal.id,
+              contactName: deal.contactName,
+              companyName: deal.companyName,
+              address: [
+                deal.addressLine1,
+                deal.addressLine2,
+                deal.town,
+                deal.postcode,
+              ]
+                .filter(Boolean)
+                .join(', '),
+              postcode: deal.postcode,
+              clientId: deal.clientId,
+              surveyType: deal.surveyorLead?.surveyType ?? null,
+              drone: null,
+            }))}
+            open={createSurveyOpen}
+            onOpenChange={(open) => {
+              setCreateSurveyOpen(open);
+              if (!open) setCreateSurveyDealId(null);
+            }}
+            initialDealId={createSurveyDealId}
+            stayOnPage
+          />
+        </>
       ) : null}
 
       {isCommercial && workspaceAccountId && workspaceAccountSlug ? (

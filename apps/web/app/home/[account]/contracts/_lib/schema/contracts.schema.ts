@@ -137,6 +137,8 @@ export const SignAuthorSchema = z.object({
   author_signature_data: z.string().min(1, 'Signature is required'),
   send_after_sign: z.boolean().optional().default(false),
   sent_to_email: z.string().email().optional(),
+  signed_ip: z.string().max(128).optional().nullable(),
+  signed_user_agent: z.string().max(1000).optional().nullable(),
 });
 
 export const SignRecipientSchema = z.object({
@@ -149,6 +151,8 @@ export const SignRecipientSchema = z.object({
   version_id: z.string().uuid().optional(),
   content_hash: z.string().min(1).optional(),
   signer_id: z.string().uuid().optional(),
+  signed_ip: z.string().max(128).optional().nullable(),
+  signed_user_agent: z.string().max(1000).optional().nullable(),
 });
 
 export const DeclineRecipientSchema = z.object({

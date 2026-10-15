@@ -47,6 +47,23 @@ struct MainTabView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .environment(tabBar)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let label = session.dictationController?.statusPillLabel {
+                Button {
+                    screen = .surveys
+                } label: {
+                    Text(label)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(OzerPalette.plum)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(OzerPalette.creamDeep, in: Capsule())
+                }
+                .padding(.top, 8)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel(label)
+            }
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if !menuOpen && !tabBar.isHidden {
                 OzerTabBar(screen: $screen, menuOpen: $menuOpen)

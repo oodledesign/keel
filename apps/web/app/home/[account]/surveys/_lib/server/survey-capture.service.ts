@@ -25,6 +25,7 @@ import {
   energySectionHtmlFromEpc,
   epcFactsForPrompt,
 } from '~/lib/building-surveyor/epc/energy-section';
+import { planMergeSectionNotes } from '~/lib/building-surveyor/merge-section-notes';
 import {
   buildingSurveySectionByKey,
   ricsCodeForSectionKey,
@@ -43,6 +44,7 @@ import {
   parseSurveyReportDocument,
 } from '~/lib/building-surveyor/survey-report-document';
 import { surveySectionByKey } from '~/lib/building-surveyor/survey-section-catalogue';
+import { isResolvableSectionKey } from '~/lib/building-surveyor/survey-sections-resolver';
 import {
   type BuildingSurveyTypeKey,
   DEFAULT_BUILDING_SURVEY_TYPE,
@@ -58,6 +60,7 @@ import type {
   CreateSurveyObservationInput,
   DeleteSurveyObservationInput,
   GenerateSurveyDraftInput,
+  MergeSurveySectionNotesInput,
   PreviewSurveyTranscriptNotesInput,
   ProposeSurveyPhotoCurationInput,
   RebuildSurveyReportInput,
@@ -104,7 +107,7 @@ type SurveyRow = {
 };
 
 function isKnownSectionKey(key: string) {
-  return Boolean(buildingSurveySectionByKey(key) || surveySectionByKey(key));
+  return isResolvableSectionKey(key);
 }
 
 function sectionLabelForKey(key: string) {
@@ -127,6 +130,9 @@ function mapObservation(row: Record<string, unknown>): SurveyObservation {
     sourceBody: (row.source_body as string | null) ?? null,
     cleanupSource:
       cleanup === 'ai' || cleanup === 'passthrough' ? cleanup : null,
+    origin: (row.origin as string | null) ?? null,
+    originDocId: (row.origin_doc_id as string | null) ?? null,
+    originBody: (row.origin_body as string | null) ?? null,
     conditionRating: isConditionRating(row.condition_rating as string | null)
       ? (row.condition_rating as SurveyObservation['conditionRating'])
       : null,
@@ -137,7 +143,7 @@ function mapObservation(row: Record<string, unknown>): SurveyObservation {
 }
 
 const OBSERVATION_SELECT =
-  'id, proposal_id, transcript_id, section_key, rics_code, condition_rating, body, source_body, cleanup_source, sort_order, created_at, updated_at';
+  'id, proposal_id, transcript_id, section_key, rics_code, condition_rating, body, source_body, cleanup_source, origin, origin_doc_id, origin_body, sort_order, created_at, updated_at';
 
 export function createSurveyCaptureService(client: SupabaseClient<Database>) {
   return new SurveyCaptureService(client);
@@ -618,7 +624,7 @@ class SurveyCaptureService {
         section_key: input.sectionKey,
         rics_code: ricsCodeForSectionKey(input.sectionKey),
         condition_rating: input.conditionRating ?? null,
-        body: input.body.trim(),
+        body: (input.body ?? '').trim(),
         sort_order: Number(maxRow?.sort_order ?? -1) + 1,
         created_by: user.id,
       })
@@ -626,6 +632,83 @@ class SurveyCaptureService {
       .single();
     if (error || !data) this.throwErr(error, 'Could not add observation');
     return mapObservation(data as Record<string, unknown>);
+  }
+
+  /**
+   * Content review save: write the merged textarea onto the first note and
+   * delete the other notes in the section.
+   */
+  async mergeSectionNotes(input: MergeSurveySectionNotesInput) {
+    await this.assertBuildingSurveyorAccount(input.accountId);
+    await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    await this.getSurvey(input.accountId, input.proposalId);
+
+    if (!isKnownSectionKey(input.sectionKey)) {
+      throw new Error('Unknown survey section');
+    }
+
+    const { data: rows, error: listError } = await this.db
+      .from('survey_observations')
+      .select(OBSERVATION_SELECT)
+      .eq('account_id', input.accountId)
+      .eq('proposal_id', input.proposalId)
+      .eq('section_key', input.sectionKey)
+      .order('sort_order', { ascending: true });
+    if (listError) this.throwErr(listError, 'Could not load section notes');
+
+    const notes = ((rows ?? []) as Array<Record<string, unknown>>).map(
+      mapObservation,
+    );
+    const plan = planMergeSectionNotes({
+      notes: notes.map((note) => ({ id: note.id, body: note.body })),
+      mergedBody: input.mergedBody,
+    });
+
+    if (!plan) {
+      if (!input.mergedBody.trim()) {
+        return { observations: [] as SurveyObservation[] };
+      }
+      const created = await this.createObservation({
+        accountId: input.accountId,
+        accountSlug: input.accountSlug,
+        proposalId: input.proposalId,
+        sectionKey: input.sectionKey,
+        body: input.mergedBody.trim(),
+      });
+      return { observations: [created] };
+    }
+
+    const keptNote = notes.find((note) => note.id === plan.keepId);
+    const mergeOrigin = {
+      origin: 'edited' as const,
+      origin_body: keptNote?.originBody ?? keptNote?.body ?? null,
+    };
+
+    const { data: kept, error: updateError } = await this.db
+      .from('survey_observations')
+      .update({ body: plan.body, ...mergeOrigin })
+      .eq('id', plan.keepId)
+      .eq('account_id', input.accountId)
+      .eq('proposal_id', input.proposalId)
+      .select(OBSERVATION_SELECT)
+      .single();
+    if (updateError || !kept) {
+      this.throwErr(updateError, 'Could not save merged notes');
+    }
+
+    if (plan.deleteIds.length > 0) {
+      const { error: deleteError } = await this.db
+        .from('survey_observations')
+        .delete()
+        .in('id', plan.deleteIds)
+        .eq('account_id', input.accountId)
+        .eq('proposal_id', input.proposalId);
+      if (deleteError) this.throwErr(deleteError, 'Could not merge notes');
+    }
+
+    return {
+      observations: [mapObservation(kept as Record<string, unknown>)],
+    };
   }
 
   async updateObservation(input: UpdateSurveyObservationInput) {

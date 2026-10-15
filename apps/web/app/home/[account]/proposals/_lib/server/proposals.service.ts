@@ -10,6 +10,12 @@ import {
   queueBrainIndexSource,
 } from '~/lib/brain/sync';
 import {
+  parseSectionOverrides,
+  resolveSurveySections,
+  snapshotResolvedSections,
+  type SurveySectionOverride,
+} from '~/lib/building-surveyor/survey-sections-resolver';
+import {
   DEFAULT_BUILDING_SURVEY_TYPE,
   normalizeSurveyLevel,
   surveyLevelFromType,
@@ -265,6 +271,40 @@ class ProposalsService {
       }),
     ]);
 
+    const surveyLevelForCreate =
+      documentKind === 'survey_report'
+        ? input.survey_level
+          ? normalizeSurveyLevel(input.survey_level)
+          : surveyLevelFromType(
+              input.survey_type ?? DEFAULT_BUILDING_SURVEY_TYPE,
+            )
+        : null;
+    let surveySectionOverrides: SurveySectionOverride[] | null = null;
+    if (documentKind === 'survey_report' && surveyLevelForCreate) {
+      const surveyTypeKey =
+        input.survey_type ??
+        (surveyLevelForCreate === 3 ? 'rics_hss_l3' : 'rics_hss_l2');
+      const { data: tmpl } = await this.db
+        .from('survey_templates')
+        .select('sections')
+        .eq('account_id', input.accountId)
+        .eq('survey_type', surveyTypeKey)
+        .eq('is_default', true)
+        .maybeSingle();
+      surveySectionOverrides = parseSectionOverrides(
+        (tmpl as { sections?: unknown } | null)?.sections,
+      );
+    }
+    const surveySections =
+      documentKind === 'survey_report' && surveyLevelForCreate
+        ? snapshotResolvedSections(
+            resolveSurveySections({
+              level: surveyLevelForCreate,
+              overrides: surveySectionOverrides,
+            }),
+          )
+        : null;
+
     const { data: proposal, error } = await this.db
       .from('proposals')
       .insert({
@@ -278,14 +318,8 @@ class ProposalsService {
               ? surveyTypeForLevel(normalizeSurveyLevel(input.survey_level))
               : (input.survey_type ?? DEFAULT_BUILDING_SURVEY_TYPE)
             : null,
-        survey_level:
-          documentKind === 'survey_report'
-            ? input.survey_level
-              ? normalizeSurveyLevel(input.survey_level)
-              : surveyLevelFromType(
-                  input.survey_type ?? DEFAULT_BUILDING_SURVEY_TYPE,
-                )
-            : null,
+        survey_level: surveyLevelForCreate,
+        survey_sections: surveySections,
         survey_property_address:
           documentKind === 'survey_report'
             ? (input.survey_property_address ?? null)
@@ -557,9 +591,15 @@ class ProposalsService {
 
     if (proposal.kind !== 'survey_report') {
       try {
-        const { createDraftContractForProposal } =
-          await import('./proposal-automation');
-        await createDraftContractForProposal(input.proposalId);
+        const { isBuildingSurveyorAccount } =
+          await import('~/lib/building-surveyor/surveyor-pipeline-sync');
+        const isSurveyor = await isBuildingSurveyorAccount(input.accountId);
+        // Surveyor quotes are not contracts — skip the AI draft contract.
+        if (!isSurveyor) {
+          const { createDraftContractForProposal } =
+            await import('./proposal-automation');
+          await createDraftContractForProposal(input.proposalId);
+        }
       } catch (error) {
         console.error('[proposals] draft contract on send failed', error);
       }

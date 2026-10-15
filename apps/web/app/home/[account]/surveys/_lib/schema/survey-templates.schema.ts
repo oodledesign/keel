@@ -5,7 +5,22 @@ import { SURVEY_TEMPLATE_SLOT_TYPES } from '~/lib/building-surveyor/survey-templ
 export const SurveySystemTemplateKeySchema = z.enum([
   'rics_hss_l3',
   'rics_hss_l2',
+  'commercial_building_survey',
 ]);
+
+export const SurveySectionOverrideSchema = z.object({
+  key: z.string().min(1).max(80),
+  heading: z.string().max(200).optional(),
+  group: z.string().max(200).optional(),
+  letter: z.string().max(4).optional(),
+  ricsCode: z.string().max(40).optional(),
+  hidden: z.boolean().optional(),
+  order: z.number().int().min(0).max(10_000).optional(),
+  allowsPhotos: z.boolean().optional(),
+  onSitePickable: z.boolean().optional(),
+  allowsRating: z.boolean().optional(),
+  kind: z.enum(['section', 'sub_item', 'field']).optional(),
+});
 
 export const CloneSurveyTemplateSchema = z.object({
   accountId: z.string().uuid(),
@@ -58,6 +73,8 @@ export const UpdateSurveyTemplateSchema = z.object({
     )
     .max(200)
     .optional(),
+  /** Null resets to built-in catalogue. */
+  sections: z.array(SurveySectionOverrideSchema).max(300).nullable().optional(),
 });
 
 export const DeleteSurveyTemplateSchema = z.object({

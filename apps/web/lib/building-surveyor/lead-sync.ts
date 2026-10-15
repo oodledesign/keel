@@ -11,8 +11,11 @@ import { leadAddressLine } from './surveyor-lead-draft';
 export { surveyLevelForLeadType };
 
 export type LeadSyncSource = {
+  name?: string | null;
   contactName: string | null;
   contactEmail: string | null;
+  contactPhone?: string | null;
+  clientAddress?: string | null;
   addressLine1: string | null;
   addressLine2: string | null;
   town: string | null;
@@ -20,6 +23,7 @@ export type LeadSyncSource = {
   surveyType: string | null;
   /** Fee in pounds (pipeline_deals.value). */
   value: number | null;
+  inspectionAt?: string | null;
 };
 
 export type LinkedDocument = {

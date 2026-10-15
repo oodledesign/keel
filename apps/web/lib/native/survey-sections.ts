@@ -1,21 +1,43 @@
 import {
+  SURVEY_SECTION_NOTE_DIVIDER,
+  appendSurveySectionNote,
+  joinSectionNoteBodies,
+  stripSurveySectionNoteDividers,
+} from '~/lib/building-surveyor/merge-section-notes';
+import {
   type SurveySectionCatalogueItem,
   onSiteCaptureSections,
   surveySectionByKey,
   surveySectionByRicsCode,
   surveySectionDisplayLabel,
 } from '~/lib/building-surveyor/survey-section-catalogue';
+import {
+  onSiteResolvedSections,
+  parseSectionOverrides,
+  resolveSurveySections,
+} from '~/lib/building-surveyor/survey-sections-resolver';
 import type { SurveyLevel } from '~/lib/building-surveyor/survey-types';
 
 import { NativeHttpError } from './http';
 
-/** Plain-text take separator — readable in iOS Text and desk-review textareas. */
-export const SURVEY_SECTION_NOTE_DIVIDER = '\u2014\u2014\u2014\u2014';
+export {
+  SURVEY_SECTION_NOTE_DIVIDER,
+  appendSurveySectionNote,
+  joinSectionNoteBodies,
+  stripSurveySectionNoteDividers,
+};
 
 const SURVEY_SPEAKER_HEADING_RE =
   /^(?:#{1,6}\s+|\*{2})?(Me|Them|Speaker \d+)(?:\*{2})?$/i;
 const SURVEY_SPEAKER_PREFIX_RE =
   /^(?:#{1,6}\s+|\*{2})?(Me|Them|Speaker \d+)(?:\*{2})?:\s*(.*)$/i;
+
+export type NativeSectionNote = {
+  id: string;
+  body: string;
+  origin: string | null;
+  created_at: string;
+};
 
 export type NativeOnSiteSection = {
   key: string;
@@ -25,7 +47,9 @@ export type NativeOnSiteSection = {
   rics_code: string;
   label: string;
   allows_photos: boolean;
+  /** Legacy merged body for older app builds. */
   note: string;
+  notes: NativeSectionNote[];
   photo_count: number;
 };
 
@@ -64,22 +88,19 @@ export function stripSurveySpeakerLabels(
   return kept.join('\n').trim();
 }
 
-export function appendSurveySectionNote(
-  existing: string | null | undefined,
-  incoming: string | null | undefined,
-): string {
-  const current = existing?.trim() ?? '';
-  const next = incoming?.trim() ?? '';
-  if (!current) return next;
-  if (!next) return current;
-  return `${current}\n\n${SURVEY_SECTION_NOTE_DIVIDER}\n\n${next}`;
-}
-
 export function resolveOnSiteSurveySection(
   value: string | null | undefined,
+  extras?: readonly SurveySectionCatalogueItem[],
 ): SurveySectionCatalogueItem | undefined {
   const raw = value?.trim();
   if (!raw) return undefined;
+  const fromExtras = extras?.find(
+    (item) =>
+      item.key === raw ||
+      item.ricsCode === raw ||
+      item.ricsCode.toUpperCase() === raw.toUpperCase(),
+  );
+  if (fromExtras) return fromExtras;
   return (
     surveySectionByRicsCode(raw) ??
     surveySectionByKey(raw) ??
@@ -89,8 +110,9 @@ export function resolveOnSiteSurveySection(
 
 export function requireOnSiteSurveySection(
   value: string | null | undefined,
+  extras?: readonly SurveySectionCatalogueItem[],
 ): SurveySectionCatalogueItem {
-  const section = resolveOnSiteSurveySection(value);
+  const section = resolveOnSiteSurveySection(value, extras);
   if (!section?.onSitePickable) {
     throw new NativeHttpError(
       400,
@@ -103,20 +125,47 @@ export function requireOnSiteSurveySection(
 export function mapNativeOnSiteSections(input: {
   level: SurveyLevel | number | string | null | undefined;
   notesByCode?: Map<string, string>;
+  notesListByCode?: Map<string, NativeSectionNote[]>;
   photoCountByKey?: Map<string, number>;
+  /** Snapshot from proposals.survey_sections (custom / renamed / reordered). */
+  sectionOverrides?: unknown;
 }): NativeOnSiteSection[] {
   const notes = input.notesByCode ?? new Map<string, string>();
+  const notesLists =
+    input.notesListByCode ?? new Map<string, NativeSectionNote[]>();
   const photos = input.photoCountByKey ?? new Map<string, number>();
 
-  return onSiteCaptureSections(input.level).map((item) => ({
-    key: item.key,
-    heading: item.heading,
-    group: item.group,
-    letter: item.letter,
-    rics_code: item.ricsCode,
-    label: surveySectionDisplayLabel(item),
-    allows_photos: item.allowsPhotos,
-    note: notes.get(item.ricsCode) ?? notes.get(item.key) ?? '',
-    photo_count: photos.get(item.key) ?? photos.get(item.ricsCode) ?? 0,
-  }));
+  const overrides = parseSectionOverrides(input.sectionOverrides);
+  const catalogue = onSiteCaptureSections(input.level);
+  const resolved = overrides
+    ? onSiteResolvedSections(
+        resolveSurveySections({
+          level: input.level,
+          overrides,
+          catalogue,
+        }),
+      )
+    : catalogue;
+
+  return resolved.map((item) => {
+    const list =
+      notesLists.get(item.ricsCode) ?? notesLists.get(item.key) ?? [];
+    const legacyNote =
+      notes.get(item.ricsCode) ??
+      notes.get(item.key) ??
+      joinSectionNoteBodies(list.map((note) => note.body));
+
+    return {
+      key: item.key,
+      heading: item.heading,
+      group: item.group,
+      letter: item.letter,
+      rics_code: item.ricsCode,
+      label: surveySectionDisplayLabel(item),
+      allows_photos: item.allowsPhotos,
+      note: legacyNote,
+      notes: list,
+      photo_count: photos.get(item.key) ?? photos.get(item.ricsCode) ?? 0,
+    };
+  });
 }

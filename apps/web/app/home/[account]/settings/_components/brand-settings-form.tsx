@@ -45,6 +45,7 @@ export function BrandSettingsForm({
   initialBrand,
   initialPortalSlug,
   canEdit,
+  showTradingName = false,
 }: {
   accountId: string;
   accountSlug: string;
@@ -53,6 +54,8 @@ export function BrandSettingsForm({
   initialBrand: AccountBrandResolved;
   initialPortalSlug?: string | null;
   canEdit: boolean;
+  /** Building-surveyor only: trading name for emails. */
+  showTradingName?: boolean;
 }) {
   const router = useRouter();
 
@@ -61,6 +64,9 @@ export function BrandSettingsForm({
   const [accent, setAccent] = useState(initialBrand.accent_color);
   const [websiteUrl, setWebsiteUrl] = useState(initialBrand.website_url ?? '');
   const [address, setAddress] = useState(initialBrand.address ?? '');
+  const [tradingName, setTradingName] = useState(
+    initialBrand.trading_name ?? '',
+  );
   const [fonts, setFonts] = useState<BrandFonts>({
     heading: initialBrand.heading_font,
     body: initialBrand.body_font,
@@ -81,6 +87,9 @@ export function BrandSettingsForm({
         portal_slug: normalizePortalSlug(portalSlug) || '',
         heading_font: fonts.heading,
         body_font: fonts.body,
+        ...(showTradingName
+          ? { trading_name: tradingName.trim() || null }
+          : {}),
       });
       toast.success('Brand settings saved');
       router.refresh();
@@ -154,6 +163,23 @@ export function BrandSettingsForm({
           value={initialBrand.logo_on_dark_url}
           canEdit={canEdit}
         />
+
+        {showTradingName ? (
+          <div className="space-y-2">
+            <Label htmlFor="brand-trading-name">Trading name</Label>
+            <p className="text-muted-foreground text-xs">
+              Used in quote and report emails as the sender name (for example
+              Bracketts LLP). Falls back to the workspace name when empty.
+            </p>
+            <Input
+              id="brand-trading-name"
+              value={tradingName}
+              onChange={(e) => setTradingName(e.target.value)}
+              placeholder={accountName}
+              disabled={!canEdit}
+            />
+          </div>
+        ) : null}
 
         <div className="space-y-2">
           <Label htmlFor="brand-portal-slug">Client portal slug</Label>

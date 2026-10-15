@@ -52,4 +52,6 @@ export const saveAccountBrandSettingsSchema = z.object({
   portal_slug: portalSlugSchema.optional().nullable(),
   heading_font: z.enum(BRAND_FONT_IDS).optional().nullable(),
   body_font: z.enum(BRAND_FONT_IDS).optional().nullable(),
+  /** Surveyor trading / brand name for emails. Ignored for other spaces. */
+  trading_name: z.string().trim().max(200).optional().nullable(),
 });

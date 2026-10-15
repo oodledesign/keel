@@ -1,5 +1,6 @@
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { loadSurveyorTobSettings } from '~/lib/building-surveyor/surveyor-tob.server';
 import { loadSurveyorPipelineSettings } from '~/lib/building-surveyor/surveyor-lead.server';
 
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
@@ -9,6 +10,8 @@ import { CoverImageSettings } from './_components/cover-image-settings';
 import { DroneFeeSettings } from './_components/drone-fee-settings';
 import { PipelineSettings } from './_components/pipeline-settings';
 import { SurveyorProfileForm } from './_components/surveyor-profile-form';
+import { QuoteTemplatesSettings } from './_components/quote-templates-settings';
+import { TermsOfBusinessSettings } from './_components/terms-of-business-settings';
 
 export const generateMetadata = async () => ({
   title: 'Surveyor profile',
@@ -28,12 +31,13 @@ export default async function SurveyorProfilePage(
   const accountId = workspace.account.id as string;
   const client = getSupabaseServerClient();
   const details = createSurveyReportDetailsService(client);
-  const [profile, droneFeePence, coverUrl, pipelineSettings] =
+  const [profile, droneFeePence, coverUrl, pipelineSettings, tobSettings] =
     await Promise.all([
       details.getMyProfile(accountId),
       details.getDroneDefaultFee(accountId),
       details.getCoverDefaultUrl(accountId),
       loadSurveyorPipelineSettings(client, accountId),
+      loadSurveyorTobSettings(accountId),
     ]);
 
   return (
@@ -57,6 +61,19 @@ export default async function SurveyorProfilePage(
         accountId={accountId}
         accountSlug={account}
         initialSettings={pipelineSettings}
+      />
+      <TermsOfBusinessSettings
+        accountId={accountId}
+        accountSlug={account}
+        initialSignatoryName={tobSettings.tobSignatoryName}
+        initialSignatoryTitle={tobSettings.tobSignatoryTitle}
+        initialSignatureType={tobSettings.tobSignatureType}
+        initialSignatureData={tobSettings.tobSignatureData}
+      />
+      <QuoteTemplatesSettings
+        accountId={accountId}
+        accountSlug={account}
+        initialTemplates={tobSettings.quoteTemplates ?? {}}
       />
     </div>
   );

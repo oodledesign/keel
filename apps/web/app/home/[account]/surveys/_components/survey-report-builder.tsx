@@ -434,6 +434,8 @@ export function SurveyReportBuilder({
           initialBody={proposal.email_body}
           initialSignature={proposal.email_signature}
           documentKind="survey_report"
+          accountName={accountName}
+          recipientName={proposal.recipient_name}
           onSent={() => {
             setShowSendPanel(false);
             router.refresh();

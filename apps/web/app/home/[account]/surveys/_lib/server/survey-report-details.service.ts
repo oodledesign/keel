@@ -189,6 +189,75 @@ class SurveyReportDetailsService {
     return normalizeSurveyorPipelineSettings(row);
   }
 
+  async saveSurveyorTobSettings(input: {
+    accountId: string;
+    tobSignatoryName: string;
+    tobSignatoryTitle?: string | null;
+    tobSignatureType: 'drawn' | 'typed';
+    tobSignatureData: string;
+  }) {
+    const surveys = this.surveys();
+    await surveys.assertBuildingSurveyorAccount(input.accountId);
+    await surveys.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    const { error } = await this.db.from('survey_account_settings').upsert(
+      {
+        account_id: input.accountId,
+        tob_signatory_name: input.tobSignatoryName,
+        tob_signatory_title: input.tobSignatoryTitle ?? null,
+        tob_signature_type: input.tobSignatureType,
+        tob_signature_data: input.tobSignatureData,
+      } as never,
+      { onConflict: 'account_id' },
+    );
+    if (error) {
+      throw new Error(error.message ?? 'Could not save terms of business');
+    }
+    return { ok: true as const };
+  }
+
+  async saveSurveyorQuoteTemplates(input: {
+    accountId: string;
+    quoteTemplates?: Record<string, string>;
+    reset?: boolean;
+  }) {
+    const surveys = this.surveys();
+    await surveys.assertBuildingSurveyorAccount(input.accountId);
+    await surveys.ensureUserAndPermission(input.accountId, 'invoices.edit');
+
+    let next: Record<string, string> = {};
+    if (!input.reset) {
+      const { data } = await this.db
+        .from('survey_account_settings')
+        .select('quote_templates')
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+      const current =
+        (data as { quote_templates?: Record<string, string> | null } | null)
+          ?.quote_templates ?? {};
+      next = { ...current };
+      for (const [key, value] of Object.entries(input.quoteTemplates ?? {})) {
+        const trimmed = value.trim();
+        if (!trimmed) {
+          delete next[key];
+        } else {
+          next[key] = trimmed;
+        }
+      }
+    }
+
+    const { error } = await this.db.from('survey_account_settings').upsert(
+      {
+        account_id: input.accountId,
+        quote_templates: next,
+      } as never,
+      { onConflict: 'account_id' },
+    );
+    if (error) {
+      throw new Error(error.message ?? 'Could not save quote templates');
+    }
+    return { ok: true as const, quoteTemplates: next };
+  }
+
   /**
    * Update the front cover: choose or clear the photo, and/or set the crop
    * and position. Choosing a different photo resets the crop unless one is

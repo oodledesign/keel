@@ -27,6 +27,7 @@ export type AccountBrandSettingsRow = {
   phone: string | null;
   heading_font: string | null;
   body_font: string | null;
+  trading_name: string | null;
 };
 
 /**
@@ -48,6 +49,8 @@ export type AccountBrandResolved = {
   heading_font: BrandFontId | null;
   /** Null keeps each surface's standard body font. */
   body_font: BrandFontId | null;
+  /** Optional trading name for emails ({{account.name}}). */
+  trading_name: string | null;
 };
 
 function resolveBrand(
@@ -70,6 +73,7 @@ function resolveBrand(
     phone: row?.phone?.trim() || null,
     heading_font: parseBrandFontId(row?.heading_font),
     body_font: parseBrandFontId(row?.body_font),
+    trading_name: row?.trading_name?.trim() || null,
   };
 }
 
@@ -80,7 +84,7 @@ export async function loadAccountBrandResolved(
   const { data, error } = await admin
     .from('account_brand_settings')
     .select(
-      'account_id, primary_color, secondary_color, accent_color, logo_url, logo_on_light_url, logo_on_dark_url, website_url, address, contact_email, phone, heading_font, body_font',
+      'account_id, primary_color, secondary_color, accent_color, logo_url, logo_on_light_url, logo_on_dark_url, website_url, address, contact_email, phone, heading_font, body_font, trading_name',
     )
     .eq('account_id', accountId)
     .maybeSingle();

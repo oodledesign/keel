@@ -19,9 +19,14 @@ struct SurveyRecordView: View {
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var showCamera = false
     @State private var showDataPrompt = false
+    @State private var showLeavePrompt = false
     @State private var pendingPhotoEnqueue: Data?
     @State private var queue = OfflineSurveyQueue.shared
     @State private var localNotes: [String: String]
+    @State private var sectionNotes: [String: [SurveySectionNote]]
+    @State private var selectedNoteId: String?
+    @State private var dictation = SurveyDictationController()
+    @Environment(\.scenePhase) private var scenePhase
 
     init(
         survey: SurveyItem,
@@ -35,6 +40,12 @@ struct SurveyRecordView: View {
         self.onFinished = onFinished
         _selectedSection = State(initialValue: section)
         _localNotes = State(initialValue: [:])
+        _sectionNotes = State(initialValue: [:])
+        _selectedNoteId = State(initialValue: section.notes.last?.id)
+    }
+
+    private var currentNotes: [SurveySectionNote] {
+        sectionNotes[selectedSection.ricsCode] ?? selectedSection.notes
     }
 
     private var controlsLocked: Bool {
@@ -93,9 +104,10 @@ struct SurveyRecordView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(capture.isRecording ? "Close" : "Done") {
                         if capture.isRecording {
-                            capture.cancel()
+                            showLeavePrompt = true
+                        } else {
+                            dismiss()
                         }
-                        dismiss()
                     }
                     .foregroundStyle(OzerPalette.plumMuted)
                     .disabled(controlsLocked)
@@ -103,11 +115,59 @@ struct SurveyRecordView: View {
             }
             .onDisappear {
                 if capture.isRecording {
-                    capture.cancel()
+                    dictation.pauseCurrent()
+                    session.dictationController = dictation
                 }
             }
+            .confirmationDialog(
+                "Leave while recording?",
+                isPresented: $showLeavePrompt,
+                titleVisibility: .visible
+            ) {
+                Button("Keep recording", role: .cancel) {}
+                Button("Pause") {
+                    Task {
+                        await capture.pause()
+                        dictation.pauseCurrent()
+                        session.dictationController = dictation
+                        dismiss()
+                    }
+                }
+                Button("Stop and save") {
+                    Task {
+                        await stopRecording()
+                        dismiss()
+                    }
+                }
+                Button("Discard", role: .destructive) {
+                    capture.cancel()
+                    dictation.discardAll()
+                    session.dictationController = nil
+                    dismiss()
+                }
+            } message: {
+                Text("Your current take can be paused and resumed from another section, or discarded.")
+            }
             .task(id: "\(survey.id)-\(workspace)") {
+                if let existing = session.dictationController, existing.hasActiveOrPaused {
+                    dictation = existing
+                } else {
+                    dictation.restoreFromDisk()
+                    if dictation.hasActiveOrPaused {
+                        session.dictationController = dictation
+                    }
+                }
                 seedLocalNotes()
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .background, capture.isRecording, !capture.isPaused {
+                    Task {
+                        dictation.updateLive(transcript: liveCaption, elapsed: capture.elapsed)
+                        await capture.pause()
+                        dictation.pauseCurrent()
+                        session.dictationController = dictation
+                    }
+                }
             }
             .onChange(of: pickerItems) { _, items in
                 Task { await importPickerItems(items) }
@@ -180,8 +240,7 @@ struct SurveyRecordView: View {
         Menu {
             ForEach(catalogue) { item in
                 Button(item.displayLabel) {
-                    selectedSection = item
-                    seedNote(for: item)
+                    Task { await selectSection(item) }
                 }
             }
         } label: {
@@ -197,19 +256,55 @@ struct SurveyRecordView: View {
             .padding(.vertical, 8)
             .background(OzerPalette.creamDeep, in: Capsule())
         }
-        .disabled(capture.isRecording || controlsLocked)
+        .disabled(controlsLocked)
         .accessibilityLabel("Section \(selectedSection.displayLabel)")
     }
 
     private var runningNote: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Running note")
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Notes")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(OzerPalette.plumMuted)
+                Spacer()
+                Button("Add new note") {
+                    addEmptyNote()
+                }
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(OzerPalette.plumMuted)
-            if pendingNote.isEmpty {
-                Text("Nothing in this section yet. Record or add photos — later visits append to this same note.")
+                .foregroundStyle(OzerPalette.coral)
+                .disabled(controlsLocked)
+            }
+            if currentNotes.isEmpty && pendingNote.isEmpty {
+                Text("Nothing in this section yet. Record or add a note — each dictation becomes its own note.")
                     .font(.subheadline)
                     .foregroundStyle(OzerPalette.plumMuted)
+            } else if !currentNotes.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(currentNotes) { note in
+                        Button {
+                            selectedNoteId = note.id
+                        } label: {
+                            HStack(alignment: .top, spacing: 8) {
+                                Circle()
+                                    .fill(selectedNoteId == note.id ? OzerPalette.coral : OzerPalette.border)
+                                    .frame(width: 8, height: 8)
+                                    .padding(.top, 5)
+                                Text(note.body.isEmpty ? "Empty note — dictation will fill this" : note.body)
+                                    .font(.subheadline)
+                                    .foregroundStyle(note.body.isEmpty ? OzerPalette.plumMuted : OzerPalette.plum)
+                                    .multilineTextAlignment(.leading)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .padding(10)
+                            .background(
+                                selectedNoteId == note.id ? OzerPalette.creamDeep : OzerPalette.cream,
+                                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(controlsLocked)
+                    }
+                }
             } else {
                 VStack(alignment: .leading, spacing: 10) {
                     ForEach(Array(SurveyDisplay.noteTakes(from: pendingNote).enumerated()), id: \.offset) { index, take in
@@ -224,6 +319,11 @@ struct SurveyRecordView: View {
                             .foregroundStyle(OzerPalette.plum)
                     }
                 }
+            }
+            if selectedNoteId != nil {
+                Text("Recording appends to the selected note.")
+                    .font(.caption2)
+                    .foregroundStyle(OzerPalette.plumMuted)
             }
         }
         .padding(14)
@@ -364,9 +464,15 @@ struct SurveyRecordView: View {
         for item in catalogue {
             seedNote(for: item)
         }
+        if selectedNoteId == nil {
+            selectedNoteId = currentNotes.last?.id
+        }
     }
 
     private func seedNote(for item: SurveySectionItem) {
+        if sectionNotes[item.ricsCode] == nil {
+            sectionNotes[item.ricsCode] = item.notes
+        }
         if localNotes[item.ricsCode] != nil { return }
         let bodies = queue.sessions(
             forSurvey: survey.id,
@@ -381,9 +487,46 @@ struct SurveyRecordView: View {
         )
     }
 
+    private func addEmptyNote() {
+        let note = SurveySectionNote(
+            id: UUID().uuidString,
+            body: "",
+            origin: "manual",
+            createdAt: ISO8601DateFormatter().string(from: Date())
+        )
+        var list = currentNotes
+        list.append(note)
+        sectionNotes[selectedSection.ricsCode] = list
+        selectedNoteId = note.id
+    }
+
+    private func selectSection(_ item: SurveySectionItem) async {
+        guard item.ricsCode != selectedSection.ricsCode else { return }
+        if capture.isRecording {
+            dictation.updateLive(transcript: liveCaption, elapsed: capture.elapsed)
+            if !capture.isPaused {
+                await capture.pause()
+            }
+            dictation.switchSection(
+                to: item.ricsCode,
+                sectionLabel: item.displayLabel
+            )
+            session.dictationController = dictation
+        }
+        selectedSection = item
+        seedNote(for: item)
+        selectedNoteId = (sectionNotes[item.ricsCode] ?? item.notes).last?.id
+    }
+
     private func start() async {
         do {
             try await capture.start()
+            dictation.begin(
+                surveyId: survey.id,
+                ricsCode: selectedSection.ricsCode,
+                sectionLabel: selectedSection.displayLabel
+            )
+            session.dictationController = dictation
         } catch is CancellationError {
             return
         } catch {
@@ -395,6 +538,8 @@ struct SurveyRecordView: View {
         if capture.isPaused {
             do {
                 try await capture.resume()
+                dictation.resume(ricsCode: selectedSection.ricsCode)
+                session.dictationController = dictation
             } catch {
                 startError = error.localizedDescription
             }
@@ -402,7 +547,10 @@ struct SurveyRecordView: View {
         }
         isPausing = true
         defer { isPausing = false }
+        dictation.updateLive(transcript: liveCaption, elapsed: capture.elapsed)
         await capture.pause()
+        dictation.pauseCurrent()
+        session.dictationController = dictation
     }
 
     private func stopRecording() async {
@@ -413,6 +561,15 @@ struct SurveyRecordView: View {
             let fallback = selectedSection.displayLabel
             let body = SpeakerTurnSplitter.plainProse(from: result.transcript)
             let title = SurveyDisplay.sessionTitle(from: body, on: Date(), fallback: fallback)
+            let appendId = selectedNoteId.flatMap { id in
+                currentNotes.contains(where: { $0.id == id && !$0.body.isEmpty }) ? id : nil
+            }
+            // Empty local draft notes are not on the server yet — insert a new row.
+            let serverAppendId = appendId.flatMap { id in
+                UUID(uuidString: id) != nil && selectedSection.notes.contains(where: { $0.id == id })
+                    ? id
+                    : nil
+            }
             _ = OfflineSurveyQueue.shared.enqueueSession(
                 workspace: workspace,
                 surveyId: survey.id,
@@ -422,14 +579,33 @@ struct SurveyRecordView: View {
                 durationSeconds: max(0, Int(result.duration.rounded())),
                 meetingDate: TaskItem.dueString(from: Date()),
                 audioURL: result.audioURL,
-                ricsCode: selectedSection.ricsCode
+                ricsCode: selectedSection.ricsCode,
+                appendToObservationId: serverAppendId
             )
-            let updated = SurveyDisplay.appendNote(
-                existing: localNotes[selectedSection.ricsCode] ?? selectedSection.note,
-                incoming: body
-            )
-            localNotes[selectedSection.ricsCode] = updated
-            selectedSection.note = updated
+            var notes = currentNotes
+            if let selectedNoteId,
+               let index = notes.firstIndex(where: { $0.id == selectedNoteId }) {
+                let existing = notes[index].body
+                notes[index].body = SurveyDisplay.appendNote(existing: existing, incoming: body)
+                sectionNotes[selectedSection.ricsCode] = notes
+                selectedSection.notes = notes
+                selectedSection.note = notes.map(\.body).filter { !$0.isEmpty }.joined(separator: "\n\n")
+            } else {
+                let note = SurveySectionNote(
+                    id: UUID().uuidString,
+                    body: body,
+                    origin: "dictation",
+                    createdAt: ISO8601DateFormatter().string(from: Date())
+                )
+                notes.append(note)
+                sectionNotes[selectedSection.ricsCode] = notes
+                selectedSection.notes = notes
+                selectedNoteId = note.id
+                selectedSection.note = notes.map(\.body).filter { !$0.isEmpty }.joined(separator: "\n\n")
+            }
+            localNotes[selectedSection.ricsCode] = selectedSection.note
+            _ = dictation.finishCurrent()
+            session.dictationController = dictation.hasActiveOrPaused ? dictation : nil
             await session.flushOfflineWork()
             await onFinished()
         } catch {

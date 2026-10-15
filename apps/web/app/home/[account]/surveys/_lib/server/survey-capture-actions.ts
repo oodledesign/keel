@@ -27,6 +27,7 @@ import {
   CreateSurveyObservationSchema,
   DeleteSurveyObservationSchema,
   DeleteSurveyStyleExampleSchema,
+  MergeSurveySectionNotesSchema,
   GenerateSurveyDraftSchema,
   PreviewSurveyTranscriptNotesSchema,
   ProposeSurveyPhotoCurationSchema,
@@ -154,6 +155,15 @@ export const createSurveyObservationAction = enhanceAction(
     return result;
   },
   { schema: CreateSurveyObservationSchema },
+);
+
+export const mergeSurveySectionNotesAction = enhanceAction(
+  async (data) => {
+    const result = await getService().mergeSectionNotes(data);
+    revalidateSurveyHub(data.accountSlug, data.proposalId);
+    return result;
+  },
+  { schema: MergeSurveySectionNotesSchema },
 );
 
 export const updateSurveyObservationAction = enhanceAction(

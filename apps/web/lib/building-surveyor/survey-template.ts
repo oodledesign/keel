@@ -1,3 +1,4 @@
+import { COMMERCIAL_BUILDING_SURVEY_TEMPLATE } from './commercial-building-survey-template';
 import { BUILDING_SURVEY_SECTIONS } from './rics-catalogue';
 import {
   CLOSING_CALLOUTS,
@@ -18,6 +19,7 @@ import {
 export const SURVEY_SYSTEM_TEMPLATE_KEYS = [
   'rics_hss_l3',
   'rics_hss_l2',
+  'commercial_building_survey',
 ] as const;
 
 export type SurveySystemTemplateKey =
@@ -116,6 +118,10 @@ export type SurveyTemplateRecord = {
   brand: SurveyTemplateBrand;
   surveyorDefaults: Record<string, string>;
   blocks: SurveyTemplateBlock[];
+  /** Null means built-in catalogue; see survey-sections-resolver. */
+  sections?:
+    | import('./survey-sections-resolver').SurveySectionOverride[]
+    | null;
   sourceSystemKey: SurveySystemTemplateKey;
   updatedAt: string;
 };
@@ -524,19 +530,25 @@ export const SYSTEM_SURVEY_TEMPLATES: Record<
 > = {
   rics_hss_l3: RICS_HSS_L3_TEMPLATE,
   rics_hss_l2: RICS_HSS_L2_TEMPLATE,
+  commercial_building_survey: COMMERCIAL_BUILDING_SURVEY_TEMPLATE,
 };
 
 export function systemSurveyTemplate(
   key: string | null | undefined,
 ): SurveyTemplateDefinition {
   if (key === 'rics_hss_l2') return RICS_HSS_L2_TEMPLATE;
+  if (key === 'commercial_building_survey') {
+    return COMMERCIAL_BUILDING_SURVEY_TEMPLATE;
+  }
   return RICS_HSS_L3_TEMPLATE;
 }
 
 export function templateLevel(
   template: Pick<SurveyTemplateDefinition, 'surveyType'>,
 ): TemplateLevel {
-  return template.surveyType === 'rics_hss_l2' ? 2 : 3;
+  if (template.surveyType === 'rics_hss_l2') return 2;
+  if (template.surveyType === 'commercial_building_survey') return 3;
+  return 3;
 }
 
 export function isSurveySystemTemplateKey(

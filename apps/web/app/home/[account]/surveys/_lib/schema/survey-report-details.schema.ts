@@ -54,6 +54,29 @@ export const SaveSurveyorPipelineSettingsSchema = z
     path: ['leadRedDays'],
   });
 
+export const SaveSurveyorTobSettingsSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1).max(200),
+  tobSignatoryName: z.string().trim().min(1).max(200),
+  tobSignatoryTitle: z.string().trim().max(200).nullable().optional(),
+  tobSignatureType: z.enum(['drawn', 'typed']),
+  tobSignatureData: z.string().trim().min(1).max(500_000),
+});
+
+export const SaveSurveyorQuoteTemplatesSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1).max(200),
+  /** Partial map; omit a key or pass empty string to clear that override. */
+  quoteTemplates: z
+    .record(
+      z.enum(['rics_hss_l2', 'rics_hss_l3', 'commercial_condition']),
+      z.string().max(80_000),
+    )
+    .optional(),
+  /** Reset all overrides to built-in defaults. */
+  reset: z.boolean().optional(),
+});
+
 export const CoverFocusSchema = z.object({
   x: z.number().min(0).max(1),
   y: z.number().min(0).max(1),

@@ -70,15 +70,20 @@ async function ProposalsPage({ params }: ProposalsPageProps) {
     'Team member';
 
   const isCommercial = workspace.workspaceProfile === 'commercial_property';
+  const isSurveyor = workspace.workspaceProfile === 'building_surveyor';
 
   return (
     <>
       <TeamAccountLayoutPageHeader
-        title={isCommercial ? 'HoTs / Proposals' : 'Proposals'}
+        title={
+          isCommercial ? 'HoTs / Proposals' : isSurveyor ? 'Quotes' : 'Proposals'
+        }
         description={
           isCommercial
             ? 'Draft and send heads of terms and proposals'
-            : 'Create and send proposals for client approval'
+            : isSurveyor
+              ? 'Draft and send survey quotes linked to leads'
+              : 'Create and send proposals for client approval'
         }
         account={accountSlug}
       />

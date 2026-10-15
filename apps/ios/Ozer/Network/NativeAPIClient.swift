@@ -782,6 +782,7 @@ actor NativeAPIClient {
         audioData: Data?,
         filename: String,
         ricsCode: String? = nil,
+        appendToObservationId: String? = nil,
         accessToken: String
     ) async throws -> SurveySessionUploadResult {
         var fields = [
@@ -797,6 +798,9 @@ actor NativeAPIClient {
         }
         if let ricsCode, !ricsCode.isEmpty {
             fields["rics_code"] = ricsCode
+        }
+        if let appendToObservationId, !appendToObservationId.isEmpty {
+            fields["append_to_observation_id"] = appendToObservationId
         }
         let data = try await sendMultipartFields(
             path: "api/native/v1/surveys/\(surveyId)/sessions",

@@ -209,6 +209,7 @@ export type Database = {
           phone: string | null
           primary_color: string
           secondary_color: string | null
+          trading_name: string | null
           updated_at: string
           website_url: string | null
         }
@@ -226,6 +227,7 @@ export type Database = {
           phone?: string | null
           primary_color?: string
           secondary_color?: string | null
+          trading_name?: string | null
           updated_at?: string
           website_url?: string | null
         }
@@ -243,6 +245,7 @@ export type Database = {
           phone?: string | null
           primary_color?: string
           secondary_color?: string | null
+          trading_name?: string | null
           updated_at?: string
           website_url?: string | null
         }
@@ -9258,6 +9261,8 @@ export type Database = {
           signature_data: string | null
           signature_type: string | null
           signed_at: string | null
+          signed_ip: string | null
+          signed_user_agent: string | null
           signing_order: number
           version_id: string | null
         }
@@ -9274,6 +9279,8 @@ export type Database = {
           signature_data?: string | null
           signature_type?: string | null
           signed_at?: string | null
+          signed_ip?: string | null
+          signed_user_agent?: string | null
           signing_order: number
           version_id?: string | null
         }
@@ -9290,6 +9297,8 @@ export type Database = {
           signature_data?: string | null
           signature_type?: string | null
           signed_at?: string | null
+          signed_ip?: string | null
+          signed_user_agent?: string | null
           signing_order?: number
           version_id?: string | null
         }
@@ -9341,7 +9350,9 @@ export type Database = {
           default_title: string | null
           default_total_pence: number
           id: string
+          is_terms_of_business: boolean
           name: string
+          survey_type: string | null
           updated_at: string
         }
         Insert: {
@@ -9353,7 +9364,9 @@ export type Database = {
           default_title?: string | null
           default_total_pence?: number
           id?: string
+          is_terms_of_business?: boolean
           name: string
+          survey_type?: string | null
           updated_at?: string
         }
         Update: {
@@ -9365,7 +9378,9 @@ export type Database = {
           default_title?: string | null
           default_total_pence?: number
           id?: string
+          is_terms_of_business?: boolean
           name?: string
+          survey_type?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -9533,6 +9548,8 @@ export type Database = {
           author_signature_data: string | null
           author_signature_type: string | null
           author_signed_at: string | null
+          author_signed_ip: string | null
+          author_signed_user_agent: string | null
           author_type: string | null
           auto_send_on_approval: boolean
           client_id: string | null
@@ -9550,6 +9567,7 @@ export type Database = {
           email_subject: string | null
           id: string
           invoices_generated_at: string | null
+          is_terms_of_business: boolean
           last_reminder_at: string | null
           payment_plan: Json
           private_note: string | null
@@ -9566,10 +9584,14 @@ export type Database = {
           recipient_signature_data: string | null
           recipient_signature_type: string | null
           recipient_signed_at: string | null
+          recipient_signed_ip: string | null
+          recipient_signed_user_agent: string | null
           recipient_type: string | null
           sent_at: string | null
           sent_to_email: string | null
           sent_version_id: string | null
+          signed_pdf_path: string | null
+          signed_pdf_sha256: string | null
           signing_expires_at: string | null
           status: string
           title: string
@@ -9584,6 +9606,8 @@ export type Database = {
           author_signature_data?: string | null
           author_signature_type?: string | null
           author_signed_at?: string | null
+          author_signed_ip?: string | null
+          author_signed_user_agent?: string | null
           author_type?: string | null
           auto_send_on_approval?: boolean
           client_id?: string | null
@@ -9601,6 +9625,7 @@ export type Database = {
           email_subject?: string | null
           id?: string
           invoices_generated_at?: string | null
+          is_terms_of_business?: boolean
           last_reminder_at?: string | null
           payment_plan?: Json
           private_note?: string | null
@@ -9617,10 +9642,14 @@ export type Database = {
           recipient_signature_data?: string | null
           recipient_signature_type?: string | null
           recipient_signed_at?: string | null
+          recipient_signed_ip?: string | null
+          recipient_signed_user_agent?: string | null
           recipient_type?: string | null
           sent_at?: string | null
           sent_to_email?: string | null
           sent_version_id?: string | null
+          signed_pdf_path?: string | null
+          signed_pdf_sha256?: string | null
           signing_expires_at?: string | null
           status?: string
           title?: string
@@ -9635,6 +9664,8 @@ export type Database = {
           author_signature_data?: string | null
           author_signature_type?: string | null
           author_signed_at?: string | null
+          author_signed_ip?: string | null
+          author_signed_user_agent?: string | null
           author_type?: string | null
           auto_send_on_approval?: boolean
           client_id?: string | null
@@ -9652,6 +9683,7 @@ export type Database = {
           email_subject?: string | null
           id?: string
           invoices_generated_at?: string | null
+          is_terms_of_business?: boolean
           last_reminder_at?: string | null
           payment_plan?: Json
           private_note?: string | null
@@ -9668,10 +9700,14 @@ export type Database = {
           recipient_signature_data?: string | null
           recipient_signature_type?: string | null
           recipient_signed_at?: string | null
+          recipient_signed_ip?: string | null
+          recipient_signed_user_agent?: string | null
           recipient_type?: string | null
           sent_at?: string | null
           sent_to_email?: string | null
           sent_version_id?: string | null
+          signed_pdf_path?: string | null
+          signed_pdf_sha256?: string | null
           signing_expires_at?: string | null
           status?: string
           title?: string
@@ -16339,8 +16375,75 @@ export type Database = {
           },
         ]
       }
+      pipeline_deal_events: {
+        Row: {
+          account_id: string
+          actor_id: string | null
+          created_at: string
+          deal_id: string
+          detail: Json
+          event_type: string
+          from_stage: string | null
+          id: string
+          to_stage: string | null
+        }
+        Insert: {
+          account_id: string
+          actor_id?: string | null
+          created_at?: string
+          deal_id: string
+          detail?: Json
+          event_type: string
+          from_stage?: string | null
+          id?: string
+          to_stage?: string | null
+        }
+        Update: {
+          account_id?: string
+          actor_id?: string | null
+          created_at?: string
+          deal_id?: string
+          detail?: Json
+          event_type?: string
+          from_stage?: string | null
+          id?: string
+          to_stage?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_deal_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_deal_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_deal_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_deal_events_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pipeline_deals: {
         Row: {
+          access_contact_name: string | null
+          access_contact_phone: string | null
           account_id: string | null
           address_line_1: string | null
           address_line_2: string | null
@@ -16351,9 +16454,13 @@ export type Database = {
           archived_by: string | null
           asking_price_pence: number | null
           asking_rent_pence: number | null
+          assigned_to: string | null
+          bedrooms: number | null
           board_position: number
           business_id: string | null
+          client_address: string | null
           client_id: string | null
+          client_notes: string | null
           client_org_id: string | null
           commercial_listing_id: string | null
           commercial_requirement_id: string | null
@@ -16376,8 +16483,11 @@ export type Database = {
           hots_solicitor_name: string | null
           hots_target_exchange_date: string | null
           id: string
+          inspection_at: string | null
           ladder_position: number
+          last_activity_at: string
           latitude: number | null
+          lead_in_time: string | null
           longitude: number | null
           lost_at: string | null
           lost_reason: string | null
@@ -16387,10 +16497,23 @@ export type Database = {
           notes: string | null
           postcode: string | null
           probability: number | null
+          property_age: string | null
           property_type: string | null
+          purchase_price_pence: number | null
+          quote_sent_by_email: boolean
+          quote_sent_by_phone: boolean
+          report_checked: boolean
+          report_checked_at: string | null
+          report_checked_by: string | null
           size_sqft: number | null
+          solicitor_email: string | null
+          solicitor_name: string | null
           source: string | null
           stage: string | null
+          survey_type: string | null
+          tenure: string | null
+          tob_signed: boolean
+          tob_signed_at: string | null
           town: string | null
           updated_at: string | null
           value: number | null
@@ -16398,6 +16521,8 @@ export type Database = {
           work_type: string | null
         }
         Insert: {
+          access_contact_name?: string | null
+          access_contact_phone?: string | null
           account_id?: string | null
           address_line_1?: string | null
           address_line_2?: string | null
@@ -16408,9 +16533,13 @@ export type Database = {
           archived_by?: string | null
           asking_price_pence?: number | null
           asking_rent_pence?: number | null
+          assigned_to?: string | null
+          bedrooms?: number | null
           board_position?: number
           business_id?: string | null
+          client_address?: string | null
           client_id?: string | null
+          client_notes?: string | null
           client_org_id?: string | null
           commercial_listing_id?: string | null
           commercial_requirement_id?: string | null
@@ -16433,8 +16562,11 @@ export type Database = {
           hots_solicitor_name?: string | null
           hots_target_exchange_date?: string | null
           id?: string
+          inspection_at?: string | null
           ladder_position?: number
+          last_activity_at?: string
           latitude?: number | null
+          lead_in_time?: string | null
           longitude?: number | null
           lost_at?: string | null
           lost_reason?: string | null
@@ -16444,10 +16576,23 @@ export type Database = {
           notes?: string | null
           postcode?: string | null
           probability?: number | null
+          property_age?: string | null
           property_type?: string | null
+          purchase_price_pence?: number | null
+          quote_sent_by_email?: boolean
+          quote_sent_by_phone?: boolean
+          report_checked?: boolean
+          report_checked_at?: string | null
+          report_checked_by?: string | null
           size_sqft?: number | null
+          solicitor_email?: string | null
+          solicitor_name?: string | null
           source?: string | null
           stage?: string | null
+          survey_type?: string | null
+          tenure?: string | null
+          tob_signed?: boolean
+          tob_signed_at?: string | null
           town?: string | null
           updated_at?: string | null
           value?: number | null
@@ -16455,6 +16600,8 @@ export type Database = {
           work_type?: string | null
         }
         Update: {
+          access_contact_name?: string | null
+          access_contact_phone?: string | null
           account_id?: string | null
           address_line_1?: string | null
           address_line_2?: string | null
@@ -16465,9 +16612,13 @@ export type Database = {
           archived_by?: string | null
           asking_price_pence?: number | null
           asking_rent_pence?: number | null
+          assigned_to?: string | null
+          bedrooms?: number | null
           board_position?: number
           business_id?: string | null
+          client_address?: string | null
           client_id?: string | null
+          client_notes?: string | null
           client_org_id?: string | null
           commercial_listing_id?: string | null
           commercial_requirement_id?: string | null
@@ -16490,8 +16641,11 @@ export type Database = {
           hots_solicitor_name?: string | null
           hots_target_exchange_date?: string | null
           id?: string
+          inspection_at?: string | null
           ladder_position?: number
+          last_activity_at?: string
           latitude?: number | null
+          lead_in_time?: string | null
           longitude?: number | null
           lost_at?: string | null
           lost_reason?: string | null
@@ -16501,10 +16655,23 @@ export type Database = {
           notes?: string | null
           postcode?: string | null
           probability?: number | null
+          property_age?: string | null
           property_type?: string | null
+          purchase_price_pence?: number | null
+          quote_sent_by_email?: boolean
+          quote_sent_by_phone?: boolean
+          report_checked?: boolean
+          report_checked_at?: string | null
+          report_checked_by?: string | null
           size_sqft?: number | null
+          solicitor_email?: string | null
+          solicitor_name?: string | null
           source?: string | null
           stage?: string | null
+          survey_type?: string | null
+          tenure?: string | null
+          tob_signed?: boolean
+          tob_signed_at?: string | null
           town?: string | null
           updated_at?: string | null
           value?: number | null
@@ -18896,10 +19063,12 @@ export type Database = {
           expires_at: string | null
           id: string
           kind: string
+          lead_changed_at: string | null
           photo_share_enabled: boolean
           photo_share_token: string | null
           private_note: string | null
           public_token: string | null
+          quote_html_hash: string | null
           read_at: string | null
           recipient_email: string | null
           recipient_name: string | null
@@ -18922,6 +19091,7 @@ export type Database = {
           survey_property_address: string | null
           survey_property_postcode: string | null
           survey_report_reference: string | null
+          survey_sections: Json | null
           survey_services: Json | null
           survey_template_id: string | null
           survey_terms_received_date: string | null
@@ -18950,10 +19120,12 @@ export type Database = {
           expires_at?: string | null
           id?: string
           kind?: string
+          lead_changed_at?: string | null
           photo_share_enabled?: boolean
           photo_share_token?: string | null
           private_note?: string | null
           public_token?: string | null
+          quote_html_hash?: string | null
           read_at?: string | null
           recipient_email?: string | null
           recipient_name?: string | null
@@ -18976,6 +19148,7 @@ export type Database = {
           survey_property_address?: string | null
           survey_property_postcode?: string | null
           survey_report_reference?: string | null
+          survey_sections?: Json | null
           survey_services?: Json | null
           survey_template_id?: string | null
           survey_terms_received_date?: string | null
@@ -19004,10 +19177,12 @@ export type Database = {
           expires_at?: string | null
           id?: string
           kind?: string
+          lead_changed_at?: string | null
           photo_share_enabled?: boolean
           photo_share_token?: string | null
           private_note?: string | null
           public_token?: string | null
+          quote_html_hash?: string | null
           read_at?: string | null
           recipient_email?: string | null
           recipient_name?: string | null
@@ -19030,6 +19205,7 @@ export type Database = {
           survey_property_address?: string | null
           survey_property_postcode?: string | null
           survey_report_reference?: string | null
+          survey_sections?: Json | null
           survey_services?: Json | null
           survey_template_id?: string | null
           survey_terms_received_date?: string | null
@@ -20356,6 +20532,16 @@ export type Database = {
           cover_image_path: string | null
           created_at: string
           drone_fee_pence: number
+          lead_amber_days: number
+          lead_archive_days: number
+          lead_red_days: number
+          quote_reminder_client_email: boolean
+          quote_reminder_days: number
+          quote_templates: Json
+          tob_signatory_name: string | null
+          tob_signatory_title: string | null
+          tob_signature_data: string | null
+          tob_signature_type: string | null
           updated_at: string
         }
         Insert: {
@@ -20363,6 +20549,16 @@ export type Database = {
           cover_image_path?: string | null
           created_at?: string
           drone_fee_pence?: number
+          lead_amber_days?: number
+          lead_archive_days?: number
+          lead_red_days?: number
+          quote_reminder_client_email?: boolean
+          quote_reminder_days?: number
+          quote_templates?: Json
+          tob_signatory_name?: string | null
+          tob_signatory_title?: string | null
+          tob_signature_data?: string | null
+          tob_signature_type?: string | null
           updated_at?: string
         }
         Update: {
@@ -20370,6 +20566,16 @@ export type Database = {
           cover_image_path?: string | null
           created_at?: string
           drone_fee_pence?: number
+          lead_amber_days?: number
+          lead_archive_days?: number
+          lead_red_days?: number
+          quote_reminder_client_email?: boolean
+          quote_reminder_days?: number
+          quote_templates?: Json
+          tob_signatory_name?: string | null
+          tob_signatory_title?: string | null
+          tob_signature_data?: string | null
+          tob_signature_type?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -20497,6 +20703,9 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          origin: string | null
+          origin_body: string | null
+          origin_doc_id: string | null
           proposal_id: string
           rics_code: string | null
           section_key: string
@@ -20513,6 +20722,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          origin?: string | null
+          origin_body?: string | null
+          origin_doc_id?: string | null
           proposal_id: string
           rics_code?: string | null
           section_key: string
@@ -20529,6 +20741,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          origin?: string | null
+          origin_body?: string | null
+          origin_doc_id?: string | null
           proposal_id?: string
           rics_code?: string | null
           section_key?: string
@@ -20790,6 +21005,7 @@ export type Database = {
           id: string
           is_default: boolean
           name: string
+          sections: Json | null
           source_system_key: string | null
           survey_type: string
           surveyor_defaults: Json
@@ -20805,6 +21021,7 @@ export type Database = {
           id?: string
           is_default?: boolean
           name: string
+          sections?: Json | null
           source_system_key?: string | null
           survey_type: string
           surveyor_defaults?: Json
@@ -20820,6 +21037,7 @@ export type Database = {
           id?: string
           is_default?: boolean
           name?: string
+          sections?: Json | null
           source_system_key?: string | null
           survey_type?: string
           surveyor_defaults?: Json
@@ -25071,6 +25289,10 @@ export type Database = {
       is_account_owner: { Args: { account_id: string }; Returns: boolean }
       is_account_team_member: {
         Args: { target_account_id: string }
+        Returns: boolean
+      }
+      is_building_surveyor_account: {
+        Args: { p_account_id: string }
         Returns: boolean
       }
       is_chat_thread_participant: {

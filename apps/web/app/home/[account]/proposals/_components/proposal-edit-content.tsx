@@ -449,6 +449,8 @@ export function ProposalEditContent({
           initialSubject={emailSubject}
           initialBody={emailBody}
           initialSignature={emailSignature}
+          accountName={accountName}
+          recipientName={proposal.recipient_name}
           onSent={() => {
             setShowSendPanel(false);
             router.refresh();

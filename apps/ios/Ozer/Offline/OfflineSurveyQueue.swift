@@ -26,6 +26,8 @@ struct PendingSurveySession: Codable, Identifiable, Equatable, Hashable {
     var meetingDate: String
     var audioFileName: String?
     var ricsCode: String?
+    /// When set, the server appends onto this observation instead of inserting a new row.
+    var appendToObservationId: String?
     var createdAt: String
 }
 
@@ -156,7 +158,8 @@ final class OfflineSurveyQueue {
         durationSeconds: Int,
         meetingDate: String,
         audioURL: URL?,
-        ricsCode: String? = nil
+        ricsCode: String? = nil,
+        appendToObservationId: String? = nil
     ) -> PendingSurveySession {
         var fileName = audioURL?.lastPathComponent
         if let audioURL {
@@ -177,6 +180,7 @@ final class OfflineSurveyQueue {
             meetingDate: meetingDate,
             audioFileName: fileName,
             ricsCode: ricsCode,
+            appendToObservationId: appendToObservationId,
             createdAt: OfflineNoteQueue.isoString(from: Date())
         )
         pendingSessions.insert(item, at: 0)
@@ -308,6 +312,7 @@ final class OfflineSurveyQueue {
                     audioData: audioData,
                     filename: filename,
                     ricsCode: session.ricsCode,
+                    appendToObservationId: session.appendToObservationId,
                     accessToken: accessToken
                 )
                 if let url = audioURL(for: session) {

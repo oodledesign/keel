@@ -47,6 +47,7 @@ import {
   pullSurveyFloodAction,
   updateSurveyFloodAction,
 } from '../_lib/server/survey-prep-actions';
+import { SurveyBrochureImport } from './survey-brochure-import';
 import { SurveyEpcPanel } from './survey-epc-panel';
 import { SurveyPropertyMapThumbnail } from './survey-property-map-thumbnail';
 
@@ -224,6 +225,12 @@ export function SurveyPropertyPanel({
       data-test="survey-property-panel"
     >
       <div className="space-y-5">
+        <SurveyBrochureImport
+          accountId={accountId}
+          accountSlug={accountSlug}
+          proposalId={proposalId}
+          canEdit={canEdit}
+        />
         <Card className={workspacePanelCard}>
           <CardContent className="p-4 sm:p-5">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--workspace-shell-text)]">

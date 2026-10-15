@@ -10,6 +10,9 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import { createProposalsService } from '~/home/[account]/proposals/_lib/server/proposals.service';
 import { createSurveyReportDetailsService } from '~/home/[account]/surveys/_lib/server/survey-report-details.service';
+import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { resolveTradingOrAccountName } from '~/lib/brand/trading-name';
+import { assertBuildingSurveyorAccount } from '~/lib/building-surveyor/assert-building-surveyor.server';
 import { hashQuoteHtml } from '~/lib/building-surveyor/lead-sync';
 import {
   loadFirmName,
@@ -24,6 +27,13 @@ import {
   quoteAddressForLead,
   renderSurveyorQuoteHtml,
 } from '~/lib/building-surveyor/surveyor-quote-content.server';
+import { resolveQuoteLetterHtml } from '~/lib/building-surveyor/surveyor-quote-letters';
+import {
+  type SurveyorTobLeadContext,
+  applyLeadSmartFields,
+  buildSurveyorLeadSmartFields,
+} from '~/lib/building-surveyor/surveyor-tob-content';
+import { loadSurveyorTobSettings } from '~/lib/building-surveyor/surveyor-tob.server';
 
 const CreateSurveyorQuoteSchema = z.object({
   accountId: z.string().uuid(),
@@ -45,22 +55,6 @@ function db(): any {
   return getSupabaseServerClient();
 }
 
-async function assertBuildingSurveyor(accountId: string) {
-  const { data: account } = await db()
-    .from('accounts')
-    .select('space_type')
-    .eq('id', accountId)
-    .maybeSingle();
-  if (
-    (account as { space_type?: string } | null)?.space_type !==
-    'building-surveyor'
-  ) {
-    throw new Error(
-      'Quotes of this type are only available in a building-surveyor workspace',
-    );
-  }
-}
-
 function revalidateQuotePaths(accountSlug: string) {
   revalidatePath(
     pathsConfig.app.accountPipeline.replace('[account]', accountSlug),
@@ -76,7 +70,10 @@ function revalidateQuotePaths(accountSlug: string) {
 export const createSurveyorQuoteAction = enhanceAction(
   async (data) => {
     const client = getSupabaseServerClient();
-    await assertBuildingSurveyor(data.accountId);
+    await assertBuildingSurveyorAccount(
+      data.accountId,
+      'Quotes of this type are only available in a building-surveyor workspace',
+    );
 
     const lead = await loadLeadSyncSource(data.accountId, data.dealId);
     if (!lead) throw new Error('Lead not found');
@@ -103,19 +100,63 @@ export const createSurveyorQuoteAction = enhanceAction(
         ? (data.droneFeePence ?? defaultFeePence)
         : null;
 
-    const html = await renderSurveyorQuoteHtml({
-      client,
-      accountId: data.accountId,
-      firmName: data.firmName?.trim() || (await loadFirmName(data.accountId)),
-      lead: quoteLead,
-      address: data.address,
-      drone: {
-        used: droneUsed,
-        billing: droneBilling,
-        feePence: droneFeePence,
-      },
-      defaultDroneFeePence: defaultFeePence,
+    const tobSettings = await loadSurveyorTobSettings(data.accountId);
+    const brand = await loadAccountBrandResolved(data.accountId);
+    const firmName =
+      data.firmName?.trim() ||
+      resolveTradingOrAccountName({
+        tradingName: brand.trading_name,
+        accountName: await loadFirmName(data.accountId),
+      });
+    const letter = resolveQuoteLetterHtml({
+      surveyType: lead.surveyType,
+      overrides: tobSettings.quoteTemplates,
     });
+    const leadCtx: SurveyorTobLeadContext = {
+      dealId: data.dealId,
+      contactName: quoteLead.contactName,
+      contactEmail: lead.contactEmail,
+      contactPhone: lead.contactPhone ?? null,
+      clientAddress: lead.clientAddress ?? null,
+      surveyType: lead.surveyType,
+      inspectionAt: lead.inspectionAt ?? null,
+      value: lead.value,
+      addressLine1: lead.addressLine1 ?? null,
+      addressLine2: lead.addressLine2 ?? null,
+      town: lead.town ?? null,
+      postcode: lead.postcode ?? null,
+      name: lead.name ?? null,
+    };
+    let html = applyLeadSmartFields(
+      letter,
+      buildSurveyorLeadSmartFields({
+        lead: leadCtx,
+        accountName: firmName,
+        signatoryName: tobSettings.tobSignatoryName,
+        signatoryTitle: tobSettings.tobSignatoryTitle,
+      }),
+    );
+    if (droneUsed) {
+      const droneBlock = await renderSurveyorQuoteHtml({
+        client,
+        accountId: data.accountId,
+        firmName,
+        lead: quoteLead,
+        address: data.address,
+        drone: {
+          used: droneUsed,
+          billing: droneBilling,
+          feePence: droneFeePence,
+        },
+        defaultDroneFeePence: defaultFeePence,
+      });
+      const droneMatch = droneBlock.match(
+        /<h2>Additional services<\/h2>[\s\S]*?<\/table>/,
+      );
+      if (droneMatch) {
+        html = `${html}\n${droneMatch[0]}`;
+      }
+    }
 
     const proposal = await createProposalsService(client).createProposal({
       accountId: data.accountId,
@@ -169,7 +210,10 @@ const ResolveQuoteSchema = z.object({
 export const resolveSurveyorQuoteLeadChangeAction = enhanceAction(
   async (data) => {
     const client = getSupabaseServerClient();
-    await assertBuildingSurveyor(data.accountId);
+    await assertBuildingSurveyorAccount(
+      data.accountId,
+      'Quotes of this type are only available in a building-surveyor workspace',
+    );
 
     const { data: row, error } = await db()
       .from('proposals')

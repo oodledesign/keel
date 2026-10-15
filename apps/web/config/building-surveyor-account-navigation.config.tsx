@@ -7,6 +7,7 @@ import {
   FormInput,
   LayoutDashboard,
   Mic,
+  ScrollText,
   Settings,
   StickyNote,
   UserRound,
@@ -101,6 +102,14 @@ export function buildBuildingSurveyorSpaceNavChildren(
             label: 'Surveys',
             path: createPath(pathsConfig.app.accountSurveys, account),
             Icon: <FileText className={iconClasses} />,
+          }
+        : null,
+    proposals: () =>
+      access.canViewInvoices && isEnabled(ms, 'proposals')
+        ? {
+            label: 'Quotes',
+            path: createPath(pathsConfig.app.accountProposals, account),
+            Icon: <ScrollText className={iconClasses} />,
           }
         : null,
     contracts: () =>

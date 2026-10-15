@@ -38,11 +38,15 @@ export const saveAccountBrandSettings = enhanceAction(
       address: input.address?.trim() || null,
       heading_font: input.heading_font ?? null,
       body_font: input.body_font ?? null,
+      ...(input.trading_name !== undefined
+        ? { trading_name: input.trading_name?.trim() || null }
+        : {}),
     };
 
+    // trading_name may lag generated Database types until typegen.
     const { error } = await admin
       .from('account_brand_settings')
-      .upsert(payload, {
+      .upsert(payload as never, {
         onConflict: 'account_id',
       });
 

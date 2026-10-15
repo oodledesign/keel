@@ -23,6 +23,7 @@ import {
   DEFAULT_SURVEY_EMAIL_BODY,
   DEFAULT_SURVEY_EMAIL_SUBJECT,
   PROPOSAL_SMART_FIELD_PILLS,
+  renderSmartFields,
 } from '../_lib/doc-smart-fields';
 import { getErrorMessage } from '../_lib/error-message';
 import {
@@ -43,6 +44,8 @@ export function ProposalSendPanel({
   onSent,
   onClose,
   documentKind = 'proposal',
+  accountName,
+  recipientName,
 }: {
   accountId: string;
   proposalId: string;
@@ -56,6 +59,9 @@ export function ProposalSendPanel({
   onSent: () => void;
   onClose: () => void;
   documentKind?: ProposalDocumentKind;
+  /** Trading or workspace name for {{account.name}} preview. */
+  accountName?: string | null;
+  recipientName?: string | null;
 }) {
   const isSurvey = documentKind === 'survey_report';
   const noun = isSurvey ? 'report' : 'proposal';
@@ -77,6 +83,16 @@ export function ProposalSendPanel({
   const [loading, setLoading] = useState<'send' | 'test' | 'link' | null>(null);
   const [templateOpen, setTemplateOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const previewSubject = renderSmartFields(subject, {
+    accountName: accountName ?? '',
+    proposal: {
+      title: proposalTitle,
+      total_pence: totalPence ?? null,
+      currency: currency ?? null,
+      recipient_name: recipientName ?? null,
+    },
+  });
 
   const loadPortalLink = async () => {
     if (portalUrl) return portalUrl;
@@ -327,7 +343,7 @@ export function ProposalSendPanel({
         title={`Send this ${noun}?`}
         documentLabel={proposalTitle}
         recipients={email.trim() ? [email.trim()] : []}
-        subject={subject}
+        subject={previewSubject}
         confirmLabel="Send email"
         pending={loading === 'send'}
         onConfirm={() => void handleSend(false)}

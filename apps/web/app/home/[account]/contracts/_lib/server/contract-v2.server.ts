@@ -130,6 +130,8 @@ export async function signContractRecipientByToken(
     version_id?: string;
     content_hash?: string;
     signer_id?: string;
+    signed_ip?: string | null;
+    signed_user_agent?: string | null;
   },
 ) {
   const service = createContractsService(adminDb());
@@ -143,6 +145,8 @@ export async function signContractRecipientByToken(
     version_id: input.version_id,
     content_hash: input.content_hash,
     signer_id: input.signer_id,
+    signed_ip: input.signed_ip ?? null,
+    signed_user_agent: input.signed_user_agent ?? null,
   });
 }
 
@@ -246,16 +250,37 @@ export async function finalizeContractIfFullySigned(
     await generateInstalmentInvoices(contractId, accountId);
   }
 
+  const dealId =
+    (updated as { deal_id?: string | null }).deal_id ??
+    (contract as { deal_id?: string | null }).deal_id;
+  const isTerms =
+    (updated as { is_terms_of_business?: boolean | null })
+      .is_terms_of_business ??
+    (contract as { is_terms_of_business?: boolean | null })
+      .is_terms_of_business ??
+    false;
+
   try {
     const { maybeMarkSurveyorTermsSigned } =
       await import('~/lib/building-surveyor/surveyor-pipeline-sync');
-    await maybeMarkSurveyorTermsSigned(
-      accountId,
-      (updated as { deal_id?: string | null }).deal_id ??
-        (contract as { deal_id?: string | null }).deal_id,
-    );
+    await maybeMarkSurveyorTermsSigned(accountId, dealId, {
+      isTermsOfBusiness: Boolean(isTerms),
+    });
   } catch {
-    // Non-blocking pipeline update for building-surveyor Terms of Business.
+    // Non-blocking pipeline update for building-surveyor ToB.
+  }
+
+  if (isTerms) {
+    try {
+      const { storeSignedSurveyorTobPdf } =
+        await import('~/lib/building-surveyor/store-signed-tob-pdf.server');
+      await storeSignedSurveyorTobPdf({
+        accountId,
+        contractId,
+      });
+    } catch (err) {
+      console.error('[tob-pdf] non-blocking generation failed', err);
+    }
   }
 
   return updated;

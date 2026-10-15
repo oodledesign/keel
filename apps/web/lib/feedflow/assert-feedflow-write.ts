@@ -21,13 +21,18 @@ export async function assertFeedflowWriteAccess(
 }> {
   const client = getSupabaseServerClient() as SupabaseClient;
 
-  const { data: membership } = await client
+  // Composite PK is (user_id, account_id) — there is no `id` column.
+  const { data: membership, error: membershipError } = await client
     .from('accounts_memberships')
-    .select('id')
+    .select('account_id')
     .eq('account_id', accountId)
     .eq('user_id', userId)
     .maybeSingle();
 
+  if (membershipError) {
+    console.error('[feedflow] membership check failed', membershipError.message);
+    throw new Error('Not a member of this account');
+  }
   if (!membership) {
     throw new Error('Not a member of this account');
   }

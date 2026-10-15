@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { NativeHttpError } from './http';
-import { SURVEY_SECTION_NOTE_DIVIDER } from './survey-sections';
 import {
   addNativeSurveyPhoto,
   createNativeSurvey,
@@ -405,7 +404,7 @@ describe('createNativeSurveySession', () => {
     expect(result.cleanup_source).toBe('ai');
   });
 
-  it('uses the surveyor-chosen section, cleans the note, and appends', async () => {
+  it('uses the surveyor-chosen section, cleans the note, and inserts a new note', async () => {
     const surveyLookup = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -439,26 +438,19 @@ describe('createNativeSurveySession', () => {
         error: null,
       }),
     };
-    const existingObservation = {
+    const observationMax = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      or: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({
-        data: { id: 'obs-f3', body: 'Stopcock is stiff.' },
+        data: { sort_order: 0 },
         error: null,
       }),
     };
-    const updateChain = {
-      update: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
+    const observationInsert = {
+      insert: vi.fn().mockResolvedValue({ error: null }),
     };
-    updateChain.eq.mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      }),
-    });
 
     let observationCalls = 0;
     const from = vi.fn((table: string) => {
@@ -466,7 +458,7 @@ describe('createNativeSurveySession', () => {
       if (table === 'meeting_transcripts') return transcriptInsert;
       if (table === 'survey_observations') {
         observationCalls += 1;
-        return observationCalls === 1 ? existingObservation : updateChain;
+        return observationCalls === 1 ? observationMax : observationInsert;
       }
       return surveyLookup;
     });
@@ -496,21 +488,19 @@ describe('createNativeSurveySession', () => {
     expect(result.cleanup_source).toBe('ai');
     expect(result.session.rics_code).toBe('F3');
     expect(result.session.section_key).toBe('water');
-    expect(updateChain.update).toHaveBeenCalledWith(
+    expect(observationInsert.insert).toHaveBeenCalledWith(
       expect.objectContaining({
-        body: `Stopcock is stiff.\n\n${SURVEY_SECTION_NOTE_DIVIDER}\n\nsupply pipework is copper.`,
-        source_body: `Stopcock is stiff.\n\n${SURVEY_SECTION_NOTE_DIVIDER}\n\nUm, supply pipework is copper.`,
+        body: 'supply pipework is copper.',
+        source_body: 'Um, supply pipework is copper.',
         cleanup_source: 'ai',
         rics_code: 'F3',
         section_key: 'water',
+        sort_order: 1,
       }),
-    );
-    expect(updateChain.update).not.toHaveBeenCalledWith(
-      expect.objectContaining({ transcript_id: 'sess-2' }),
     );
   });
 
-  it('strips speaker headings from a section recording before cleanup and append', async () => {
+  it('strips speaker headings then inserts a new section note', async () => {
     const surveyLookup = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -544,14 +534,108 @@ describe('createNativeSurveySession', () => {
         error: null,
       }),
     };
-    const existingObservation = {
+    const observationMax = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      or: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({
-        data: { id: 'obs-f3', body: 'Supply is copper.' },
+        data: { sort_order: 0 },
+        error: null,
+      }),
+    };
+    const observationInsert = {
+      insert: vi.fn().mockResolvedValue({ error: null }),
+    };
+
+    let observationCalls = 0;
+    const from = vi.fn((table: string) => {
+      if (table === 'proposals') return surveyLookup;
+      if (table === 'meeting_transcripts') return transcriptInsert;
+      if (table === 'survey_observations') {
+        observationCalls += 1;
+        return observationCalls === 1 ? observationMax : observationInsert;
+      }
+      return surveyLookup;
+    });
+
+    await createNativeSurveySession({
+      client: { from } as never,
+      userId: 'user-dan',
+      workspace: surveyor,
+      surveyId,
+      title: 'F3 Water',
+      content: '## Me\n\nThe stopcock is stiff.',
+      durationSeconds: 10,
+      meetingDate: '2026-09-16',
+      source: 'iphone',
+      ricsCode: 'F3',
+    });
+
+    expect(transcriptInsert.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: 'The stopcock is stiff.',
+        speaker_segments: null,
+      }),
+    );
+    expect(cleanSurveyTranscript).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceText: 'The stopcock is stiff.',
+      }),
+    );
+    expect(observationInsert.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: 'The stopcock is stiff.',
+        source_body: 'The stopcock is stiff.',
+      }),
+    );
+  });
+
+  it('appends onto append_to_observation_id when provided', async () => {
+    const surveyLookup = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: surveyId,
+          title: '12 High Street',
+          status: 'draft',
+          survey_type: 'rics_hss_l2',
+          survey_level: 2,
+          client_id: clientId,
+          created_at: '2026-09-15T10:00:00Z',
+          updated_at: '2026-09-15T10:00:00Z',
+        },
+        error: null,
+      }),
+    };
+    const transcriptInsert = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: 'sess-4',
+          title: 'F3 Water',
+          content: 'Supply is copper.',
+          source: 'iphone',
+          duration_seconds: 8,
+          meeting_date: '2026-09-16',
+          created_at: '2026-09-16T13:00:00Z',
+        },
+        error: null,
+      }),
+    };
+    const existingObservation = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          id: 'obs-f3',
+          body: 'Stopcock is stiff.',
+          source_body: 'Stopcock is stiff.',
+          section_key: 'water',
+          rics_code: 'F3',
+        },
         error: null,
       }),
     };
@@ -582,28 +666,16 @@ describe('createNativeSurveySession', () => {
       workspace: surveyor,
       surveyId,
       title: 'F3 Water',
-      content: '## Me\n\nThe stopcock is stiff.',
-      durationSeconds: 10,
-      meetingDate: '2026-09-16',
-      source: 'iphone',
+      content: 'Supply is copper.',
       ricsCode: 'F3',
+      appendToObservationId: 'obs-f3',
     });
 
-    expect(transcriptInsert.insert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        content: 'The stopcock is stiff.',
-        speaker_segments: null,
-      }),
-    );
-    expect(cleanSurveyTranscript).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sourceText: 'The stopcock is stiff.',
-      }),
-    );
     expect(updateChain.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        body: `Supply is copper.\n\n${SURVEY_SECTION_NOTE_DIVIDER}\n\nThe stopcock is stiff.`,
-        source_body: `Supply is copper.\n\n${SURVEY_SECTION_NOTE_DIVIDER}\n\nThe stopcock is stiff.`,
+        body: 'Stopcock is stiff.\n\nSupply is copper.',
+        source_body: 'Stopcock is stiff.\n\nSupply is copper.',
+        transcript_id: 'sess-4',
       }),
     );
   });
@@ -641,14 +713,6 @@ describe('createNativeSurveySession', () => {
         error: null,
       }),
     };
-    const observationLookup = {
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      or: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-    };
     const observationMax = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -666,9 +730,7 @@ describe('createNativeSurveySession', () => {
       if (table === 'meeting_transcripts') return transcriptInsert;
       if (table === 'survey_observations') {
         observationCalls += 1;
-        if (observationCalls === 1) return observationLookup;
-        if (observationCalls === 2) return observationMax;
-        return observationInsert;
+        return observationCalls === 1 ? observationMax : observationInsert;
       }
       return surveyLookup;
     });

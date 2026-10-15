@@ -47,11 +47,13 @@ export function useSurveyorLeadActions({
   accountId,
   accountSlug,
   currentUserId,
+  onBooked,
 }: {
   setDeals: Dispatch<SetStateAction<PipelineDeal[]>>;
   accountId?: string;
   accountSlug?: string;
   currentUserId: string | null;
+  onBooked?: (deal: PipelineDeal) => void;
 }) {
   const replace = useCallback(
     (id: string, update: (deal: PipelineDeal) => PipelineDeal) =>
@@ -64,15 +66,18 @@ export function useSurveyorLeadActions({
   const moveStage = useCallback(
     (deal: PipelineDeal, stage: string) => {
       if (deal.stage === stage) return;
+      const next = { ...deal, stage };
       replace(deal.id, (row) => ({ ...row, stage }));
       void moveDealToStage(deal.id, stage, { accountSlug }).then((result) => {
         if (!result.success) {
           replace(deal.id, (row) => ({ ...row, stage: deal.stage }));
           toast.error(result.error ?? 'Could not move the lead');
+          return;
         }
+        if (stage === 'booked') onBooked?.(next);
       });
     },
-    [replace, accountSlug],
+    [replace, accountSlug, onBooked],
   );
 
   const changeTicks = useCallback(

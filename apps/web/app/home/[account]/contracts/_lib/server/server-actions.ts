@@ -110,12 +110,30 @@ export const sendContract = enhanceAction(
 );
 
 export const signAuthor = enhanceAction(
-  async (input) => getService().signAuthor(input),
+  async (input) => {
+    const { readSigningAuditFromHeaders } =
+      await import('~/lib/contracts/request-signing-audit');
+    const audit = await readSigningAuditFromHeaders();
+    return getService().signAuthor({
+      ...input,
+      signed_ip: input.signed_ip ?? audit.signed_ip,
+      signed_user_agent: input.signed_user_agent ?? audit.signed_user_agent,
+    });
+  },
   { schema: SignAuthorSchema },
 );
 
 export const signRecipient = enhanceAction(
-  async (input) => getService().signRecipient(input),
+  async (input) => {
+    const { readSigningAuditFromHeaders } =
+      await import('~/lib/contracts/request-signing-audit');
+    const audit = await readSigningAuditFromHeaders();
+    return getService().signRecipient({
+      ...input,
+      signed_ip: input.signed_ip ?? audit.signed_ip,
+      signed_user_agent: input.signed_user_agent ?? audit.signed_user_agent,
+    });
+  },
   { schema: SignRecipientSchema },
 );
 
@@ -169,8 +187,11 @@ export const declineContractRecipientByTokenAction = enhanceAction(
 );
 
 export const signContractRecipientByTokenAction = enhanceAction(
-  async (input) =>
-    signContractRecipientByToken(input.token, {
+  async (input) => {
+    const { readSigningAuditFromHeaders } =
+      await import('~/lib/contracts/request-signing-audit');
+    const audit = await readSigningAuditFromHeaders();
+    return signContractRecipientByToken(input.token, {
       recipient_type: input.recipient_type,
       recipient_name: input.recipient_name,
       recipient_company: input.recipient_company ?? null,
@@ -179,7 +200,10 @@ export const signContractRecipientByTokenAction = enhanceAction(
       version_id: input.version_id,
       content_hash: input.content_hash,
       signer_id: input.signer_id,
-    }),
+      signed_ip: input.signed_ip ?? audit.signed_ip,
+      signed_user_agent: input.signed_user_agent ?? audit.signed_user_agent,
+    });
+  },
   { schema: SignRecipientSchema, auth: false, verifyEmail: false },
 );
 

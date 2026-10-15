@@ -91,6 +91,8 @@ export function CreateSurveyDialog({
   open,
   onOpenChange,
   clients: preloadedClients,
+  initialDealId,
+  stayOnPage = false,
 }: {
   accountId: string;
   accountSlug: string;
@@ -98,6 +100,10 @@ export function CreateSurveyDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   clients?: ClientOption[] | null;
+  /** Prefill and lock the linked lead when opened from the Booked popup. */
+  initialDealId?: string | null;
+  /** When true, close the dialog instead of navigating to the new survey. */
+  stayOnPage?: boolean;
 }) {
   const router = useRouter();
   const [surveyLevel, setSurveyLevel] = useState<SurveyLevel>(2);
@@ -127,7 +133,29 @@ export function CreateSurveyDialog({
     setClientId('');
     setDealId('');
     setDrone(EMPTY_DRONE_FORM);
-  }, [open]);
+    const prefills = initialDealId?.trim();
+    if (prefills) {
+      const deal = deals.find((item) => item.id === prefills);
+      setDealId(prefills);
+      if (deal?.address?.trim()) {
+        setAddress(deal.address.trim());
+        setPostcode(deal.postcode?.trim() ?? '');
+      }
+      if (deal?.clientId) setClientId(deal.clientId);
+      const level = surveyLevelForLeadType(deal?.surveyType);
+      if (level) setSurveyLevel(level);
+      if (deal?.drone) {
+        setDrone({
+          used: deal.drone.used,
+          billing: deal.drone.billing,
+          fee:
+            deal.drone.feePence === null
+              ? ''
+              : inputFromPence(deal.drone.feePence),
+        });
+      }
+    }
+  }, [open, initialDealId, deals]);
 
   useEffect(() => {
     if (!open || preloadedClients || clientsRequested.current) return;
@@ -212,9 +240,14 @@ export function CreateSurveyDialog({
       });
       if (proposal?.id) {
         onOpenChange(false);
-        router.push(
-          documentDetailPath(accountSlug, proposal.id, 'survey_report'),
-        );
+        if (stayOnPage) {
+          toast.success('Survey created');
+          router.refresh();
+        } else {
+          router.push(
+            documentDetailPath(accountSlug, proposal.id, 'survey_report'),
+          );
+        }
       }
     } catch (error) {
       toast.error(getErrorMessage(error));

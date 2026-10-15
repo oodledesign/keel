@@ -8,6 +8,7 @@ import {
   getOptionalTikTok,
 } from '~/lib/feedflow/env';
 
+import { ModuleDataSection } from '../../../_components/module-data-section';
 import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
 import { loadFeedflowSocialAccountsForTeam } from '../../../_lib/server/feedflow-account-data';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
@@ -59,35 +60,44 @@ export default async function FeedflowSocialAccountsPage({
       <TeamAccountLayoutPageHeader
         account={account}
         title="Social accounts"
-        description="Connect Instagram (Instagram Login, no Facebook Page) or TikTok for feed widgets. Callback URLs live under /api/feedflow/auth/*/callback."
+        description="Connect Instagram or TikTok so you can embed live feeds on your website."
       />
       <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
-        <FeedflowOauthBanner
-          error={oauthError}
-          success={sp.feedflow_connected ?? null}
-        />
+        {oauthError || sp.feedflow_connected ? (
+          <div className="px-4 lg:px-0">
+            <FeedflowOauthBanner
+              error={oauthError}
+              success={sp.feedflow_connected ?? null}
+            />
+          </div>
+        ) : null}
 
-        <FeedflowSocialPanel
-          accountSlug={account}
-          accountId={accountId}
-          accounts={rows}
-          instagramEnabled={instagramEnabled}
-          tiktokEnabled={tiktokEnabled}
-          googleConfigured={googleConfigured}
-        />
+        <ModuleDataSection
+          title="Connections"
+          description="Linked accounts power Feedflow widgets. Disconnect anytime — existing embeds keep working until you remove the widget."
+        >
+          <FeedflowSocialPanel
+            accountSlug={account}
+            accountId={accountId}
+            accounts={rows}
+            instagramEnabled={instagramEnabled}
+            tiktokEnabled={tiktokEnabled}
+            googleConfigured={googleConfigured}
+          />
+        </ModuleDataSection>
 
-        <div className="flex flex-wrap gap-3 text-sm">
+        <div className="flex flex-wrap gap-3 px-4 text-sm lg:px-0">
           <Link
-            href={workAccountPath(workPaths.accountFeedflowReviews, account)}
-            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
+            href={workAccountPath(workPaths.accountFeedflowWidgets, account)}
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-2 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
           >
-            Reviews & widgets
+            Widgets
           </Link>
           <Link
-            href={workAccountPath(workPaths.accountClients, account)}
-            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
+            href={workAccountPath(workPaths.accountFeedflowReviews, account)}
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-2 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
           >
-            CRM clients
+            Reviews
           </Link>
         </div>
       </PageBody>

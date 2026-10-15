@@ -95,6 +95,7 @@ export const OzerAIFeature = {
   survey_photo_curate: 'survey_photo_curate',
   survey_photo_caption: 'survey_photo_caption',
   survey_gap_check: 'survey_gap_check',
+  survey_brochure_map: 'survey_brochure_map',
 } as const;
 
 export type OzerAIFeatureKey =
@@ -640,6 +641,14 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     maxOutputTokens: 2048,
     structuredOutput: true,
   },
+  survey_brochure_map: {
+    provider: 'google',
+    model: GEMINI_FLASH_LITE_MODEL,
+    credits: 1,
+    batchable: false,
+    maxOutputTokens: 4096,
+    structuredOutput: true,
+  },
 };
 
 export type AiCreditBalanceRow = {
@@ -731,7 +740,8 @@ export function resolveFeatureConfig(feature: OzerAIFeatureKey): FeatureConfig {
       feature === 'survey_style_distill' ||
       feature === 'survey_photo_curate' ||
       feature === 'survey_photo_caption' ||
-      feature === 'survey_gap_check')
+      feature === 'survey_gap_check' ||
+      feature === 'survey_brochure_map')
   ) {
     return {
       ...config,

@@ -33,32 +33,40 @@ export async function loadLeadSyncSource(
   const { data } = await db()
     .from('pipeline_deals')
     .select(
-      'contact_name, contact_email, address_line_1, address_line_2, town, postcode, survey_type, value',
+      'name, contact_name, contact_email, contact_phone, client_address, address_line_1, address_line_2, town, postcode, survey_type, value, inspection_at',
     )
     .eq('id', dealId)
     .eq('account_id', accountId)
     .maybeSingle();
   if (!data) return null;
   const row = data as {
+    name: string | null;
     contact_name: string | null;
     contact_email: string | null;
+    contact_phone: string | null;
+    client_address: string | null;
     address_line_1: string | null;
     address_line_2: string | null;
     town: string | null;
     postcode: string | null;
     survey_type: string | null;
     value: number | string | null;
+    inspection_at: string | null;
   };
   const value = row.value === null ? null : Number(row.value);
   return {
+    name: row.name,
     contactName: row.contact_name,
     contactEmail: row.contact_email,
+    contactPhone: row.contact_phone,
+    clientAddress: row.client_address,
     addressLine1: row.address_line_1,
     addressLine2: row.address_line_2,
     town: row.town,
     postcode: row.postcode,
     surveyType: row.survey_type,
     value: value !== null && Number.isFinite(value) ? value : null,
+    inspectionAt: row.inspection_at,
   };
 }
 

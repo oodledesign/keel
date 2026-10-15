@@ -118,13 +118,21 @@ export async function maybeMoveSurveyorDealOnAccepted(
 /**
  * A signed Terms of business ticks Signed on the lead. The stage is left
  * where it is, so a lead further along is never moved back.
+ * Only contracts flagged is_terms_of_business count.
  */
 export async function maybeMarkSurveyorTermsSigned(
   accountId: string,
   dealId: string | null | undefined,
+  options?: { isTermsOfBusiness?: boolean | null },
 ): Promise<boolean> {
   if (!dealId) return false;
+  if (options?.isTermsOfBusiness === false) return false;
   if (!(await isBuildingSurveyorAccount(accountId))) return false;
+  if (options?.isTermsOfBusiness !== true) {
+    // When the caller omits the flag, look up the contract is not available
+    // here — require an explicit true from the sign completion path.
+    return false;
+  }
   return setAutomaticTick({
     accountId,
     dealId,

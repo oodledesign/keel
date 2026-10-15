@@ -8,6 +8,7 @@ import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { assertBuildingSurveyorAccount } from '~/lib/building-surveyor/assert-building-surveyor.server';
 import type { SurveyorLeadEvent } from '~/lib/building-surveyor/lead-activity';
 
 const LeadScopeSchema = z.object({
@@ -22,18 +23,10 @@ function db(): any {
 }
 
 async function assertBuildingSurveyor(accountId: string) {
-  const { data } = await db()
-    .from('accounts')
-    .select('space_type')
-    .eq('id', accountId)
-    .maybeSingle();
-  if (
-    (data as { space_type?: string } | null)?.space_type !== 'building-surveyor'
-  ) {
-    throw new Error(
-      'Leads are only available in a building-surveyor workspace',
-    );
-  }
+  await assertBuildingSurveyorAccount(
+    accountId,
+    'Leads are only available in a building-surveyor workspace',
+  );
 }
 
 async function memberNames(userIds: string[]): Promise<Map<string, string>> {
@@ -107,38 +100,83 @@ export const listSurveyorLeadEventsAction = enhanceAction(
 
 export type SurveyorLeadDocument = {
   id: string;
-  kind: 'proposal' | 'survey_report';
+  kind: 'proposal' | 'survey_report' | 'terms_of_business';
   title: string;
   status: string;
   leadChangedAt: string | null;
+  /** Storage path for signed ToB PDF when present. */
+  signedPdfPath?: string | null;
 };
 
 export const listSurveyorLeadDocumentsAction = enhanceAction(
   async (input): Promise<SurveyorLeadDocument[]> => {
     await assertBuildingSurveyor(input.accountId);
-    const { data, error } = await db()
-      .from('proposals')
-      .select('id, kind, title, status, lead_changed_at, created_at')
-      .eq('account_id', input.accountId)
-      .eq('deal_id', input.dealId)
-      .order('created_at', { ascending: false })
-      .limit(20);
+    const [{ data, error }, { data: contracts, error: contractError }] =
+      await Promise.all([
+        db()
+          .from('proposals')
+          .select('id, kind, title, status, lead_changed_at, created_at')
+          .eq('account_id', input.accountId)
+          .eq('deal_id', input.dealId)
+          .order('created_at', { ascending: false })
+          .limit(20),
+        db()
+          .from('contracts')
+          .select(
+            'id, title, status, signed_pdf_path, created_at, is_terms_of_business',
+          )
+          .eq('account_id', input.accountId)
+          .eq('deal_id', input.dealId)
+          .eq('is_terms_of_business', true)
+          .order('created_at', { ascending: false })
+          .limit(10),
+      ]);
     if (error) throw new Error(error.message);
-    return (
+    if (contractError) {
+      console.error('[lead-documents] contracts', contractError.message);
+    }
+
+    const proposalDocs = (
       (data ?? []) as Array<{
         id: string;
         kind: string | null;
         title: string | null;
         status: string | null;
         lead_changed_at: string | null;
+        created_at: string;
       }>
     ).map((row) => ({
       id: row.id,
-      kind: row.kind === 'survey_report' ? 'survey_report' : 'proposal',
+      kind: (row.kind === 'survey_report'
+        ? 'survey_report'
+        : 'proposal') as SurveyorLeadDocument['kind'],
       title: row.title?.trim() || 'Untitled',
       status: row.status ?? 'draft',
       leadChangedAt: row.lead_changed_at,
+      createdAt: row.created_at,
     }));
+
+    const tobDocs = (
+      (contracts ?? []) as Array<{
+        id: string;
+        title: string | null;
+        status: string | null;
+        signed_pdf_path: string | null;
+        created_at: string;
+      }>
+    ).map((row) => ({
+      id: row.id,
+      kind: 'terms_of_business' as const,
+      title: row.title?.trim() || 'Terms of business',
+      status: row.status ?? 'draft',
+      leadChangedAt: null as string | null,
+      signedPdfPath: row.signed_pdf_path,
+      createdAt: row.created_at,
+    }));
+
+    return [...proposalDocs, ...tobDocs]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map(({ createdAt: _createdAt, ...doc }) => doc);
   },
   { schema: LeadScopeSchema },
 );
@@ -189,4 +227,106 @@ export const markSurveyorLeadsLostAction = enhanceAction(
     return { updatedIds, lostAt: now };
   },
   { schema: MarkLostSchema },
+);
+
+const SendTermsSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  dealId: z.string().uuid(),
+});
+
+export const sendSurveyorTermsAction = enhanceAction(
+  async (input) => {
+    await assertBuildingSurveyor(input.accountId);
+    const { sendSurveyorTermsForDeal } =
+      await import('~/lib/building-surveyor/surveyor-tob.server');
+    const result = await sendSurveyorTermsForDeal({
+      accountId: input.accountId,
+      dealId: input.dealId,
+      client: db(),
+    });
+    revalidatePath(
+      pathsConfig.app.accountPipeline.replace('[account]', input.accountSlug),
+    );
+    revalidatePath(
+      pathsConfig.app.accountContracts.replace('[account]', input.accountSlug),
+    );
+    return result;
+  },
+  { schema: SendTermsSchema },
+);
+
+const LinkSurveySchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  dealId: z.string().uuid(),
+  proposalId: z.string().uuid(),
+});
+
+export const linkSurveyToLeadAction = enhanceAction(
+  async (input) => {
+    await assertBuildingSurveyor(input.accountId);
+    const { data: survey, error: surveyError } = await db()
+      .from('proposals')
+      .select('id, deal_id, kind')
+      .eq('id', input.proposalId)
+      .eq('account_id', input.accountId)
+      .eq('kind', 'survey_report')
+      .maybeSingle();
+    if (surveyError || !survey) throw new Error('Survey not found');
+    if ((survey as { deal_id?: string | null }).deal_id) {
+      throw new Error('That survey is already linked to a lead');
+    }
+
+    const { error } = await db()
+      .from('proposals')
+      .update({ deal_id: input.dealId })
+      .eq('id', input.proposalId)
+      .eq('account_id', input.accountId);
+    if (error) throw new Error(error.message);
+
+    revalidatePath(
+      pathsConfig.app.accountPipeline.replace('[account]', input.accountSlug),
+    );
+    revalidatePath(
+      pathsConfig.app.accountSurveys.replace('[account]', input.accountSlug),
+    );
+    return { ok: true };
+  },
+  { schema: LinkSurveySchema },
+);
+
+const ListUnlinkedSurveysSchema = z.object({
+  accountId: z.string().uuid(),
+});
+
+export const listUnlinkedSurveysAction = enhanceAction(
+  async (input) => {
+    await assertBuildingSurveyor(input.accountId);
+    const { data, error } = await db()
+      .from('proposals')
+      .select('id, title, survey_property_address, status, created_at')
+      .eq('account_id', input.accountId)
+      .eq('kind', 'survey_report')
+      .is('deal_id', null)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    return (
+      (data ?? []) as Array<{
+        id: string;
+        title: string | null;
+        survey_property_address: string | null;
+        status: string | null;
+        created_at: string;
+      }>
+    ).map((row) => ({
+      id: row.id,
+      title: row.title?.trim() || 'Untitled survey',
+      address: row.survey_property_address?.trim() || null,
+      status: row.status,
+      createdAt: row.created_at,
+    }));
+  },
+  { schema: ListUnlinkedSurveysSchema },
 );

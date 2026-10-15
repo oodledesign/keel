@@ -96,16 +96,19 @@ enum SurveyDisplay {
         let next = incoming.trimmingCharacters(in: .whitespacesAndNewlines)
         if current.isEmpty { return next }
         if next.isEmpty { return current }
-        return "\(current)\n\n\(noteTakeDivider)\n\n\(next)"
+        return "\(current)\n\n\(next)"
     }
 
     static func accumulatedNote(remote: String, pendingBodies: [String]) -> String {
         pendingBodies.reduce(remote) { appendNote(existing: $0, incoming: $1) }
     }
 
+    /// Split a section note into takes. Still recognises the legacy em-dash divider.
     static func noteTakes(from note: String) -> [String] {
-        note
-            .components(separatedBy: noteTakeDivider)
+        let normalised = note
+            .replacingOccurrences(of: noteTakeDivider, with: "\n\n")
+        return normalised
+            .components(separatedBy: "\n\n")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
     }

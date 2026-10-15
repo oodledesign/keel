@@ -2117,7 +2117,9 @@ class ContractsService {
           signature_type: input.author_signature_type,
           signature_data: input.author_signature_data,
           signed_at: now,
-        })
+          signed_ip: input.signed_ip ?? null,
+          signed_user_agent: input.signed_user_agent ?? null,
+        } as never)
         .eq('contract_id', input.contractId)
         .eq('version_id', currentVersion.id)
         .eq('role', 'author');
@@ -2126,14 +2128,16 @@ class ContractsService {
     let status: 'ready_to_sign' | 'sent' = 'ready_to_sign';
     const patch: ContractUpdate = unpublished
       ? {}
-      : {
+      : ({
           author_type: input.author_type,
           author_name: input.author_name,
           author_company: input.author_company ?? null,
           author_signature_type: input.author_signature_type,
           author_signature_data: input.author_signature_data,
           author_signed_at: now,
-        };
+          author_signed_ip: input.signed_ip ?? null,
+          author_signed_user_agent: input.signed_user_agent ?? null,
+        } as ContractUpdate);
 
     if (sendAfterSign) {
       if (!recipientEmail) {
@@ -2342,20 +2346,24 @@ class ContractsService {
           signature_type: input.recipient_signature_type,
           signature_data: input.recipient_signature_data,
           signed_at: now,
-        })
+          signed_ip: input.signed_ip ?? null,
+          signed_user_agent: input.signed_user_agent ?? null,
+        } as never)
         .eq('id', targetSigner.id);
       if (signerError) this.throwErr(signerError);
     }
 
     const recipientPatch: ContractUpdate = isPrimaryRecipient
-      ? {
+      ? ({
           recipient_type: input.recipient_type,
           recipient_name: input.recipient_name,
           recipient_company: input.recipient_company ?? null,
           recipient_signature_type: input.recipient_signature_type,
           recipient_signature_data: input.recipient_signature_data,
           recipient_signed_at: now,
-        }
+          recipient_signed_ip: input.signed_ip ?? null,
+          recipient_signed_user_agent: input.signed_user_agent ?? null,
+        } as ContractUpdate)
       : {};
 
     if (sentVersion && isPrimaryRecipient) {

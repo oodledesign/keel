@@ -28,6 +28,8 @@ import {
   updateSurveyTemplateAction,
 } from '../../../surveys/_lib/server/survey-template-actions';
 
+import { SurveyTemplateSectionsEditor } from './survey-template-sections-editor';
+
 export function SurveyTemplatesSettingsClient({
   accountId,
   accountSlug,
@@ -259,6 +261,13 @@ function TemplateEditor({
           />
         </div>
       ))}
+      <SurveyTemplateSectionsEditor
+        template={template}
+        accountId={accountId}
+        accountSlug={accountSlug}
+        canEdit={canEdit}
+        onSave={onSave}
+      />
       <Button
         type="button"
         className={workspaceBtnPrimaryMd}

@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
-import { BUILDING_SURVEY_SECTIONS } from '~/lib/building-surveyor/report-sections';
-import { SURVEY_SECTION_CATALOGUE } from '~/lib/building-surveyor/survey-section-catalogue';
+import { isResolvableSectionKey } from '~/lib/building-surveyor/survey-sections-resolver';
 import { BUILDING_SURVEY_TYPES } from '~/lib/building-surveyor/survey-types';
 
 const surveyTypeKeys = BUILDING_SURVEY_TYPES.map((item) => item.key) as [
@@ -11,14 +10,15 @@ const surveyTypeKeys = BUILDING_SURVEY_TYPES.map((item) => item.key) as [
 
 export const SurveyTypeSchema = z.enum(surveyTypeKeys);
 
-const sectionKeys = [
-  ...new Set([
-    ...BUILDING_SURVEY_SECTIONS.map((section) => section.key),
-    ...SURVEY_SECTION_CATALOGUE.map((item) => item.key),
-  ]),
-] as [string, ...string[]];
-
-export const SurveySectionKeySchema = z.enum(sectionKeys);
+/** Catalogue keys plus custom_<slug> from template overrides. */
+export const SurveySectionKeySchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(80)
+  .refine((key) => isResolvableSectionKey(key), {
+    message: 'Unknown survey section',
+  });
 
 export const SurveyAccountSchema = z.object({
   accountId: z.string().uuid(),
@@ -69,13 +69,14 @@ export const ConditionRatingSchema = z.enum(['1', '2', '3', 'NA', 'NI']);
 export const UpdateSurveyObservationSchema = SurveyAccountSchema.extend({
   observationId: z.string().uuid(),
   sectionKey: SurveySectionKeySchema.optional(),
-  body: z.string().min(1).max(20_000).optional(),
+  body: z.string().max(20_000).optional(),
   conditionRating: ConditionRatingSchema.nullable().optional(),
 });
 
 export const CreateSurveyObservationSchema = SurveyAccountSchema.extend({
   sectionKey: SurveySectionKeySchema,
-  body: z.string().min(1).max(20_000),
+  /** Empty body allowed for "Add new note" placeholders. */
+  body: z.string().max(20_000).default(''),
   conditionRating: ConditionRatingSchema.nullable().optional(),
 });
 
@@ -86,6 +87,11 @@ export const SetSurveySectionRatingSchema = SurveyAccountSchema.extend({
 
 export const DeleteSurveyObservationSchema = SurveyAccountSchema.extend({
   observationId: z.string().uuid(),
+});
+
+export const MergeSurveySectionNotesSchema = SurveyAccountSchema.extend({
+  sectionKey: SurveySectionKeySchema,
+  mergedBody: z.string().max(100_000),
 });
 
 export const UpdateSurveyTypeSchema = SurveyAccountSchema.extend({
@@ -179,6 +185,10 @@ export type SetSurveySectionRatingInput = z.infer<
 export type DeleteSurveyObservationInput = z.infer<
   typeof DeleteSurveyObservationSchema
 >;
+
+export type MergeSurveySectionNotesInput = z.infer<
+  typeof MergeSurveySectionNotesSchema
+>;
 export type UpdateSurveyTypeInput = z.infer<typeof UpdateSurveyTypeSchema>;
 export type GenerateSurveyDraftInput = z.infer<
   typeof GenerateSurveyDraftSchema
@@ -224,6 +234,9 @@ export type SurveyObservation = {
   body: string;
   sourceBody: string | null;
   cleanupSource: 'ai' | 'passthrough' | null;
+  origin: string | null;
+  originDocId: string | null;
+  originBody: string | null;
   conditionRating: '1' | '2' | '3' | 'NA' | 'NI' | null;
   sortOrder: number;
   createdAt: string;

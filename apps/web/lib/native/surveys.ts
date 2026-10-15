@@ -12,6 +12,11 @@ import { queueBrainIndexSource } from '~/lib/brain/sync';
 import { extractUkPostcode } from '~/lib/building-surveyor/epc/parse';
 import { buildingSurveyBlankHtml } from '~/lib/building-surveyor/report-sections';
 import {
+  parseSectionOverrides,
+  resolveSurveySections,
+  snapshotResolvedSections,
+} from '~/lib/building-surveyor/survey-sections-resolver';
+import {
   normalizeSurveyLevel,
   surveyLevelFromType,
   surveyTypeForLevel,
@@ -23,10 +28,12 @@ import {
   parseNativeMeetingSource,
 } from './meetings-shared';
 import {
+  type NativeSectionNote,
   appendSurveySectionNote,
   mapNativeOnSiteSections,
   requireOnSiteSurveySection,
   resolveOnSiteSurveySection,
+  stripSurveySectionNoteDividers,
   stripSurveySpeakerLabels,
 } from './survey-sections';
 import {
@@ -66,7 +73,7 @@ export {
 
 const LIST_LIMIT = 80;
 const SURVEY_SELECT =
-  'id, title, status, survey_type, survey_level, survey_property_address, survey_property_postcode, survey_uprn, survey_flood_risk_band, survey_flood_risk_summary, client_id, created_at, updated_at';
+  'id, title, status, survey_type, survey_level, survey_sections, survey_property_address, survey_property_postcode, survey_uprn, survey_flood_risk_band, survey_flood_risk_summary, client_id, created_at, updated_at';
 
 function requireSurveyWorkspace(workspace: NativeWorkspace) {
   if (!workspaceShowsNativeSurveys(workspace.profile)) {
@@ -279,7 +286,9 @@ export async function getNativeSurvey(
       .order('created_at', { ascending: false }),
     client
       .from('survey_observations')
-      .select('transcript_id, section_key, rics_code, body, sort_order')
+      .select(
+        'id, transcript_id, section_key, rics_code, body, sort_order, created_at',
+      )
       .eq('account_id', workspace.id)
       .eq('proposal_id', row.id)
       .order('sort_order', { ascending: true }),
@@ -296,16 +305,19 @@ export async function getNativeSurvey(
   }
 
   const observations = (observationRows.data ?? []) as Array<{
+    id?: string | null;
     transcript_id?: string | null;
     section_key?: string | null;
     rics_code?: string | null;
     body?: string | null;
+    created_at?: string | null;
   }>;
   const sessionSection = new Map<
     string,
     { rics_code: string | null; section_key: string | null }
   >();
   const notesByCode = new Map<string, string>();
+  const notesListByCode = new Map<string, NativeSectionNote[]>();
   for (const observation of observations) {
     const sectionKey = observation.section_key?.trim() || null;
     const ricsCode = observation.rics_code?.trim() || null;
@@ -316,7 +328,23 @@ export async function getNativeSurvey(
         section_key: sectionKey,
       });
     }
-    const body = stripSurveySpeakerLabels(observation.body);
+    const body = stripSurveySectionNoteDividers(
+      stripSurveySpeakerLabels(observation.body),
+    );
+    const noteId = observation.id?.trim();
+    if (noteId) {
+      const note: NativeSectionNote = {
+        id: noteId,
+        body,
+        origin: null,
+        created_at: String(observation.created_at ?? ''),
+      };
+      for (const key of [ricsCode, sectionKey].filter(Boolean) as string[]) {
+        const list = notesListByCode.get(key) ?? [];
+        list.push(note);
+        notesListByCode.set(key, list);
+      }
+    }
     if (!body) continue;
     for (const key of [ricsCode, sectionKey].filter(Boolean) as string[]) {
       notesByCode.set(key, appendSurveySectionNote(notesByCode.get(key), body));
@@ -371,7 +399,9 @@ export async function getNativeSurvey(
     sections: mapNativeOnSiteSections({
       level: mapped.survey_level,
       notesByCode,
+      notesListByCode,
       photoCountByKey,
+      sectionOverrides: row.survey_sections,
     }),
   };
 }
@@ -454,6 +484,23 @@ export async function createNativeSurvey(input: {
     input.postcode?.trim() ||
     extractUkPostcode(input.postcode) ||
     extractUkPostcode(address);
+  // commercial_condition is web-only; native surveys are L2 or L3 only.
+  const surveyTypeKey =
+    surveyType === 'rics_hss_l3' ? 'rics_hss_l3' : 'rics_hss_l2';
+  const { data: tmpl } = await input.client
+    .from('survey_templates')
+    .select('sections')
+    .eq('account_id', input.workspace.id)
+    .eq('survey_type', surveyTypeKey)
+    .eq('is_default', true)
+    .maybeSingle();
+  const sectionOverrides = parseSectionOverrides(
+    (tmpl as { sections?: unknown } | null)?.sections,
+  );
+  const surveySections = snapshotResolvedSections(
+    resolveSurveySections({ level: surveyLevel, overrides: sectionOverrides }),
+  );
+
   const { data, error } = await input.client
     .from('proposals')
     .insert({
@@ -466,6 +513,7 @@ export async function createNativeSurvey(input: {
       survey_property_address: address,
       survey_property_postcode: postcode,
       survey_uprn: input.uprn?.trim() || null,
+      survey_sections: surveySections,
       title,
       content_html: buildingSurveyBlankHtml(),
       status: 'draft',
@@ -568,6 +616,8 @@ export async function createNativeSurveySession(input: {
   meetingDate?: string | null;
   source?: string | null;
   ricsCode?: string | null;
+  /** When set, append this take onto the chosen note instead of inserting a new row. */
+  appendToObservationId?: string | null;
   audio?: {
     bytes: Buffer;
     filename: string;
@@ -683,6 +733,7 @@ export async function createNativeSurveySession(input: {
         sourceBody: rawContent,
         cleanedBody: cleanup.cleanedText,
         cleanupSource: cleanup.source,
+        appendToObservationId: input.appendToObservationId ?? null,
       });
     } catch (observationError) {
       console.warn(
@@ -782,35 +833,48 @@ async function upsertUserSectionObservation(input: {
   sourceBody: string;
   cleanedBody: string;
   cleanupSource: 'ai' | 'passthrough';
+  appendToObservationId?: string | null;
 }) {
   const incomingSource = input.sourceBody.trim();
   const incomingCleaned = input.cleanedBody.trim() || incomingSource;
   if (!incomingSource && !incomingCleaned) return;
 
-  const existingQuery = await input.client
-    .from('survey_observations')
-    .select('id, body, source_body')
-    .eq('account_id', input.workspaceId)
-    .eq('proposal_id', input.surveyId)
-    // Catalogue codes are alphanumeric / underscore only (F3, water).
-    .or(
-      `rics_code.eq.${input.section.ricsCode},section_key.eq.${input.section.key}`,
-    )
-    .order('sort_order', { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  const appendId = input.appendToObservationId?.trim() || null;
+  if (appendId) {
+    const existingQuery = await input.client
+      .from('survey_observations')
+      .select('id, body, source_body, section_key, rics_code')
+      .eq('id', appendId)
+      .eq('account_id', input.workspaceId)
+      .eq('proposal_id', input.surveyId)
+      .maybeSingle();
 
-  if (existingQuery.error) {
-    throw new Error(existingQuery.error.message);
-  }
+    if (existingQuery.error) {
+      throw new Error(existingQuery.error.message);
+    }
 
-  const existing = existingQuery.data as {
-    id: string;
-    body?: string | null;
-    source_body?: string | null;
-  } | null;
+    const existing = existingQuery.data as {
+      id: string;
+      body?: string | null;
+      source_body?: string | null;
+      section_key?: string | null;
+      rics_code?: string | null;
+    } | null;
 
-  if (existing?.id) {
+    if (!existing?.id) {
+      throw new NativeHttpError(400, 'append_to_observation_id not found');
+    }
+
+    const sameSection =
+      existing.section_key === input.section.key ||
+      existing.rics_code === input.section.ricsCode;
+    if (!sameSection) {
+      throw new NativeHttpError(
+        400,
+        'append_to_observation_id must belong to the same section',
+      );
+    }
+
     const { error } = await input.client
       .from('survey_observations')
       .update({
@@ -822,6 +886,7 @@ async function upsertUserSectionObservation(input: {
         cleanup_source: input.cleanupSource,
         section_key: input.section.key,
         rics_code: input.section.ricsCode,
+        transcript_id: input.transcriptId,
       } as never)
       .eq('id', existing.id)
       .eq('account_id', input.workspaceId)
@@ -832,6 +897,7 @@ async function upsertUserSectionObservation(input: {
     return;
   }
 
+  // Each dictation is its own note (no divider-merge onto the first row).
   const { data: maxRow } = await input.client
     .from('survey_observations')
     .select('sort_order')

@@ -35,12 +35,20 @@ function mapTemplate(row: Record<string, unknown>): SurveyTemplateRecord {
     },
     surveyorDefaults: (row.surveyor_defaults as Record<string, string>) ?? {},
     blocks: (row.blocks as SurveyTemplateRecord['blocks']) ?? [],
+    sections: Array.isArray(row.sections)
+      ? (row.sections as SurveyTemplateRecord['sections'])
+      : row.sections === null
+        ? null
+        : undefined,
     sourceSystemKey:
       (row.source_system_key as SurveySystemTemplateKey | null) ??
       (row.system_key as SurveySystemTemplateKey),
     updatedAt: row.updated_at as string,
   };
 }
+
+const TEMPLATE_SELECT =
+  'id, account_id, system_key, survey_type, name, is_default, brand, surveyor_defaults, blocks, sections, source_system_key, updated_at';
 
 export function createSurveyTemplatesService(client: SupabaseClient<Database>) {
   return new SurveyTemplatesService(client);
@@ -105,9 +113,7 @@ class SurveyTemplatesService {
     await this.ensureAccess(accountId, 'invoices.view');
     const { data, error } = await this.db
       .from('survey_templates')
-      .select(
-        'id, account_id, system_key, survey_type, name, is_default, brand, surveyor_defaults, blocks, source_system_key, updated_at',
-      )
+      .select(TEMPLATE_SELECT)
       .eq('account_id', accountId)
       .order('updated_at', { ascending: false });
     if (error) this.throwErr(error);
@@ -140,9 +146,7 @@ class SurveyTemplatesService {
         source_system_key: definition.key,
         created_by: user.id,
       })
-      .select(
-        'id, account_id, system_key, survey_type, name, is_default, brand, surveyor_defaults, blocks, source_system_key, updated_at',
-      )
+      .select(TEMPLATE_SELECT)
       .single();
     if (error || !data) this.throwErr(error, 'Could not clone template');
     return mapTemplate(data as Record<string, unknown>);
@@ -159,6 +163,7 @@ class SurveyTemplatesService {
       payload.surveyor_defaults = input.surveyorDefaults;
     }
     if (input.blocks !== undefined) payload.blocks = input.blocks;
+    if (input.sections !== undefined) payload.sections = input.sections;
     if (input.isDefault !== undefined) {
       payload.is_default = input.isDefault;
       if (input.isDefault) {
@@ -184,9 +189,7 @@ class SurveyTemplatesService {
       .update(payload)
       .eq('id', input.templateId)
       .eq('account_id', input.accountId)
-      .select(
-        'id, account_id, system_key, survey_type, name, is_default, brand, surveyor_defaults, blocks, source_system_key, updated_at',
-      )
+      .select(TEMPLATE_SELECT)
       .single();
     if (error || !data) this.throwErr(error, 'Could not update template');
     return mapTemplate(data as Record<string, unknown>);

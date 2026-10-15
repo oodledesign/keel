@@ -88,6 +88,7 @@ export type NativeSurveyRow = {
   status?: string | null;
   survey_type?: string | null;
   survey_level?: number | string | null;
+  survey_sections?: unknown;
   survey_property_address?: string | null;
   survey_property_postcode?: string | null;
   survey_uprn?: string | null;

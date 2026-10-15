@@ -164,6 +164,7 @@ export const BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER = [
   'clients',
   'meetings',
   'surveys',
+  'proposals',
   'contracts',
   'notes',
   'docs',

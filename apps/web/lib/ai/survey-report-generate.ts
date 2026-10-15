@@ -17,6 +17,7 @@ import {
   documentFromObservations,
   documentFromSectionHtml,
 } from '~/lib/building-surveyor/survey-report-document';
+import { COMMERCIAL_SECTION_AI_HINTS } from '~/lib/building-surveyor/commercial-building-survey-template';
 import { buildingSurveyTypeLabel } from '~/lib/building-surveyor/survey-types';
 
 export type SurveyTranscript = {
@@ -138,6 +139,11 @@ function buildUserPayload(params: SurveyGenerateParams) {
       '(none attached — do not invent an Energy Performance Certificate)',
     instruction:
       'Prefer the grouped observations over raw transcripts when both are present. Write section html only. Curated photos are attached after each matching section by the app — mention the defect, not a fake image tag. Match the style guidance. If EPC facts are provided, use them in the energy section and mention floor area or fuel in about_property only when that section is otherwise empty. Do not invent certificate numbers.',
+    commercial_section_hints:
+      params.surveyType === 'commercial_condition' ||
+      params.surveyType === 'commercial_building_survey'
+        ? COMMERCIAL_SECTION_AI_HINTS
+        : null,
   });
 }
 

@@ -235,6 +235,18 @@ struct SurveyPhotoItem: Decodable, Identifiable, Equatable, Hashable {
     }
 }
 
+struct SurveySectionNote: Decodable, Identifiable, Equatable, Hashable {
+    var id: String
+    var body: String
+    var origin: String?
+    var createdAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, body, origin
+        case createdAt = "created_at"
+    }
+}
+
 struct SurveySectionItem: Decodable, Identifiable, Equatable, Hashable {
     var key: String
     var heading: String
@@ -244,6 +256,7 @@ struct SurveySectionItem: Decodable, Identifiable, Equatable, Hashable {
     var label: String
     var allowsPhotos: Bool
     var note: String
+    var notes: [SurveySectionNote]
     var photoCount: Int
 
     var id: String { ricsCode.isEmpty ? key : ricsCode }
@@ -258,7 +271,7 @@ struct SurveySectionItem: Decodable, Identifiable, Equatable, Hashable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case key, heading, group, letter, label, note
+        case key, heading, group, letter, label, note, notes
         case ricsCode = "rics_code"
         case allowsPhotos = "allows_photos"
         case photoCount = "photo_count"
@@ -273,6 +286,7 @@ struct SurveySectionItem: Decodable, Identifiable, Equatable, Hashable {
         label: String = "",
         allowsPhotos: Bool = true,
         note: String = "",
+        notes: [SurveySectionNote] = [],
         photoCount: Int = 0
     ) {
         self.key = key
@@ -285,6 +299,7 @@ struct SurveySectionItem: Decodable, Identifiable, Equatable, Hashable {
             : label
         self.allowsPhotos = allowsPhotos
         self.note = note
+        self.notes = notes
         self.photoCount = photoCount
     }
 
@@ -301,6 +316,7 @@ struct SurveySectionItem: Decodable, Identifiable, Equatable, Hashable {
             : decodedLabel
         allowsPhotos = try container.decodeIfPresent(Bool.self, forKey: .allowsPhotos) ?? true
         note = try container.decodeIfPresent(String.self, forKey: .note) ?? ""
+        notes = try container.decodeIfPresent([SurveySectionNote].self, forKey: .notes) ?? []
         photoCount = try container.decodeIfPresent(Int.self, forKey: .photoCount) ?? 0
     }
 

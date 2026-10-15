@@ -2,6 +2,7 @@ import {
   type ConditionRating,
   sectionConditionRating,
 } from './condition-rating';
+import { stripSurveySectionNoteDividers } from './merge-section-notes';
 import {
   BUILDING_SURVEY_SECTIONS,
   buildingSurveySectionByKey,
@@ -175,7 +176,7 @@ export function htmlFromObservations(
   return BUILDING_SURVEY_SECTIONS.map((section) => {
     const bodies = observations
       .filter((item) => item.sectionKey === section.key)
-      .map((item) => item.body.trim())
+      .map((item) => stripSurveySectionNoteDividers(item.body).trim())
       .filter(Boolean);
     const sectionPhotos = photos.filter(
       (photo) => photo.sectionKey === section.key,

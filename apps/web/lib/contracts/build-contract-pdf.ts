@@ -16,6 +16,22 @@ import { addUriLink } from '~/lib/pdf/pdf-links';
 
 export type ContractPdfPaymentItem = { label: string; percent: number };
 
+export type ContractPdfAuditSigner = {
+  role: string;
+  name: string;
+  email?: string | null;
+  signedAt?: string | null;
+  signedIp?: string | null;
+  signedUserAgent?: string | null;
+};
+
+export type ContractPdfAudit = {
+  contentHash?: string | null;
+  sentAt?: string | null;
+  viewedAt?: string | null;
+  signers: ContractPdfAuditSigner[];
+};
+
 export type ContractForPdf = {
   id?: string | null;
   title: string;
@@ -40,6 +56,8 @@ export type ContractForPdf = {
   recipient_signed_at?: string | null;
   brand_name?: string | null;
   generated_at?: string | null;
+  /** Surveyor terms of business: append a signing audit page. */
+  audit?: ContractPdfAudit | null;
   client?: {
     display_name?: string | null;
     first_name?: string | null;
@@ -650,6 +668,62 @@ export async function buildContractPdf(
   });
 
   y = Math.min(authorBottom, recipientBottom, y);
+
+  if (contract.audit && contract.audit.signers.length > 0) {
+    startPage();
+    drawTextLine('Signing audit', { size: 14, font: fonts.bold });
+    y -= 4;
+    drawTextLine(`Document ID: ${contract.id ?? '—'}`, {
+      size: 10,
+      font: fonts.regular,
+    });
+    if (contract.audit.contentHash) {
+      drawTextLine(`Content hash: ${contract.audit.contentHash}`, {
+        size: 9,
+        font: fonts.regular,
+        color: COLORS.muted,
+      });
+    }
+    drawTextLine(`Sent: ${formatDateTime(contract.audit.sentAt)}`, {
+      size: 10,
+      font: fonts.regular,
+    });
+    drawTextLine(`Viewed: ${formatDateTime(contract.audit.viewedAt)}`, {
+      size: 10,
+      font: fonts.regular,
+    });
+    y -= 8;
+    drawTextLine('Signers', { size: 12, font: fonts.bold });
+    for (const signer of contract.audit.signers) {
+      y -= 4;
+      drawTextLine(
+        `${signer.role}: ${signer.name}${signer.email ? ` <${signer.email}>` : ''}`,
+        { size: 10, font: fonts.bold },
+      );
+      drawTextLine(`Signed: ${formatDateTime(signer.signedAt)}`, {
+        size: 9,
+        font: fonts.regular,
+      });
+      drawTextLine(`IP: ${signer.signedIp?.trim() || '—'}`, {
+        size: 9,
+        font: fonts.regular,
+        color: COLORS.muted,
+      });
+      const ua = signer.signedUserAgent?.trim();
+      if (ua) {
+        drawRunLines([{ text: `Browser: ${ua}`, bold: false }], {
+          size: 8,
+          lineHeight: 11,
+        });
+      } else {
+        drawTextLine('Browser: —', {
+          size: 9,
+          font: fonts.regular,
+          color: COLORS.muted,
+        });
+      }
+    }
+  }
 
   const pageCount = pages.length;
   const idLabel = contract.id ? `ID ${contract.id}` : 'Unsigned draft';

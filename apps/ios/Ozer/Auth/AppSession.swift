@@ -43,6 +43,8 @@ final class AppSession {
     private(set) var pendingInvoiceId: String?
     private(set) var pendingThreadId: String?
     private(set) var pendingTaskReviewCount = 0
+    /// Survives leaving SurveyRecordView so the status pill and resume work.
+    var dictationController: SurveyDictationController?
 
     var lastError: String?
     /// Shown once on the sign-in screen, e.g. after scheduling account deletion.
@@ -83,6 +85,7 @@ final class AppSession {
     }
 
     func hydrate() {
+        restoreDictationIfNeeded()
         do {
             if let data = try KeychainStore.data(account: Self.keychainAccount) {
                 session = try JSONDecoder().decode(AuthSession.self, from: data)
@@ -98,6 +101,15 @@ final class AppSession {
         } catch {
             session = nil
             phase = .signedOut
+        }
+    }
+
+    private func restoreDictationIfNeeded() {
+        guard dictationController == nil else { return }
+        let controller = SurveyDictationController()
+        controller.restoreFromDisk()
+        if controller.hasActiveOrPaused {
+            dictationController = controller
         }
     }
 

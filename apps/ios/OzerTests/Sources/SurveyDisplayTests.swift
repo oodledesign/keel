@@ -48,20 +48,47 @@ enum SurveyDisplayTests {
                 == "Ready To Issue"
         }
 
-        check("later visits append to the same section note with a divider") {
+        check("later visits append to the same section note with a blank line") {
             let divider = SurveyDisplay.noteTakeDivider
             SurveyDisplay.appendNote(existing: "Stopcock is stiff.", incoming: "Supply is copper.")
-                == "Stopcock is stiff.\n\n\(divider)\n\nSupply is copper."
+                == "Stopcock is stiff.\n\nSupply is copper."
                 && SurveyDisplay.accumulatedNote(
                     remote: "Stopcock is stiff.",
                     pendingBodies: ["Supply is copper.", "Tank is lagged."]
-                ) == "Stopcock is stiff.\n\n\(divider)\n\nSupply is copper.\n\n\(divider)\n\nTank is lagged."
+                ) == "Stopcock is stiff.\n\nSupply is copper.\n\nTank is lagged."
                 && SurveyDisplay.appendNote(existing: "Stopcock is stiff.", incoming: "   \n")
                 == "Stopcock is stiff."
                 && SurveyDisplay.appendNote(existing: "", incoming: "Stopcock is stiff.")
                 == "Stopcock is stiff."
                 && SurveyDisplay.noteTakes(from: "Stopcock is stiff.\n\n\(divider)\n\nSupply is copper.")
                 == ["Stopcock is stiff.", "Supply is copper."]
+                && SurveyDisplay.noteTakes(from: "Stopcock is stiff.\n\nSupply is copper.")
+                == ["Stopcock is stiff.", "Supply is copper."]
+        }
+
+        check("dictation state pauses the current section when switching") {
+            let switched = SurveyDictationState.switchSection(
+                takes: [],
+                from: "F3",
+                to: "D2",
+                nextLabel: "Roof coverings",
+                surveyId: "survey-1",
+                liveTranscript: "Stopcock is stiff.",
+                liveElapsed: 12
+            )
+            switched.activeCode == "D2"
+                && switched.takes.contains(where: {
+                    $0.ricsCode == "F3" && $0.isPaused && $0.transcript == "Stopcock is stiff."
+                })
+                && switched.takes.contains(where: {
+                    $0.ricsCode == "D2" && !$0.isPaused
+                })
+                && SurveyDictationState.statusPill(
+                    takes: switched.takes,
+                    activeCode: "D2",
+                    isRecording: true,
+                    elapsed: 5
+                ) == "Recording · Roof coverings · 00:05"
         }
 
         check("formats a Mapbox street address like web survey prep") {

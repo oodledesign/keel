@@ -11,16 +11,20 @@ import {
 } from '~/home/[account]/_lib/server/account-modules';
 
 describe('BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER', () => {
-  it('includes contracts near surveys and docs', () => {
+  it('includes quotes and contracts near surveys and docs', () => {
     expect(BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER).toContain('contracts');
     expect(BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER).toContain('forms');
     expect(BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER).toContain('surveys');
+    expect(BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER).toContain('proposals');
 
     const contracts =
       BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER.indexOf('contracts');
+    const proposals =
+      BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER.indexOf('proposals');
     const surveys = BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER.indexOf('surveys');
     const docs = BUILDING_SURVEYOR_WORKSPACE_MODULE_ORDER.indexOf('docs');
-    expect(contracts).toBeGreaterThan(surveys);
+    expect(proposals).toBeGreaterThan(surveys);
+    expect(contracts).toBeGreaterThan(proposals);
     expect(contracts).toBeLessThan(docs);
   });
 

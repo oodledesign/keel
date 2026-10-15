@@ -153,20 +153,33 @@ export function SurveyorLeadDocuments({
                   href={
                     doc.kind === 'survey_report'
                       ? documentDetailPath(accountSlug, doc.id, 'survey_report')
-                      : pathsConfig.app.accountProposalEdit
-                          .replace('[account]', accountSlug)
-                          .replace('[id]', doc.id)
+                      : doc.kind === 'terms_of_business'
+                        ? pathsConfig.app.accountContractEdit
+                            .replace('[account]', accountSlug)
+                            .replace('[id]', doc.id)
+                        : pathsConfig.app.accountProposalEdit
+                            .replace('[account]', accountSlug)
+                            .replace('[id]', doc.id)
                   }
                   className={`min-w-0 flex-1 truncate ${workspaceLinkAccent}`}
                 >
-                  {doc.kind === 'survey_report' ? 'Survey' : 'Quote'} ·{' '}
-                  {doc.title}
+                  {doc.kind === 'survey_report'
+                    ? 'Survey'
+                    : doc.kind === 'terms_of_business'
+                      ? 'Terms'
+                      : 'Quote'}{' '}
+                  · {doc.title}
                 </Link>
                 <span className={`shrink-0 text-xs ${workspaceTextMuted}`}>
                   {STATUS_LABELS[doc.status] ?? doc.status}
+                  {doc.kind === 'terms_of_business' && doc.signedPdfPath
+                    ? ' · PDF'
+                    : ''}
                 </span>
               </div>
-              {doc.leadChangedAt && doc.status === 'draft' ? (
+              {doc.leadChangedAt &&
+              doc.status === 'draft' &&
+              doc.kind === 'proposal' ? (
                 <div className="mt-2 flex flex-wrap items-center gap-2 rounded-md bg-amber-500/10 px-2.5 py-2 text-xs text-[var(--workspace-shell-text)]">
                   <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600" />
                   <span className="min-w-0 flex-1">

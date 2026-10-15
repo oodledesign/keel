@@ -86,6 +86,7 @@ export default async function BrandSettingsPage(props: BrandSettingsPageProps) {
         initialBrand={brand}
         initialPortalSlug={agencyBranding?.slug ?? null}
         canEdit={canEditBrand}
+        showTradingName={workspace.workspaceProfile === 'building_surveyor'}
       />
       <BrandBranchesSection
         accountId={accountId}

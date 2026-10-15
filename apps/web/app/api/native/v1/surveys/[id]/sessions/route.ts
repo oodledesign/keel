@@ -30,6 +30,7 @@ const CreateSessionBodySchema = z.object({
     .nullable(),
   rics_code: z.string().max(40).optional().nullable(),
   section_key: z.string().max(80).optional().nullable(),
+  append_to_observation_id: z.string().uuid().optional().nullable(),
 });
 
 async function readSessionPayload(request: Request): Promise<{
@@ -40,6 +41,7 @@ async function readSessionPayload(request: Request): Promise<{
   meetingDate?: string | null;
   source?: string | null;
   ricsCode?: string | null;
+  appendToObservationId?: string | null;
   audio: {
     bytes: Buffer;
     filename: string;
@@ -73,6 +75,8 @@ async function readSessionPayload(request: Request): Promise<{
       ricsCode:
         String(form.get('rics_code') ?? form.get('section_key') ?? '').trim() ||
         null,
+      appendToObservationId:
+        String(form.get('append_to_observation_id') ?? '').trim() || null,
       audio,
     };
   }
@@ -90,6 +94,8 @@ async function readSessionPayload(request: Request): Promise<{
     source: parsed.data.source,
     ricsCode:
       parsed.data.rics_code?.trim() || parsed.data.section_key?.trim() || null,
+    appendToObservationId:
+      parsed.data.append_to_observation_id?.trim() || null,
     audio: null,
   };
 }
@@ -126,6 +132,7 @@ export async function POST(
       meetingDate: payload.meetingDate,
       source: payload.source,
       ricsCode: payload.ricsCode,
+      appendToObservationId: payload.appendToObservationId,
       audio: payload.audio,
     });
     return NextResponse.json(result);

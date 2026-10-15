@@ -6,10 +6,11 @@ import {
   loadAccountBrandResolved,
   wrapEmailHtmlWithBrand,
 } from '~/lib/brand/account-brand';
+import { resolveTradingOrAccountName } from '~/lib/brand/trading-name';
+import { createInAppNotification } from '~/lib/notifications/create-in-app-notification';
 import { sendClientFacingEmail } from '~/lib/server/send-client-facing-email';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 import pathsConfig from '~/config/paths.config';
-import { createInAppNotification } from '~/lib/notifications/create-in-app-notification';
 
 import {
   DEFAULT_PROPOSAL_EMAIL_BODY,
@@ -102,11 +103,18 @@ export async function sendProposalIssuedEmail(params: {
     siteUrl,
   ).href;
 
+  const brand = await loadAccountBrandResolved(params.accountId);
+  const displayAccountName = resolveTradingOrAccountName({
+    tradingName: brand.trading_name,
+    accountName: account?.name,
+    fallback: productName,
+  });
+
   const smartCtx = {
     client,
     proposal,
     sender: params.sender ?? null,
-    accountName: account?.name ?? productName,
+    accountName: displayAccountName,
   };
 
   const subjectTemplate =
@@ -126,8 +134,6 @@ export async function sendProposalIssuedEmail(params: {
     proposal.total_pence != null
       ? formatPence(proposal.total_pence, proposal.currency ?? 'gbp')
       : '—';
-
-  const brand = await loadAccountBrandResolved(params.accountId);
   const issuedInner = `
       <h2 style="margin:0 0 16px">${subject}</h2>
       <p>${bodyText.replace(/\n/g, '<br />')}</p>

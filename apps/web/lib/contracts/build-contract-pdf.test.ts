@@ -84,4 +84,34 @@ describe('buildContractPdf', () => {
     const loaded = await PDFDocument.load(bytes);
     expect(loaded.getPageCount()).toBe(1);
   });
+
+  it('appends a signing audit page when audit payload is provided', async () => {
+    const bytes = await buildContractPdf({
+      ...base,
+      audit: {
+        contentHash: 'abc123hash',
+        sentAt: '2026-09-01T08:00:00.000Z',
+        viewedAt: '2026-09-01T12:00:00.000Z',
+        signers: [
+          {
+            role: 'author',
+            name: 'Dan Potter',
+            signedAt: '2026-09-01T09:00:00.000Z',
+            signedIp: '203.0.113.10',
+            signedUserAgent: 'Mozilla/5.0',
+          },
+          {
+            role: 'recipient',
+            name: 'Ada Lovelace',
+            email: 'ada@example.com',
+            signedAt: '2026-09-02T15:30:00.000Z',
+            signedIp: '198.51.100.20',
+            signedUserAgent: 'Safari',
+          },
+        ],
+      },
+    });
+    const loaded = await PDFDocument.load(bytes);
+    expect(loaded.getPageCount()).toBeGreaterThanOrEqual(2);
+  });
 });

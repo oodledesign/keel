@@ -3,6 +3,7 @@ import {
   type SurveyPinnedPhotoInput,
   buildingSurveySectionByKey,
 } from '~/lib/building-surveyor/report-sections';
+import { isResolvableSectionKey } from '~/lib/building-surveyor/survey-sections-resolver';
 import {
   type SurveyReportDocument,
   documentFromSectionHtml,
@@ -51,7 +52,8 @@ export function parseGeneratedDocument(
       .filter(
         (section) =>
           typeof section.key === 'string' &&
-          buildingSurveySectionByKey(section.key),
+          (buildingSurveySectionByKey(section.key) ||
+            isResolvableSectionKey(section.key)),
       )
       .map((section) => ({
         key: section.key as string,

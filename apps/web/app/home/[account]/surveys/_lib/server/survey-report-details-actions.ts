@@ -15,6 +15,8 @@ import {
   SaveDroneDefaultFeeSchema,
   SaveSurveyorPipelineSettingsSchema,
   SaveSurveyorProfileSchema,
+  SaveSurveyorQuoteTemplatesSchema,
+  SaveSurveyorTobSettingsSchema,
   UpdateSurveyAccommodationSchema,
   UpdateSurveyCoverSchema,
   UpdateSurveyDroneSchema,
@@ -111,6 +113,44 @@ export const saveSurveyorPipelineSettingsAction = enhanceAction(
     return result;
   },
   { schema: SaveSurveyorPipelineSettingsSchema },
+);
+
+export const saveSurveyorTobSettingsAction = enhanceAction(
+  async (data, user) => {
+    const logger = await getLogger();
+    logger.info(
+      { name: 'save-surveyor-tob-settings', userId: user.id },
+      'Saving surveyor terms of business signature',
+    );
+    const result = await getService().saveSurveyorTobSettings(data);
+    revalidatePath(
+      pathsConfig.app.accountSurveyorProfileSettings.replace(
+        '[account]',
+        data.accountSlug,
+      ),
+    );
+    return result;
+  },
+  { schema: SaveSurveyorTobSettingsSchema },
+);
+
+export const saveSurveyorQuoteTemplatesAction = enhanceAction(
+  async (data, user) => {
+    const logger = await getLogger();
+    logger.info(
+      { name: 'save-surveyor-quote-templates', userId: user.id },
+      'Saving surveyor quote letter templates',
+    );
+    const result = await getService().saveSurveyorQuoteTemplates(data);
+    revalidatePath(
+      pathsConfig.app.accountSurveyorProfileSettings.replace(
+        '[account]',
+        data.accountSlug,
+      ),
+    );
+    return result;
+  },
+  { schema: SaveSurveyorQuoteTemplatesSchema },
 );
 
 export const getDroneDefaultFeeAction = enhanceAction(

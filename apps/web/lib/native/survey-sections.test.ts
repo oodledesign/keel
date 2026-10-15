@@ -44,12 +44,11 @@ describe('stripSurveySpeakerLabels', () => {
 });
 
 describe('appendSurveySectionNote', () => {
-  it('uses a four-em-dash divider that is not a speaker heading', () => {
+  it('keeps the divider constant for cleanup of old data', () => {
     expect(SURVEY_SECTION_NOTE_DIVIDER).toBe('\u2014'.repeat(4));
-    expect(SURVEY_SECTION_NOTE_DIVIDER).not.toMatch(/Me|Speaker|#/);
   });
 
-  it('appends a later visit onto the same running note with a divider', () => {
+  it('appends a later visit onto the same running note with a blank line', () => {
     expect(appendSurveySectionNote('', 'Stopcock is stiff.')).toBe(
       'Stopcock is stiff.',
     );
@@ -61,9 +60,7 @@ describe('appendSurveySectionNote', () => {
         'Stopcock is stiff.',
         'Supply pipework is copper.',
       ),
-    ).toBe(
-      `Stopcock is stiff.\n\n${SURVEY_SECTION_NOTE_DIVIDER}\n\nSupply pipework is copper.`,
-    );
+    ).toBe('Stopcock is stiff.\n\nSupply pipework is copper.');
   });
 
   it('does not insert an orphan divider for empty or whitespace takes', () => {
@@ -98,6 +95,19 @@ describe('mapNativeOnSiteSections', () => {
     const sections = mapNativeOnSiteSections({
       level: 2,
       notesByCode: new Map([['F3', 'Stopcock is under the sink.']]),
+      notesListByCode: new Map([
+        [
+          'F3',
+          [
+            {
+              id: 'obs-1',
+              body: 'Stopcock is under the sink.',
+              origin: null,
+              created_at: '2026-09-16T10:00:00Z',
+            },
+          ],
+        ],
+      ]),
       photoCountByKey: new Map([['water', 2]]),
     });
     const codes = sections.map((item) => item.rics_code);
@@ -111,6 +121,13 @@ describe('mapNativeOnSiteSections', () => {
       label: 'F3 Water',
       note: 'Stopcock is under the sink.',
       photo_count: 2,
+      notes: [
+        {
+          id: 'obs-1',
+          body: 'Stopcock is under the sink.',
+          origin: null,
+        },
+      ],
     });
   });
 });
