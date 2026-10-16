@@ -180,6 +180,7 @@ export function renderFeedflowEmbedHtml(input: {
   const tileRatio = input.config.tile_ratio === 'square' ? '1 / 1' : '4 / 5';
   const reveal = revealMode(input.config.reveal_animation);
   const stagger = reveal === 'cascade' || reveal === 'scale';
+  const layout = input.config.layout === 'slider' ? 'slider' : 'grid';
   const customCss = input.config.custom_css
     ? escapeHtml(input.config.custom_css)
     : '';
@@ -233,6 +234,15 @@ export function renderFeedflowEmbedHtml(input: {
     ? '<p class="ff-empty-state">No posts yet. This feed updates automatically.</p>'
     : '';
 
+  const stage =
+    layout === 'slider'
+      ? `<div class="ff-slider">
+  <button type="button" class="ff-nav ff-prev" aria-label="Previous posts">‹</button>
+  <div class="ff-track-wrap"><div class="ff-track">${cards}</div></div>
+  <button type="button" class="ff-nav ff-next" aria-label="Next posts">›</button>
+</div>`
+      : `<div class="ff-grid" data-feedflow-grid>${cards}</div>`;
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -255,6 +265,37 @@ export function renderFeedflowEmbedHtml(input: {
     @media (min-width: 960px) {
       .ff-grid { grid-template-columns: repeat(${cols.desktop}, minmax(0, 1fr)); }
     }
+    .ff-slider {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ff-track-wrap { overflow: hidden; flex: 1; min-width: 0; }
+    .ff-track {
+      display: flex;
+      gap: ${gap}px;
+      transition: transform 0.35s ease;
+    }
+    .ff-slider .ff-card { flex: 0 0 100%; }
+    @media (min-width: 640px) {
+      .ff-slider .ff-card { flex-basis: calc((100% - ${gap * 2}px) / 3); }
+    }
+    @media (min-width: 960px) {
+      .ff-slider .ff-card { flex-basis: calc((100% - ${gap * 4}px) / 5); }
+    }
+    .ff-nav {
+      flex: 0 0 auto;
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      border: 1px solid #ddd;
+      background: #fff;
+      color: #111;
+      cursor: pointer;
+      font-size: 22px;
+      line-height: 1;
+    }
+    .ff-nav:disabled { opacity: 0.35; cursor: default; }
     .ff-card {
       display: block;
       color: inherit;
@@ -365,10 +406,12 @@ export function renderFeedflowEmbedHtml(input: {
       from { opacity: 0; transform: scale(0.94); }
       to { opacity: 1; transform: none; }
     }
-    .ff-reveal-fade .ff-grid {
+    .ff-reveal-fade .ff-grid,
+    .ff-reveal-fade .ff-slider {
       animation: ff-fade 0.7s ease both;
     }
-    .ff-reveal-rise .ff-grid {
+    .ff-reveal-rise .ff-grid,
+    .ff-reveal-rise .ff-slider {
       animation: ff-rise 0.75s cubic-bezier(.2,.7,.2,1) both;
     }
     .ff-reveal-cascade .ff-card {
@@ -381,7 +424,9 @@ export function renderFeedflowEmbedHtml(input: {
     }
     @media (prefers-reduced-motion: reduce) {
       .ff-reveal-fade .ff-grid,
+      .ff-reveal-fade .ff-slider,
       .ff-reveal-rise .ff-grid,
+      .ff-reveal-rise .ff-slider,
       .ff-reveal-cascade .ff-card,
       .ff-reveal-scale .ff-card { animation: none; }
     }
@@ -389,7 +434,7 @@ export function renderFeedflowEmbedHtml(input: {
   </style>
 </head>
 <body class="${reveal === 'none' ? '' : `ff-reveal-${reveal}`}">
-  <div class="ff-grid" data-feedflow-grid>${cards}</div>
+  ${stage}
   ${empty}
   <script>
     function reportHeight() {
@@ -417,6 +462,34 @@ export function renderFeedflowEmbedHtml(input: {
       card.addEventListener('focus', start);
       card.addEventListener('blur', stop);
     });
+    var slider = document.querySelector('.ff-slider');
+    if (slider) {
+      var track = slider.querySelector('.ff-track');
+      var prev = slider.querySelector('.ff-prev');
+      var next = slider.querySelector('.ff-next');
+      var index = 0;
+      function perView() {
+        if (window.innerWidth >= 960) return 5;
+        if (window.innerWidth >= 640) return 3;
+        return 1;
+      }
+      function layoutSlider() {
+        var count = track.children.length;
+        var max = Math.max(0, count - perView());
+        if (index > max) index = max;
+        var card = track.children[0];
+        if (!card) return;
+        var step = card.getBoundingClientRect().width + ${gap};
+        track.style.transform = 'translateX(' + (-index * step) + 'px)';
+        prev.disabled = index <= 0;
+        next.disabled = index >= max;
+        reportHeight();
+      }
+      prev.addEventListener('click', function () { index -= 1; layoutSlider(); });
+      next.addEventListener('click', function () { index += 1; layoutSlider(); });
+      window.addEventListener('resize', layoutSlider);
+      layoutSlider();
+    }
     reportHeight();
     window.addEventListener('load', reportHeight);
     if (window.ResizeObserver) {

@@ -442,6 +442,7 @@ export async function sendWorkspaceOwnerInviteEmail(params: {
   workspaceName: string;
   inviterName: string;
   accountId?: string;
+  inviteeFirstName?: string | null;
 }): Promise<void> {
   const acceptUrl = getAdminUserInviteAcceptUrl(params.inviteToken);
   const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
@@ -456,6 +457,7 @@ export async function sendWorkspaceOwnerInviteEmail(params: {
     inviterName: params.inviterName,
     acceptUrl,
     productName,
+    inviteeFirstName: params.inviteeFirstName,
   });
 
   await sendPlatformEmail({
@@ -488,6 +490,8 @@ export async function createProvisionedWorkspaceOwnerInvite(
     accountId: string;
     slug: string;
     workspaceName: string;
+    firstName?: string | null;
+    lastName?: string | null;
   },
 ): Promise<{
   invite: AdminUserInviteRow;
@@ -524,6 +528,10 @@ export async function createProvisionedWorkspaceOwnerInvite(
           workspaceName: params.workspaceName,
           inviterName: params.inviterName,
           accountId: params.accountId,
+          inviteeFirstName:
+            params.firstName ??
+            existingConfig.firstName ??
+            existingConfig.inviteeName,
         });
         return { invite: existingPending, emailSent: true };
       } catch (sendError) {
@@ -549,6 +557,9 @@ export async function createProvisionedWorkspaceOwnerInvite(
       email: normalizedEmail,
       invited_by: params.invitedBy,
       access_config: {
+        firstName: params.firstName?.trim() || undefined,
+        lastName: params.lastName?.trim() || undefined,
+        inviteeName: params.firstName?.trim() || undefined,
         provisionedOwner: {
           accountId: params.accountId,
           slug: params.slug,
@@ -575,6 +586,7 @@ export async function createProvisionedWorkspaceOwnerInvite(
       workspaceName: params.workspaceName,
       inviterName: params.inviterName,
       accountId: params.accountId,
+      inviteeFirstName: params.firstName,
     });
   } catch (sendError) {
     emailSent = false;
@@ -745,6 +757,7 @@ export async function resendAdminUserInvite(
       workspaceName: config.provisionedOwner.workspaceName,
       inviterName,
       accountId: config.provisionedOwner.accountId,
+      inviteeFirstName: config.firstName ?? config.inviteeName,
     });
     return;
   }
@@ -754,8 +767,81 @@ export async function resendAdminUserInvite(
     inviteToken: invite.invite_token,
     accessSummary: summarizeAccessConfig(config),
     inviterName,
-    inviteeName: config.inviteeName,
+    inviteeName: config.firstName ?? config.inviteeName,
   });
+}
+
+/**
+ * Copy invitee names onto the profile when those fields are still empty.
+ * Matches team invitations, which do the same on accept.
+ */
+export async function applyInviteeProfileNames(
+  admin: SupabaseClient,
+  userId: string,
+  firstName: string | null | undefined,
+  lastName: string | null | undefined,
+): Promise<void> {
+  const first = firstName?.trim() || null;
+  const last = lastName?.trim() || null;
+
+  if (!first && !last) {
+    return;
+  }
+
+  const { data: settings } = await admin
+    .from('user_settings')
+    .select('first_name, last_name')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  const nextFirst = settings?.first_name?.trim() || first;
+  const nextLast = settings?.last_name?.trim() || last;
+
+  const { error: settingsError } = await admin.from('user_settings').upsert(
+    {
+      user_id: userId,
+      first_name: nextFirst,
+      last_name: nextLast,
+    },
+    { onConflict: 'user_id' },
+  );
+
+  if (settingsError) {
+    console.error(
+      '[admin-invite] Failed to save invitee name:',
+      settingsError.message,
+    );
+    return;
+  }
+
+  const displayName = [nextFirst, nextLast].filter(Boolean).join(' ');
+  if (!displayName) {
+    return;
+  }
+
+  const [{ data: account }, authUser] = await Promise.all([
+    admin.from('accounts').select('name').eq('id', userId).maybeSingle(),
+    admin.auth.admin.getUserById(userId),
+  ]);
+
+  const currentName = account?.name?.trim() ?? '';
+  const email = authUser.data.user?.email?.trim() ?? '';
+
+  if (currentName && currentName !== email) {
+    return;
+  }
+
+  const { error: accountError } = await admin
+    .from('accounts')
+    .update({ name: displayName })
+    .eq('id', userId);
+
+  if (accountError) {
+    console.error(
+      '[admin-invite] Failed to save account name:',
+      accountError.message,
+    );
+  }
 }
 
 export async function fulfillAdminUserInvite(
@@ -830,6 +916,13 @@ export async function fulfillAdminUserInvite(
         accepted_user_id: userId,
       })
       .eq('id', invite.id);
+
+    await applyInviteeProfileNames(
+      admin,
+      userId,
+      config.firstName ?? config.inviteeName,
+      config.lastName,
+    );
 
     await logAdminAction(admin, {
       actorUserId: userId,
@@ -941,6 +1034,13 @@ export async function fulfillAdminUserInvite(
       accepted_user_id: userId,
     })
     .eq('id', invite.id);
+
+  await applyInviteeProfileNames(
+    admin,
+    userId,
+    config.firstName ?? config.inviteeName,
+    config.lastName,
+  );
 
   await logAdminAction(admin, {
     actorUserId: userId,

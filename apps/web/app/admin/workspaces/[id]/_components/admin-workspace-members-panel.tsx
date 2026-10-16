@@ -97,6 +97,8 @@ export function AdminWorkspaceMembersPanel(props: {
     defaultValues: {
       accountId: props.accountId,
       email: '',
+      firstName: '',
+      lastName: '',
       role: 'staff',
       seatKind: 'billable',
     },
@@ -114,11 +116,7 @@ export function AdminWorkspaceMembersPanel(props: {
         </p>
         <Form {...form}>
           <form
-            className={
-              props.isCommercial
-                ? 'grid gap-3 sm:grid-cols-[1fr_8rem_9rem_auto]'
-                : 'grid gap-3 sm:grid-cols-[1fr_10rem_auto]'
-            }
+            className="space-y-3"
             onSubmit={form.handleSubmit((values) => {
               startTransition(async () => {
                 try {
@@ -131,6 +129,8 @@ export function AdminWorkspaceMembersPanel(props: {
                   form.reset({
                     accountId: props.accountId,
                     email: '',
+                    firstName: '',
+                    lastName: '',
                     role: 'staff',
                     seatKind: 'billable',
                   });
@@ -145,81 +145,120 @@ export function AdminWorkspaceMembersPanel(props: {
               });
             })}
           >
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="sr-only">Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="email"
-                      placeholder="colleague@example.com"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="sr-only">Role</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {roles.map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {role}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {props.isCommercial ? (
+            <div className="grid gap-3 sm:grid-cols-2">
               <FormField
                 control={form.control}
-                name="seatKind"
+                name="firstName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="sr-only">Seat</FormLabel>
-                    <Select
-                      value={field.value ?? 'billable'}
-                      onValueChange={field.onChange}
-                    >
+                    <FormLabel className="sr-only">First name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="First name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="sr-only">Last name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Last name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div
+              className={
+                props.isCommercial
+                  ? 'grid gap-3 sm:grid-cols-[1fr_8rem_9rem_auto]'
+                  : 'grid gap-3 sm:grid-cols-[1fr_10rem_auto]'
+              }
+            >
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="sr-only">Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="colleague@example.com"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="sr-only">Role</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Seat" />
+                          <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="billable">Billable seat</SelectItem>
-                        <SelectItem value="support">Support seat</SelectItem>
+                        {roles.map((role) => (
+                          <SelectItem key={role} value={role}>
+                            {role}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            ) : null}
-            <Button type="submit" disabled={pending}>
-              {pending ? 'Saving…' : 'Add / invite'}
-            </Button>
+              {props.isCommercial ? (
+                <FormField
+                  control={form.control}
+                  name="seatKind"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="sr-only">Seat</FormLabel>
+                      <Select
+                        value={field.value ?? 'billable'}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seat" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="billable">
+                            Billable seat
+                          </SelectItem>
+                          <SelectItem value="support">Support seat</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : null}
+              <Button type="submit" disabled={pending}>
+                {pending ? 'Saving…' : 'Add / invite'}
+              </Button>
+            </div>
           </form>
         </Form>
         <p className="text-muted-foreground mt-2 text-xs">
           Existing users are added immediately. New emails get a workspace
-          invitation.
+          invitation. First and last name are optional and saved on their
+          profile.
           {props.isCommercial
             ? ' Role controls permissions; seat kind controls billing and commercial edit rights.'
             : null}

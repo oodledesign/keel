@@ -84,7 +84,8 @@ export function AdminInviteUserDialog(props: React.PropsWithChildren) {
     resolver: zodResolver(CreateAdminUserInviteSchema),
     defaultValues: {
       email: '',
-      inviteeName: '',
+      firstName: '',
+      lastName: '',
       personalOnly: false,
       billingExempt: true,
       personalAddons: [],
@@ -224,22 +225,46 @@ export function AdminInviteUserDialog(props: React.PropsWithChildren) {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="inviteeName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name (optional)</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Alex" autoComplete="off" />
-                  </FormControl>
-                  <FormDescription>
-                    Used in the invite email greeting — e.g. “Hi Alex,”.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First name</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="Alex"
+                        autoComplete="given-name"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last name</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="Morgan"
+                        autoComplete="family-name"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <p className="text-muted-foreground -mt-2 text-sm">
+              Optional. The first name is used in the invite email, and both
+              names are saved on their profile when they accept.
+            </p>
 
             <FormField
               control={form.control}

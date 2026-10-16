@@ -36,6 +36,8 @@ export const ADMIN_WORKSPACE_PROFILE_LABELS: Record<
 export const CreateAdminWorkspaceSchema = z.object({
   name: z.string().trim().min(1).max(80),
   ownerEmail: z.string().email(),
+  ownerFirstName: z.string().trim().max(100).optional(),
+  ownerLastName: z.string().trim().max(100).optional(),
   profile: z.enum(ADMIN_WORKSPACE_PROFILES),
   businessMode: z.enum(['lite', 'full']).optional(),
   billingExempt: z.boolean(),
@@ -48,6 +50,8 @@ export type CreateAdminWorkspaceInput = z.infer<
 export const AddAdminWorkspaceMemberSchema = z.object({
   accountId: z.string().uuid(),
   email: z.string().email(),
+  firstName: z.string().trim().max(100).optional(),
+  lastName: z.string().trim().max(100).optional(),
   role: z.enum(ADMIN_WORKSPACE_ROLES),
   /** Commercial Property only — ignored for other profiles. */
   seatKind: z.enum(['billable', 'support']).default('billable'),

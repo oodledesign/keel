@@ -84,6 +84,8 @@ export const updateFeedflowWidget = enhanceAction(
         show_likes: input.showLikes,
         play_videos: input.playVideos,
         reveal_animation: input.revealAnimation,
+        layout: input.layout,
+        post_count: input.postCount,
       })
       .eq('id', input.widgetId)
       .eq('account_id', input.accountId);

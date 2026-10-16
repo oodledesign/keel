@@ -8,6 +8,7 @@ export type WorkspaceOwnerInviteEmailInput = {
   inviterName: string;
   acceptUrl: string;
   productName?: string;
+  inviteeFirstName?: string | null;
 };
 
 /**
@@ -26,9 +27,11 @@ export function renderWorkspaceOwnerInviteEmail(
   const safeProduct = escapeEmailHtml(productName);
   const safeWorkspace = escapeEmailHtml(workspaceName);
   const safeInviter = escapeEmailHtml(inviterName);
+  const firstName = input.inviteeFirstName?.trim().split(/\s+/)[0] ?? '';
+  const greeting = firstName ? `Hi ${escapeEmailHtml(firstName)},` : 'Hi,';
 
   const bodyHtml = `
-<p style="margin:0 0 16px;">Hi,</p>
+<p style="margin:0 0 16px;">${greeting}</p>
 <p style="margin:0 0 16px;"><strong style="color:#2A1720;">${safeInviter}</strong> has invited you to use <strong style="color:#2A1720;">${safeProduct}</strong> as an <strong style="color:#2A1720;">owner</strong> of the workspace <strong style="color:#2A1720;">${safeWorkspace}</strong>.</p>
 <p style="margin:0;">Accept the invitation to set your password and open ${safeWorkspace}. The link signs you in the same way as other Ozer invitations.</p>
 `.trim();

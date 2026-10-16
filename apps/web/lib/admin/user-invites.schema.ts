@@ -28,6 +28,10 @@ export type AdminInviteWorkspaceProfile =
   (typeof ADMIN_INVITE_WORKSPACE_PROFILES)[number];
 
 export type AdminUserInviteAccessConfig = {
+  /** First name, used in the invite greeting and copied onto the profile. */
+  firstName?: string;
+  /** Last name, copied onto the profile when they accept. */
+  lastName?: string;
   /** First name / preferred name for the invite email greeting. */
   inviteeName?: string;
   /** No pre-created team workspaces — user gets the standard personal onboarding. */
@@ -107,7 +111,8 @@ const workspaceSelectionSchema = z.object({
 export const CreateAdminUserInviteSchema = z
   .object({
     email: z.string().email(),
-    inviteeName: z.string().trim().max(80).optional(),
+    firstName: z.string().trim().max(100).optional(),
+    lastName: z.string().trim().max(100).optional(),
     personalOnly: z.boolean(),
     billingExempt: z.boolean(),
     personalAddons: z.array(z.enum(['addon_email_assistant'])),
@@ -162,10 +167,13 @@ export type CreateAdminUserInviteInput = z.infer<
 export function buildAccessConfigFromInput(
   input: CreateAdminUserInviteInput,
 ): AdminUserInviteAccessConfig {
-  const inviteeName = input.inviteeName?.trim() || undefined;
+  const firstName = input.firstName?.trim() || undefined;
+  const lastName = input.lastName?.trim() || undefined;
 
   return {
-    inviteeName,
+    firstName,
+    lastName,
+    inviteeName: firstName,
     personalOnly: input.personalOnly,
     billingExempt: input.billingExempt,
     workspaces: input.personalOnly

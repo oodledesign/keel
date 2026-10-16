@@ -19,7 +19,10 @@ import {
   spaceTypeForProfile,
 } from '~/home/[account]/_lib/workspace-profile';
 import { logAdminAction } from '~/lib/admin/log-admin-action';
-import { createProvisionedWorkspaceOwnerInvite } from '~/lib/admin/user-invites.service';
+import {
+  applyInviteeProfileNames,
+  createProvisionedWorkspaceOwnerInvite,
+} from '~/lib/admin/user-invites.service';
 import { findPlanByProductAndPlanId } from '~/lib/billing/ozer-plan-catalog';
 import {
   ensureEstablishedWorkspaceMembersOnboarded,
@@ -135,6 +138,7 @@ async function resolveUserIdByEmail(
 async function resolveOrCreateOwnerUserId(
   admin: AdminClient,
   email: string,
+  displayName?: string | null,
 ): Promise<{ userId: string; created: boolean }> {
   const existing = await resolveUserIdByEmail(admin, email);
   if (existing) {
@@ -142,11 +146,13 @@ async function resolveOrCreateOwnerUserId(
   }
 
   const normalized = email.trim().toLowerCase();
+  const name = displayName?.trim() || normalized.split('@')[0] || normalized;
   const { data, error } = await admin.auth.admin.createUser({
     email: normalized,
     email_confirm: true,
     user_metadata: {
-      name: normalized.split('@')[0] || normalized,
+      name,
+      full_name: name,
     },
   });
 
@@ -297,8 +303,26 @@ export const createAdminWorkspaceAction = enhanceAction(
     const { user, client } = await requireSuperAdmin();
     const admin = getSupabaseServerAdminClient();
 
-    const owner = await resolveOrCreateOwnerUserId(admin, input.ownerEmail);
+    const ownerFirstName = input.ownerFirstName?.trim() || '';
+    const ownerLastName = input.ownerLastName?.trim() || '';
+    const ownerDisplayName = [ownerFirstName, ownerLastName]
+      .filter(Boolean)
+      .join(' ');
+    const owner = await resolveOrCreateOwnerUserId(
+      admin,
+      input.ownerEmail,
+      ownerDisplayName,
+    );
     const ownerUserId = owner.userId;
+
+    if (ownerFirstName || ownerLastName) {
+      await applyInviteeProfileNames(
+        admin,
+        ownerUserId,
+        ownerFirstName,
+        ownerLastName,
+      );
+    }
 
     const businessMode =
       input.profile === 'work_design'
@@ -374,6 +398,8 @@ export const createAdminWorkspaceAction = enhanceAction(
           accountId,
           slug: workspaceSlug,
           workspaceName,
+          firstName: ownerFirstName,
+          lastName: ownerLastName,
         });
         inviteEmailSent = invite.emailSent;
         inviteEmailError = invite.emailError;
@@ -469,6 +495,15 @@ export const addAdminWorkspaceMemberAction = enhanceAction(
 
       if (error) throw new Error(error.message);
 
+      if (input.firstName?.trim() || input.lastName?.trim()) {
+        await applyInviteeProfileNames(
+          admin,
+          existingUserId,
+          input.firstName,
+          input.lastName,
+        );
+      }
+
       await logAdminAction(admin, {
         actorUserId: user.id,
         action: 'add_workspace_member',
@@ -495,8 +530,8 @@ export const addAdminWorkspaceMemberAction = enhanceAction(
       invitations: [
         {
           email: input.email.trim().toLowerCase(),
-          firstName: '',
-          lastName: '',
+          firstName: input.firstName?.trim() || '',
+          lastName: input.lastName?.trim() || '',
           role: input.role,
           seatKind: requestedSeatKind,
         },

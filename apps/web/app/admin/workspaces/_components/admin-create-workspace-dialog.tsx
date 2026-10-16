@@ -56,6 +56,8 @@ export function AdminCreateWorkspaceDialog(props: React.PropsWithChildren) {
     defaultValues: {
       name: '',
       ownerEmail: '',
+      ownerFirstName: '',
+      ownerLastName: '',
       profile: 'work_design',
       businessMode: 'lite',
       billingExempt: true,
@@ -125,6 +127,39 @@ export function AdminCreateWorkspaceDialog(props: React.PropsWithChildren) {
               )}
             />
 
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="ownerFirstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Owner first name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Alex" autoComplete="off" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="ownerLastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Owner last name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Morgan"
+                        autoComplete="off"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="ownerEmail"
@@ -140,7 +175,8 @@ export function AdminCreateWorkspaceDialog(props: React.PropsWithChildren) {
                   </FormControl>
                   <FormDescription>
                     They become the primary owner. A new email gets an Ozer
-                    account and an invitation to sign in as owner.
+                    account and an invitation to sign in as owner. Names are
+                    saved on their profile and used in the invite greeting.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

@@ -72,11 +72,51 @@ describe('renderFeedflowEmbedHtml', () => {
     expect(html).toContain('aspect-ratio: 4 / 5');
     expect(html).toContain('ff-reveal-cascade');
     expect(html).toContain('--ff-i:0');
+    expect(html).toContain('ff-grid');
+    expect(html).not.toContain('class="ff-slider"');
     expect(html).toContain('1.2k');
     expect(html).toContain('grid-template-columns: repeat(3, minmax(0, 1fr))');
     expect(html).toContain('https://www.instagram.com/p/abc/');
     expect(html).toContain('Hello &lt;script&gt;alert(1)&lt;/script&gt;');
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('#FF5C34');
+  });
+
+  it('renders a slider with previous and next buttons', () => {
+    const html = renderFeedflowEmbedHtml({
+      embedKey: 'widgetkey12345678',
+      config: {
+        columns_desktop: 3,
+        columns_tablet: 2,
+        columns_mobile: 1,
+        post_count: 5,
+        show_captions: false,
+        show_likes: false,
+        play_videos: false,
+        tile_ratio: 'portrait',
+        reveal_animation: 'none',
+        gap: 8,
+        border_radius: 0,
+        accent_colour: null,
+        custom_css: null,
+        open_in: 'instagram',
+        layout: 'slider',
+      },
+      posts: [
+        {
+          id: '1',
+          media_url: 'https://cdn.example/one.jpg',
+          thumbnail_url: null,
+          caption: null,
+          permalink: 'https://www.instagram.com/p/abc/',
+          timestamp: '2026-08-01T00:00:00.000Z',
+          media_type: 'IMAGE',
+        },
+      ],
+    });
+
+    expect(html).toContain('class="ff-slider"');
+    expect(html).toContain('aria-label="Previous posts"');
+    expect(html).toContain('aria-label="Next posts"');
   });
 });

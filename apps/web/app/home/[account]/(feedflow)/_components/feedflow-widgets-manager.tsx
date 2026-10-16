@@ -181,6 +181,14 @@ function WidgetEmbedCard(props: {
       ? props.widget.reveal_animation
       : 'none',
   );
+  const [layout, setLayout] = useState<'grid' | 'slider'>(
+    props.widget.layout === 'slider' ? 'slider' : 'grid',
+  );
+  const [postCount, setPostCount] = useState(
+    [3, 4, 5, 6, 9, 12].includes(props.widget.post_count ?? 0)
+      ? (props.widget.post_count as number)
+      : 9,
+  );
   const [saving, setSaving] = useState(false);
   const snippets = useMemo(
     () => ({
@@ -208,6 +216,8 @@ function WidgetEmbedCard(props: {
     showLikes: boolean;
     playVideos: boolean;
     revealAnimation: 'none' | 'fade' | 'rise' | 'cascade' | 'scale';
+    layout: 'grid' | 'slider';
+    postCount: number;
   }) => {
     setSaving(true);
     try {
@@ -261,6 +271,8 @@ function WidgetEmbedCard(props: {
                 showLikes,
                 playVideos,
                 revealAnimation,
+                layout,
+                postCount,
               });
             }}
           >
@@ -292,6 +304,8 @@ function WidgetEmbedCard(props: {
                 showLikes,
                 playVideos,
                 revealAnimation: next,
+                layout,
+                postCount,
               });
             }}
           >
@@ -307,6 +321,63 @@ function WidgetEmbedCard(props: {
             </SelectContent>
           </Select>
         </div>
+        <div className="space-y-2">
+          <Label>Layout</Label>
+          <Select
+            value={layout}
+            disabled={saving}
+            onValueChange={(value) => {
+              const next = value === 'slider' ? 'slider' : 'grid';
+              setLayout(next);
+              void saveDisplay({
+                tileRatio,
+                showLikes,
+                playVideos,
+                revealAnimation,
+                layout: next,
+                postCount,
+              });
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="grid">Grid</SelectItem>
+              <SelectItem value="slider">Slider</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Posts</Label>
+          <Select
+            value={String(postCount)}
+            disabled={saving}
+            onValueChange={(value) => {
+              const next = Number(value);
+              setPostCount(next);
+              void saveDisplay({
+                tileRatio,
+                showLikes,
+                playVideos,
+                revealAnimation,
+                layout,
+                postCount: next,
+              });
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[3, 4, 5, 6, 9, 12].map((count) => (
+                <SelectItem key={count} value={String(count)}>
+                  {count}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <label className="flex items-center justify-between gap-3 rounded-md border border-[color:var(--workspace-shell-border)] px-3 py-2">
           <span className="text-sm">Likes and comments</span>
           <Switch
@@ -319,6 +390,8 @@ function WidgetEmbedCard(props: {
                 showLikes: checked,
                 playVideos,
                 revealAnimation,
+                layout,
+                postCount,
               });
             }}
           />
@@ -335,16 +408,15 @@ function WidgetEmbedCard(props: {
                 showLikes,
                 playVideos: checked,
                 revealAnimation,
+                layout,
+                postCount,
               });
             }}
           />
         </label>
       </div>
       <p className={`text-xs ${workspaceTextMuted}`}>
-        Counts appear on hover when Instagram returns them. Video plays muted
-        from the latest saved file and still links out to the post. Reveal plays
-        when the embed scrolls into view. Copy the snippet again so an existing
-        embed waits for that moment.
+        A slider shows five posts at a time on a wide screen, with buttons to move left and right. The post count is how many posts are included.
       </p>
 
       <div className="grid gap-4 lg:grid-cols-2">

@@ -13,6 +13,8 @@ export const updateFeedflowWidgetActionSchema = z.object({
   showLikes: z.boolean(),
   playVideos: z.boolean(),
   revealAnimation: z.enum(['none', 'fade', 'rise', 'cascade', 'scale']),
+  layout: z.enum(['grid', 'slider']),
+  postCount: z.number().int().min(1).max(12),
 });
 
 export const deleteFeedflowSocialAccountActionSchema = z.object({
