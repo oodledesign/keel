@@ -52,7 +52,7 @@ export const createFeedflowWidget = enhanceAction(
         embed_key: embedKey,
         settings: {},
       })
-      .select('embed_key')
+      .select('id, embed_key')
       .single();
 
     if (error) {
@@ -65,7 +65,11 @@ export const createFeedflowWidget = enhanceAction(
     revalidatePath(
       workPath(pathsConfig.app.accountFeedflowReviews, accountSlug),
     );
-    return { ok: true as const, embedKey: data?.embed_key as string };
+    return {
+      ok: true as const,
+      embedKey: data?.embed_key as string,
+      widgetId: data?.id as string,
+    };
   },
   { schema: createFeedflowWidgetActionSchema },
 );
@@ -97,6 +101,7 @@ export const updateFeedflowWidget = enhanceAction(
     revalidatePath(
       workPath(pathsConfig.app.accountFeedflowWidgets, accountSlug),
     );
+    revalidatePath(`/app/${accountSlug}/widgets/${input.widgetId}`);
     return { ok: true as const };
   },
   { schema: updateFeedflowWidgetActionSchema },

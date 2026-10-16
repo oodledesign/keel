@@ -68,7 +68,7 @@ export default async function PublicWatchPage({
 
   return (
     <main className="min-h-screen bg-[var(--ozer-cream-50)] text-[var(--ozer-plum-900)]">
-      <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+      <div className="mx-auto flex min-h-screen w-full max-w-[90rem] flex-col px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
         <PublicWatchClient
           video={video}
           mediaUrl={`/api/watch/${token}/media`}

@@ -18,16 +18,17 @@ const VARIANT_STYLES: Record<
     title: string;
     muted: string;
     body: string;
+    chapter: string;
     link: string;
     border: string;
   }
 > = {
   public: {
-    panel:
-      'rounded-2xl border border-[color:var(--ozer-border-on-light)] bg-white p-5 sm:p-6',
+    panel: '',
     title: 'text-base font-semibold text-[var(--ozer-plum-900)]',
     muted: 'text-base leading-relaxed text-[var(--ozer-text-on-light-muted)]',
     body: 'text-base leading-relaxed text-[var(--ozer-plum-900)]',
+    chapter: 'text-sm font-medium text-[var(--ozer-plum-900)]',
     link: 'text-[var(--ozer-info)] hover:underline',
     border: 'border-[color:var(--ozer-border-on-light)]',
   },
@@ -37,6 +38,7 @@ const VARIANT_STYLES: Record<
     title: 'text-sm font-semibold text-[var(--workspace-shell-text)]',
     muted: 'text-sm text-[var(--workspace-shell-text-muted)]',
     body: 'text-sm leading-relaxed text-[var(--workspace-shell-text)]',
+    chapter: 'text-sm font-semibold text-[var(--workspace-shell-text)]',
     link: 'text-[var(--ozer-accent)] hover:underline',
     border: 'border-[color:var(--workspace-shell-border)]',
   },
@@ -66,7 +68,7 @@ export function VideoChaptersList(props: {
               >
                 {formatChapterTime(chapter.startMs)}
               </span>
-              <span className={styles.title}>{chapter.title}</span>
+              <span className={styles.chapter}>{chapter.title}</span>
             </button>
           </li>
         ))}

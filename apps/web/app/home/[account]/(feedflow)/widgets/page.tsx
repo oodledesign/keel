@@ -56,7 +56,7 @@ export default async function FeedflowWidgetsPage({
       <TeamAccountLayoutPageHeader
         account={account}
         title="Feedflow widgets"
-        description="Create a feed widget, copy the embed snippet, and preview the grid."
+        description="Open a widget to change its layout, then save so the embed updates."
       />
       <PageBody className="space-y-8 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <FeedflowOauthBanner
@@ -67,9 +67,7 @@ export default async function FeedflowWidgetsPage({
         <ModuleDataSection title="Widgets">
           <FeedflowWidgetsManager
             accountId={accountId}
-            siteOrigin={
-              process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? ''
-            }
+            accountSlug={account}
             socialAccounts={social}
             widgets={widgets}
           />

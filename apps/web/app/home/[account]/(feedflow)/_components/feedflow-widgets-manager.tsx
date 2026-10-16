@@ -1,10 +1,18 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
@@ -15,15 +23,8 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
-import { Switch } from '@kit/ui/switch';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
-import { copyTextToClipboard } from '~/lib/clipboard';
-import {
-  buildIframeEmbedSnippet,
-  buildScriptEmbedSnippet,
-  feedflowFeedJsonUrl,
-} from '~/lib/feedflow/embed';
 import {
   workspaceBorder,
   workspaceText,
@@ -34,10 +35,7 @@ import type {
   FeedflowSocialAccountRow,
   FeedflowWidgetRow,
 } from '../../_lib/server/feedflow-account-data';
-import {
-  createFeedflowWidget,
-  updateFeedflowWidget,
-} from '../_lib/server/feedflow-module-actions';
+import { createFeedflowWidget } from '../_lib/server/feedflow-module-actions';
 
 function accountLabel(account: FeedflowSocialAccountRow) {
   const platform = account.platform ?? account.provider;
@@ -47,21 +45,26 @@ function accountLabel(account: FeedflowSocialAccountRow) {
   return `${platform} · ${account.external_account_id}`;
 }
 
+function layoutLabel(layout: string | null) {
+  return layout === 'slider' ? 'Slider' : 'Grid';
+}
+
 export function FeedflowWidgetsManager(props: {
   accountId: string;
-  siteOrigin: string;
+  accountSlug: string;
   socialAccounts: FeedflowSocialAccountRow[];
   widgets: FeedflowWidgetRow[];
 }) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [socialId, setSocialId] = useState<string>(
     props.socialAccounts[0]?.id ?? '',
   );
   const [busy, setBusy] = useState(false);
-  const origin =
-    props.siteOrigin ||
-    (typeof window !== 'undefined' ? window.location.origin : '');
+  const accountsById = new Map(
+    props.socialAccounts.map((account) => [account.id, account]),
+  );
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,12 +83,13 @@ export function FeedflowWidgetsManager(props: {
         socialAccountId: socialId,
         name: name.trim(),
       });
-      toast.success(
-        res.embedKey
-          ? `Widget created. Embed key: ${res.embedKey}`
-          : 'Widget created',
-      );
+      toast.success('Widget created');
       setName('');
+      setOpen(false);
+      if (res.widgetId) {
+        router.push(`/app/${props.accountSlug}/widgets/${res.widgetId}`);
+        return;
+      }
       router.refresh();
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -95,377 +99,103 @@ export function FeedflowWidgetsManager(props: {
   };
 
   return (
-    <div className="space-y-8">
-      <form
-        onSubmit={submit}
-        className={`max-w-lg space-y-4 rounded-lg border bg-[var(--workspace-shell-panel)] p-4 ${workspaceBorder}`}
-      >
-        <p className={`text-sm ${workspaceTextMuted}`}>
-          Create a widget, then paste the iframe or script snippet on any site.
-          Posts are cached — the embed does not call Instagram on each pageview.
-        </p>
-        <div className="space-y-2">
-          <Label>Social account</Label>
-          {props.socialAccounts.length === 0 ? (
-            <p className={`text-sm ${workspaceTextMuted}`}>
-              Connect a social account under Social accounts first.
-            </p>
-          ) : (
-            <Select value={socialId} onValueChange={setSocialId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose source" />
-              </SelectTrigger>
-              <SelectContent>
-                {props.socialAccounts.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {accountLabel(s)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="widget-name">Widget name</Label>
-          <Input
-            id="widget-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Homepage feed"
-          />
-        </div>
-        <Button
-          type="submit"
-          disabled={busy || props.socialAccounts.length === 0}
-        >
-          {busy ? 'Creating…' : 'Create widget'}
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button type="button" onClick={() => setOpen(true)}>
+          New widget
         </Button>
-      </form>
-
-      {props.widgets.length > 0 ? (
-        <div className="space-y-6">
-          {props.widgets.map((widget) => (
-            <WidgetEmbedCard
-              key={widget.id}
-              accountId={props.accountId}
-              widget={widget}
-              origin={origin}
-            />
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function WidgetEmbedCard(props: {
-  accountId: string;
-  widget: FeedflowWidgetRow;
-  origin: string;
-}) {
-  const router = useRouter();
-  const [tileRatio, setTileRatio] = useState<'square' | 'portrait'>(
-    props.widget.tile_ratio === 'square' ? 'square' : 'portrait',
-  );
-  const [showLikes, setShowLikes] = useState(props.widget.show_likes !== false);
-  const [playVideos, setPlayVideos] = useState(
-    props.widget.play_videos !== false,
-  );
-  const [revealAnimation, setRevealAnimation] = useState<
-    'none' | 'fade' | 'rise' | 'cascade' | 'scale'
-  >(
-    props.widget.reveal_animation === 'fade' ||
-      props.widget.reveal_animation === 'rise' ||
-      props.widget.reveal_animation === 'cascade' ||
-      props.widget.reveal_animation === 'scale'
-      ? props.widget.reveal_animation
-      : 'none',
-  );
-  const [layout, setLayout] = useState<'grid' | 'slider'>(
-    props.widget.layout === 'slider' ? 'slider' : 'grid',
-  );
-  const [postCount, setPostCount] = useState(
-    [3, 4, 5, 6, 9, 12].includes(props.widget.post_count ?? 0)
-      ? (props.widget.post_count as number)
-      : 9,
-  );
-  const [saving, setSaving] = useState(false);
-  const snippets = useMemo(
-    () => ({
-      iframe: buildIframeEmbedSnippet(props.origin, props.widget.embed_key),
-      script: buildScriptEmbedSnippet(props.origin, props.widget.embed_key),
-      json: feedflowFeedJsonUrl(props.origin, props.widget.embed_key),
-    }),
-    [props.origin, props.widget.embed_key],
-  );
-  const [copied, setCopied] = useState<'iframe' | 'script' | null>(null);
-
-  const copy = async (kind: 'iframe' | 'script') => {
-    try {
-      await copyTextToClipboard(snippets[kind]);
-      setCopied(kind);
-      toast.success('Embed snippet copied');
-      window.setTimeout(() => setCopied(null), 2000);
-    } catch {
-      toast.error('Could not copy snippet');
-    }
-  };
-
-  const saveDisplay = async (next: {
-    tileRatio: 'square' | 'portrait';
-    showLikes: boolean;
-    playVideos: boolean;
-    revealAnimation: 'none' | 'fade' | 'rise' | 'cascade' | 'scale';
-    layout: 'grid' | 'slider';
-    postCount: number;
-  }) => {
-    setSaving(true);
-    try {
-      await updateFeedflowWidget({
-        accountId: props.accountId,
-        widgetId: props.widget.id,
-        ...next,
-      });
-      router.refresh();
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div
-      className={`space-y-4 rounded-lg border bg-[var(--workspace-shell-panel)] p-4 ${workspaceBorder}`}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className={`text-sm font-medium ${workspaceText}`}>
-            {props.widget.name}
-          </h3>
-          <p className={`font-mono text-xs ${workspaceTextMuted}`}>
-            {props.widget.embed_key}
-          </p>
-        </div>
-        <a
-          href={snippets.json}
-          className="text-primary text-sm underline-offset-4 hover:underline"
-          target="_blank"
-          rel="noreferrer"
-        >
-          JSON
-        </a>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label>Tile shape</Label>
-          <Select
-            value={tileRatio}
-            disabled={saving}
-            onValueChange={(value) => {
-              const next = value === 'square' ? 'square' : 'portrait';
-              setTileRatio(next);
-              void saveDisplay({
-                tileRatio: next,
-                showLikes,
-                playVideos,
-                revealAnimation,
-                layout,
-                postCount,
-              });
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="portrait">Portrait (4:5)</SelectItem>
-              <SelectItem value="square">Square</SelectItem>
-            </SelectContent>
-          </Select>
+      {props.widgets.length === 0 ? (
+        <p className={`text-sm ${workspaceTextMuted}`}>
+          No widgets yet. Create one to get an embed snippet.
+        </p>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {props.widgets.map((widget) => {
+            const source = widget.social_account_id
+              ? accountsById.get(widget.social_account_id)
+              : undefined;
+            return (
+              <Link
+                key={widget.id}
+                href={`/app/${props.accountSlug}/widgets/${widget.id}`}
+                className={`block space-y-2 rounded-lg border bg-[var(--workspace-shell-panel)] p-4 transition hover:border-[color:var(--ozer-accent)] ${workspaceBorder}`}
+              >
+                <h3 className={`text-sm font-medium ${workspaceText}`}>
+                  {widget.name}
+                </h3>
+                <p className={`text-sm ${workspaceTextMuted}`}>
+                  {layoutLabel(widget.layout)} · {widget.post_count ?? 9} posts
+                </p>
+                {source ? (
+                  <p className={`text-xs ${workspaceTextMuted}`}>
+                    {accountLabel(source)}
+                  </p>
+                ) : null}
+              </Link>
+            );
+          })}
         </div>
-        <div className="space-y-2">
-          <Label>Reveal</Label>
-          <Select
-            value={revealAnimation}
-            disabled={saving}
-            onValueChange={(value) => {
-              const next =
-                value === 'fade' ||
-                value === 'rise' ||
-                value === 'cascade' ||
-                value === 'scale'
-                  ? value
-                  : 'none';
-              setRevealAnimation(next);
-              void saveDisplay({
-                tileRatio,
-                showLikes,
-                playVideos,
-                revealAnimation: next,
-                layout,
-                postCount,
-              });
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">None</SelectItem>
-              <SelectItem value="fade">Fade in</SelectItem>
-              <SelectItem value="rise">Rise</SelectItem>
-              <SelectItem value="cascade">Cascade</SelectItem>
-              <SelectItem value="scale">Scale</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Layout</Label>
-          <Select
-            value={layout}
-            disabled={saving}
-            onValueChange={(value) => {
-              const next = value === 'slider' ? 'slider' : 'grid';
-              setLayout(next);
-              void saveDisplay({
-                tileRatio,
-                showLikes,
-                playVideos,
-                revealAnimation,
-                layout: next,
-                postCount,
-              });
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="grid">Grid</SelectItem>
-              <SelectItem value="slider">Slider</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Posts</Label>
-          <Select
-            value={String(postCount)}
-            disabled={saving}
-            onValueChange={(value) => {
-              const next = Number(value);
-              setPostCount(next);
-              void saveDisplay({
-                tileRatio,
-                showLikes,
-                playVideos,
-                revealAnimation,
-                layout,
-                postCount: next,
-              });
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[3, 4, 5, 6, 9, 12].map((count) => (
-                <SelectItem key={count} value={String(count)}>
-                  {count}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <label className="flex items-center justify-between gap-3 rounded-md border border-[color:var(--workspace-shell-border)] px-3 py-2">
-          <span className="text-sm">Likes and comments</span>
-          <Switch
-            checked={showLikes}
-            disabled={saving}
-            onCheckedChange={(checked) => {
-              setShowLikes(checked);
-              void saveDisplay({
-                tileRatio,
-                showLikes: checked,
-                playVideos,
-                revealAnimation,
-                layout,
-                postCount,
-              });
-            }}
-          />
-        </label>
-        <label className="flex items-center justify-between gap-3 rounded-md border border-[color:var(--workspace-shell-border)] px-3 py-2">
-          <span className="text-sm">Play video on hover</span>
-          <Switch
-            checked={playVideos}
-            disabled={saving}
-            onCheckedChange={(checked) => {
-              setPlayVideos(checked);
-              void saveDisplay({
-                tileRatio,
-                showLikes,
-                playVideos: checked,
-                revealAnimation,
-                layout,
-                postCount,
-              });
-            }}
-          />
-        </label>
-      </div>
-      <p className={`text-xs ${workspaceTextMuted}`}>
-        A slider shows five posts at a time on a wide screen, with buttons to move left and right. The post count is how many posts are included.
-      </p>
+      )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <Label>iframe snippet</Label>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => copy('iframe')}
-            >
-              {copied === 'iframe' ? 'Copied' : 'Copy iframe'}
-            </Button>
-          </div>
-          <pre
-            className={`overflow-x-auto rounded-md border bg-[var(--workspace-control-surface)] p-3 text-xs ${workspaceBorder} ${workspaceText}`}
-          >
-            <code>{snippets.iframe}</code>
-          </pre>
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <Label>script snippet</Label>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => copy('script')}
-            >
-              {copied === 'script' ? 'Copied' : 'Copy script'}
-            </Button>
-          </div>
-          <pre
-            className={`overflow-x-auto rounded-md border bg-[var(--workspace-control-surface)] p-3 text-xs ${workspaceBorder} ${workspaceText}`}
-          >
-            <code>{snippets.script}</code>
-          </pre>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Preview</Label>
-        <iframe
-          title={`${props.widget.name} preview`}
-          src={`/api/feedflow/embed?widget=${encodeURIComponent(props.widget.embed_key)}`}
-          className={`h-[28rem] w-full rounded-md border bg-white ${workspaceBorder}`}
-        />
-      </div>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) setName('');
+          setOpen(next);
+        }}
+      >
+        <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New widget</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={submit} className="space-y-4">
+            <p className={`text-sm ${workspaceTextMuted}`}>
+              Posts are cached. The embed does not call Instagram on each
+              pageview.
+            </p>
+            <div className="space-y-2">
+              <Label>Social account</Label>
+              {props.socialAccounts.length === 0 ? (
+                <p className={`text-sm ${workspaceTextMuted}`}>
+                  Connect a social account under Social accounts first.
+                </p>
+              ) : (
+                <Select value={socialId} onValueChange={setSocialId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {props.socialAccounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {accountLabel(account)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="widget-name">Widget name</Label>
+              <Input
+                id="widget-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Homepage feed"
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="submit"
+                disabled={busy || props.socialAccounts.length === 0}
+              >
+                {busy ? 'Creating…' : 'Create widget'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

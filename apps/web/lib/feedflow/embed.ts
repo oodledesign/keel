@@ -43,6 +43,33 @@ export function feedflowFeedJsonUrl(origin: string, embedKey: string): string {
   return `${base}/api/feedflow/feed?widget=${encodeURIComponent(embedKey)}`;
 }
 
+export type FeedflowEmbedPreviewSettings = {
+  layout: 'grid' | 'slider';
+  postCount: number;
+  tileRatio: 'square' | 'portrait';
+  showLikes: boolean;
+  playVideos: boolean;
+  revealAnimation: 'none' | 'fade' | 'rise' | 'cascade' | 'scale';
+};
+
+/** Same-origin preview URL. Query overrides are not part of the public snippet. */
+export function feedflowEmbedPreviewPath(
+  embedKey: string,
+  settings: FeedflowEmbedPreviewSettings,
+): string {
+  const params = new URLSearchParams({
+    widget: embedKey,
+    preview: '1',
+    layout: settings.layout,
+    posts: String(settings.postCount),
+    ratio: settings.tileRatio,
+    likes: settings.showLikes ? '1' : '0',
+    videos: settings.playVideos ? '1' : '0',
+    reveal: settings.revealAnimation,
+  });
+  return `/api/feedflow/embed?${params.toString()}`;
+}
+
 export function buildIframeEmbedSnippet(
   origin: string,
   embedKey: string,

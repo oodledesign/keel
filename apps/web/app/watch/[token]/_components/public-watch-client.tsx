@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 
-import { Download } from 'lucide-react';
+import { Download, Share2 } from 'lucide-react';
 
 import {
   VideoChaptersList,
@@ -89,6 +89,27 @@ export function PublicWatchClient(props: Props) {
     [playTimeline, onPlaybackTime],
   );
 
+  const [linkCopied, setLinkCopied] = useState(false);
+  const onShare = useCallback(async () => {
+    const url = window.location.href;
+    const title = props.video.title;
+
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title, url });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+      }
+    }
+
+    await navigator.clipboard.writeText(url);
+    setLinkCopied(true);
+    window.setTimeout(() => setLinkCopied(false), 2000);
+  }, [props.video.title]);
+
   const publishedLabel = formatPublishedAt(props.publishedAt);
   const hasSummary = Boolean(props.summary?.trim());
   const hasChapters = props.chapters.length > 0;
@@ -99,20 +120,9 @@ export function PublicWatchClient(props: Props) {
   return (
     <>
       <header className="mb-6 space-y-2 lg:mb-8">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <h1 className="font-heading text-3xl font-semibold tracking-tight text-[var(--ozer-plum-900)] sm:text-4xl">
-            {props.video.title}
-          </h1>
-          {props.downloadUrl ? (
-            <a
-              href={props.downloadUrl}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[color:var(--ozer-border-on-light)] bg-white px-3.5 py-1.5 text-sm font-medium text-[var(--ozer-plum-900)] shadow-sm transition hover:shadow-md"
-            >
-              <Download className="size-4" aria-hidden />
-              Download
-            </a>
-          ) : null}
-        </div>
+        <h1 className="font-heading text-3xl font-semibold tracking-tight text-[var(--ozer-plum-900)] sm:text-4xl">
+          {props.video.title}
+        </h1>
         <p className="text-base text-[var(--ozer-text-on-light-muted)]">
           {formatViewCount(props.video.view_count)}{' '}
           {Number(props.video.view_count ?? 0) === 1 ? 'view' : 'views'}
@@ -141,56 +151,79 @@ export function PublicWatchClient(props: Props) {
       >
         <div className="min-w-0 space-y-5 lg:space-y-8">
           <div
-            ref={playerAnchorRef}
-            className="mx-auto w-full min-w-0 overflow-hidden rounded-2xl border border-[color:var(--ozer-border-on-light)] bg-black shadow-lg shadow-[color:var(--ozer-plum-900)]/10"
+            className="mx-auto w-full min-w-0"
             style={{ maxWidth: viewportFitMaxWidth(props.aspectRatio) }}
           >
-            {playTimeline ? (
-              <PublicTimelineWatchPlayer
-                ref={timelineRef}
-                mediaUrl={props.mediaUrl}
-                aspectRatio={props.aspectRatio}
-                config={props.config}
-                onUnsupported={onMasterUnsupported}
-                onPlaybackTime={onPlaybackTime}
-              />
-            ) : timelineUnplayable ? (
-              <div
-                className="flex w-full items-center justify-center bg-black/60 px-6 text-center text-base text-[var(--ozer-text-on-dark)]/80"
-                style={{ aspectRatio: props.aspectRatio }}
+            <div
+              ref={playerAnchorRef}
+              className="w-full min-w-0 overflow-hidden rounded-2xl border border-[color:var(--ozer-border-on-light)] bg-black shadow-lg shadow-[color:var(--ozer-plum-900)]/10"
+            >
+              {playTimeline ? (
+                <PublicTimelineWatchPlayer
+                  ref={timelineRef}
+                  mediaUrl={props.mediaUrl}
+                  aspectRatio={props.aspectRatio}
+                  config={props.config}
+                  onUnsupported={onMasterUnsupported}
+                  onPlaybackTime={onPlaybackTime}
+                />
+              ) : timelineUnplayable ? (
+                <div
+                  className="flex w-full items-center justify-center bg-black/60 px-6 text-center text-base text-[var(--ozer-text-on-dark)]/80"
+                  style={{ aspectRatio: props.aspectRatio }}
+                >
+                  This browser can&apos;t play this video yet. Try again
+                  shortly, or open it in Safari or Chrome.
+                </div>
+              ) : props.embedReady ? (
+                <SeekableBunnyEmbed
+                  ref={bunnyRef}
+                  libraryId={props.video.bunny_library_id}
+                  bunnyVideoId={props.video.bunny_video_id}
+                  config={props.config}
+                  title={props.video.title}
+                  onPlaybackTime={onPlaybackTime}
+                />
+              ) : (
+                <div
+                  className="relative flex w-full items-center justify-center bg-black/60"
+                  style={{ aspectRatio: props.aspectRatio }}
+                >
+                  {props.video.thumbnail_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={props.video.thumbnail_url}
+                      alt={props.video.title}
+                      className="absolute inset-0 h-full w-full object-cover opacity-40"
+                    />
+                  ) : null}
+                  <p className="relative z-10 px-6 text-center text-base text-[var(--ozer-text-on-dark)]/80">
+                    {props.video.status === 'failed'
+                      ? 'This video failed to process.'
+                      : 'This video is still processing. Check back soon.'}
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="mt-3 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => void onShare()}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[color:var(--ozer-border-on-light)] bg-white px-3.5 py-1.5 text-sm font-medium text-[var(--ozer-plum-900)] shadow-sm transition hover:shadow-md"
               >
-                This browser can&apos;t play this video yet. Try again shortly,
-                or open it in Safari or Chrome.
-              </div>
-            ) : props.embedReady ? (
-              <SeekableBunnyEmbed
-                ref={bunnyRef}
-                libraryId={props.video.bunny_library_id}
-                bunnyVideoId={props.video.bunny_video_id}
-                config={props.config}
-                title={props.video.title}
-                onPlaybackTime={onPlaybackTime}
-              />
-            ) : (
-              <div
-                className="relative flex w-full items-center justify-center bg-black/60"
-                style={{ aspectRatio: props.aspectRatio }}
-              >
-                {props.video.thumbnail_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={props.video.thumbnail_url}
-                    alt={props.video.title}
-                    className="absolute inset-0 h-full w-full object-cover opacity-40"
-                  />
-                ) : null}
-                <p className="relative z-10 px-6 text-center text-base text-[var(--ozer-text-on-dark)]/80">
-                  {props.video.status === 'failed'
-                    ? 'This video failed to process.'
-                    : 'This video is still processing. Check back soon.'}
-                </p>
-              </div>
-            )}
+                <Share2 className="size-4" aria-hidden />
+                {linkCopied ? 'Link copied' : 'Share'}
+              </button>
+              {props.downloadUrl ? (
+                <a
+                  href={props.downloadUrl}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[color:var(--ozer-border-on-light)] bg-white px-3.5 py-1.5 text-sm font-medium text-[var(--ozer-plum-900)] shadow-sm transition hover:shadow-md"
+                >
+                  <Download className="size-4" aria-hidden />
+                  Download
+                </a>
+              ) : null}
+            </div>
           </div>
 
           {hasSummary || hasChapters ? (

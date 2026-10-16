@@ -80,6 +80,29 @@ export const loadFeedflowWidgetsForTeam = cache(
   },
 );
 
+export const loadFeedflowWidgetForTeam = cache(
+  async (
+    accountId: string,
+    widgetId: string,
+  ): Promise<FeedflowWidgetRow | null> => {
+    const client = getSupabaseServerClient();
+    const { data, error } = await supabaseCustomSchema(client, 'feedflow')
+      .from('widgets')
+      .select(
+        'id, name, embed_key, layout, post_count, tile_ratio, show_likes, play_videos, reveal_animation, created_at, social_account_id',
+      )
+      .eq('account_id', accountId)
+      .eq('id', widgetId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[feedflow] widget', error.message);
+      return null;
+    }
+    return (data as FeedflowWidgetRow | null) ?? null;
+  },
+);
+
 export const loadClientForTeam = cache(
   async (clientId: string, accountId: string) => {
     const client = getSupabaseServerClient() as SupabaseClient;
