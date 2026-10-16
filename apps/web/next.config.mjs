@@ -219,9 +219,21 @@ export default withSentryConfig(nextConfig, {
   project: 'ozer',
   authToken: process.env.SENTRY_AUTH_TOKEN,
   silent: !process.env.CI,
-  // Source maps are uploaded to Sentry, not served publicly
-  hideSourceMaps: true,
-  disableLogger: true,
+  telemetry: false,
+  // The 8 GB production builder OOMs if the Sentry plugin generates maps for
+  // the whole app. Runtime capture still works; stack traces stay minified.
+  sourcemaps: {
+    disable: true,
+  },
+  webpack: {
+    autoInstrumentServerFunctions: false,
+    autoInstrumentMiddleware: false,
+    autoInstrumentAppDirectory: false,
+    automaticVercelMonitors: false,
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
 });
 
 /** @returns {import('next').NextConfig['images']} */
