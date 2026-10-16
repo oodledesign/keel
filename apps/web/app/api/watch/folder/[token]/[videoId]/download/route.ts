@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { findVideoInSharedFolder } from '~/lib/videos/server/public-folder.loader';
-import { bunnyMp4DownloadResponse } from '~/lib/videos/server/video-mp4-download';
+import { videoFileDownloadResponse } from '~/lib/videos/server/video-mp4-download';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,7 +32,7 @@ export async function GET(_request: Request, context: RouteContext) {
   const { data: video, error } = await admin
     .from('videos')
     .select(
-      'title, bunny_video_id, bunny_library_id, published_revision, baked_revision',
+      'id, title, bunny_video_id, bunny_library_id',
     )
     .eq('id', inFolder.id)
     .eq('status', 'ready')
@@ -45,11 +45,10 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  return bunnyMp4DownloadResponse({
+  return videoFileDownloadResponse({
+    id: String(video.id),
     title: String(video.title),
     bunny_video_id: String(video.bunny_video_id),
     bunny_library_id: String(video.bunny_library_id),
-    published_revision: video.published_revision as number | null,
-    baked_revision: video.baked_revision as number | null,
   });
 }

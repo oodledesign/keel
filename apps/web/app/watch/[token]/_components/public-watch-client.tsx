@@ -106,7 +106,6 @@ export function PublicWatchClient(props: Props) {
           {props.downloadUrl ? (
             <a
               href={props.downloadUrl}
-              download
               className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[color:var(--ozer-border-on-light)] bg-white px-3.5 py-1.5 text-sm font-medium text-[var(--ozer-plum-900)] shadow-sm transition hover:shadow-md"
             >
               <Download className="size-4" aria-hidden />

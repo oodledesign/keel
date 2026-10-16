@@ -423,11 +423,16 @@ export async function upsertDesktopTranscript(input: {
 export async function createSignedMasterUrl(
   storagePath: string,
   expiresIn = 60 * 60,
+  downloadName?: string,
 ) {
   const admin = getSupabaseServerAdminClient();
   const { data, error } = await admin.storage
     .from(VIDEO_MASTERS_BUCKET)
-    .createSignedUrl(storagePath, expiresIn);
+    .createSignedUrl(
+      storagePath,
+      expiresIn,
+      downloadName ? { download: downloadName } : undefined,
+    );
 
   if (error || !data?.signedUrl) {
     throw new Error(error?.message ?? 'Could not sign master URL');

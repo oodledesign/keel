@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { bunnyMp4DownloadResponse } from '~/lib/videos/server/video-mp4-download';
+import { videoFileDownloadResponse } from '~/lib/videos/server/video-mp4-download';
 import { requireVideoById } from '~/lib/videos/server/videos-access';
 
 export const runtime = 'nodejs';
@@ -34,11 +34,10 @@ export async function GET(_request: Request, context: RouteContext) {
     );
   }
 
-  return bunnyMp4DownloadResponse({
+  return videoFileDownloadResponse({
+    id: String(video.id),
     title: String(video.title),
     bunny_video_id: String(video.bunny_video_id),
     bunny_library_id: String(video.bunny_library_id),
-    published_revision: video.published_revision as number | null,
-    baked_revision: video.baked_revision as number | null,
   });
 }

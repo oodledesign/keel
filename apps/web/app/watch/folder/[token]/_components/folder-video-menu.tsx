@@ -26,7 +26,7 @@ export function FolderVideoMenu(props: { downloadUrl: string; title: string }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem asChild>
-          <a href={props.downloadUrl} download>
+          <a href={props.downloadUrl}>
             <Download className="mr-2 size-4" aria-hidden />
             Download
           </a>

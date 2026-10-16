@@ -74,7 +74,6 @@ export default async function PublicFolderVideoPage({
           {data.allowDownload ? (
             <a
               href={`/api/watch/folder/${token}/${video.id}/download`}
-              download
               className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--ozer-border-on-light)] bg-white px-3.5 py-1.5 text-sm font-medium text-[var(--ozer-plum-900)] shadow-sm transition hover:shadow-md"
             >
               <Download className="size-4" aria-hidden />

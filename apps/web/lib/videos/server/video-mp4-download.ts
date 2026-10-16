@@ -2,6 +2,9 @@ import 'server-only';
 
 import { NextResponse } from 'next/server';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
+import { createSignedMasterUrl } from './video-edit.service';
 import { resolveBunnyCdnHostname } from './videos-data';
 
 /** Best first; Bunny only serves renditions up to the source resolution. */
@@ -15,39 +18,44 @@ const MP4_RENDITIONS = [
   '240p',
 ] as const;
 
-export function videoDownloadContentDisposition(title: string) {
-  const base =
+function downloadBaseName(title: string) {
+  return (
     title
       .replace(/[^\p{L}\p{N} _.-]+/gu, '')
       .trim()
-      .slice(0, 120) || 'video';
-  const ascii = base.replace(/[^\x20-\x7e]+/g, '') || 'video';
-  return `attachment; filename="${ascii}.mp4"; filename*=UTF-8''${encodeURIComponent(`${base}.mp4`)}`;
-}
-
-export function videoFileMatchesPublishedEdit(video: {
-  published_revision?: number | null;
-  baked_revision?: number | null;
-}) {
-  const published = Number(video.published_revision ?? 0);
-  return published === 0 || Number(video.baked_revision ?? 0) === published;
+      .slice(0, 120) || 'video'
+  );
 }
 
 /**
- * Stream the highest available Bunny MP4. The CDN URL stays on the server.
+ * Redirect to the file instead of streaming it through the app. Large videos
+ * die on the serverless body limit, which looks like a click that does nothing.
+ * Prefer the stored master (what the timeline player uses). Fall back to a
+ * Bunny MP4 rendition for videos that were only uploaded to the stream.
  */
-export async function bunnyMp4DownloadResponse(video: {
+export async function videoFileDownloadResponse(video: {
+  id: string;
   title: string;
   bunny_video_id: string;
   bunny_library_id: string;
-  published_revision?: number | null;
-  baked_revision?: number | null;
 }) {
-  if (!videoFileMatchesPublishedEdit(video)) {
-    return NextResponse.json(
-      { error: 'This video is still processing its latest edit.' },
-      { status: 409 },
+  const admin = getSupabaseServerAdminClient();
+  const { data: master } = await admin
+    .from('video_masters')
+    .select('storage_path')
+    .eq('video_id', video.id)
+    .maybeSingle();
+
+  const storagePath = master?.storage_path ? String(master.storage_path) : '';
+  if (storagePath) {
+    const ext = storagePath.split('.').pop()?.toLowerCase();
+    const suffix = ext && /^[a-z0-9]{2,5}$/.test(ext) ? ext : 'mp4';
+    const url = await createSignedMasterUrl(
+      storagePath,
+      60 * 10,
+      `${downloadBaseName(video.title)}.${suffix}`,
     );
+    return NextResponse.redirect(url);
   }
 
   const host = await resolveBunnyCdnHostname(String(video.bunny_library_id));
@@ -56,26 +64,10 @@ export async function bunnyMp4DownloadResponse(video: {
   }
 
   for (const rendition of MP4_RENDITIONS) {
-    const upstream = await fetch(
-      `https://${host}/${video.bunny_video_id}/play_${rendition}.mp4`,
-      { cache: 'no-store' },
-    );
-    if (!upstream.ok || !upstream.body) {
-      await upstream.body?.cancel();
-      continue;
-    }
-
-    const headers = new Headers({
-      'Content-Type': 'video/mp4',
-      'Content-Disposition': videoDownloadContentDisposition(
-        String(video.title),
-      ),
-      'Cache-Control': 'private, no-store',
-    });
-    const length = upstream.headers.get('content-length');
-    if (length) headers.set('Content-Length', length);
-
-    return new Response(upstream.body, { headers });
+    const fileUrl = `https://${host}/${video.bunny_video_id}/play_${rendition}.mp4`;
+    const head = await fetch(fileUrl, { method: 'HEAD', cache: 'no-store' });
+    if (!head.ok) continue;
+    return NextResponse.redirect(fileUrl);
   }
 
   return NextResponse.json(
