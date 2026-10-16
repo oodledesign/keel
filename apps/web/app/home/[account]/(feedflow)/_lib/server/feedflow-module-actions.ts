@@ -13,6 +13,7 @@ import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 import {
   createFeedflowWidgetActionSchema,
   deleteFeedflowSocialAccountActionSchema,
+  updateFeedflowWidgetActionSchema,
 } from '../schema/feedflow-module.schema';
 
 function workPath(template: string, accountSlug: string) {
@@ -67,6 +68,36 @@ export const createFeedflowWidget = enhanceAction(
     return { ok: true as const, embedKey: data?.embed_key as string };
   },
   { schema: createFeedflowWidgetActionSchema },
+);
+
+export const updateFeedflowWidget = enhanceAction(
+  async (input, user) => {
+    const { client, slug: accountSlug } = await assertFeedflowWriteAccess(
+      input.accountId,
+      user.id,
+    );
+
+    const { error } = await supabaseCustomSchema(client, 'feedflow')
+      .from('widgets')
+      .update({
+        tile_ratio: input.tileRatio,
+        show_likes: input.showLikes,
+        play_videos: input.playVideos,
+        reveal_animation: input.revealAnimation,
+      })
+      .eq('id', input.widgetId)
+      .eq('account_id', input.accountId);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    revalidatePath(
+      workPath(pathsConfig.app.accountFeedflowWidgets, accountSlug),
+    );
+    return { ok: true as const };
+  },
+  { schema: updateFeedflowWidgetActionSchema },
 );
 
 export const deleteFeedflowSocialAccount = enhanceAction(

@@ -13,7 +13,7 @@
     ".": "./src/index.ts",
     "./provider": "./src/components/provider.tsx",
     "./config/client": "./src/sentry.client.config.ts",
-    "./config/server": "./src/sentry.client.server.ts"
+    "./config/server": "./src/sentry.server.config.ts"
   },
   "dependencies": {
     "@sentry/nextjs": "catalog:"

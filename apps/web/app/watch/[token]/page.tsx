@@ -63,6 +63,11 @@ export default async function PublicWatchPage({
   } = data;
   const ratio = aspectRatioCss(config.aspect_ratio);
   const isReady = video.status === 'ready';
+  const fileMatchesEdit = !useTimelinePlayer || streamMatchesPublishedEdit;
+  const downloadUrl =
+    isReady && config.allow_download && fileMatchesEdit
+      ? `/api/watch/${token}/download`
+      : null;
 
   return (
     <main className="min-h-screen bg-[var(--ozer-cream-50)] text-[var(--ozer-plum-900)]">
@@ -80,6 +85,7 @@ export default async function PublicWatchPage({
           summary={summary}
           aspectRatio={ratio}
           embedReady={isReady}
+          downloadUrl={downloadUrl}
         />
       </div>
     </main>

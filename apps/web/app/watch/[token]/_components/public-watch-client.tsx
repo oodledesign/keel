@@ -2,6 +2,8 @@
 
 import { useCallback, useRef, useState } from 'react';
 
+import { Download } from 'lucide-react';
+
 import {
   VideoChaptersList,
   VideoSummaryCard,
@@ -38,6 +40,8 @@ type Props = {
   summary: string | null;
   aspectRatio: string;
   embedReady: boolean;
+  /** Set when the owner allowed downloads and a current file exists. */
+  downloadUrl?: string | null;
 };
 
 /** Widest the player can be while its full height still fits in the viewport. */
@@ -95,9 +99,21 @@ export function PublicWatchClient(props: Props) {
   return (
     <>
       <header className="mb-6 space-y-2 lg:mb-8">
-        <h1 className="font-heading text-3xl font-semibold tracking-tight text-[var(--ozer-plum-900)] sm:text-4xl">
-          {props.video.title}
-        </h1>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h1 className="font-heading text-3xl font-semibold tracking-tight text-[var(--ozer-plum-900)] sm:text-4xl">
+            {props.video.title}
+          </h1>
+          {props.downloadUrl ? (
+            <a
+              href={props.downloadUrl}
+              download
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[color:var(--ozer-border-on-light)] bg-white px-3.5 py-1.5 text-sm font-medium text-[var(--ozer-plum-900)] shadow-sm transition hover:shadow-md"
+            >
+              <Download className="size-4" aria-hidden />
+              Download
+            </a>
+          ) : null}
+        </div>
         <p className="text-base text-[var(--ozer-text-on-light-muted)]">
           {formatViewCount(props.video.view_count)}{' '}
           {Number(props.video.view_count ?? 0) === 1 ? 'view' : 'views'}

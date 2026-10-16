@@ -25,7 +25,7 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
-import { Textarea } from '@kit/ui/textarea';
+import { AutoGrowTextarea } from './auto-grow-textarea';
 import {
   Tooltip,
   TooltipContent,
@@ -561,7 +561,7 @@ export function SurveyHubContent({
                       onChange={(event) => setPasteTitle(event.target.value)}
                       placeholder="Visit title (optional)"
                     />
-                    <Textarea
+                    <AutoGrowTextarea
                       value={pasteContent}
                       onChange={(event) => setPasteContent(event.target.value)}
                       placeholder="Paste the site visit transcript here…"

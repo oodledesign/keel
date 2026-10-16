@@ -26,6 +26,10 @@ export type FeedflowWidgetRow = {
   embed_key: string;
   layout: string | null;
   post_count: number | null;
+  tile_ratio: string | null;
+  show_likes: boolean | null;
+  play_videos: boolean | null;
+  reveal_animation: string | null;
   created_at: string;
   social_account_id: string | null;
 };
@@ -63,7 +67,7 @@ export const loadFeedflowWidgetsForTeam = cache(
     const { data, error } = await supabaseCustomSchema(client, 'feedflow')
       .from('widgets')
       .select(
-        'id, name, embed_key, layout, post_count, created_at, social_account_id',
+        'id, name, embed_key, layout, post_count, tile_ratio, show_likes, play_videos, reveal_animation, created_at, social_account_id',
       )
       .eq('account_id', accountId)
       .order('created_at', { ascending: false });
@@ -178,7 +182,9 @@ export async function loadFeedflowReviews(
     .eq('account_id', accountId)
     .order('reviewed_at', { ascending: false, nullsFirst: false })
     .limit(200);
-  query = clientId ? query.eq('client_id', clientId) : query.is('client_id', null);
+  query = clientId
+    ? query.eq('client_id', clientId)
+    : query.is('client_id', null);
 
   const { data, error } = await query;
   if (error) {
@@ -205,7 +211,9 @@ export async function loadFeedflowWebflowConnection(
       'id, site_name, collection_name, webflow_collection_id, field_mapping, sync_mode, auto_publish, min_rating, min_character_count, last_synced_at, sync_status, sync_error',
     )
     .eq('account_id', accountId);
-  query = clientId ? query.eq('client_id', clientId) : query.is('client_id', null);
+  query = clientId
+    ? query.eq('client_id', clientId)
+    : query.is('client_id', null);
 
   const { data, error } = await query.maybeSingle();
   if (error) {

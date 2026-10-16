@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
+import { Switch } from '@kit/ui/switch';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import { copyTextToClipboard } from '~/lib/clipboard';
@@ -33,7 +34,10 @@ import type {
   FeedflowSocialAccountRow,
   FeedflowWidgetRow,
 } from '../../_lib/server/feedflow-account-data';
-import { createFeedflowWidget } from '../_lib/server/feedflow-module-actions';
+import {
+  createFeedflowWidget,
+  updateFeedflowWidget,
+} from '../_lib/server/feedflow-module-actions';
 
 function accountLabel(account: FeedflowSocialAccountRow) {
   const platform = account.platform ?? account.provider;
@@ -141,7 +145,12 @@ export function FeedflowWidgetsManager(props: {
       {props.widgets.length > 0 ? (
         <div className="space-y-6">
           {props.widgets.map((widget) => (
-            <WidgetEmbedCard key={widget.id} widget={widget} origin={origin} />
+            <WidgetEmbedCard
+              key={widget.id}
+              accountId={props.accountId}
+              widget={widget}
+              origin={origin}
+            />
           ))}
         </div>
       ) : null}
@@ -149,7 +158,30 @@ export function FeedflowWidgetsManager(props: {
   );
 }
 
-function WidgetEmbedCard(props: { widget: FeedflowWidgetRow; origin: string }) {
+function WidgetEmbedCard(props: {
+  accountId: string;
+  widget: FeedflowWidgetRow;
+  origin: string;
+}) {
+  const router = useRouter();
+  const [tileRatio, setTileRatio] = useState<'square' | 'portrait'>(
+    props.widget.tile_ratio === 'square' ? 'square' : 'portrait',
+  );
+  const [showLikes, setShowLikes] = useState(props.widget.show_likes !== false);
+  const [playVideos, setPlayVideos] = useState(
+    props.widget.play_videos !== false,
+  );
+  const [revealAnimation, setRevealAnimation] = useState<
+    'none' | 'fade' | 'rise' | 'cascade' | 'scale'
+  >(
+    props.widget.reveal_animation === 'fade' ||
+      props.widget.reveal_animation === 'rise' ||
+      props.widget.reveal_animation === 'cascade' ||
+      props.widget.reveal_animation === 'scale'
+      ? props.widget.reveal_animation
+      : 'none',
+  );
+  const [saving, setSaving] = useState(false);
   const snippets = useMemo(
     () => ({
       iframe: buildIframeEmbedSnippet(props.origin, props.widget.embed_key),
@@ -168,6 +200,27 @@ function WidgetEmbedCard(props: { widget: FeedflowWidgetRow; origin: string }) {
       window.setTimeout(() => setCopied(null), 2000);
     } catch {
       toast.error('Could not copy snippet');
+    }
+  };
+
+  const saveDisplay = async (next: {
+    tileRatio: 'square' | 'portrait';
+    showLikes: boolean;
+    playVideos: boolean;
+    revealAnimation: 'none' | 'fade' | 'rise' | 'cascade' | 'scale';
+  }) => {
+    setSaving(true);
+    try {
+      await updateFeedflowWidget({
+        accountId: props.accountId,
+        widgetId: props.widget.id,
+        ...next,
+      });
+      router.refresh();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -193,6 +246,106 @@ function WidgetEmbedCard(props: { widget: FeedflowWidgetRow; origin: string }) {
           JSON
         </a>
       </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Tile shape</Label>
+          <Select
+            value={tileRatio}
+            disabled={saving}
+            onValueChange={(value) => {
+              const next = value === 'square' ? 'square' : 'portrait';
+              setTileRatio(next);
+              void saveDisplay({
+                tileRatio: next,
+                showLikes,
+                playVideos,
+                revealAnimation,
+              });
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="portrait">Portrait (4:5)</SelectItem>
+              <SelectItem value="square">Square</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Reveal</Label>
+          <Select
+            value={revealAnimation}
+            disabled={saving}
+            onValueChange={(value) => {
+              const next =
+                value === 'fade' ||
+                value === 'rise' ||
+                value === 'cascade' ||
+                value === 'scale'
+                  ? value
+                  : 'none';
+              setRevealAnimation(next);
+              void saveDisplay({
+                tileRatio,
+                showLikes,
+                playVideos,
+                revealAnimation: next,
+              });
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None</SelectItem>
+              <SelectItem value="fade">Fade in</SelectItem>
+              <SelectItem value="rise">Rise</SelectItem>
+              <SelectItem value="cascade">Cascade</SelectItem>
+              <SelectItem value="scale">Scale</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <label className="flex items-center justify-between gap-3 rounded-md border border-[color:var(--workspace-shell-border)] px-3 py-2">
+          <span className="text-sm">Likes and comments</span>
+          <Switch
+            checked={showLikes}
+            disabled={saving}
+            onCheckedChange={(checked) => {
+              setShowLikes(checked);
+              void saveDisplay({
+                tileRatio,
+                showLikes: checked,
+                playVideos,
+                revealAnimation,
+              });
+            }}
+          />
+        </label>
+        <label className="flex items-center justify-between gap-3 rounded-md border border-[color:var(--workspace-shell-border)] px-3 py-2">
+          <span className="text-sm">Play video on hover</span>
+          <Switch
+            checked={playVideos}
+            disabled={saving}
+            onCheckedChange={(checked) => {
+              setPlayVideos(checked);
+              void saveDisplay({
+                tileRatio,
+                showLikes,
+                playVideos: checked,
+                revealAnimation,
+              });
+            }}
+          />
+        </label>
+      </div>
+      <p className={`text-xs ${workspaceTextMuted}`}>
+        Counts appear on hover when Instagram returns them. Video plays muted
+        from the latest saved file and still links out to the post. Reveal plays
+        when the embed scrolls into view. Copy the snippet again so an existing
+        embed waits for that moment.
+      </p>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-2">

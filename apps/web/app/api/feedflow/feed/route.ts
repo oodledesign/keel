@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
   const { data: widget, error } = await admin
     .from('widgets')
     .select(
-      'id, embed_key, layout, post_count, show_captions, show_likes, open_in, gap, border_radius, columns_desktop, columns_tablet, columns_mobile, slider_autoplay, slider_autoplay_speed, accent_colour, custom_css, social_account_id',
+      'id, embed_key, layout, post_count, show_captions, show_likes, play_videos, tile_ratio, reveal_animation, open_in, gap, border_radius, columns_desktop, columns_tablet, columns_mobile, slider_autoplay, slider_autoplay_speed, accent_colour, custom_css, social_account_id',
     )
     .eq('embed_key', parsed.data.widget)
     .maybeSingle();
@@ -78,6 +78,9 @@ export async function GET(request: NextRequest) {
           post_count: widget.post_count,
           show_captions: widget.show_captions,
           show_likes: widget.show_likes,
+          play_videos: widget.play_videos,
+          tile_ratio: widget.tile_ratio,
+          reveal_animation: widget.reveal_animation,
           gap: widget.gap,
           border_radius: widget.border_radius,
           open_in: widget.open_in,

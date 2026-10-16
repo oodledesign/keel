@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
-import { Check, Loader2 } from 'lucide-react';
+import { Check, ImagePlus, Loader2 } from 'lucide-react';
 
+import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 import { Button } from '@kit/ui/button';
 import {
   Dialog,
@@ -21,7 +22,9 @@ import pathsConfig from '~/config/paths.config';
 import {
   getWorkspaceDocDownloadUrlAction,
   listProposalDocsAction,
+  registerUploadedWorkspaceDocAction,
 } from '~/home/[account]/_lib/workspace-content/docs-actions';
+import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
 import {
   type CoverFocus,
@@ -66,12 +69,15 @@ export function SurveyCoverCard({
   focus: CoverFocus;
   defaultUrl: string | null;
 }) {
+  const supabase = useSupabase();
+  const uploadInputRef = useRef<HTMLInputElement>(null);
   const [chosen, setChosen] = useState({ id: photoDocId, url: photoUrl });
   const [focus, setFocus] = useState(initialFocus);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [cropOpen, setCropOpen] = useState(false);
   const [photos, setPhotos] = useState<LibraryPhoto[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const source = surveyCoverSource({
@@ -113,6 +119,68 @@ export function SurveyCoverCard({
   const openPicker = () => {
     setPickerOpen(true);
     if (photos === null) void loadLibrary();
+  };
+
+  const uploadCover = async (files: FileList | null) => {
+    const file = files?.[0];
+    if (!file || !canEdit) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Choose an image file');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = `${accountId}/${proposalId}/cover_${Date.now()}_${safeName}`;
+      const { error: uploadError } = await supabase.storage
+        .from(ACCOUNT_DOCS_BUCKET)
+        .upload(filePath, file, { upsert: false });
+      if (uploadError) throw uploadError;
+
+      const { docId } = await registerUploadedWorkspaceDocAction({
+        accountId,
+        accountSlug,
+        title: file.name,
+        filePath,
+        mimeType: file.type || null,
+        fileSizeBytes: file.size,
+        proposalId,
+        photoRole: 'archive',
+        link: null,
+      });
+      const { url } = await getWorkspaceDocDownloadUrlAction({
+        accountId,
+        docId,
+      });
+      await updateSurveyCoverAction({
+        accountId,
+        accountSlug,
+        proposalId,
+        photoDocId: docId,
+      });
+
+      const photo: LibraryPhoto = {
+        id: docId,
+        title: file.name,
+        caption: null,
+        url,
+      };
+      setChosen({ id: docId, url });
+      setFocus(DEFAULT_COVER_FOCUS);
+      setPhotos((current) =>
+        current
+          ? [photo, ...current.filter((item) => item.id !== docId)]
+          : [photo],
+      );
+      setPickerOpen(false);
+      toast.success('Cover photo uploaded');
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setUploading(false);
+      if (uploadInputRef.current) uploadInputRef.current.value = '';
+    }
   };
 
   const save = (next: LibraryPhoto | null) => {
@@ -186,11 +254,34 @@ export function SurveyCoverCard({
           </p>
           {canEdit ? (
             <div className="flex flex-wrap gap-2">
+              <input
+                ref={uploadInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => void uploadCover(event.target.files)}
+                data-test="survey-cover-upload-input"
+              />
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                disabled={pending}
+                disabled={pending || uploading}
+                onClick={() => uploadInputRef.current?.click()}
+                data-test="survey-cover-upload"
+              >
+                {uploading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <ImagePlus className="mr-2 h-4 w-4" />
+                )}
+                Upload cover photo
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={pending || uploading}
                 onClick={openPicker}
                 data-test="survey-cover-choose"
               >
@@ -257,10 +348,27 @@ export function SurveyCoverCard({
           <DialogHeader>
             <DialogTitle>Choose a cover photo</DialogTitle>
             <DialogDescription>
-              Pick a photo of the front of the building from this survey&apos;s
-              photo library.
+              Upload a new photo, or pick one already on this survey.
             </DialogDescription>
           </DialogHeader>
+
+          {canEdit ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={pending || uploading}
+              onClick={() => uploadInputRef.current?.click()}
+              data-test="survey-cover-upload-in-picker"
+            >
+              {uploading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <ImagePlus className="mr-2 h-4 w-4" />
+              )}
+              Upload cover photo
+            </Button>
+          ) : null}
 
           {loading || photos === null ? (
             <div
@@ -270,8 +378,8 @@ export function SurveyCoverCard({
             </div>
           ) : photos.length === 0 ? (
             <p className={`py-8 text-sm ${workspaceTextMuted}`}>
-              No photos yet. Upload photos in Content review, then choose one
-              here.
+              No photos in the library yet. Upload one above to use it on the
+              cover.
             </p>
           ) : (
             <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">

@@ -25,8 +25,29 @@ export type PersistedPostRow = {
   caption: string | null;
   username: string | null;
   posted_at: string | null;
+  like_count: number | null;
+  comments_count: number | null;
   children: IgMediaChild[] | null;
 };
+
+function videoUrlFor(input: {
+  media_type: string;
+  media_url?: string | null;
+  children?: IgMediaChild[] | null;
+}): string | null {
+  if (input.media_type === 'VIDEO' && input.media_url) {
+    return input.media_url;
+  }
+  const first = input.children?.[0];
+  if (first?.media_type === 'VIDEO' && first.media_url) {
+    return first.media_url;
+  }
+  return null;
+}
+
+function countOrNull(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
 
 export function mapPersistedPosts(rows: PersistedPostRow[]): UnifiedPost[] {
   return rows.map((row) => {
@@ -46,6 +67,9 @@ export function mapPersistedPosts(rows: PersistedPostRow[]): UnifiedPost[] {
       timestamp: row.posted_at ?? '',
       media_type: row.media_type,
       username: row.username ?? null,
+      like_count: countOrNull(row.like_count),
+      comment_count: countOrNull(row.comments_count),
+      video_url: videoUrlFor(row),
     };
   });
 }
@@ -69,6 +93,13 @@ export function mapInstagramItems(items: IgMediaItem[]): UnifiedPost[] {
       timestamp: item.timestamp ?? '',
       media_type: item.media_type ?? 'IMAGE',
       username: item.username ?? null,
+      like_count: countOrNull(item.like_count),
+      comment_count: countOrNull(item.comments_count),
+      video_url: videoUrlFor({
+        media_type: item.media_type ?? 'IMAGE',
+        media_url: item.media_url,
+        children,
+      }),
     };
   });
 }
@@ -83,7 +114,7 @@ export async function loadPersistedPosts(
   const { data, error } = await admin
     .from('posts')
     .select(
-      'external_post_id, media_type, media_url, thumbnail_url, permalink, caption, username, posted_at, children',
+      'external_post_id, media_type, media_url, thumbnail_url, permalink, caption, username, posted_at, like_count, comments_count, children',
     )
     .eq('social_account_id', socialAccountId)
     .order('posted_at', { ascending: false, nullsFirst: false })
@@ -169,6 +200,8 @@ export async function ingestInstagramAccount(socialAccountId: string): Promise<{
       caption: item.caption ?? null,
       username: item.username ?? (account.username as string | null),
       posted_at: item.timestamp ?? null,
+      like_count: countOrNull(item.like_count),
+      comments_count: countOrNull(item.comments_count),
       children,
       raw_json: item as unknown as Record<string, unknown>,
       ingested_at: now,

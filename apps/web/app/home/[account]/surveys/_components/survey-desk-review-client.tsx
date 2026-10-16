@@ -26,7 +26,6 @@ import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 import { Button } from '@kit/ui/button';
 import { Skeleton } from '@kit/ui/skeleton';
 import { toast } from '@kit/ui/sonner';
-import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
@@ -68,7 +67,6 @@ import type { SurveyObservation } from '../_lib/schema/survey-capture.schema';
 import {
   autoCaptionSurveyPhotosAction,
   createSurveyObservationAction,
-  mergeSurveySectionNotesAction,
   reorderSurveyPhotosAction,
   setSurveySectionRatingAction,
   updateSurveyObservationAction,
@@ -76,6 +74,7 @@ import {
 } from '../_lib/server/survey-capture-actions';
 import { updateSurveyCoverAction } from '../_lib/server/survey-report-details-actions';
 import { surveyPath } from '../_lib/survey-display';
+import { AutoGrowTextarea } from './auto-grow-textarea';
 import { SurveyPhrasePanel } from './survey-phrase-panel';
 import { SurveySectionHeadingIcon } from './survey-section-heading-icon';
 
@@ -106,6 +105,16 @@ function reviewHref(
   );
 }
 
+function reviewSectionKeyFromPath(pathname: string) {
+  const marker = '/review/';
+  const index = pathname.lastIndexOf(marker);
+  if (index < 0) return null;
+  const key = decodeURIComponent(
+    pathname.slice(index + marker.length).split('/')[0] ?? '',
+  );
+  return key || null;
+}
+
 export function SurveyDeskReviewClient({
   accountSlug,
   accountId,
@@ -134,6 +143,7 @@ export function SurveyDeskReviewClient({
   const contentTopRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const captionedKey = useRef<string | null>(null);
+  const localCreatedIds = useRef<Set<string>>(new Set());
   const [observations, setObservations] = useState(initialObservations);
   const [coverPhotoDocId, setCoverPhotoDocId] = useState(
     initialCoverPhotoDocId,
@@ -144,54 +154,59 @@ export function SurveyDeskReviewClient({
   const [uploading, setUploading] = useState(false);
   const [captioning, setCaptioning] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [mergedDrafts, setMergedDrafts] = useState<Record<string, string>>({});
-  const [mergedDirty, setMergedDirty] = useState<Record<string, boolean>>({});
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const [focusNoteId, setFocusNoteId] = useState<string | null>(null);
+  const [activeKey, setActiveKey] = useState(currentKey);
+  const pendingSectionFocus = useRef(false);
 
   const goToSection = useCallback(
     (sectionKey: string) => {
-      if (sectionKey === currentKey) return;
+      if (sectionKey === activeKey) return;
+      if (!sections.some((item) => item.key === sectionKey)) return;
+      pendingSectionFocus.current = true;
+      setActiveKey(sectionKey);
       window.history.pushState(
         null,
         '',
         reviewHref(accountSlug, proposalId, sectionKey),
       );
-      requestAnimationFrame(() => {
-        headingRef.current?.focus({ preventScroll: true });
-        const top = contentTopRef.current?.getBoundingClientRect().top ?? 0;
-        if (top < 0) {
-          contentTopRef.current?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start',
-          });
-        }
-      });
     },
-    [accountSlug, currentKey, proposalId],
+    [accountSlug, activeKey, proposalId, sections],
   );
 
   const current =
-    sections.find((item) => item.key === currentKey) ?? sections[0] ?? null;
-  const { previous, next } = adjacentDeskReviewSection(sections, currentKey);
+    sections.find((item) => item.key === activeKey) ?? sections[0] ?? null;
+  const { previous, next } = adjacentDeskReviewSection(sections, activeKey);
   const sectionObservations = useMemo(
     () =>
       observations
-        .filter((item) => item.sectionKey === currentKey)
+        .filter((item) => item.sectionKey === activeKey)
         .slice()
         .sort((a, b) => a.sortOrder - b.sortOrder),
-    [observations, currentKey],
+    [observations, activeKey],
+  );
+  const noteText = (item: SurveyObservation) =>
+    noteDrafts[item.id] ?? item.body;
+  const notesDirty = sectionObservations.some(
+    (item) =>
+      noteDrafts[item.id] !== undefined && noteDrafts[item.id] !== item.body,
   );
   const joinedSectionBody = useMemo(
-    () => joinSectionNoteBodies(sectionObservations.map((item) => item.body)),
-    [sectionObservations],
+    () =>
+      joinSectionNoteBodies(
+        sectionObservations.map((item) => noteDrafts[item.id] ?? item.body),
+      ),
+    [noteDrafts, sectionObservations],
   );
-  const mergedBody =
-    mergedDirty[currentKey] && mergedDrafts[currentKey] !== undefined
-      ? (mergedDrafts[currentKey] ?? '')
-      : joinedSectionBody;
-  const setMergedBody = (value: string) => {
-    setMergedDrafts((prev) => ({ ...prev, [currentKey]: value }));
-    setMergedDirty((prev) => ({ ...prev, [currentKey]: true }));
-  };
+
+  useEffect(() => {
+    if (!focusNoteId) return;
+    const field = document.querySelector<HTMLTextAreaElement>(
+      `[data-note-id="${CSS.escape(focusNoteId)}"]`,
+    );
+    field?.focus();
+    if (field) setFocusNoteId(null);
+  }, [focusNoteId, sectionObservations]);
   const noteRatings = useMemo(
     () => sectionObservations.map((item) => item.conditionRating),
     [sectionObservations],
@@ -208,15 +223,15 @@ export function SurveyDeskReviewClient({
   const sectionPhotos = useMemo(
     () =>
       photos
-        .filter((photo) => photo.pinnedSectionKey === currentKey)
+        .filter((photo) => photo.pinnedSectionKey === activeKey)
         .sort(
           (a, b) => (a.curatedSortOrder ?? 99) - (b.curatedSortOrder ?? 99),
         ),
-    [photos, currentKey],
+    [photos, activeKey],
   );
   const archivePhotos = useMemo(
-    () => photos.filter((photo) => photo.pinnedSectionKey !== currentKey),
-    [photos, currentKey],
+    () => photos.filter((photo) => photo.pinnedSectionKey !== activeKey),
+    [photos, activeKey],
   );
 
   const loadPhotos = useCallback(async () => {
@@ -253,8 +268,50 @@ export function SurveyDeskReviewClient({
   }, [loadPhotos]);
 
   useEffect(() => {
-    setObservations(initialObservations);
+    setObservations((prev) => {
+      const serverIds = new Set(initialObservations.map((item) => item.id));
+      for (const id of localCreatedIds.current) {
+        if (serverIds.has(id)) localCreatedIds.current.delete(id);
+      }
+      const localOnly = prev.filter(
+        (item) =>
+          localCreatedIds.current.has(item.id) && !serverIds.has(item.id),
+      );
+      return localOnly.length === 0
+        ? initialObservations
+        : [...initialObservations, ...localOnly];
+    });
   }, [initialObservations]);
+
+  useEffect(() => {
+    const key = reviewSectionKeyFromPath(window.location.pathname);
+    if (!key || !sections.some((item) => item.key === key)) return;
+    setActiveKey((prev) => (prev === key ? prev : key));
+  }, [sections]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const key = reviewSectionKeyFromPath(window.location.pathname);
+      if (!key || !sections.some((item) => item.key === key)) return;
+      pendingSectionFocus.current = true;
+      setActiveKey(key);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [sections]);
+
+  useEffect(() => {
+    if (!pendingSectionFocus.current) return;
+    pendingSectionFocus.current = false;
+    headingRef.current?.focus({ preventScroll: true });
+    const top = contentTopRef.current?.getBoundingClientRect().top ?? 0;
+    if (top < 0) {
+      contentTopRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+  }, [activeKey]);
 
   useEffect(() => {
     if (!canEdit || !current || captionedKey.current === current.key) return;
@@ -326,29 +383,36 @@ export function SurveyDeskReviewClient({
     });
   };
 
-  const saveMergedNotes = () => {
-    if (!current || !canEdit) return;
-    const sectionKey = current.key;
-    const body = mergedBody;
+  const saveNote = async (observationId: string, body: string) => {
+    const updated = await updateSurveyObservationAction({
+      accountId,
+      accountSlug,
+      proposalId,
+      observationId,
+      body,
+    });
+    setObservations((prev) =>
+      prev.map((row) => (row.id === updated.id ? updated : row)),
+    );
+    setNoteDrafts((prev) => {
+      if (prev[observationId] === undefined) return prev;
+      const next = { ...prev };
+      delete next[observationId];
+      return next;
+    });
+  };
+
+  const saveDirtyNotes = () => {
+    if (!canEdit || !notesDirty) return;
+    const pendingNotes = sectionObservations.filter(
+      (item) =>
+        noteDrafts[item.id] !== undefined && noteDrafts[item.id] !== item.body,
+    );
     startTransition(async () => {
       try {
-        const result = await mergeSurveySectionNotesAction({
-          accountId,
-          accountSlug,
-          proposalId,
-          sectionKey,
-          mergedBody: body,
-        });
-        setObservations((prev) => [
-          ...prev.filter((row) => row.sectionKey !== sectionKey),
-          ...result.observations,
-        ]);
-        setMergedDirty((prev) => ({ ...prev, [sectionKey]: false }));
-        setMergedDrafts((prev) => {
-          const next = { ...prev };
-          delete next[sectionKey];
-          return next;
-        });
+        for (const item of pendingNotes) {
+          await saveNote(item.id, noteDrafts[item.id] ?? item.body);
+        }
         toast.success('Notes saved');
       } catch (error) {
         toast.error(getErrorMessage(error));
@@ -377,7 +441,12 @@ export function SurveyDeskReviewClient({
           setObservations((prev) =>
             prev.map((row) => (row.id === updated.id ? updated : row)),
           );
-          setMergedDirty((prev) => ({ ...prev, [current.key]: false }));
+          setNoteDrafts((prev) => {
+            if (prev[target.id] === undefined) return prev;
+            const next = { ...prev };
+            delete next[target.id];
+            return next;
+          });
           toast.success('Phrase added to note');
           return;
         }
@@ -391,6 +460,7 @@ export function SurveyDeskReviewClient({
             ? (defaultRating as SurveyObservation['conditionRating'])
             : undefined,
         });
+        localCreatedIds.current.add(created.id);
         setObservations((prev) => [...prev, created]);
         toast.success('Phrase added as a note');
       } catch (error) {
@@ -410,8 +480,9 @@ export function SurveyDeskReviewClient({
           sectionKey: current.key,
           body: '',
         });
+        localCreatedIds.current.add(created.id);
         setObservations((prev) => [...prev, created]);
-        setMergedDirty((prev) => ({ ...prev, [current.key]: false }));
+        setFocusNoteId(created.id);
         toast.success('New note added');
       } catch (error) {
         toast.error(getErrorMessage(error));
@@ -539,7 +610,7 @@ export function SurveyDeskReviewClient({
         accountId,
         accountSlug,
         proposalId,
-        sectionKey: currentKey,
+        sectionKey: activeKey,
         orderedDocIds: ordered.map((item) => item.id),
       });
     } catch (error) {
@@ -705,7 +776,7 @@ export function SurveyDeskReviewClient({
             ) : null}
             {canEdit &&
             sectionRating === 'NI' &&
-            !NI_REASON_RE.test(mergedBody) ? (
+            !NI_REASON_RE.test(joinedSectionBody) ? (
               <p
                 className="text-xs text-amber-600 dark:text-amber-400"
                 data-test="survey-ni-reason-prompt"
@@ -768,46 +839,65 @@ export function SurveyDeskReviewClient({
             <h3 className={`text-sm font-semibold ${workspaceText}`}>Notes</h3>
             {sectionObservations.length > 1 ? (
               <span className={`text-xs ${workspaceTextMuted}`}>
-                {sectionObservations.length} notes · saving combines them
+                {sectionObservations.length} notes
               </span>
             ) : null}
           </div>
-          {sectionObservations.some(
-            (item) =>
-              item.origin === 'brochure_exact' || item.origin === 'brochure_ai',
-          ) ? (
-            <div className="flex flex-wrap gap-1.5">
-              {sectionObservations.map((item) => {
+          {sectionObservations.length === 0 ? (
+            <p className={`text-sm ${workspaceTextMuted}`}>
+              No notes on this section yet.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {sectionObservations.map((item, index) => {
                 const label = brochurePillLabel({
                   origin: item.origin,
                   body: item.body,
                   originBody: item.originBody,
                 });
-                if (!label) return null;
                 return (
-                  <span
-                    key={item.id}
-                    className="inline-flex items-center rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[10px] font-medium tracking-wide text-[var(--workspace-shell-accent-text)] uppercase"
-                  >
-                    {label}
-                  </span>
+                  <div key={item.id} className="space-y-1.5">
+                    {sectionObservations.length > 1 || label ? (
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`text-xs ${workspaceTextMuted}`}>
+                          Note {index + 1}
+                        </span>
+                        {label ? (
+                          <span className="inline-flex items-center rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[10px] font-medium tracking-wide text-[var(--workspace-shell-accent-text)] uppercase">
+                            {label}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    <AutoGrowTextarea
+                      value={noteText(item)}
+                      onChange={(event) =>
+                        setNoteDrafts((prev) => ({
+                          ...prev,
+                          [item.id]: event.target.value,
+                        }))
+                      }
+                      onBlur={(event) => {
+                        const draft = event.currentTarget.value;
+                        if (draft === item.body) return;
+                        startTransition(async () => {
+                          try {
+                            await saveNote(item.id, draft);
+                          } catch (error) {
+                            toast.error(getErrorMessage(error));
+                          }
+                        });
+                      }}
+                      placeholder="Write this note…"
+                      className="min-h-36"
+                      disabled={!canEdit}
+                      data-note-id={item.id}
+                      data-test="survey-review-note"
+                    />
+                  </div>
                 );
               })}
             </div>
-          ) : null}
-          {!canEdit && !mergedBody.trim() ? (
-            <p className={`text-sm ${workspaceTextMuted}`}>
-              No notes on this section yet.
-            </p>
-          ) : (
-            <Textarea
-              value={mergedBody}
-              onChange={(event) => setMergedBody(event.target.value)}
-              placeholder="No notes on this section yet. Type here…"
-              className="min-h-36"
-              disabled={!canEdit}
-              data-test="survey-review-merged-notes"
-            />
           )}
           {canEdit ? (
             <div className="flex flex-wrap items-center gap-2">
@@ -815,11 +905,8 @@ export function SurveyDeskReviewClient({
                 type="button"
                 size="sm"
                 className={workspaceBtnPrimaryMd}
-                disabled={
-                  pending ||
-                  !(mergedDirty[currentKey] && mergedBody !== joinedSectionBody)
-                }
-                onClick={saveMergedNotes}
+                disabled={pending || !notesDirty}
+                onClick={saveDirtyNotes}
                 data-test="survey-review-save-notes"
               >
                 Save notes
@@ -921,7 +1008,7 @@ export function SurveyDeskReviewClient({
                     <p className={`text-sm font-medium ${workspaceText}`}>
                       {photo.title}
                     </p>
-                    <Textarea
+                    <AutoGrowTextarea
                       value={photo.caption ?? ''}
                       onChange={(event) =>
                         setPhotos((prev) =>

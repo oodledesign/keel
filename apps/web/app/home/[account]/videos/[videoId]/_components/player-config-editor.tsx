@@ -545,7 +545,10 @@ export function PlayerConfigEditor(props: {
         ) : null}
 
         <TabsContent value="sharing" className="mt-0">
-          <ConfigRow label="Allow download">
+          <ConfigRow
+            label="Allow download"
+            description="Shows a Download button on the public watch page"
+          >
             <Switch
               checked={config.allow_download}
               onCheckedChange={(checked) =>

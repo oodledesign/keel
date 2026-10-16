@@ -6,7 +6,9 @@ export type UnifiedPost = {
   permalink: string;
   timestamp: string;
   media_type: string;
-  like_count?: number;
+  like_count?: number | null;
+  comment_count?: number | null;
   view_count?: number;
+  video_url?: string | null;
   username?: string | null;
 };

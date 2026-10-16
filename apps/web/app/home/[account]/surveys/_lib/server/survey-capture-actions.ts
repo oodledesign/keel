@@ -27,8 +27,8 @@ import {
   CreateSurveyObservationSchema,
   DeleteSurveyObservationSchema,
   DeleteSurveyStyleExampleSchema,
-  MergeSurveySectionNotesSchema,
   GenerateSurveyDraftSchema,
+  MergeSurveySectionNotesSchema,
   PreviewSurveyTranscriptNotesSchema,
   ProposeSurveyPhotoCurationSchema,
   RebuildSurveyReportSchema,
@@ -149,10 +149,20 @@ export const applySurveyTranscriptNotesAction = enhanceAction(
 );
 
 export const createSurveyObservationAction = enhanceAction(
-  async (data) => {
-    const result = await getService().createObservation(data);
-    revalidateSurveyHub(data.accountSlug, data.proposalId);
-    return result;
+  async (data, user) => {
+    const logger = await getLogger();
+    logger.info(
+      {
+        name: 'create-survey-observation',
+        userId: user.id,
+        proposalId: data.proposalId,
+        sectionKey: data.sectionKey,
+      },
+      'Adding survey note',
+    );
+    // Content review inserts the new note into local state. Revalidating
+    // here refreshed the page and hid an empty note inside the merged box.
+    return getService().createObservation(data);
   },
   { schema: CreateSurveyObservationSchema },
 );

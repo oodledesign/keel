@@ -17,10 +17,26 @@ import {
   buildingSurveySectionListForPrompt,
 } from '~/lib/building-surveyor/report-sections';
 
+export type PhotoCurationJevMeta = {
+  checked: number;
+  culledNonReportable: number;
+  tagMismatches: Array<{
+    photoId: string;
+    detail: string;
+  }>;
+  groupSuggestions: Array<{
+    photoId: string;
+    group: string;
+    detail: string;
+  }>;
+};
+
 export type PhotoCurationResult = {
   items: SurveyPhotoCuration[];
   source: 'ai' | 'keyword_fallback';
   fallbackReason?: string;
+  /** Present when Jev image triage ran (experimental). */
+  jev?: PhotoCurationJevMeta;
 };
 
 const SYSTEM_PROMPT = `You choose a small curated set of site photographs for a UK building survey report.

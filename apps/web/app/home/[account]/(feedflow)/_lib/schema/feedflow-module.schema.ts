@@ -6,6 +6,15 @@ export const createFeedflowWidgetActionSchema = z.object({
   name: z.string().min(1).max(200),
 });
 
+export const updateFeedflowWidgetActionSchema = z.object({
+  accountId: z.string().uuid(),
+  widgetId: z.string().uuid(),
+  tileRatio: z.enum(['square', 'portrait']),
+  showLikes: z.boolean(),
+  playVideos: z.boolean(),
+  revealAnimation: z.enum(['none', 'fade', 'rise', 'cascade', 'scale']),
+});
+
 export const deleteFeedflowSocialAccountActionSchema = z.object({
   accountId: z.string().uuid(),
   socialAccountId: z.string().uuid(),

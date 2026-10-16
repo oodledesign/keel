@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
   const { data: widget, error } = await admin
     .from('widgets')
     .select(
-      'id, embed_key, layout, post_count, show_captions, gap, border_radius, columns_desktop, columns_tablet, columns_mobile, accent_colour, custom_css, open_in, social_account_id',
+      'id, embed_key, layout, post_count, show_captions, show_likes, play_videos, tile_ratio, reveal_animation, gap, border_radius, columns_desktop, columns_tablet, columns_mobile, accent_colour, custom_css, open_in, social_account_id',
     )
     .eq('embed_key', parsed.data.widget)
     .maybeSingle();
@@ -88,5 +88,9 @@ export async function GET(request: NextRequest) {
 }
 
 function renderEmpty(message: string) {
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Feedflow</title></head><body style="font-family:system-ui;padding:24px;color:#555">${message}</body></html>`;
+  const safe = message
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Feedflow</title></head><body style="font-family:system-ui;padding:24px;color:#555">${safe}</body></html>`;
 }

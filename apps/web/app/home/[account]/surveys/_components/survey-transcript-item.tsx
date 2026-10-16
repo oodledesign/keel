@@ -9,7 +9,7 @@ import { ListChecks, Loader2, Pencil } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
-import { Textarea } from '@kit/ui/textarea';
+import { AutoGrowTextarea } from './auto-grow-textarea';
 
 import { getErrorMessage } from '~/home/[account]/proposals/_lib/error-message';
 import { workspaceTextMuted } from '~/lib/workspace-ui';
@@ -111,7 +111,7 @@ export function SurveyTranscriptItem({
           disabled={pending}
           data-test="survey-transcript-title-input"
         />
-        <Textarea
+        <AutoGrowTextarea
           value={content}
           onChange={(event) => setContent(event.target.value)}
           className="min-h-56 text-sm"

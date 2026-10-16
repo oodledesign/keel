@@ -1,4 +1,5 @@
 import withBundleAnalyzer from '@next/bundle-analyzer';
+import { withSentryConfig } from '@sentry/nextjs';
 
 import reservedWorkspaceUrlSegments from '../../packages/shared/reserved-workspace-url-segments.json' with { type: 'json' };
 
@@ -67,6 +68,8 @@ const config = {
     '@sentry/node',
   ],
   // Source maps during prerender/collection are a large spike on 8 GB builders.
+  // Note: this also means withSentryConfig cannot upload browser chunk maps unless
+  // production builds re-enable maps or use a separate upload path.
   productionBrowserSourceMaps: false,
   enablePrerenderSourceMaps: false,
   // Scope content tracing to content routes only (avoid whole-app include).
@@ -207,9 +210,19 @@ const config = {
   typescript: { ignoreBuildErrors: true },
 };
 
-export default withBundleAnalyzer({
+const nextConfig = withBundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 })(config);
+
+export default withSentryConfig(nextConfig, {
+  org: 'tradeways',
+  project: 'ozer',
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  // Source maps are uploaded to Sentry, not served publicly
+  hideSourceMaps: true,
+  disableLogger: true,
+});
 
 /** @returns {import('next').NextConfig['images']} */
 function getImagesConfig() {

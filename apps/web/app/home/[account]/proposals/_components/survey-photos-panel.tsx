@@ -250,13 +250,32 @@ export function SurveyPhotosPanel({
       });
       await loadPhotos();
       onChange?.();
-      toast.success(
+      const jevBits: string[] = [];
+      if (result.jev && result.jev.checked > 0) {
+        if (result.jev.culledNonReportable > 0) {
+          jevBits.push(
+            `skipped ${result.jev.culledNonReportable} unclear photo${
+              result.jev.culledNonReportable === 1 ? '' : 's'
+            }`,
+          );
+        }
+        if (result.jev.tagMismatches.length > 0) {
+          jevBits.push(
+            `${result.jev.tagMismatches.length} possible tag mismatch${
+              result.jev.tagMismatches.length === 1 ? '' : 'es'
+            }`,
+          );
+        }
+      }
+      const base =
         result.source === 'ai'
           ? `Proposed ${result.curatedCount} curated photo${
               result.curatedCount === 1 ? '' : 's'
             } with captions.`
           : (result.fallbackReason ??
-              'Proposed photos from titles because the AI path was unavailable.'),
+            'Proposed photos from titles because the AI path was unavailable.');
+      toast.success(
+        jevBits.length > 0 ? `${base} Jev: ${jevBits.join('; ')}.` : base,
       );
     } catch (error) {
       toast.error(

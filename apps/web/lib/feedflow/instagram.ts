@@ -214,7 +214,7 @@ export class InstagramRateLimitedError extends Error {
 }
 
 const MEDIA_FIELDS =
-  'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,username,children{id,media_type,media_url,thumbnail_url,permalink}';
+  'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,username,like_count,comments_count,children{id,media_type,media_url,thumbnail_url,permalink}';
 
 export async function fetchInstagramMedia(
   igUserId: string,

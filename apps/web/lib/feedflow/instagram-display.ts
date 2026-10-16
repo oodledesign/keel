@@ -15,6 +15,8 @@ export type IgMediaItem = {
   permalink?: string;
   timestamp?: string;
   username?: string;
+  like_count?: number;
+  comments_count?: number;
   children?: { data?: IgMediaChild[] };
 };
 

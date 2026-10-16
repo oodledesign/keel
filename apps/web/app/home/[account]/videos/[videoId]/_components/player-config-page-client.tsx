@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 
 import {
   ChevronRight,
+  Download,
   ExternalLink,
   Eye,
   Folder,
@@ -418,6 +419,14 @@ export function PlayerConfigPageClient(props: {
         </nav>
 
         <div className="flex flex-wrap items-center gap-2">
+          {ready ? (
+            <Button variant="outline" size="sm" className="gap-1.5" asChild>
+              <a href={`/api/videos/${props.video.id}/download`} download>
+                <Download className="h-3.5 w-3.5" />
+                Download video
+              </a>
+            </Button>
+          ) : null}
           {publicUrl ? (
             <Button variant="outline" size="sm" className="gap-1.5" asChild>
               <a href={publicUrl} target="_blank" rel="noreferrer">

@@ -38,7 +38,7 @@ import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
-import { Textarea } from '@kit/ui/textarea';
+import { AutoGrowTextarea } from './auto-grow-textarea';
 
 import pathsConfig from '~/config/paths.config';
 import { ProposalEditAiAssist } from '~/home/[account]/proposals/_components/proposal-edit-ai-assist';
@@ -646,13 +646,12 @@ export function SurveyReportBuilder({
                   <p className={`text-xs ${workspaceTextMuted}`}>
                     Only your team sees this.
                   </p>
-                  <Textarea
+                  <AutoGrowTextarea
                     value={privateNote}
                     onChange={(e) => setPrivateNote(e.target.value)}
                     disabled={!canModify}
-                    rows={4}
                     placeholder="Internal notes about this report"
-                    className={`mt-2 text-sm ${controlInput}`}
+                    className={`mt-2 min-h-24 text-sm ${controlInput}`}
                   />
                 </SurveyBuilderSidebarSection>
               </>

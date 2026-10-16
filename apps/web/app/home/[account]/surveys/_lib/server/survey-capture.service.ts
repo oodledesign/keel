@@ -8,6 +8,7 @@ import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
+import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
 import { groupSurveyObservations } from '~/lib/ai/survey-observation-group';
 import { captionEmptySurveyPhotos } from '~/lib/ai/survey-photo-caption';
 import { curateSurveyPhotos } from '~/lib/ai/survey-photo-curate';
@@ -25,6 +26,10 @@ import {
   energySectionHtmlFromEpc,
   epcFactsForPrompt,
 } from '~/lib/building-surveyor/epc/energy-section';
+import {
+  checkSurveyPhotosWithJev,
+  filterReportablePhotoIds,
+} from '~/lib/building-surveyor/jev-survey-photo-check';
 import { planMergeSectionNotes } from '~/lib/building-surveyor/merge-section-notes';
 import {
   buildingSurveySectionByKey,
@@ -1105,15 +1110,50 @@ class SurveyCaptureService {
 
     const [observations, photos] = await Promise.all([
       this.listObservations(input.accountId, input.proposalId),
-      this.listLibraryPhotos(input.accountId, input.proposalId),
+      this.listLibraryPhotosWithStorage(input.accountId, input.proposalId),
     ]);
 
     const imagePhotos = photos.filter(
       (photo) => !photo.mimeType || photo.mimeType.startsWith('image/'),
     );
 
+    const admin = getSupabaseServerAdminClient();
+    const jevInputs = await Promise.all(
+      imagePhotos.slice(0, 12).map(async (photo) => {
+        const path = photo.filePath ?? photo.storagePath;
+        let bytes: Uint8Array | null = null;
+        if (path) {
+          const { data } = await admin.storage
+            .from(photo.storageBucket ?? ACCOUNT_DOCS_BUCKET)
+            .download(path);
+          if (data) {
+            bytes = new Uint8Array(await data.arrayBuffer());
+          }
+        }
+        return {
+          id: photo.id,
+          bytes,
+          title: photo.title,
+          taggedSectionKey: photo.pinnedSectionKey,
+        };
+      }),
+    );
+
+    const jevBatch = await checkSurveyPhotosWithJev({
+      photos: jevInputs,
+    });
+    const reportableIds = new Set(
+      filterReportablePhotoIds(
+        imagePhotos.map((photo) => photo.id),
+        jevBatch.suggestions,
+      ),
+    );
+    const curationPool = imagePhotos.filter((photo) =>
+      reportableIds.has(photo.id),
+    );
+
     const result = await curateSurveyPhotos({
-      photos: imagePhotos.map((photo) => ({
+      photos: curationPool.map((photo) => ({
         id: photo.id,
         title: photo.title,
         createdAt: photo.createdAt,
@@ -1125,6 +1165,24 @@ class SurveyCaptureService {
       accountId: input.accountId,
       supabase: this.client,
     });
+
+    const jevMeta = {
+      checked: jevBatch.suggestions.length,
+      culledNonReportable: imagePhotos.length - curationPool.length,
+      tagMismatches: jevBatch.suggestions
+        .filter((item) => item.tagMismatch && item.detail)
+        .map((item) => ({
+          photoId: item.photoId,
+          detail: item.detail!,
+        })),
+      groupSuggestions: jevBatch.suggestions
+        .filter((item) => item.suggestedGroup && item.detail)
+        .map((item) => ({
+          photoId: item.photoId,
+          group: item.suggestedGroup!,
+          detail: item.detail!,
+        })),
+    };
 
     const curatedIds = new Set(result.items.map((item) => item.docId));
 
@@ -1167,6 +1225,7 @@ class SurveyCaptureService {
     return {
       ...result,
       curatedCount: curatedIds.size,
+      jev: jevMeta,
     };
   }
 
@@ -1325,10 +1384,35 @@ class SurveyCaptureService {
     accountId: string,
     proposalId: string,
   ): Promise<SurveyLibraryPhoto[]> {
+    const rows = await this.listLibraryPhotosWithStorage(accountId, proposalId);
+    return rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      mimeType: row.mimeType,
+      createdAt: row.createdAt,
+      pinnedSectionKey: row.pinnedSectionKey,
+      photoRole: row.photoRole,
+      caption: row.caption,
+      curatedSortOrder: row.curatedSortOrder,
+    }));
+  }
+
+  async listLibraryPhotosWithStorage(
+    accountId: string,
+    proposalId: string,
+  ): Promise<
+    Array<
+      SurveyLibraryPhoto & {
+        filePath: string | null;
+        storagePath: string | null;
+        storageBucket: string | null;
+      }
+    >
+  > {
     const { data, error } = await this.db
       .from('docs')
       .select(
-        'id, title, mime_type, created_at, pinned_section_key, photo_role, caption, curated_sort_order',
+        'id, title, mime_type, created_at, pinned_section_key, photo_role, caption, curated_sort_order, file_path, storage_path, storage_bucket',
       )
       .eq('account_id', accountId)
       .eq('proposal_id', proposalId)
@@ -1360,6 +1444,9 @@ class SurveyCaptureService {
           row.curated_sort_order === undefined
             ? null
             : Number(row.curated_sort_order),
+        filePath: (row.file_path as string | null) ?? null,
+        storagePath: (row.storage_path as string | null) ?? null,
+        storageBucket: (row.storage_bucket as string | null) ?? null,
       }));
   }
 }

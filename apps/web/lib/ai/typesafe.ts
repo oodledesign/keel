@@ -5,11 +5,12 @@ import 'server-only';
  * Minimal client for TypeSafe's Jev "System One" API: typed questions in,
  * structured answers out. Not a text generator — use callAI for prose.
  * Docs: https://docs.typesafe.ai/api
+ * Images (experimental): https://docs.typesafe.ai/go/images
  */
 
 const TYPESAFE_ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
 const TYPESAFE_MODEL = 'jev-latest';
-const REQUEST_TIMEOUT_MS = 15_000;
+const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_ATTEMPTS = 3;
 
 export type TypeSafeNoulQuestion = {
@@ -31,10 +32,23 @@ export type TypeSafeScoreQuestion = {
   criteria: string[];
 };
 
+/** Box needs jev-1.14+ and the images danger-zone header. */
+export type TypeSafeBoxQuestion = {
+  type: 'box';
+  instructions: string | Record<string, unknown>;
+};
+
 export type TypeSafeQuestion =
   | TypeSafeNoulQuestion
   | TypeSafeChoiceQuestion
-  | TypeSafeScoreQuestion;
+  | TypeSafeScoreQuestion
+  | TypeSafeBoxQuestion;
+
+export type TypeSafeImageAsset = {
+  type?: 'image';
+  format: 'jpg' | 'jpeg' | 'png';
+  data_base64: string;
+};
 
 export type TypeSafeAnswer =
   | { type: 'noul'; noul: number }
@@ -48,6 +62,14 @@ export type TypeSafeAnswer =
       type: 'score';
       score: number;
       probabilities: Record<string, number>;
+      confidence: number;
+    }
+  | {
+      type: 'box';
+      top: number;
+      bottom: number;
+      left: number;
+      right: number;
       confidence: number;
     };
 
@@ -63,14 +85,28 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function requestUsesImages(input: {
+  assets?: Record<string, TypeSafeImageAsset>;
+  questions: Record<string, TypeSafeQuestion>;
+}) {
+  if (input.assets && Object.keys(input.assets).length > 0) return true;
+  return Object.values(input.questions).some((q) => q.type === 'box');
+}
+
 /**
  * Evaluate one state against many typed questions in a single request.
  * Retries 429/529/5xx with exponential backoff. Throws on failure so callers
  * can fall back to a generative model.
+ *
+ * Pass `assets` (and use their keys in state/instructions) for experimental
+ * image input. That sets `TypeSafe-Danger-Zone-Images: true` automatically.
  */
 export async function askTypeSafe(input: {
   state: string | Record<string, unknown> | unknown[];
   questions: Record<string, TypeSafeQuestion>;
+  assets?: Record<string, TypeSafeImageAsset>;
+  /** Override model (e.g. jev-1.14.0 for Box). Defaults to jev-latest. */
+  model?: string;
 }): Promise<TypeSafeResult> {
   const apiKey = process.env.TYPESAFE_API_KEY?.trim();
 
@@ -78,21 +114,32 @@ export async function askTypeSafe(input: {
     throw new Error('TYPESAFE_API_KEY is not configured');
   }
 
+  const useImages = requestUsesImages(input);
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     try {
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      };
+      if (useImages) {
+        headers['TypeSafe-Danger-Zone-Images'] = 'true';
+      }
+
+      const body: Record<string, unknown> = {
+        state: input.state,
+        model: input.model ?? TYPESAFE_MODEL,
+        questions: input.questions,
+      };
+      if (input.assets && Object.keys(input.assets).length > 0) {
+        body.assets = input.assets;
+      }
+
       const response = await fetch(TYPESAFE_ENDPOINT, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          state: input.state,
-          model: TYPESAFE_MODEL,
-          questions: input.questions,
-        }),
+        headers,
+        body: JSON.stringify(body),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
 
@@ -113,7 +160,10 @@ export async function askTypeSafe(input: {
         response.status === 529 ||
         response.status >= 500;
 
-      lastError = new Error(`TypeSafe request failed (${response.status})`);
+      const errBody = await response.text().catch(() => '');
+      lastError = new Error(
+        `TypeSafe request failed (${response.status})${errBody ? `: ${errBody.slice(0, 200)}` : ''}`,
+      );
 
       if (!retryable) {
         break;
